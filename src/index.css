@@ -1,0 +1,19 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  background: #0C0A08;
+  color: #F0EBE3;
+  overflow: auto;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  display: block;
+}

@@ -1,0 +1,235 @@
+/* Responsive Design Styles for BrewCRM */
+
+/* Mobile-first approach */
+@media (max-width: 768px) {
+  /* Hide sidebar on mobile, show hamburger menu */
+  .sidebar {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    height: 100vh;
+    width: 280px;
+    z-index: 1000;
+    transition: left 0.3s ease;
+  }
+  
+  .sidebar.open {
+    left: 0;
+  }
+  
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+  
+  /* Mobile header */
+  .mobile-header {
+    display: flex !important;
+    height: 60px;
+    background: #1a1a2e;
+    border-bottom: 1px solid #2a2a4e;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  
+  .hamburger-btn {
+    display: flex !important;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: rgba(232, 160, 32, 0.1);
+    border-radius: 8px;
+    color: #e8a020;
+    font-size: 20px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Main content adjustments */
+  main {
+    padding: 12px !important;
+  }
+  
+  /* Grid adjustments */
+  .grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  
+  .grid-6 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Card adjustments */
+  .card {
+    padding: 12px !important;
+  }
+  
+  /* CRM layout */
+  .crm-grid {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  
+  .crm-sidebar {
+    height: auto !important;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .crm-profile {
+    height: auto !important;
+  }
+  
+  /* Order list */
+  .order-card {
+    padding: 12px !important;
+  }
+  
+  .order-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  
+  /* Kitchen cards */
+  .kitchen-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .kitchen-card {
+    padding: 12px !important;
+  }
+  
+  /* Modal adjustments */
+  .modal {
+    width: 95% !important;
+    max-width: none !important;
+    max-height: 90vh !important;
+    margin: 0 !important;
+  }
+  
+  /* Button adjustments */
+  .btn {
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+  
+  /* Input adjustments */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+  
+  /* Hide non-essential elements on mobile */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Show mobile-specific elements */
+  .mobile-only {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet adjustments */
+  .sidebar {
+    width: 220px;
+  }
+  
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .grid-6 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  
+  .crm-grid {
+    grid-template-columns: 280px 1fr !important;
+  }
+  
+  .kitchen-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  /* Desktop styles */
+  .mobile-header {
+    display: none !important;
+  }
+  
+  .hamburger-btn {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: none !important;
+  }
+  
+  .desktop-only {
+    display: flex !important;
+  }
+}
+
+/* Touch-friendly targets */
+@media (hover: none) and (pointer: coarse) {
+  button, a, .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  input, select, textarea {
+    min-height: 44px;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-header {
+    height: 50px;
+  }
+  
+  main {
+    padding: 8px !important;
+  }
+  
+  .card {
+    padding: 8px !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  .mobile-header,
+  .hamburger-btn,
+  .sidebar-overlay {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+  }
+  
+  .card {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
