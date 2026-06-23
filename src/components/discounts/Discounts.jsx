@@ -2,14 +2,17 @@ import { useState } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_DISCOUNTS, DISCOUNT_TYPES, DISCOUNT_STATUS, TIER_REQUIREMENTS } from "../../data/discountConstants";
 
-export default function Discounts() {
-  const [discounts, setDiscounts] = useState(INIT_DISCOUNTS);
+export default function Discounts({ discounts: externalDiscounts, setDiscounts: externalSetDiscounts }) {
+  const [discounts, setDiscounts] = useState(externalDiscounts || INIT_DISCOUNTS);
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editDiscount, setEditDiscount] = useState(null);
   const [form, setForm] = useState({ code: "", type: "percentage", value: "", minOrder: "", maxDiscount: "", maxUsage: "", expiryDate: "", description: "", tierRequired: "All" });
+
+  // Use external setter if provided, otherwise use local state
+  const handleSetDiscounts = externalSetDiscounts || setDiscounts;
 
   const filtered = discounts.filter(discount => {
     const matchesType = typeFilter === "All" || discount.type === typeFilter;
@@ -55,20 +58,20 @@ export default function Discounts() {
       usageCount: 0,
     };
     if (editDiscount) {
-      setDiscounts(discounts.map(d => d.id === editDiscount ? { ...d, ...discountData } : d));
+      handleSetDiscounts(discounts.map(d => d.id === editDiscount ? { ...d, ...discountData } : d));
     } else {
-      setDiscounts([...discounts, { ...discountData, id: "disc-" + Date.now() }]);
+      handleSetDiscounts([...discounts, { ...discountData, id: "disc-" + Date.now() }]);
     }
     setShowModal(false);
   };
 
   const updateStatus = (id, status) => {
-    setDiscounts(discounts.map(d => d.id === id ? { ...d, status } : d));
+    handleSetDiscounts(discounts.map(d => d.id === id ? { ...d, status } : d));
   };
 
   const deleteDiscount = (id) => {
     if (!window.confirm("Delete this discount?")) return;
-    setDiscounts(discounts.filter(d => d.id !== id));
+    handleSetDiscounts(discounts.filter(d => d.id !== id));
   };
 
   const calculateDiscount = (orderAmount, discount) => {
@@ -88,7 +91,7 @@ export default function Discounts() {
   return (
     <div>
       {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Discounts", val: discounts.length, color: C.amber2 },
           { label: "Active", val: activeCount, color: C.green },
@@ -110,12 +113,12 @@ export default function Discounts() {
             <input style={{ ...input, paddingLeft: 28, width: 180 }} placeholder="Search discounts…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           {DISCOUNT_TYPES.map(type => (
-            <button key={type} onClick={() => setTypeFilter(type)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${typeFilter === type ? C.amber3 : C.border2}`, background: typeFilter === type ? C.amberDim : C.bg3, color: typeFilter === type ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={type} onClick={() => setTypeFilter(type)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${typeFilter === type ? C.amber3 : C.border2}`, background: typeFilter === type ? C.amberDim : C.bg3, color: typeFilter === type ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {type}
             </button>
           ))}
           {DISCOUNT_STATUS.slice(1).map(status => (
-            <button key={status} onClick={() => setStatusFilter(status)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${statusFilter === status ? C.amber3 : C.border2}`, background: statusFilter === status ? C.amberDim : C.bg3, color: statusFilter === status ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={status} onClick={() => setStatusFilter(status)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${statusFilter === status ? C.amber3 : C.border2}`, background: statusFilter === status ? C.amberDim : C.bg3, color: statusFilter === status ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {status}
             </button>
           ))}

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_TABLES, TABLE_TYPES, TABLE_AREAS, TABLE_STATUS } from "../../data/tableConstants";
 
-export default function Tables() {
-  const [tables, setTables] = useState(INIT_TABLES);
+export default function Tables({ tables: externalTables, setTables: externalSetTables }) {
+  const [tables, setTables] = useState(externalTables || INIT_TABLES);
   const [typeFilter, setTypeFilter] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -11,6 +11,9 @@ export default function Tables() {
   const [editTable, setEditTable] = useState(null);
   const [form, setForm] = useState({ number: "", capacity: "", type: "indoor", area: "main" });
   const [selectedTable, setSelectedTable] = useState(null);
+
+  // Use external setter if provided, otherwise use local state
+  const handleSetTables = externalSetTables || setTables;
 
   const filtered = tables.filter(table => {
     const matchesType = typeFilter === "All" || table.type === typeFilter;
@@ -46,29 +49,29 @@ export default function Tables() {
       currentOrder: null,
     };
     if (editTable) {
-      setTables(tables.map(t => t.id === editTable ? { ...t, ...tableData } : t));
+      handleSetTables(tables.map(t => t.id === editTable ? { ...t, ...tableData } : t));
     } else {
-      setTables([...tables, { ...tableData, id: "tbl-" + Date.now() }]);
+      handleSetTables([...tables, { ...tableData, id: "tbl-" + Date.now() }]);
     }
     setShowModal(false);
   };
 
   const updateStatus = (id, status) => {
-    setTables(tables.map(t => t.id === id ? { ...t, status, currentOrder: status === "available" ? null : t.currentOrder } : t));
+    handleSetTables(tables.map(t => t.id === id ? { ...t, status, currentOrder: status === "available" ? null : t.currentOrder } : t));
   };
 
   const assignOrder = (tableId) => {
     const orderId = prompt("Enter order ID to assign:");
     if (orderId) {
-      setTables(tables.map(t => t.id === tableId ? { ...t, status: "occupied", currentOrder: orderId } : t));
+      handleSetTables(tables.map(t => t.id === tableId ? { ...t, status: "occupied", currentOrder: orderId } : t));
     }
   };
 
   const clearTable = (id) => {
     if (!window.confirm("Clear this table?")) return;
-    setTables(tables.map(t => t.id === id ? { ...t, status: "cleaning", currentOrder: null } : t));
+    handleSetTables(tables.map(t => t.id === id ? { ...t, status: "cleaning", currentOrder: null } : t));
     setTimeout(() => {
-      setTables(tables.map(t => t.id === id ? { ...t, status: "available" } : t));
+      handleSetTables(tables.map(t => t.id === id ? { ...t, status: "available" } : t));
     }, 3000);
   };
 
@@ -76,13 +79,13 @@ export default function Tables() {
     const name = prompt("Reservation name:");
     const time = prompt("Reservation time (HH:MM):");
     if (name && time) {
-      setTables(tables.map(t => t.id === id ? { ...t, status: "reserved", reservedFor: name, reservedTime: time } : t));
+      handleSetTables(tables.map(t => t.id === id ? { ...t, status: "reserved", reservedFor: name, reservedTime: time } : t));
     }
   };
 
   const deleteTable = (id) => {
     if (!window.confirm("Delete this table?")) return;
-    setTables(tables.filter(t => t.id !== id));
+    handleSetTables(tables.filter(t => t.id !== id));
   };
 
   const getStatusColor = (status) => {
@@ -98,7 +101,7 @@ export default function Tables() {
   return (
     <div>
       {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Tables", val: tables.length, color: C.amber2 },
           { label: "Available", val: availableCount, color: C.green },
@@ -112,7 +115,7 @@ export default function Tables() {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
         <div style={{ ...card(), padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Total Capacity</div>
           <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: C.blue }}>{totalCapacity} seats</div>
@@ -127,17 +130,17 @@ export default function Tables() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           {TABLE_TYPES.slice(1).map(type => (
-            <button key={type} onClick={() => setTypeFilter(type)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${typeFilter === type ? C.amber3 : C.border2}`, background: typeFilter === type ? C.amberDim : C.bg3, color: typeFilter === type ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={type} onClick={() => setTypeFilter(type)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${typeFilter === type ? C.amber3 : C.border2}`, background: typeFilter === type ? C.amberDim : C.bg3, color: typeFilter === type ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {type}
             </button>
           ))}
           {TABLE_AREAS.slice(1).map(area => (
-            <button key={area} onClick={() => setAreaFilter(area)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${areaFilter === area ? C.amber3 : C.border2}`, background: areaFilter === area ? C.amberDim : C.bg3, color: areaFilter === area ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={area} onClick={() => setAreaFilter(area)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${areaFilter === area ? C.amber3 : C.border2}`, background: areaFilter === area ? C.amberDim : C.bg3, color: areaFilter === area ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {area}
             </button>
           ))}
           {TABLE_STATUS.slice(1).map(status => (
-            <button key={status} onClick={() => setStatusFilter(status)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${statusFilter === status ? C.amber3 : C.border2}`, background: statusFilter === status ? C.amberDim : C.bg3, color: statusFilter === status ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={status} onClick={() => setStatusFilter(status)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${statusFilter === status ? C.amber3 : C.border2}`, background: statusFilter === status ? C.amberDim : C.bg3, color: statusFilter === status ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {status}
             </button>
           ))}
@@ -146,7 +149,7 @@ export default function Tables() {
       </div>
 
       {/* Table Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10 }} className="tables-grid">
         {filtered.map(table => {
           const sc = getStatusColor(table.status);
           return (

@@ -44,19 +44,19 @@ export const card = (extra = {}) => ({
 });
 
 export const btn = (variant) => {
-  if (variant === "primary") return { padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.amber3}`, background: C.amber, color: "#000", fontSize: 12, cursor: "pointer", fontWeight: 700, letterSpacing: ".02em", transition: "opacity .15s" };
-  if (variant === "ghost") return { padding: "8px 14px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 12, cursor: "pointer", fontWeight: 600, transition: "all .15s" };
-  if (variant === "danger") return { padding: "5px 10px", borderRadius: 7, border: `1px solid #3a1a1a`, background: "transparent", color: C.red, fontSize: 11, cursor: "pointer" };
-  if (variant === "success") return { padding: "5px 10px", borderRadius: 7, border: `1px solid #1a3a1a`, background: "transparent", color: C.green, fontSize: 11, cursor: "pointer" };
+  if (variant === "primary") return { padding: "12px 20px", borderRadius: 8, border: `1px solid ${C.amber3}`, background: C.amber, color: "#000", fontSize: 14, cursor: "pointer", fontWeight: 700, letterSpacing: ".02em", transition: "opacity .15s", minHeight: 44, minWidth: 44 };
+  if (variant === "ghost") return { padding: "12px 16px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 14, cursor: "pointer", fontWeight: 600, transition: "all .15s", minHeight: 44, minWidth: 44 };
+  if (variant === "danger") return { padding: "10px 14px", borderRadius: 7, border: `1px solid #3a1a1a`, background: "transparent", color: C.red, fontSize: 13, cursor: "pointer", minHeight: 44, minWidth: 44 };
+  if (variant === "success") return { padding: "10px 14px", borderRadius: 7, border: `1px solid #1a3a1a`, background: "transparent", color: C.green, fontSize: 13, cursor: "pointer", minHeight: 44, minWidth: 44 };
   return {};
 };
 
 export const input = {
   background: C.bg3, border: `1px solid ${C.border2}`,
-  borderRadius: 8, padding: "9px 12px",
-  color: C.text, fontSize: 13, width: "100%",
+  borderRadius: 8, padding: "12px 14px",
+  color: C.text, fontSize: 16, width: "100%",
   outline: "none", fontFamily: "inherit",
-  boxSizing: "border-box",
+  boxSizing: "border-box", minHeight: 44,
 };
 
 export const label = { fontSize: 10, fontWeight: 700, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 6, display: "block" };

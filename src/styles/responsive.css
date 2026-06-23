@@ -38,8 +38,8 @@
   
   .hamburger-btn {
     display: flex !important;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border: none;
     background: rgba(232, 160, 32, 0.1);
     border-radius: 8px;
@@ -50,8 +50,17 @@
     justify-content: center;
   }
   
+  /* Hide desktop header on mobile */
+  .desktop-header {
+    display: none !important;
+  }
+  
   /* Main content adjustments */
-  main {
+  .main-content {
+    padding: 0 !important;
+  }
+  
+  .content-area {
     padding: 12px !important;
   }
   
@@ -111,6 +120,26 @@
     padding: 12px !important;
   }
   
+  /* Menu grid */
+  .menu-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Inventory grid */
+  .inventory-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Staff grid */
+  .staff-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Tables grid */
+  .tables-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
   /* Modal adjustments */
   .modal {
     width: 95% !important;
@@ -121,13 +150,17 @@
   
   /* Button adjustments */
   .btn {
-    padding: 8px 12px !important;
-    font-size: 12px !important;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    min-height: 44px;
+    min-width: 44px;
   }
   
   /* Input adjustments */
   input, select, textarea {
     font-size: 16px !important; /* Prevent zoom on iOS */
+    min-height: 44px;
+    padding: 10px 12px !important;
   }
   
   /* Hide non-essential elements on mobile */
@@ -162,6 +195,14 @@
   .kitchen-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
+  
+  .mobile-header {
+    display: none !important;
+  }
+  
+  .hamburger-btn {
+    display: none !important;
+  }
 }
 
 @media (min-width: 1025px) {
@@ -171,6 +212,10 @@
   }
   
   .hamburger-btn {
+    display: none !important;
+  }
+  
+  .sidebar-overlay {
     display: none !important;
   }
   
@@ -201,7 +246,7 @@
     height: 50px;
   }
   
-  main {
+  .content-area {
     padding: 8px !important;
   }
   
@@ -215,11 +260,16 @@
   .sidebar,
   .mobile-header,
   .hamburger-btn,
-  .sidebar-overlay {
+  .sidebar-overlay,
+  .desktop-header {
     display: none !important;
   }
   
-  main {
+  .main-content {
+    padding: 0 !important;
+  }
+  
+  .content-area {
     padding: 0 !important;
   }
   

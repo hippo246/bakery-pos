@@ -1,4 +1,5 @@
 // Offline mode support utilities for BrewCRM
+import { useState, useEffect } from "react";
 
 const STORAGE_PREFIX = "brewcrm_";
 const SYNC_QUEUE_KEY = "brewcrm_sync_queue";

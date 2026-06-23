@@ -2,6 +2,7 @@ import { useState } from "react";
 import { C, pill, input, btn, SRC_COLORS, URGENCY_ORDER, URGENCY_NEXT, URGENCY_PREV } from "../../styles/theme";
 import ElapsedTimer from "../common/ElapsedTimer";
 import { srcLabel } from "../../styles/theme";
+import { getMinutesElapsed } from "../../domain/dates.js";
 
 // Prep time estimates for menu items (in minutes)
 const PREP_TIMES = {
@@ -21,7 +22,7 @@ const PREP_TIMES = {
   "Blueberry Muffin": 3,
 };
 
-function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemCheck, compact }) {
+function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemCheck, onStart, onMoveStation, onBump, compact }) {
   const [editingNote, setEditingNote] = useState(false);
   const [noteVal, setNoteVal] = useState(card.note || "");
   const [holdReason, setHoldReason] = useState("");
@@ -38,7 +39,7 @@ function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemChec
 
   const getPrepTimeStatus = () => {
     const prepTime = calculatePrepTime();
-    const elapsedMinutes = Math.floor((Date.now() - card.startedAt) / 60000);
+    const elapsedMinutes = getMinutesElapsed(card.startedAt);
     const remaining = Math.max(0, prepTime - elapsedMinutes);
     
     if (remaining === 0) return { label: "Ready", color: C.green };
@@ -142,18 +143,27 @@ function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemChec
       )}
 
       {/* Action row */}
-      <div style={{ display: "flex", gap: 5 }}>
-        <button onClick={() => onDone(card.id)} style={{ flex: 2, padding: "8px 0", borderRadius: 8, border: "none", background: checkedAll ? "#1a3a1a" : "#162614", color: checkedAll ? C.green : "#4a7a50", fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: ".03em", transition: "all .2s" }}>
+      <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+        <button onClick={() => onDone(card.id)} style={{ flex: 2, padding: "10px 0", borderRadius: 8, border: "none", background: checkedAll ? "#1a3a1a" : "#162614", color: checkedAll ? C.green : "#4a7a50", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: ".03em", transition: "all .2s", minHeight: 44 }}>
           {checkedAll ? "✓ Done" : `✓ Done (${checkedCount}/${card.items.length})`}
         </button>
         {card.held ? (
-          <button onClick={() => onHold(card.id)} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid ${C.amber3}`, background: "rgba(232,160,32,.1)", color: C.amber2, fontSize: 12, cursor: "pointer" }}>▶ Resume</button>
+          <button onClick={() => onHold(card.id)} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${C.amber3}`, background: "rgba(232,160,32,.1)", color: C.amber2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>▶ Resume</button>
         ) : (
-          <button onClick={() => { if (card.held) { onHold(card.id); } else { setShowHoldInput(h => !h); } }} style={{ flex: 1, padding: 8, borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 12, cursor: "pointer" }}>⏸ Hold</button>
+          <button onClick={() => { if (card.held) { onHold(card.id); } else { setShowHoldInput(h => !h); } }} style={{ flex: 1, padding: 10, borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>⏸ Hold</button>
+        )}
+        {onStart && (
+          <button onClick={() => onStart(card.id)} style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }} title="Start ticket">▶ Start</button>
+        )}
+        {onMoveStation && (
+          <button onClick={() => onMoveStation(card.id)} style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }} title="Move to station">↔ Move</button>
+        )}
+        {onBump && (
+          <button onClick={() => onBump(card.id)} style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }} title="Bump ticket">⇪ Bump</button>
         )}
         {/* Urgency stepper */}
-        <button onClick={() => onUrgencyChange(card.id, URGENCY_PREV[card.urgency])} title="Lower urgency" style={{ padding: "0 8px", borderRadius: 7, border: `1px solid ${C.border2}`, background: "transparent", color: C.text3, fontSize: 13, cursor: "pointer" }}>▽</button>
-        <button onClick={() => onUrgencyChange(card.id, URGENCY_NEXT[card.urgency])} title="Raise urgency" style={{ padding: "0 8px", borderRadius: 7, border: `1px solid ${C.border2}`, background: "transparent", color: { urgent: C.red, soon: C.amber, ok: C.text3 }[card.urgency], fontSize: 13, cursor: "pointer" }}>△</button>
+        <button onClick={() => onUrgencyChange(card.id, URGENCY_PREV[card.urgency])} title="Lower urgency" style={{ padding: "10px 8px", borderRadius: 7, border: `1px solid ${C.border2}`, background: "transparent", color: C.text3, fontSize: 14, cursor: "pointer", minHeight: 44 }}>▽</button>
+        <button onClick={() => onUrgencyChange(card.id, URGENCY_NEXT[card.urgency])} title="Raise urgency" style={{ padding: "10px 8px", borderRadius: 7, border: `1px solid ${C.border2}`, background: "transparent", color: { urgent: C.red, soon: C.amber, ok: C.text3 }[card.urgency], fontSize: 14, cursor: "pointer", minHeight: 44 }}>△</button>
       </div>
     </div>
   );

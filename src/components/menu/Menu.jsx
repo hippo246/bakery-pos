@@ -47,8 +47,8 @@ function Menu({ menuItems, setMenuItems }) {
   return (
     <div>
       {/* Header Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ position: "relative" }}>
             <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.text3 }}>🔍</span>
             <input style={{ ...input, paddingLeft: 28, width: 160 }} placeholder="Search menu…" value={menuSearch} onChange={e => setMenuSearch(e.target.value)} />
@@ -56,9 +56,9 @@ function Menu({ menuItems, setMenuItems }) {
           {cats.map(cat => {
             const catCount = menuItems.filter(m => (cat === "ALL" || m.cat === cat)).length;
             return (
-            <button key={cat} onClick={() => setCatFilter(cat)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${catFilter === cat ? C.amber3 : C.border2}`, background: catFilter === cat ? C.amberDim : C.bg3, color: catFilter === cat ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <button key={cat} onClick={() => setCatFilter(cat)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${catFilter === cat ? C.amber3 : C.border2}`, background: catFilter === cat ? C.amberDim : C.bg3, color: catFilter === cat ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, minHeight: 44 }}>
               {cat}
-              <span style={{ fontSize: 9, fontFamily: "monospace", background: catFilter === cat ? C.amber3 : C.bg4, color: catFilter === cat ? C.amber2 : C.text3, padding: "0 4px", borderRadius: 3 }}>{catCount}</span>
+              <span style={{ fontSize: 10, fontFamily: "monospace", background: catFilter === cat ? C.amber3 : C.bg4, color: catFilter === cat ? C.amber2 : C.text3, padding: "2px 5px", borderRadius: 3 }}>{catCount}</span>
             </button>
           )})}
           <span style={{ fontSize: 11, color: C.text3, marginLeft: 8 }}>{activeCount}/{menuItems.length} active{eightySixedCount > 0 && <span style={{ color: "#FF8C42", marginLeft: 6 }}>· {eightySixedCount} 86'd</span>}</span>
@@ -76,7 +76,7 @@ function Menu({ menuItems, setMenuItems }) {
               {cat}
               <span style={{ color: C.text3, fontWeight: 400, letterSpacing: 0, fontSize: 11 }}>({items.filter(m => m.active).length} active)</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }} className="menu-grid">
               {items.map(m => (
                 <div key={m.id} style={{ background: m.eightySixed ? "#1a0d0d" : m.active ? C.bg2 : C.bg3, border: `1px solid ${m.eightySixed ? "#3a1a1a" : C.border}`, borderRadius: 12, padding: "12px 14px", opacity: m.active && !m.eightySixed ? 1 : 0.6, transition: "opacity .2s" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>

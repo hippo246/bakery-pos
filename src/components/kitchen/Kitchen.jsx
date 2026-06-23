@@ -1,6 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { C, card, input, btn, URGENCY_ORDER } from "../../styles/theme";
 import KDSCard from "./KDSCard";
+import { 
+  createKdsTicketsFromOrder, 
+  normalizeKdsTicket, 
+  getTicketsByStation,
+  getActiveTickets,
+  getHeldTickets,
+  areAllOrderTicketsCompleted,
+  cancelOrderTickets,
+  calculateUrgencyFromTime,
+  recalculateUrgency,
+  startKdsTicket,
+  completeKdsTicket,
+  holdKdsTicket,
+  releaseKdsTicket,
+  moveKdsTicketToStation,
+  bumpKdsTicket,
+  toggleKdsItemCheck,
+  KDS_STATIONS
+} from "../../domain/kdsModel.js";
+import { getMinutesElapsed, toTimestamp } from "../../domain/dates.js";
 
 // Prep time estimates for menu items (in minutes)
 const PREP_TIMES = {
@@ -20,37 +40,149 @@ const PREP_TIMES = {
   "Blueberry Muffin": 3,
 };
 
-function Kitchen({ kdsCards, setKdsCards }) {
+function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
   const [view, setView] = useState("cards");
   const [doneLog, setDoneLog] = useState([]);
   const [sortBy, setSortBy] = useState("time");
   const [showDoneLog, setShowDoneLog] = useState(false);
-  const [stationFilter, setStationFilter] = useState("ALL");
+  const [stationFilter, setStationFilter] = useState("All");
+  const [holdReasonModal, setHoldReasonModal] = useState(null);
+  const [moveStationModal, setMoveStationModal] = useState(null);
 
-  const completeCard = (id) => {
+  // Memoized filtered tickets by station
+  const filteredTickets = useMemo(() => {
+    return getTicketsByStation(kdsCards, stationFilter);
+  }, [kdsCards, stationFilter]);
+
+  // Memoized active and held tickets
+  const activeTickets = useMemo(() => getActiveTickets(kdsCards), [kdsCards]);
+  const heldTickets = useMemo(() => getHeldTickets(kdsCards), [kdsCards]);
+
+  // Recalculate urgency for all tickets every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setKdsCards(prev => prev.map(ticket => recalculateUrgency(ticket)));
+    }, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, [setKdsCards]);
+
+  // Sync KDS cards with orders - create KDS cards for new orders
+  const syncKDSWithOrders = useCallback(() => {
+    if (!orders) return;
+    
+    orders.forEach(order => {
+      // Only create KDS cards for orders that are accepted/preparing and don't have a KDS card yet
+      if ((order.status === "ACCEPTED" || order.status === "PREPARING") && !kdsCards.find(c => c.orderId === order.id)) {
+        const newTickets = createKdsTicketsFromOrder(order);
+        if (newTickets.length > 0) {
+          setKdsCards(prev => [...prev, ...newTickets]);
+        }
+      }
+      
+      // Cancel KDS tickets for cancelled orders
+      if (order.status === "CANCELLED" && kdsCards.find(c => c.orderId === order.id)) {
+        setKdsCards(prev => cancelOrderTickets(order.id, prev));
+      }
+      
+      // Remove completed KDS tickets for ready/completed orders
+      if ((order.status === "READY" || order.status === "COMPLETED") && kdsCards.find(c => c.orderId === order.id)) {
+        setKdsCards(prev => cancelOrderTickets(order.id, prev));
+      }
+    });
+  }, [orders, kdsCards, setKdsCards]);
+
+  // Sync when orders change
+  useEffect(() => {
+    syncKDSWithOrders();
+  }, [syncKDSWithOrders]);
+
+  // Complete ticket and check if order should be marked as READY
+  const completeCard = useCallback((id) => {
     const card = kdsCards.find(c => c.id === id);
     if (!card) return;
-    setDoneLog(l => [{ ...card, completedAt: Date.now(), duration: Math.round((Date.now() - card.startedAt) / 1000) }, ...l].slice(0, 20));
-    setKdsCards(prev => prev.filter(c => c.id !== id));
-  };
+    
+    const completedTicket = completeKdsTicket(card);
+    setDoneLog(l => [{ ...completedTicket, completedAt: Date.now(), duration: Math.round((Date.now() - card.startedAt) / 1000) }, ...l].slice(0, 20));
+    setKdsCards(prev => prev.map(c => c.id === id ? completedTicket : c));
+    
+    // Check if all tickets for this order are completed
+    const updatedCards = kdsCards.map(c => c.id === id ? completedTicket : c);
+    if (areAllOrderTicketsCompleted(card.orderId, updatedCards)) {
+      // Update order status to READY
+      setOrders(prev => prev.map(o => o.id === card.orderId ? { ...o, status: "READY" } : o));
+    }
+  }, [kdsCards, setOrders]);
 
-  const holdCard = (id, reason = "") => {
-    setKdsCards(prev => prev.map(c => c.id === id ? { ...c, held: !c.held, holdReason: reason || c.holdReason || "" } : c));
-  };
+  const holdCard = useCallback((id, reason = "") => {
+    const card = kdsCards.find(c => c.id === id);
+    if (!card) return;
+    
+    if (card.held) {
+      // Release from hold
+      setKdsCards(prev => prev.map(c => c.id === id ? releaseKdsTicket(c) : c));
+    } else {
+      // Put on hold
+      if (reason) {
+        setKdsCards(prev => prev.map(c => c.id === id ? holdKdsTicket(c, reason) : c));
+      } else {
+        setHoldReasonModal(id);
+      }
+    }
+  }, [kdsCards, setKdsCards]);
 
-  const changeUrgency = (id, urgency) => {
+  const confirmHold = useCallback((reason) => {
+    if (holdReasonModal) {
+      setKdsCards(prev => prev.map(c => c.id === holdReasonModal ? holdKdsTicket(c, reason) : c));
+      setHoldReasonModal(null);
+    }
+  }, [holdReasonModal, setKdsCards]);
+
+  const changeUrgency = useCallback((id, urgency) => {
     setKdsCards(prev => prev.map(c => c.id === id ? { ...c, urgency } : c));
-  };
+  }, [setKdsCards]);
 
-  const editNote = (id, note) => {
+  const editNote = useCallback((id, note) => {
     setKdsCards(prev => prev.map(c => c.id === id ? { ...c, note } : c));
-  };
+  }, [setKdsCards]);
 
-  const checkItem = (cardId, itemIdx) => {
-    setKdsCards(prev => prev.map(c => c.id === cardId
-      ? { ...c, items: c.items.map((it, i) => i === itemIdx ? { ...it, checked: !it.checked } : it) }
-      : c));
-  };
+  const checkItem = useCallback((cardId, itemIdx) => {
+    const card = kdsCards.find(c => c.id === cardId);
+    if (!card) return;
+    
+    const updatedTicket = toggleKdsItemCheck(card, itemIdx, !card.items[itemIdx].checked);
+    setKdsCards(prev => prev.map(c => c.id === cardId ? updatedTicket : c));
+  }, [kdsCards, setKdsCards]);
+
+  const startTicket = useCallback((id) => {
+    setKdsCards(prev => prev.map(c => c.id === id ? startKdsTicket(c) : c));
+  }, [setKdsCards]);
+
+  const moveStation = useCallback((id, newStation) => {
+    const card = kdsCards.find(c => c.id === id);
+    if (!card) return;
+    
+    try {
+      const updatedTicket = moveKdsTicketToStation(card, newStation);
+      setKdsCards(prev => prev.map(c => c.id === id ? updatedTicket : c));
+      setMoveStationModal(null);
+    } catch (error) {
+      console.error(error);
+    }
+  }, [kdsCards, setKdsCards]);
+
+  const bumpTicket = useCallback((id) => {
+    const card = kdsCards.find(c => c.id === id);
+    if (!card) return;
+    
+    const bumpedTicket = bumpKdsTicket(card);
+    setDoneLog(l => [{ ...bumpedTicket, completedAt: Date.now(), duration: Math.round((Date.now() - card.startedAt) / 1000) }, ...l].slice(0, 20));
+    setKdsCards(prev => prev.filter(c => c.id !== id));
+    
+    // Check if all tickets for this order are completed
+    if (areAllOrderTicketsCompleted(card.orderId, kdsCards.filter(c => c.id !== id))) {
+      setOrders(prev => prev.map(o => o.id === card.orderId ? { ...o, status: "READY" } : o));
+    }
+  }, [kdsCards, setOrders]);
 
   const bumpAllNonUrgent = () => {
     const done = kdsCards.filter(c => (c.urgency === "ok" || c.urgency === "soon") && !c.held);
@@ -85,7 +217,7 @@ function Kitchen({ kdsCards, setKdsCards }) {
     return { label: `${remaining}m left`, color: C.text3 };
   };
 
-  const visibleCards = kdsCards.filter(c => stationFilter === "ALL" || c.station === stationFilter);
+  const visibleCards = filteredTickets;
   const sorted = [...visibleCards].sort((a, b) => {
     if (sortBy === "time") return a.startedAt - b.startedAt;
     if (sortBy === "urgency") return URGENCY_ORDER[a.urgency] - URGENCY_ORDER[b.urgency];
@@ -93,13 +225,19 @@ function Kitchen({ kdsCards, setKdsCards }) {
     return 0;
   });
 
-  const urgentCount = kdsCards.filter(c => c.urgency === "urgent" && !c.held).length;
-  const heldCount = kdsCards.filter(c => c.held).length;
+  const urgentCount = activeTickets.filter(c => c.urgency === "urgent").length;
+  const heldCount = heldTickets.length;
   const avgDuration = doneLog.length
     ? Math.round(doneLog.reduce((s, d) => s + (d.duration || 0), 0) / doneLog.length)
     : null;
 
-  const stationCounts = { Bar: kdsCards.filter(c => c.station === "Bar").length, Kitchen: kdsCards.filter(c => c.station === "Kitchen").length };
+  const stationCounts = {
+    All: kdsCards.filter(c => !c.completed).length,
+    Bar: kdsCards.filter(c => c.station === "Bar" && !c.completed).length,
+    Kitchen: kdsCards.filter(c => c.station === "Kitchen" && !c.completed).length,
+    Packaging: kdsCards.filter(c => c.station === "Packaging" && !c.completed).length,
+    Dessert: kdsCards.filter(c => c.station === "Dessert" && !c.completed).length,
+  };
 
   return (
     <div style={{ display: "flex", gap: 14, height: "calc(100vh - 130px)" }}>
@@ -107,7 +245,7 @@ function Kitchen({ kdsCards, setKdsCards }) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* ── Throughput bar ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 12 }}>
+        <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 12 }}>
           {[
             { val: kdsCards.length, lbl: "Active Tickets", color: C.amber2 },
             { val: urgentCount, lbl: "Urgent", color: urgentCount > 0 ? C.red : C.text3 },
@@ -126,30 +264,30 @@ function Kitchen({ kdsCards, setKdsCards }) {
           {/* View toggle */}
           <div style={{ display: "flex", gap: 4, background: C.bg3, padding: 3, borderRadius: 8 }}>
             {[["cards","⊞ Cards"],["list","≡ List"],["station","⊟ Station"]].map(([v, lbl]) => (
-              <button key={v} onClick={() => setView(v)} style={{ padding: "5px 11px", borderRadius: 6, border: "none", background: view === v ? C.bg4 : "transparent", color: view === v ? C.amber2 : C.text3, fontSize: 12, cursor: "pointer", fontWeight: view === v ? 600 : 400 }}>{lbl}</button>
+              <button key={v} onClick={() => setView(v)} style={{ padding: "10px 11px", borderRadius: 6, border: "none", background: view === v ? C.bg4 : "transparent", color: view === v ? C.amber2 : C.text3, fontSize: 12, cursor: "pointer", fontWeight: view === v ? 600 : 400, minHeight: 44 }}>{lbl}</button>
             ))}
           </div>
           {/* Sort */}
-          <select style={{ ...input, fontSize: 11, padding: "5px 8px", width: "auto" }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+          <select style={{ ...input, fontSize: 11, padding: "5px 8px", width: "auto", minHeight: 44 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
             <option value="time">Sort: Oldest First</option>
             <option value="urgency">Sort: Urgency</option>
             <option value="source">Sort: Source</option>
           </select>
           {/* Station filter (hidden in station view) */}
-          {view !== "station" && ["ALL","Bar","Kitchen"].map(s => (
-            <button key={s} onClick={() => setStationFilter(s)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${stationFilter === s ? C.amber3 : C.border2}`, background: stationFilter === s ? C.amberDim : C.bg3, color: stationFilter === s ? C.amber2 : C.text2, fontSize: 11, cursor: "pointer" }}>
-              {s}{s !== "ALL" ? ` (${stationCounts[s] || 0})` : ""}
+          {view !== "station" && KDS_STATIONS.map(s => (
+            <button key={s} onClick={() => setStationFilter(s)} style={{ padding: "10px 10px", borderRadius: 6, border: `1px solid ${stationFilter === s ? C.amber3 : C.border2}`, background: stationFilter === s ? C.amberDim : C.bg3, color: stationFilter === s ? C.amber2 : C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>
+              {s}{s !== "All" ? ` (${stationCounts[s] || 0})` : ""}
             </button>
           ))}
           {/* Bulk actions */}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
             {kdsCards.filter(c => !c.held && c.urgency !== "urgent").length > 0 && (
-              <button onClick={bumpAllNonUrgent} style={{ padding: "5px 11px", borderRadius: 7, border: `1px solid #1a4020`, background: "#0d2010", color: C.green, fontSize: 11, cursor: "pointer", fontWeight: 700 }}>✓ Bump Non-Urgent</button>
+              <button onClick={bumpAllNonUrgent} style={{ padding: "10px 11px", borderRadius: 7, border: `1px solid #1a4020`, background: "#0d2010", color: C.green, fontSize: 11, cursor: "pointer", fontWeight: 700, minHeight: 44 }}>✓ Bump Non-Urgent</button>
             )}
             {doneLog.length > 0 && (
-              <button onClick={recallLast} style={{ padding: "5px 11px", borderRadius: 7, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, cursor: "pointer" }}>↩ Recall Last</button>
+              <button onClick={recallLast} style={{ padding: "10px 11px", borderRadius: 7, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>↩ Recall Last</button>
             )}
-            <button onClick={() => setShowDoneLog(v => !v)} style={{ padding: "5px 11px", borderRadius: 7, border: `1px solid ${C.border2}`, background: showDoneLog ? C.amberDim : C.bg3, color: showDoneLog ? C.amber2 : C.text2, fontSize: 11, cursor: "pointer" }}>
+            <button onClick={() => setShowDoneLog(v => !v)} style={{ padding: "10px 11px", borderRadius: 7, border: `1px solid ${C.border2}`, background: showDoneLog ? C.amberDim : C.bg3, color: showDoneLog ? C.amber2 : C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>
               🕘 Log ({doneLog.length})
             </button>
           </div>
@@ -167,7 +305,7 @@ function Kitchen({ kdsCards, setKdsCards }) {
         {/* ── Cards view ── */}
         {kdsCards.length > 0 && view === "cards" && (
           <div style={{ overflowY: "auto", flex: 1 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 12 }} className="kitchen-grid">
               {sorted.map(card => (
                 <KDSCard key={card.id} card={card} onDone={completeCard} onHold={holdCard} onUrgencyChange={changeUrgency} onNoteEdit={editNote} onItemCheck={checkItem} compact={false} />
               ))}
@@ -186,14 +324,21 @@ function Kitchen({ kdsCards, setKdsCards }) {
 
         {/* ── Station split view ── */}
         {kdsCards.length > 0 && view === "station" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, overflowY: "auto", flex: 1 }}>
-            {["Bar", "Kitchen"].map(station => {
+          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, overflowY: "auto", flex: 1 }}>
+            {["Bar", "Kitchen", "Packaging", "Dessert"].map(station => {
               const stCards = sorted.filter(c => c.station === station);
+              const stationColors = {
+                Bar: { bg: "#0d1a28", border: "#1a3050", color: C.blue },
+                Kitchen: { bg: "#1a0d1a", border: "#2e1a3a", color: C.purple },
+                Packaging: { bg: "#0d1a15", border: "#1a3028", color: C.green },
+                Dessert: { bg: "#1a150d", border: "#302818", color: C.amber2 },
+              };
+              const colors = stationColors[station] || stationColors.Bar;
               return (
                 <div key={station} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: station === "Bar" ? "#0d1a28" : "#1a0d1a", borderRadius: 8, border: `1px solid ${station === "Bar" ? "#1a3050" : "#2e1a3a"}` }}>
-                    <span style={{ fontSize: 14 }}>{station === "Bar" ? "🍹" : "🍳"}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: station === "Bar" ? C.blue : C.purple }}>{station}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: colors.bg, borderRadius: 8, border: `1px solid ${colors.border}` }}>
+                    <span style={{ fontSize: 14 }}>{station === "Bar" ? "🍹" : station === "Kitchen" ? "🍳" : station === "Packaging" ? "📦" : "🍰"}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: colors.color }}>{station}</span>
                     <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 11, color: C.text3 }}>{stCards.length} tickets</span>
                     {stCards.filter(c => c.urgency === "urgent").length > 0 && (
                       <span style={{ fontSize: 10, color: C.red, fontFamily: "monospace", fontWeight: 700 }}>{stCards.filter(c => c.urgency === "urgent").length} urgent</span>
@@ -201,7 +346,19 @@ function Kitchen({ kdsCards, setKdsCards }) {
                   </div>
                   {stCards.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: C.text3, fontSize: 12 }}>No tickets</div>}
                   {stCards.map(card => (
-                    <KDSCard key={card.id} card={card} onDone={completeCard} onHold={holdCard} onUrgencyChange={changeUrgency} onNoteEdit={editNote} onItemCheck={checkItem} compact={false} />
+                    <KDSCard 
+                      key={card.id} 
+                      card={card} 
+                      onDone={completeCard} 
+                      onHold={holdCard} 
+                      onUrgencyChange={changeUrgency} 
+                      onNoteEdit={editNote} 
+                      onItemCheck={checkItem}
+                      onStart={startTicket}
+                      onMoveStation={(id) => setMoveStationModal(id)}
+                      onBump={bumpTicket}
+                      compact={false} 
+                    />
                   ))}
                 </div>
               );
@@ -209,6 +366,55 @@ function Kitchen({ kdsCards, setKdsCards }) {
           </div>
         )}
       </div>
+
+      {/* ── Hold Reason Modal ── */}
+      {holdReasonModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setHoldReasonModal(null)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: 20, width: 400, maxWidth: "95%" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Hold Reason</div>
+            <textarea
+              style={{ ...input, resize: "none", marginBottom: 12 }}
+              rows={3}
+              placeholder="Enter hold reason..."
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  confirmHold(e.target.value);
+                }
+              }}
+            />
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setHoldReasonModal(null)} style={{ ...btn("ghost"), padding: "8px 16px" }}>Cancel</button>
+              <button onClick={() => {
+                const textarea = document.querySelector("textarea");
+                if (textarea) confirmHold(textarea.value);
+              }} style={{ ...btn("primary"), padding: "8px 16px" }}>Hold</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Move Station Modal ── */}
+      {moveStationModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setMoveStationModal(null)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: 20, width: 400, maxWidth: "95%" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Move to Station</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {["Bar", "Kitchen", "Packaging", "Dessert"].map(station => (
+                <button
+                  key={station}
+                  onClick={() => moveStation(moveStationModal, station)}
+                  style={{ padding: "12px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 13, cursor: "pointer", textAlign: "left" }}
+                >
+                  {station === "Bar" ? "🍹" : station === "Kitchen" ? "🍳" : station === "Packaging" ? "📦" : "🍰"} {station}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setMoveStationModal(null)} style={{ ...btn("ghost"), padding: "8px 16px", marginTop: 12, width: "100%" }}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Done log side panel ── */}
       {showDoneLog && (

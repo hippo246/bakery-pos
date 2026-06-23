@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_STAFF, STAFF_ROLES, STAFF_STATUS, SHIFT_TYPES } from "../../data/staffConstants";
 
-export default function Staff() {
-  const [staff, setStaff] = useState(INIT_STAFF);
+export default function Staff({ staff: externalStaff, setStaff: externalSetStaff, orders }) {
+  const [staff, setStaff] = useState(externalStaff || INIT_STAFF);
   const [roleFilter, setRoleFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -11,8 +11,31 @@ export default function Staff() {
   const [editStaff, setEditStaff] = useState(null);
   const [form, setForm] = useState({ name: "", role: "Barista", phone: "", email: "", status: "active", hourlyRate: "", shifts: [] });
   const [viewMode, setViewMode] = useState("grid"); // grid | list
+  const [selectedStaff, setSelectedStaff] = useState(null);
 
-  const filtered = staff.filter(person => {
+  // Use external setter if provided, otherwise use local state
+  const handleSetStaff = externalSetStaff || setStaff;
+
+  // Calculate staff performance metrics
+  const staffPerformance = useMemo(() => {
+    return staff.map(person => {
+      const staffOrders = orders?.filter(o => o.assignedStaff === person.id) || [];
+      const completedOrders = staffOrders.filter(o => o.status === "COMPLETED");
+      const avgPrepTime = completedOrders.length > 0 
+        ? Math.round(completedOrders.reduce((sum, o) => sum + (o.prepTime || 5), 0) / completedOrders.length)
+        : 0;
+      
+      return {
+        ...person,
+        ordersHandled: staffOrders.length,
+        ordersCompleted: completedOrders.length,
+        avgPrepTime,
+        efficiency: completedOrders.length > 0 ? Math.round((completedOrders.length / Math.max(1, staffOrders.length)) * 100) : 0
+      };
+    });
+  }, [staff, orders]);
+
+  const filtered = staffPerformance.filter(person => {
     const matchesRole = roleFilter === "All" || person.role === roleFilter;
     const matchesStatus = statusFilter === "All" || person.status === statusFilter;
     const matchesSearch = !search.trim() || person.name.toLowerCase().includes(search.toLowerCase()) || person.email?.toLowerCase().includes(search.toLowerCase()) || person.phone.includes(search);
@@ -22,6 +45,10 @@ export default function Staff() {
   const activeCount = staff.filter(s => s.status === "active").length;
   const onLeaveCount = staff.filter(s => s.status === "on_leave").length;
   const totalHourlyCost = staff.filter(s => s.status === "active").reduce((sum, s) => sum + s.hourlyRate, 0);
+  const totalOrdersHandled = staffPerformance.reduce((sum, s) => sum + s.ordersHandled, 0);
+  const avgEfficiency = staffPerformance.length > 0 
+    ? Math.round(staffPerformance.reduce((sum, s) => sum + s.efficiency, 0) / staffPerformance.length)
+    : 0;
 
   const openAdd = () => {
     setEditStaff(null);
@@ -44,9 +71,9 @@ export default function Staff() {
       joinDate: new Date().toISOString().split("T")[0],
     };
     if (editStaff) {
-      setStaff(staff.map(s => s.id === editStaff ? { ...s, ...staffData } : s));
+      handleSetStaff(staff.map(s => s.id === editStaff ? { ...s, ...staffData } : s));
     } else {
-      setStaff([...staff, { ...staffData, id: "staff-" + Date.now() }]);
+      handleSetStaff([...staff, { ...staffData, id: "staff-" + Date.now() }]);
     }
     setShowModal(false);
   };
@@ -59,23 +86,23 @@ export default function Staff() {
   };
 
   const updateStatus = (id, status) => {
-    setStaff(staff.map(s => s.id === id ? { ...s, status } : s));
+    handleSetStaff(staff.map(s => s.id === id ? { ...s, status } : s));
   };
 
   const deleteStaff = (id) => {
     if (!window.confirm("Delete this staff member?")) return;
-    setStaff(staff.filter(s => s.id !== id));
+    handleSetStaff(staff.filter(s => s.id !== id));
   };
 
   return (
     <div>
       {/* Summary Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Staff", val: staff.length, color: C.amber2 },
           { label: "Active", val: activeCount, color: C.green },
-          { label: "On Leave", val: onLeaveCount, color: onLeaveCount > 0 ? C.amber : C.text3 },
-          { label: "Hourly Cost", val: "₹" + totalHourlyCost.toLocaleString(), color: C.blue },
+          { label: "Orders Handled", val: totalOrdersHandled, color: C.blue },
+          { label: "Avg Efficiency", val: avgEfficiency + "%", color: avgEfficiency >= 80 ? C.green : avgEfficiency >= 60 ? C.amber : C.red },
         ].map(m => (
           <div key={m.label} style={{ ...card(), padding: "12px 14px" }}>
             <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace", color: m.color }}>{m.val}</div>
@@ -92,12 +119,12 @@ export default function Staff() {
             <input style={{ ...input, paddingLeft: 28, width: 180 }} placeholder="Search staff…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           {STAFF_ROLES.slice(1).map(role => (
-            <button key={role} onClick={() => setRoleFilter(role)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${roleFilter === role ? C.amber3 : C.border2}`, background: roleFilter === role ? C.amberDim : C.bg3, color: roleFilter === role ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={role} onClick={() => setRoleFilter(role)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${roleFilter === role ? C.amber3 : C.border2}`, background: roleFilter === role ? C.amberDim : C.bg3, color: roleFilter === role ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {role}
             </button>
           ))}
           {STAFF_STATUS.slice(1).map(status => (
-            <button key={status} onClick={() => setStatusFilter(status)} style={{ padding: "5px 12px", borderRadius: 6, border: `1px solid ${statusFilter === status ? C.amber3 : C.border2}`, background: statusFilter === status ? C.amberDim : C.bg3, color: statusFilter === status ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer" }}>
+            <button key={status} onClick={() => setStatusFilter(status)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${statusFilter === status ? C.amber3 : C.border2}`, background: statusFilter === status ? C.amberDim : C.bg3, color: statusFilter === status ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", minHeight: 44 }}>
               {status.replace("_", " ")}
             </button>
           ))}
@@ -105,7 +132,7 @@ export default function Staff() {
         <div style={{ display: "flex", gap: 6 }}>
           <div style={{ display: "flex", gap: 4, background: C.bg3, padding: 3, borderRadius: 8 }}>
             {["grid","list"].map(v => (
-              <button key={v} onClick={() => setViewMode(v)} style={{ padding: "5px 11px", borderRadius: 6, border: "none", background: viewMode === v ? C.bg4 : "transparent", color: viewMode === v ? C.amber2 : C.text3, fontSize: 12, cursor: "pointer", fontWeight: viewMode === v ? 600 : 400 }}>
+              <button key={v} onClick={() => setViewMode(v)} style={{ padding: "10px 11px", borderRadius: 6, border: "none", background: viewMode === v ? C.bg4 : "transparent", color: viewMode === v ? C.amber2 : C.text3, fontSize: 12, cursor: "pointer", fontWeight: viewMode === v ? 600 : 400, minHeight: 44 }}>
                 {v === "grid" ? "⊞ Grid" : "≡ List"}
               </button>
             ))}
@@ -116,7 +143,7 @@ export default function Staff() {
 
       {/* Grid View */}
       {viewMode === "grid" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 10 }} className="staff-grid">
           {filtered.map(person => (
             <div key={person.id} style={{ ...card(), padding: "16px", border: `1px solid ${person.status === "on_leave" ? "#3a2010" : C.border}`, background: person.status === "on_leave" ? "#1a1000" : C.bg2 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -135,7 +162,7 @@ export default function Staff() {
                 ))}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+              <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
                 <div>
                   <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Status</div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: person.status === "active" ? C.green : person.status === "on_leave" ? C.amber : C.red }}>
@@ -143,8 +170,25 @@ export default function Staff() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Hourly</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace", color: C.amber2 }}>₹{person.hourlyRate}</div>
+                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Efficiency</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace", color: person.efficiency >= 80 ? C.green : person.efficiency >= 60 ? C.amber : C.red }}>
+                    {person.efficiency}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Orders</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace", color: C.amber2 }}>
+                    {person.ordersHandled}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Avg Time</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace", color: C.blue }}>
+                    {person.avgPrepTime}m
+                  </div>
                 </div>
               </div>
 
@@ -152,12 +196,12 @@ export default function Staff() {
                 📞 {person.phone} · 📧 {person.email}
               </div>
 
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => openEdit(person)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, cursor: "pointer" }}>✎ Edit</button>
-                <button onClick={() => updateStatus(person.id, person.status === "active" ? "on_leave" : "active")} style={{ padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer" }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button onClick={() => openEdit(person)} style={{ flex: 1, padding: "10px 0", borderRadius: 6, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>✎ Edit</button>
+                <button onClick={() => updateStatus(person.id, person.status === "active" ? "on_leave" : "active")} style={{ padding: "10px 10px", borderRadius: 6, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>
                   {person.status === "active" ? "⏸ Leave" : "▶ Active"}
                 </button>
-                <button onClick={() => deleteStaff(person.id)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer" }}>🗑</button>
+                <button onClick={() => deleteStaff(person.id)} style={{ padding: "10px 10px", borderRadius: 6, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer", minHeight: 44 }}>🗑</button>
               </div>
             </div>
           ))}

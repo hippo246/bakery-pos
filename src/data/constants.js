@@ -1,3 +1,5 @@
+import { normalizeOrders, normalizeCustomers, normalizeKdsCards } from '../domain/normalize.js';
+
 export const MENU_ITEMS = [
   { id: "m1", name: "Espresso", price: 80, cat: "Coffee", desc: "Double shot, intense & smooth", emoji: "☕", popular: true, eightySixed: false },
   { id: "m2", name: "Cappuccino", price: 120, cat: "Coffee", desc: "Espresso with steamed milk foam", emoji: "☕", popular: true, eightySixed: false },
@@ -11,7 +13,8 @@ export const MENU_ITEMS = [
   { id: "m10", name: "Blueberry Muffin", price: 95, cat: "Food", desc: "Jumbo, streusel-topped", emoji: "🫐", popular: false, eightySixed: false },
 ];
 
-export const INIT_ORDERS = [
+// Legacy order data - will be normalized on import
+export const LEGACY_INIT_ORDERS = [
   { id: "ORD-001", source: "WALK_IN", customer: "Rohan Mehta", items: "Cappuccino × 2, Croissant", amount: 330, status: "PREPARING", time: 8, payStatus: "PAID" },
   { id: "ORD-002", source: "SWIGGY", customer: "Priya Sharma", items: "Cold Brew × 1, Banana Bread × 2", amount: 350, status: "NEW", time: 2, payStatus: "PAID" },
   { id: "ORD-003", source: "ZOMATO", customer: "Ankit Patel", items: "Matcha Latte × 1, Avocado Toast × 1", amount: 340, status: "ACCEPTED", time: 5, payStatus: "PAID" },
@@ -20,13 +23,20 @@ export const INIT_ORDERS = [
   { id: "ORD-006", source: "SWIGGY", customer: "Meera Singh", items: "Cappuccino × 3, Banana Bread × 1", amount: 460, status: "READY", time: 12, payStatus: "PAID" },
 ];
 
-export const INIT_CUSTOMERS = [
+// Normalized orders using new domain model
+export const INIT_ORDERS = normalizeOrders(LEGACY_INIT_ORDERS);
+
+// Legacy customer data - will be normalized on import
+export const LEGACY_INIT_CUSTOMERS = [
   { id: "c1", name: "Rohan Mehta", phone: "9876543210", email: "rohan@email.com", visits: 42, spend: 12400, tier: "GOLD", tags: ["Morning Regular", "High Spender"], fav: "Cappuccino", lastVisit: "2 days ago", notes: "Prefers oat milk. Table by window." },
   { id: "c2", name: "Sneha Kulkarni", phone: "8765432109", email: "sneha@email.com", visits: 18, spend: 4800, tier: "SILVER", tags: ["Weekend Visitor"], fav: "Matcha Latte", lastVisit: "5 days ago", notes: "Allergic to nuts." },
   { id: "c3", name: "Vikram Desai", phone: "7654321098", email: "", visits: 61, spend: 18900, tier: "PLATINUM", tags: ["High Spender", "Morning Regular", "Daily Customer"], fav: "Espresso", lastVisit: "Today", notes: "Loyal since Day 1. Always espresso, never sugar." },
   { id: "c4", name: "Ayesha Khan", phone: "6543210987", email: "ayesha@email.com", visits: 8, spend: 2100, tier: "BRONZE", tags: ["New Customer"], fav: "Cold Brew", lastVisit: "12 days ago", notes: "" },
   { id: "c5", name: "Karan Joshi", phone: "9512345678", email: "karan@email.com", visits: 23, spend: 6700, tier: "SILVER", tags: ["Afternoon Regular"], fav: "Flat White", lastVisit: "Yesterday", notes: "Usually orders for 2." },
 ];
+
+// Normalized customers using new domain model
+export const INIT_CUSTOMERS = normalizeCustomers(LEGACY_INIT_CUSTOMERS);
 
 export const INIT_HIST = {
   c1: [{ date: "May 29", items: "Cappuccino × 2, Croissant", amt: 330 }, { date: "May 27", items: "Cappuccino × 1", amt: 120 }, { date: "May 24", items: "Flat White, Banana Bread", amt: 230 }],
@@ -36,12 +46,16 @@ export const INIT_HIST = {
   c5: [{ date: "May 30", items: "Flat White × 2", amt: 260 }, { date: "May 28", items: "Flat White × 2, Croissant × 2", amt: 440 }],
 };
 
-export const INIT_KDS = [
+// Legacy KDS data - will be normalized on import
+export const LEGACY_INIT_KDS = [
   { id: "ORD-001", source: "WALK_IN", station: "Bar", items: [{ name: "Cappuccino", qty: 2, mod: "Oat milk" }, { name: "Croissant", qty: 1, mod: "" }], note: "Window table", startedAt: Date.now() - 8 * 60 * 1000, urgency: "soon" },
   { id: "ORD-002", source: "SWIGGY", station: "Bar", items: [{ name: "Cold Brew", qty: 1, mod: "" }, { name: "Banana Bread", qty: 2, mod: "Warmed please" }], note: "", startedAt: Date.now() - 2 * 60 * 1000, urgency: "urgent" },
   { id: "ORD-003", source: "ZOMATO", station: "Kitchen", items: [{ name: "Matcha Latte", qty: 1, mod: "Less sugar" }, { name: "Avocado Toast", qty: 1, mod: "Extra chili" }], note: "", startedAt: Date.now() - 5 * 60 * 1000, urgency: "urgent" },
   { id: "ORD-006", source: "SWIGGY", station: "Bar", items: [{ name: "Cappuccino", qty: 3, mod: "" }, { name: "Banana Bread", qty: 1, mod: "" }], note: "3 separate cups", startedAt: Date.now() - 12 * 60 * 1000, urgency: "ok" },
 ];
+
+// Normalized KDS cards using new domain model
+export const INIT_KDS = normalizeKdsCards(LEGACY_INIT_KDS);
 
 export const MENU_CATS = ["ALL", "Coffee", "Special", "Food"];
 
