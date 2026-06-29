@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { MENU_ITEMS, INIT_ORDERS, INIT_CUSTOMERS, INIT_KDS } from "../data/constants";
 import { INIT_TABLES } from "../data/tableConstants";
 import { INIT_STAFF } from "../data/staffConstants";
 import { INIT_DISCOUNTS } from "../data/discountConstants";
 import { INIT_INVENTORY } from "../data/inventoryConstants.js";
+import { applyTheme, getTheme } from "../styles/theme";
 import Orders from "./orders/Orders";
 import Kitchen from "./kitchen/Kitchen";
 import CRM from "./crm/CRM";
@@ -28,25 +29,31 @@ export default function BrewCRM() {
   const [discounts, setDiscounts] = useState(INIT_DISCOUNTS);
   const [deliveryOrders, setDeliveryOrders] = useState([]);
   const [inventory, setInventory] = useState(INIT_INVENTORY);
+  const [theme, setTheme] = useState(() => getTheme());
+
+  const toggleTheme = useCallback(() => {
+    applyTheme();
+    const next = getTheme();
+    setTheme(next);
+    localStorage.setItem("brew-theme", next);
+  }, []);
 
   const newOrderCount = orders.filter(o => o.status === "NEW").length;
   const urgentKds = kdsCards.filter(c => c.urgency === "urgent").length;
 
-  console.log("BrewCRM rendering", { tab, orders, customers, kdsCards, menuItems });
-
   return (
-    <Layout tab={tab} setTab={setTab} newOrderCount={newOrderCount} urgentKds={urgentKds}>
-      {tab === "orders" && <Orders orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} tables={tables} setTables={setTables} staff={staff} discounts={discounts} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} />}
-      {tab === "kitchen" && <Kitchen kdsCards={kdsCards} setKdsCards={setKdsCards} orders={orders} setOrders={setOrders} />}
-      {tab === "crm" && <CRM customers={customers} setCustomers={setCustomers} orders={orders} kdsCards={kdsCards} />}
+    <Layout tab={tab} setTab={setTab} newOrderCount={newOrderCount} urgentKds={urgentKds} theme={theme} toggleTheme={toggleTheme}>
+      {tab === "orders"    && <Orders    orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} tables={tables} setTables={setTables} staff={staff} discounts={discounts} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} />}
+      {tab === "kitchen"   && <Kitchen   kdsCards={kdsCards} setKdsCards={setKdsCards} orders={orders} setOrders={setOrders} />}
+      {tab === "crm"       && <CRM       customers={customers} setCustomers={setCustomers} orders={orders} kdsCards={kdsCards} />}
       {tab === "analytics" && <Analytics orders={orders} customers={customers} />}
-      {tab === "menu" && <Menu menuItems={menuItems} setMenuItems={setMenuItems} />}
+      {tab === "menu"      && <Menu      menuItems={menuItems} setMenuItems={setMenuItems} />}
       {tab === "inventory" && <Inventory inventory={inventory} setInventory={setInventory} />}
-      {tab === "staff" && <Staff staff={staff} setStaff={setStaff} orders={orders} />}
-      {tab === "tables" && <Tables tables={tables} setTables={setTables} />}
+      {tab === "staff"     && <Staff     staff={staff} setStaff={setStaff} orders={orders} />}
+      {tab === "tables"    && <Tables    tables={tables} setTables={setTables} />}
       {tab === "discounts" && <Discounts discounts={discounts} setDiscounts={setDiscounts} />}
-      {tab === "delivery" && <Delivery deliveryOrders={deliveryOrders} setDeliveryOrders={setDeliveryOrders} orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} />}
-      {tab === "settings" && <Settings />}
+      {tab === "delivery"  && <Delivery  deliveryOrders={deliveryOrders} setDeliveryOrders={setDeliveryOrders} orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} />}
+      {tab === "settings"  && <Settings  theme={theme} toggleTheme={toggleTheme} />}
     </Layout>
   );
 }

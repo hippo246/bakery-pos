@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { createOrder, normalizeOrder, updateOrderStatus, getOrderDisplayItems, getOrderCustomerName, getOrderAmount } from "../../domain/orderModel.js";
 import { createKdsTicketsFromOrder } from "../../domain/kdsModel.js";
@@ -113,6 +113,9 @@ const INIT_DELIVERY_ORDERS = [
 ];
 
 export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, setOrders, kdsCards, setKdsCards, menuItems }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
+
   const [ordersState, setOrdersState] = useState(deliveryOrders || INIT_DELIVERY_ORDERS);
   const [riders, setRiders] = useState(INIT_RIDERS);
   const [settlements, setSettlements] = useState(INIT_SETTLEMENTS);
@@ -364,7 +367,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
 
   const getStatusColor = (status) => {
     const colors = {
-      PACKING: "#FF8C42",
+      PACKING: C.warning,
       READY_FOR_PICKUP: C.green,
       PICKED_UP: C.purple,
       OUT_FOR_DELIVERY: C.blue,
@@ -385,7 +388,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
 
   return (
     <div>
-      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Orders", val: analytics.totalOrders, color: C.amber2 },
           { label: "Active", val: analytics.activeDeliveries, color: C.blue },
@@ -500,7 +503,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>₹{o.total}</div>
-                  <span style={{ ...pill("#1a1a2a", getStatusColor(o.status)), fontSize: 9 }}>{o.status.replace(/_/g, " ")}</span>
+                  <span style={{ ...pill(C.neutralBg, getStatusColor(o.status)), fontSize: 9 }}>{o.status.replace(/_/g, " ")}</span>
                 </div>
               </div>
               {o.paymentStatus === "COD" && (
@@ -514,7 +517,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
       {/* Order Details Modal */}
       {showModal && modalType === "details" && selectedOrder && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 450, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(450px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{selectedOrder.platformOrderId || selectedOrder.orderId}</div>
               <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setShowModal(false)}>×</span>
@@ -601,7 +604,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
       {/* Riders Modal */}
       {showModal && modalType === "riders" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 600, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(600px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Rider Management</div>
               <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
@@ -645,7 +648,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
       {/* Settlements Modal */}
       {showModal && modalType === "settlements" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 600, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(600px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Settlement Tracking</div>
               <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
@@ -662,12 +665,12 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                         <div style={{ fontSize: 14, fontWeight: 700 }}>{partner.name}</div>
                         <div style={{ fontSize: 12, color: C.text3 }}>{settlement.period}</div>
                       </div>
-                      <span style={{ ...pill("#1a1a2a", settlement.status === "paid" ? C.green : C.amber), fontSize: 9 }}>
+                      <span style={{ ...pill(C.neutralBg, settlement.status === "paid" ? C.green : C.amber), fontSize: 9 }}>
                         {settlement.status.toUpperCase()}
                       </span>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8 }}>
                       <div>
                         <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Orders</div>
                         <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{settlement.totalOrders}</div>
@@ -702,7 +705,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
       {/* Settings Modal */}
       {showSettings && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowSettings(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 500, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(500px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Delivery Partner Settings</div>
               <button aria-label="Close" onClick={() => setShowSettings(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
@@ -720,7 +723,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginBottom: 12 }}>
                     <div>
                       <label style={label}>Enabled</label>
                       <select 
@@ -751,7 +754,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                     </div>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 12 }}>
                     <div>
                       <label style={label}>Commission (%)</label>
                       <input 

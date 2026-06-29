@@ -1,19 +1,35 @@
-html, body {
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  /* Prevent iOS rubber-band scroll on the html element */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
-}
-
-body {
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  background: #0C0A08;
-  color: #F0EBE3;
-  overflow: auto;
+  background: var(--c-bg);
+  color: var(--c-text);
+  /* Body must NOT scroll — Layout owns all scroll internally */
+  overflow: hidden;
+  overscroll-behavior: none;
+  /* Improve font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   height: 100%;
   width: 100%;
-  display: block;
+  /* Flex so the Layout div inside can stretch to full height */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }

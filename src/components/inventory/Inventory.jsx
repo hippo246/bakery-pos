@@ -1,9 +1,11 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_INVENTORY, INVENTORY_CATEGORIES, SUPPLIERS } from "../../data/inventoryConstants.js";
 import { normalizeInventoryItem, deductInventoryForOrder, BASIC_RECIPES, isLowStock, isOutOfStock, getLowStockItems, getOutOfStockItems, getTotalInventoryValue, restockInventoryItem } from "../../domain/inventoryModel.js";
 
 export default function Inventory({ inventory: propInventory, setInventory: propSetInventory }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
   const [inventory, setInventory] = useState(propInventory || INIT_INVENTORY);
   const handleSetInventory = propSetInventory || setInventory;
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -138,7 +140,7 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
   return (
     <div>
       {/* Summary Cards */}
-      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Items", val: inventory.length, color: C.amber2 },
           { label: "Low Stock", val: lowStockCount, color: lowStockCount > 0 ? C.red : C.green },
@@ -190,24 +192,24 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
       {/* Inventory Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 10 }} className="inventory-grid">
         {sorted.map(item => {
-          const isLowStock = isLowStock(item);
-          const isOutOfStock = isOutOfStock(item);
+          const itemIsLowStock = isLowStock(item);
+          const itemIsOutOfStock = isOutOfStock(item);
           const stockPercent = item.minStock > 0 ? (item.quantity / item.minStock) * 100 : 100;
           return (
-            <div key={item.id} style={{ ...card(), padding: "14px", border: `1px solid ${isOutOfStock ? "#3a0a0a" : isLowStock ? "#3a1a1a" : C.border}`, background: isOutOfStock ? "#1a0505" : isLowStock ? "#1a0d0d" : C.bg2 }}>
+            <div key={item.id} style={{ ...card(), padding: "14px", border: `1px solid ${itemIsOutOfStock ? C.redBorder : itemIsLowStock ? C.amberBorder : C.border}`, background: itemIsOutOfStock ? C.redBg : itemIsLowStock ? C.amberBg : C.bg2 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{item.name}</div>
                   <div style={{ fontSize: 11, color: C.text3 }}>{item.category}</div>
                 </div>
-                {isOutOfStock && <span style={{ ...pill("#2a0505", C.red), fontSize: 9 }}>OUT OF STOCK</span>}
-                {isLowStock && !isOutOfStock && <span style={{ ...pill("#2a0808", C.amber), fontSize: 9 }}>LOW STOCK</span>}
+                {itemIsOutOfStock && <span style={{ ...pill(C.redBg, C.red), fontSize: 9 }}>OUT OF STOCK</span>}
+                {itemIsLowStock && !itemIsOutOfStock && <span style={{ ...pill(C.amberBg, C.amber), fontSize: 9 }}>LOW STOCK</span>}
               </div>
               
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Quantity</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: isOutOfStock ? C.red : isLowStock ? C.amber : C.amber2 }}>{item.quantity} {item.unit}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: itemIsOutOfStock ? C.red : itemIsLowStock ? C.amber : C.amber2 }}>{item.quantity} {item.unit}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Min Stock</div>
@@ -216,7 +218,7 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
               </div>
 
               <div style={{ height: 4, background: C.bg4, borderRadius: 2, marginBottom: 10, overflow: "hidden" }}>
-                <div style={{ height: "100%", borderRadius: 2, background: isOutOfStock ? C.red : isLowStock ? C.amber : stockPercent < 150 ? C.amber : C.green, width: `${Math.min(100, stockPercent)}%`, transition: "width .3s" }} />
+                <div style={{ height: "100%", borderRadius: 2, background: itemIsOutOfStock ? C.red : itemIsLowStock ? C.amber : stockPercent < 150 ? C.amber : C.green, width: `${Math.min(100, stockPercent)}%`, transition: "width .3s" }} />
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
@@ -237,7 +239,7 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => openAdjustmentModal(item)} style={{ flex: 1, padding: "8px 0", borderRadius: 6, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>⚙ Adjust</button>
                 <button onClick={() => openEdit(item)} style={{ padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>✎</button>
-                <button onClick={() => deleteItem(item.id)} style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer", minHeight: 44 }}>🗑</button>
+                <button onClick={() => deleteItem(item.id)} style={{ padding: "8px 10px", borderRadius: 6, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.mutedRed, fontSize: 11, cursor: "pointer", minHeight: 44 }}>🗑</button>
               </div>
             </div>
           );
@@ -251,7 +253,7 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
       {/* Add/Edit Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 400 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(400px,95vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{editItem ? "Edit Item" : "Add Inventory Item"}</div>
               <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setShowModal(false)}>×</span>
@@ -306,7 +308,7 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
       {/* Stock Adjustment Modal */}
       {adjustmentModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setAdjustmentModal(null)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 450 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(450px,95vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Stock Adjustment</div>
               <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setAdjustmentModal(null)}>×</span>

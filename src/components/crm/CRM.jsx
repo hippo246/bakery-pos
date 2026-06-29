@@ -57,6 +57,16 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const [bulkCommMsg, setBulkCommMsg] = useState("");
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [smartList, setSmartList] = useState(null); // null | "gone_cold" | "loyalty_ready" | "high_value" | "new_customers"
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, color = C.green) => { setToast({ msg, color }); setTimeout(() => setToast(null), 3000); };
+  const [localVisits, setLocalVisits] = useState({}); // cid -> [{date, items, amt}]
+
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 700);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 700);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // Get real customer order history from orders data
   const getCustomerOrders = (customerId) => {
@@ -133,6 +143,23 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     };
   };
 
+  const isAtRisk = (c) => {
+    if (c.lastVisit === "Today" || c.lastVisit === "Yesterday") return false;
+    const days = parseInt(c.lastVisit);
+    return !isNaN(days) && days >= 10;
+  };
+
+  const churnRisk = (c) => {
+    if (c.lastVisit === "Today") return { label: "Active", color: C.green };
+    if (c.lastVisit === "Yesterday") return { label: "Good", color: C.green };
+    const days = parseInt(c.lastVisit);
+    if (isNaN(days)) return { label: "Unknown", color: C.text3 };
+    if (days <= 5) return { label: "Good", color: C.green };
+    if (days <= 10) return { label: "Cooling", color: C.amber };
+    if (days <= 20) return { label: "At Risk", color: C.warning };
+    return { label: "Churned", color: C.red };
+  };
+
   let filtered = customers;
   if (tierFilter !== "ALL") filtered = filtered.filter(c => c.tier === tierFilter);
   if (typeFilter !== "ALL") filtered = filtered.filter(c => c.customerType === typeFilter);
@@ -166,28 +193,22 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     return 0;
   });
 
-  const isAtRisk = (c) => {
-    if (c.lastVisit === "Today" || c.lastVisit === "Yesterday") return false;
-    const days = parseInt(c.lastVisit);
-    return !isNaN(days) && days >= 10;
-  };
-
-  const churnRisk = (c) => {
-    if (c.lastVisit === "Today") return { label: "Active", color: C.green };
-    if (c.lastVisit === "Yesterday") return { label: "Good", color: C.green };
-    const days = parseInt(c.lastVisit);
-    if (isNaN(days)) return { label: "Unknown", color: C.text3 };
-    if (days <= 5) return { label: "Good", color: C.green };
-    if (days <= 10) return { label: "Cooling", color: C.amber };
-    if (days <= 20) return { label: "At Risk", color: "#FF8C42" };
-    return { label: "Churned", color: C.red };
-  };
-
   const maxSpend = Math.max(...customers.map(c => c.spend), 1);
 
   const profile = selected ? customers.find(c => c.id === selected) : null;
   const customerMetrics = selected ? calculateCustomerMetrics(selected) : null;
-  const hist = selected ? getCustomerOrders(selected) : [];
+  const realOrders = selected ? getCustomerOrders(selected) : [];
+  // Merge real orders with manually-logged visits (shown as synthetic entries)
+  const manualEntries = selected ? (localVisits[selected] || []).map(v => ({
+    id: `manual-${v.date}-${v.amt}`,
+    createdAt: new Date().toISOString(),
+    status: "COMPLETED",
+    total: v.amt,
+    items: [{ name: v.items, qty: 1 }],
+    _manual: true,
+    _label: v.items,
+  })) : [];
+  const hist = [...manualEntries, ...realOrders];
 
   // Update customer data with metrics when order is completed
   const updateCustomerOnOrderComplete = (order) => {
@@ -212,13 +233,13 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   useEffect(() => { if (profile) { setNoteVal(profile.notes || ""); setPinnedNote(profile.pinnedNote || ""); } }, [profile?.id]);
 
   useEffect(() => {
-    if (!showModal && !showLoyaltyModal) return;
+    if (!showModal && !showLoyaltyModal && !showBulkModal) return;
     const onKey = (e) => {
-      if (e.key === "Escape") { setShowModal(false); setShowLoyaltyModal(false); }
+      if (e.key === "Escape") { setShowModal(false); setShowLoyaltyModal(false); setShowBulkModal(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [showModal, showLoyaltyModal]);
+  }, [showModal, showLoyaltyModal, showBulkModal]);
 
   const openAddModal = () => {
     setEditMode(false);
@@ -245,21 +266,25 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     const tagArr = modalData.tags.split(",").map(t => t.trim()).filter(Boolean);
     if (editMode) {
       setCustomers(customers.map(c => c.id === selected ? { ...c, ...modalData, name, phone, email, visits: Number(modalData.visits), spend: Number(modalData.spend), tags: tagArr } : c));
+      showToast("Customer updated ✓");
     } else {
       const newC = { id: "c" + Date.now(), ...modalData, name, phone, email, visits: Number(modalData.visits), spend: Number(modalData.spend), tags: tagArr.length ? tagArr : ["New Customer"], lastVisit: "Never" };
       setCustomers([...customers, newC]);
       setSelected(newC.id);
+      showToast(`${name} added ✓`);
     }
     setShowModal(false);
   };
 
-  const updateNote = () => setCustomers(customers.map(c => c.id === selected ? { ...c, notes: noteVal } : c));
-  const savePinnedNote = () => setCustomers(customers.map(c => c.id === selected ? { ...c, pinnedNote } : c));
+  const updateNote = () => { setCustomers(customers.map(c => c.id === selected ? { ...c, notes: noteVal } : c)); showToast("Notes saved ✓"); };
+  const savePinnedNote = () => { setCustomers(customers.map(c => c.id === selected ? { ...c, pinnedNote } : c)); showToast("Pinned note saved 📌"); };
 
   const deleteCustomer = (id) => {
+    const c = customers.find(x => x.id === id);
     if (!window.confirm("Delete this customer?")) return;
     setCustomers(customers.filter(c => c.id !== id));
     setSelected(null);
+    showToast(`${c?.name || "Customer"} deleted`, C.red);
   };
 
   const saveField = (field) => {
@@ -279,8 +304,11 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const addTag = () => {
     const tag = newTag.trim();
     if (!tag) return;
-    setCustomers(customers.map(c => c.id === selected && !c.tags.some(t => t.toLowerCase() === tag.toLowerCase()) ? { ...c, tags: [...c.tags, tag] } : c));
+    const customer = customers.find(c => c.id === selected);
+    if (customer?.tags.some(t => t.toLowerCase() === tag.toLowerCase())) { showToast("Tag already exists", C.amber); return; }
+    setCustomers(customers.map(c => c.id === selected ? { ...c, tags: [...c.tags, tag] } : c));
     setNewTag("");
+    showToast(`Tag "${tag}" added ✓`);
   };
 
   const removeTag = (tag) => setCustomers(customers.map(c => c.id === selected ? { ...c, tags: c.tags.filter(t => t !== tag) } : c));
@@ -288,7 +316,8 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const addVisitEntry = (cid, items, amt) => {
     const today = new Date(); const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const dateStr = `${months[today.getMonth()]} ${today.getDate()}`;
-    INIT_HIST[cid] = [{ date: dateStr, items, amt: Number(amt) }, ...(INIT_HIST[cid] || [])];
+    const entry = { date: dateStr, items, amt: Number(amt) };
+    setLocalVisits(prev => ({ ...prev, [cid]: [entry, ...(prev[cid] || [])] }));
     const pointsEarned = Math.floor(Number(amt) * POINTS_PER_RUPEE);
     setCustomers(customers.map(c => c.id === cid ? { 
       ...c, 
@@ -297,11 +326,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
       lastVisit: "Today",
       loyaltyPoints: (c.loyaltyPoints || 0) + pointsEarned
     } : c));
-    
-    // If orders are provided, also create a new order for this customer
-    if (orders && setCustomers) {
-      // This would require passing setOrders as well, for now just update customer
-    }
+    showToast(`Visit logged · +${pointsEarned} pts`);
   };
 
   const redeemPoints = (cid, amount) => {
@@ -323,7 +348,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     } : c));
     setShowLoyaltyModal(false);
     setRedeemAmount("");
-    alert(`Successfully redeemed ₹${amount} using ${pointsNeeded} points! Apply this as a discount on their next order.`);
+    showToast(`Redeemed ₹${amount} — apply as discount on next order.`, C.amber2);
   };
 
   const calculatePoints = (spend) => Math.floor(spend * POINTS_PER_RUPEE);
@@ -345,6 +370,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     const entry = { type, message, date: new Date().toISOString(), staff: "Staff" };
     setCustomers(customers.map(c => c.id === cid ? { ...c, commLog: [entry, ...(c.commLog || [])] } : c));
     setCommMsg("");
+    showToast(`${type} logged ✓`);
   };
 
   const todayBirthdays = customers.filter(c => c.birthday && new Date().toISOString().slice(5,10) === c.birthday?.slice(5,10)).length;
@@ -388,13 +414,14 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
   const sendBulkComm = () => {
     if (!bulkCommMsg.trim() || bulkSelected.size === 0) return;
+    const count = bulkSelected.size;
     const entry = { type: bulkCommType, message: bulkCommMsg, date: new Date().toISOString(), staff: "Staff", bulk: true };
     setCustomers(customers.map(c => bulkSelected.has(c.id) ? { ...c, commLog: [entry, ...(c.commLog || [])] } : c));
     setBulkCommMsg("");
     setBulkSelected(new Set());
     setBulkMode(false);
     setShowBulkModal(false);
-    alert(`${bulkCommType} logged for ${bulkSelected.size} customers.`);
+    showToast(`${bulkCommType} logged for ${count} customers.`);
   };
 
   const tierCounts = { ALL: customers.length };
@@ -404,14 +431,14 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   let displayList = applySmartList(filtered);
 
   return (
-    <div className="crm-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, height: "calc(100vh - 130px)" }}>
-      {/* Left: Customer List */}
-      <div className="crm-sidebar" style={{ display: "flex", flexDirection: "column", gap: 8, overflow: "hidden" }}>
+    <div style={{ display: isMobile ? "block" : "grid", gridTemplateColumns: "300px 1fr", gap: 16, height: isMobile ? "auto" : "calc(100dvh - 160px)", minHeight: 0, position: "relative" }}>
+      {/* Left: Customer List — hidden on mobile when a profile is open */}
+      <div style={{ display: isMobile && selected ? "none" : "flex", flexDirection: "column", gap: 8, overflow: "hidden", height: isMobile ? "calc(100dvh - 60px)" : "auto" }}>
         {/* Quick Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 2 }}>
           {[
             { label: "Total", val: customers.length, color: C.text2 },
-            { label: "At Risk", val: atRiskCount, color: atRiskCount > 0 ? "#FF8C42" : C.text3 },
+            { label: "At Risk", val: atRiskCount, color: atRiskCount > 0 ? C.warning : C.text3 },
             { label: "Birthdays", val: todayBirthdays, color: todayBirthdays > 0 ? C.purple : C.text3 },
           ].map(s => (
             <div key={s.label} style={{ background: C.bg3, borderRadius: 7, padding: "6px 8px", textAlign: "center" }}>
@@ -424,19 +451,28 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         <div style={{ display: "flex", gap: 6 }}>
           <div style={{ position: "relative", flex: 1 }}>
             <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.text3 }}>🔍</span>
-            <input style={{ ...input, paddingLeft: 28 }} placeholder="Search customers…" value={search} onChange={e => setSearch(e.target.value)} />
+            <input style={{ ...input, paddingLeft: 28, paddingRight: search ? 28 : undefined }} placeholder="Search customers…" value={search} onChange={e => setSearch(e.target.value)} />
+            {search && (
+              <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.text3, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }} title="Clear search">×</button>
+            )}
           </div>
           <button style={btn("primary")} onClick={openAddModal}>＋ Add</button>
           <button style={{ ...btn("ghost"), fontSize: 11, padding: "6px 9px" }} onClick={exportCSV} title="Export to CSV">⬇ CSV</button>
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
           <select style={{ ...input, fontSize: 11, padding: "5px 8px", flex: 1, minHeight: 44 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
             <option value="spend">Sort: Top Spenders</option>
             <option value="visits">Sort: Most Visits</option>
             <option value="recent">Sort: Most Recent</option>
             <option value="name">Sort: Name A–Z</option>
             <option value="risk">Sort: Churn Risk</option>
+          </select>
+          <select style={{ ...input, fontSize: 11, padding: "5px 8px", flex: 1, minHeight: 44 }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+            <option value="ALL">All Types</option>
+            {CUSTOMER_TYPES.map(t => (
+              <option key={t.key} value={t.key}>{t.icon} {t.label}</option>
+            ))}
           </select>
         </div>
 
@@ -448,14 +484,14 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
             { key: "VIP", label: "⭐ VIP" },
             { key: "BIRTHDAY", label: "🎂 B-day" },
           ].map(s => (
-            <button key={s.key} onClick={() => setSegmentFilter(s.key)} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: `1px solid ${segmentFilter === s.key ? C.amber3 : C.border}`, background: segmentFilter === s.key ? C.bg4 : "transparent", color: segmentFilter === s.key ? C.amber2 : C.text3, fontSize: 9, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", minHeight: 36 }}>
+            <button key={s.key} onClick={() => setSegmentFilter(s.key)} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: `1px solid ${segmentFilter === s.key ? C.amber3 : C.border}`, background: segmentFilter === s.key ? C.bg4 : "transparent", color: segmentFilter === s.key ? C.amber2 : C.text3, fontSize: 9, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", minHeight: 44, minWidth: 0 }}>
               {s.label}
             </button>
           ))}
         </div>
 
         {/* Tier Filter */}
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {["ALL", "PLATINUM", "GOLD", "SILVER", "BRONZE"].map(t => {
             const tc = TIER_COLORS[t] || { color: C.text2, bg: C.bg3 };
             const active = tierFilter === t;
@@ -467,10 +503,10 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
           })}
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5, paddingRight: 2 }}>
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5, paddingRight: 2, paddingBottom: isMobile ? 8 : 0 }}>
           {/* Smart list label */}
           {smartList && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "#1a1400", border: `1px solid ${C.amber3}`, borderRadius: 8, fontSize: 11 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: C.amberBg, border: `1px solid ${C.amber3}`, borderRadius: 8, fontSize: 11 }}>
               <span style={{ color: C.amber2, fontWeight: 600 }}>
                 {smartList === "gone_cold" ? "🧊 Regulars Gone Cold" : smartList === "loyalty_ready" ? "⭐ Loyalty Ready" : smartList === "high_value" ? "💎 High Value" : "🌱 New Customers"}
               </span>
@@ -481,6 +517,9 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
           {/* Bulk mode toggle */}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {(tierFilter !== "ALL" || segmentFilter !== "ALL" || typeFilter !== "ALL" || smartList) && (
+              <button onClick={() => { setTierFilter("ALL"); setSegmentFilter("ALL"); setTypeFilter("ALL"); setSmartList(null); }} style={{ ...btn("ghost"), fontSize: 10, padding: "5px 10px", color: C.warning, borderColor: C.warningBorder }}>✕ Clear filters</button>
+            )}
             <button onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }} style={{ ...btn(bulkMode ? "primary" : "ghost"), fontSize: 10, padding: "5px 10px" }}>
               {bulkMode ? `✓ ${bulkSelected.size} selected` : "☑ Select"}
             </button>
@@ -508,10 +547,10 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                 } else {
                   setSelected(c.id); setProfileTab("overview");
                 }
-              }} style={{ background: active ? C.bg3 : C.bg2, border: `1px solid ${bulkSelected.has(c.id) ? C.amber3 : active ? C.amber3 : atRisk ? "#3a2010" : C.border}`, borderRadius: 10, padding: 11, cursor: "pointer", transition: "all .12s" }}>
+              }} style={{ background: active ? C.bg3 : C.bg2, border: `1px solid ${bulkSelected.has(c.id) ? C.amber3 : active ? C.amber3 : atRisk ? C.warningBorder : C.border}`, borderRadius: 10, padding: 11, cursor: "pointer", transition: "all .12s" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                   {bulkMode && (
-                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${bulkSelected.has(c.id) ? C.amber2 : C.border2}`, background: bulkSelected.has(c.id) ? C.amber2 : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: "#000", fontWeight: 700 }}>
+                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${bulkSelected.has(c.id) ? C.amber2 : C.border2}`, background: bulkSelected.has(c.id) ? C.amber2 : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: C.onAmber2, fontWeight: 700 }}>
                       {bulkSelected.has(c.id) ? "✓" : ""}
                     </div>
                   )}
@@ -531,7 +570,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                     <div style={{ display: "flex", gap: 3 }}>
                       {c.allergy && <span title={`Allergy: ${c.allergy}`} style={{ fontSize: 11 }}>⚠️</span>}
                       {c.birthday && new Date().toISOString().slice(5,10) === c.birthday?.slice(5,10) && <span title="Birthday today!" style={{ fontSize: 11 }}>🎂</span>}
-                      {atRisk && <span style={{ ...pill("#2a1200", "#FF8C42"), fontSize: 8 }}>⚠ RISK</span>}
+                      {atRisk && <span style={{ ...pill(C.warningBg, C.warning), fontSize: 8 }}>⚠ RISK</span>}
                     </div>
                   </div>
                 </div>
@@ -563,14 +602,20 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         </div>
       </div>
 
-      {/* Right: Profile Panel */}
-      <div className="crm-profile" style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, overflowY: "auto" }}>
+      {/* Right: Profile Panel — hidden on mobile when no profile is selected */}
+      <div style={{ display: isMobile && !selected ? "none" : "flex", flexDirection: "column", background: C.bg2, border: isMobile ? "none" : `1px solid ${C.border}`, borderRadius: isMobile ? 0 : 14, padding: isMobile ? "14px 14px 80px" : 20, overflowY: "auto", height: isMobile ? "calc(100dvh - 60px)" : "auto" }}>
+        {/* Mobile back button */}
+        {isMobile && selected && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, paddingBottom: 12, borderBottom: `1px solid ${C.border}` }}>
+            <button onClick={() => setSelected(null)} style={{ ...btn("ghost"), fontSize: 13, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>← Customers</button>
+          </div>
+        )}
         {!profile ? (
           <div style={{ overflowY: "auto" }}>
             {/* Owner Dashboard */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>☕ Today's Snapshot</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8, marginBottom: 12 }}>
                 {[
                   { val: `₹${todayRevenue.toLocaleString()}`, lbl: "Today's Revenue", color: C.amber2 },
                   { val: todayOrders.filter(o=>o.status==="COMPLETED").length, lbl: "Orders Today", color: C.green },
@@ -582,7 +627,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                   </div>
                 ))}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8, marginBottom: 16 }}>
                 {[
                   { val: `₹${totalRevenue.toLocaleString()}`, lbl: "Total Revenue", color: C.text2 },
                   { val: avgVisitsPerCustomer, lbl: "Avg Visits", color: C.text2 },
@@ -601,7 +646,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
               <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>🎯 Smart Lists</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {[
-                  { key: "gone_cold", icon: "🧊", label: "Regulars Gone Cold", desc: "3+ visits, away 14+ days", count: customers.filter(c => { const d = parseInt(c.lastVisit); return !isNaN(d) && d >= 14 && c.visits >= 3; }).length, color: "#FF8C42" },
+                  { key: "gone_cold", icon: "🧊", label: "Regulars Gone Cold", desc: "3+ visits, away 14+ days", count: customers.filter(c => { const d = parseInt(c.lastVisit); return !isNaN(d) && d >= 14 && c.visits >= 3; }).length, color: C.warning },
                   { key: "loyalty_ready", icon: "⭐", label: "Loyalty Ready to Redeem", desc: "Enough points for a reward", count: loyaltyReadyCount, color: C.amber2 },
                   { key: "high_value", icon: "💎", label: "High Value Customers", desc: "Lifetime spend ₹5,000+", count: customers.filter(c => c.spend >= 5000).length, color: C.purple },
                   { key: "new_customers", icon: "🌱", label: "New Customers", desc: "2 or fewer visits", count: customers.filter(c => c.visits <= 2).length, color: C.green },
@@ -637,7 +682,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                           <div style={{ fontSize: 12, fontWeight: 600 }}>{c.name}</div>
                           <div style={{ fontSize: 10, color: C.text3 }}>{diff === 1 ? "Tomorrow!" : `In ${diff} days`}</div>
                         </div>
-                        <button onClick={e => { e.stopPropagation(); setSelected(c.id); setProfileTab("comms"); setBulkCommMsg(`Hi ${c.name.split(" ")[0]}, wishing you a very happy birthday! 🎂 Come celebrate with us.`); }} style={{ ...btn("ghost"), fontSize: 9, padding: "4px 8px" }}>Send 🎁</button>
+                        <button onClick={e => { e.stopPropagation(); setSelected(c.id); setProfileTab("comms"); setCommMsg(`Hi ${c.name.split(" ")[0]}, wishing you a very happy birthday! 🎂 Come celebrate with us.`); }} style={{ ...btn("ghost"), fontSize: 9, padding: "4px 8px" }}>Send 🎁</button>
                       </div>
                     );
                   })}
@@ -657,7 +702,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                   <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 10 }}>⚡ Action Needed</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {actions.map((a, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#1a1200", border: `1px solid #3a2800`, borderRadius: 10 }}>
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: 10 }}>
                         <span style={{ fontSize: 16 }}>{a.icon}</span>
                         <div style={{ flex: 1, fontSize: 12, color: C.text2, lineHeight: 1.4 }}>{a.text}</div>
                         <button onClick={a.action} style={{ ...btn("ghost"), fontSize: 10, padding: "4px 8px", whiteSpace: "nowrap" }}>{a.cta}</button>
@@ -690,9 +735,9 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                     <div style={{ fontSize: 18, fontWeight: 700, cursor: "pointer", borderBottom: `1px dashed ${C.border2}` }} title="Click to edit" onClick={() => { setEditField("name"); setEditVal(profile.name); }}>{profile.name}</div>
                   )}
                   <span style={{ ...pill(TIER_COLORS[profile.tier]?.bg, TIER_COLORS[profile.tier]?.color), fontSize: 10 }}>{profile.tier}</span>
-                  <span style={{ ...pill("#1a1a2a", churnRisk(profile).color), fontSize: 9, marginLeft: "auto" }}>{churnRisk(profile).label}</span>
+                  <span style={{ ...pill(C.neutralBg, churnRisk(profile).color), fontSize: 9, marginLeft: "auto" }}>{churnRisk(profile).label}</span>
                   <button onClick={() => openEditModal(profile)} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px" }}>✎ Edit</button>
-                  <button onClick={() => deleteCustomer(profile.id)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer" }} title="Delete customer">🗑</button>
+                  <button onClick={() => deleteCustomer(profile.id)} style={{ padding: "3px 8px", borderRadius: 6, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.red, fontSize: 11, cursor: "pointer" }} title="Delete customer">🗑</button>
                 </div>
                 <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                   {["phone","email","birthday","allergy"].map(field => (
@@ -704,7 +749,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                         onKeyDown={e => { if (e.key === "Enter") saveField(field); if (e.key === "Escape") setEditField(null); }}
                         onBlur={() => saveField(field)} />
                     ) : (
-                      <span key={field} style={{ fontSize: 11, color: field === "allergy" && profile[field] ? "#FF8C42" : C.text2, fontFamily: "monospace", cursor: "pointer", borderBottom: `1px dashed ${C.border2}` }} title={`Click to edit ${field}`} onClick={() => { setEditField(field); setEditVal(profile[field] || ""); }}>
+                      <span key={field} style={{ fontSize: 11, color: field === "allergy" && profile[field] ? C.warning : C.text2, fontFamily: "monospace", cursor: "pointer", borderBottom: `1px dashed ${C.border2}` }} title={`Click to edit ${field}`} onClick={() => { setEditField(field); setEditVal(profile[field] || ""); }}>
                         {field === "birthday" && profile[field] ? `🎂 ${new Date(profile[field]).toLocaleDateString("en-IN",{day:"numeric",month:"short"})}` :
                          field === "allergy" && profile[field] ? `⚠️ ${profile[field]}` :
                          profile[field] || `+ add ${field}`}
@@ -737,33 +782,33 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
             {/* Allergy Warning */}
             {profile.allergy && (
-              <div style={{ background: "#2a1400", border: `1px solid #5a2a00`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 16 }}>⚠️</span>
                 <div>
-                  <div style={{ fontSize: 10, color: "#FF8C42", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>Allergy Alert</div>
+                  <div style={{ fontSize: 10, color: C.warning, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>Allergy Alert</div>
                   <div style={{ fontSize: 12, color: C.text }}>{profile.allergy}</div>
                 </div>
               </div>
             )}
             {profile.birthday && new Date().toISOString().slice(5,10) === profile.birthday?.slice(5,10) && (
-              <div style={{ background: "#1a0d2a", border: `1px solid #4a2a6a`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ background: C.purpleBg, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 16 }}>🎂</span>
                 <div style={{ fontSize: 12, color: C.purple }}>It's {profile.name.split(" ")[0]}'s birthday today! Consider a free treat 🎁</div>
               </div>
             )}
             {profile.pinnedNote && (
-              <div style={{ background: "#1a1a0d", border: `1px solid #4a4a10`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <div style={{ background: C.amberBg, border: `1px solid ${C.amberBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
                 <span style={{ fontSize: 14, marginTop: 1 }}>📌</span>
                 <div style={{ fontSize: 12, color: C.amber2, lineHeight: 1.5, flex: 1 }}>{profile.pinnedNote}</div>
               </div>
             )}
 
             {/* Profile Tabs */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.bg3, padding: 3, borderRadius: 8 }}>
-              {["overview","insights","loyalty","history","notes","comms"].map(t => (
-                <button key={t} onClick={() => setProfileTab(t)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: "none", background: profileTab === t ? C.bg4 : "transparent", color: profileTab === t ? C.amber2 : C.text3, fontSize: 11, cursor: "pointer", fontWeight: profileTab === t ? 600 : 400, transition: "all .15s" }}>
-                  {t === "overview" ? "📊" : t === "insights" ? "💡" : t === "loyalty" ? "⭐" : t === "history" ? "🧾" : t === "notes" ? "📝" : "💬"}
-                  <div style={{ fontSize: 9, marginTop: 1 }}>{t === "overview" ? "Overview" : t === "insights" ? "Insights" : t === "loyalty" ? "Loyalty" : t === "history" ? "History" : t === "notes" ? "Notes" : "Comms"}</div>
+            <div style={{ display: "flex", gap: 4, marginBottom: 16, background: C.bg3, padding: 3, borderRadius: 8, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
+              {["overview","history","notes","comms"].map(t => (
+                <button key={t} onClick={() => setProfileTab(t)} style={{ flex: "0 0 auto", minWidth: isMobile ? 70 : 64, padding: isMobile ? "10px 0" : "7px 0", borderRadius: 6, border: "none", background: profileTab === t ? C.bg4 : "transparent", color: profileTab === t ? C.amber2 : C.text3, fontSize: isMobile ? 12 : 11, cursor: "pointer", fontWeight: profileTab === t ? 600 : 400, transition: "all .15s", whiteSpace: "nowrap" }}>
+                  {t === "overview" ? "📊" : t === "history" ? "🧾" : t === "notes" ? "📝" : "💬"}
+                  <div style={{ fontSize: 9, marginTop: 1 }}>{t === "overview" ? "Overview" : t === "history" ? "History" : t === "notes" ? "Notes" : "Comms"}</div>
                 </button>
               ))}
             </div>
@@ -775,9 +820,8 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                 {(() => {
                   const items = [];
                   const risk = churnRisk(profile);
-                  if (risk.label === "At Risk" || risk.label === "Churned") items.push({ color: C.red, bg: "#2a0808", icon: "🚨", text: `${risk.label}: Last visit was ${profile.lastVisit}. Send a win-back offer.`, tab: "comms" });
-                  if (calculateRedeemable(profile.loyaltyPoints || 0) >= MIN_REDEEM_AMOUNT) items.push({ color: C.amber2, bg: "#1a1200", icon: "⭐", text: `₹${calculateRedeemable(profile.loyaltyPoints || 0)} redeemable — remind customer next visit.`, tab: "loyalty" });
-                  if (profile.birthday && new Date().toISOString().slice(5,10) === profile.birthday?.slice(5,10)) items.push({ color: C.purple, bg: "#1a0d2a", icon: "🎂", text: "Birthday today! Consider a complimentary treat.", tab: "comms" });
+                  if (risk.label === "At Risk" || risk.label === "Churned") items.push({ color: C.red, bg: C.redBg, icon: "🚨", text: `${risk.label}: Last visit was ${profile.lastVisit}. Send a win-back offer.`, tab: "comms" });
+                  if (profile.birthday && new Date().toISOString().slice(5,10) === profile.birthday?.slice(5,10)) items.push({ color: C.purple, bg: C.purpleBg, icon: "🎂", text: "Birthday today! Consider a complimentary treat.", tab: "comms" });
                   if (!profile.email) items.push({ color: C.text3, bg: C.bg3, icon: "📧", text: "No email on file — add it to enable email campaigns.", tab: null });
                   if (items.length === 0) return null;
                   return (
@@ -793,29 +837,53 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                   );
                 })()}
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
                   {[
-                    { val: customerMetrics?.ordersCompleted || profile.visits, lbl: "Orders" },
-                    { val: "₹" + (customerMetrics?.totalSpend || profile.spend).toLocaleString(), lbl: "Lifetime" },
-                    { val: "₹" + Math.round((customerMetrics?.totalSpend || profile.spend) / Math.max(1, customerMetrics?.ordersCompleted || profile.visits)), lbl: "Avg Order" },
-                    { val: customerMetrics?.lastOrderDate ? new Date(customerMetrics.lastOrderDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : profile.lastVisit, lbl: "Last Order" },
+                    { val: customerMetrics?.ordersCompleted || profile.visits || 0, lbl: "Orders", color: C.text },
+                    { val: "₹" + (Number(customerMetrics?.totalSpend) || Number(profile.spend) || 0).toLocaleString(), lbl: "Lifetime", color: C.amber2 },
+                    { val: "₹" + Math.round((Number(customerMetrics?.totalSpend) || Number(profile.spend) || 0) / Math.max(1, Number(customerMetrics?.ordersCompleted) || Number(profile.visits) || 1)), lbl: "Avg Order", color: C.green },
+                    { val: customerMetrics?.lastOrderDate ? new Date(customerMetrics.lastOrderDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : (profile.lastVisit || "Never"), lbl: "Last Visit", color: C.blue },
                   ].map(s => (
                     <div key={s.lbl} style={{ background: C.bg3, borderRadius: 8, padding: "10px 8px", textAlign: "center" }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: C.amber2, fontFamily: "monospace" }}>{s.val}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: s.color, fontFamily: "monospace" }}>{s.val}</div>
                       <div style={{ fontSize: 9, color: C.text3, marginTop: 2, textTransform: "uppercase", letterSpacing: ".06em" }}>{s.lbl}</div>
                     </div>
                   ))}
                 </div>
 
+                {/* Loyalty Points Card */}
+                {(() => {
+                  const pts = profile.loyaltyPoints || 0;
+                  const redeemable = calculateRedeemable(pts);
+                  const canRedeem = redeemable >= MIN_REDEEM_AMOUNT;
+                  return (
+                    <div style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", marginBottom: 16, border: `1px solid ${canRedeem ? C.amber3 : C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 20 }}>⭐</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 2 }}>Loyalty Points</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: canRedeem ? C.amber2 : C.text, fontFamily: "monospace" }}>{pts.toLocaleString()} pts</div>
+                        <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Redeemable: ₹{redeemable} {canRedeem ? "· Ready!" : `· Need ${MIN_REDEEM_AMOUNT - redeemable} more`}</div>
+                      </div>
+                      <button
+                        style={{ ...btn(canRedeem ? "primary" : "ghost"), fontSize: 11, opacity: canRedeem ? 1 : 0.5, cursor: canRedeem ? "pointer" : "not-allowed" }}
+                        disabled={!canRedeem}
+                        onClick={() => { setRedeemAmount(""); setShowLoyaltyModal(true); }}
+                      >Redeem</button>
+                    </div>
+                  );
+                })()}
+
                 <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                   <div style={{ flex: 1, background: C.bg3, borderRadius: 10, padding: "10px 12px" }}>
                     <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Favourite Item</div>
-                    <div style={{ fontSize: 13, color: C.amber2, fontWeight: 600 }}>☕ {customerMetrics?.favoriteItem || profile.fav}</div>
+                    <div style={{ fontSize: 13, color: C.amber2, fontWeight: 600 }}>☕ {customerMetrics?.favoriteItem || profile.fav || "—"}</div>
                   </div>
                   <div style={{ flex: 1, background: C.bg3, borderRadius: 10, padding: "10px 12px" }}>
                     <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Preferred Time</div>
                     <div style={{ fontSize: 13, color: C.blue, fontWeight: 600 }}>
-                      {customerMetrics?.preferredHour ? `${customerMetrics.preferredHour}:00` : "Not enough data"}
+                      {customerMetrics?.preferredHour != null
+                        ? (() => { const h = parseInt(customerMetrics.preferredHour); return `${h % 12 || 12}:00 ${h < 12 ? "AM" : "PM"}`; })()
+                        : "Not enough data"}
                     </div>
                   </div>
                   {profile.birthday && (
@@ -825,6 +893,23 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                     </div>
                   )}
                 </div>
+
+                {/* Customer Type Card */}
+                {profile.customerType && TYPE_MAP[profile.customerType] && (() => {
+                  const ct = TYPE_MAP[profile.customerType];
+                  return (
+                    <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 16, border: `1px solid ${ct.color}33` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                        <span style={{ fontSize: 18 }}>{ct.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: ct.color }}>{ct.label}</div>
+                          <div style={{ fontSize: 10, color: C.text3 }}>{ct.desc}</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: C.text2, background: C.bg4, borderRadius: 7, padding: "8px 10px", lineHeight: 1.5 }}>💡 {ct.tip}</div>
+                    </div>
+                  );
+                })()}
 
                 <LogVisit key={profile.id} profile={profile} addVisitEntry={addVisitEntry} />
 
@@ -845,237 +930,18 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
               </>
             )}
 
-            {/* TAB: INSIGHTS */}
-            {profileTab === "insights" && (
-              <>
-                <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 12 }}>Customer Analytics</div>
-                
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "14px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Order Frequency</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>
-                      {customerMetrics?.ordersCompleted || 0}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>total orders completed</div>
-                  </div>
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "14px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Average Order Value</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: C.green }}>
-                      ₹{Math.round(customerMetrics?.avgOrderValue || 0)}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>per order average</div>
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "14px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Cancel Rate</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: (customerMetrics?.cancelRate || 0) > 20 ? C.red : (customerMetrics?.cancelRate || 0) > 10 ? C.amber : C.green }}>
-                      {customerMetrics?.cancelRate || 0}%
-                    </div>
-                    <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>of orders cancelled</div>
-                  </div>
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "14px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Monthly Spend</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: C.blue }}>
-                      ₹{customerMetrics?.monthlySpend || 0}
-                    </div>
-                    <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>avg per month</div>
-                  </div>
-                </div>
-
-                {/* LTV Projection */}
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "14px", marginBottom: 16, border: `1px solid ${C.border2}` }}>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>Annual LTV Projection</div>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>₹{(customerMetrics?.ltvProjection || 0).toLocaleString()}</div>
-                    <div style={{ fontSize: 11, color: C.text3 }}>projected / year</div>
-                  </div>
-                  <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>Based on ₹{customerMetrics?.monthlySpend || 0}/mo average spend</div>
-                </div>
-
-                {/* Top Items */}
-                {(customerMetrics?.topItems || []).length > 0 && (
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "14px", marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 10 }}>Most Ordered Items</div>
-                    {(() => {
-                      const maxQty = Math.max(...(customerMetrics?.topItems || []).map(([,q]) => q), 1);
-                      return (customerMetrics?.topItems || []).map(([name, qty]) => (
-                        <div key={name} style={{ marginBottom: 8 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text2, marginBottom: 3 }}>
-                            <span>{name}</span>
-                            <span style={{ fontFamily: "monospace", color: C.amber2 }}>{qty}×</span>
-                          </div>
-                          <div style={{ height: 4, background: C.bg4, borderRadius: 2, overflow: "hidden" }}>
-                            <div style={{ height: "100%", borderRadius: 2, background: C.amber3, width: `${(qty / maxQty) * 100}%`, transition: "width .4s" }} />
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </div>
-                )}
-
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "14px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Peak Visit Hours</div>
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                    {["6","9","12","15","18","21"].map(hour => {
-                      const hourOrders = hist.filter(o => {
-                        const h = new Date(o.createdAt || Date.now()).getHours();
-                        return h >= parseInt(hour) && h < parseInt(hour) + 3;
-                      }).length;
-                      const maxOrders = Math.max(...["6","9","12","15","18","21"].map(h => 
-                        hist.filter(o => {
-                          const hr = new Date(o.createdAt || Date.now()).getHours();
-                          return hr >= parseInt(h) && hr < parseInt(h) + 3;
-                        }).length
-                      ), 1);
-                      return (
-                        <div key={hour} style={{ 
-                          flex: 1, 
-                          padding: "8px 4px", 
-                          background: hourOrders > 0 ? C.bg4 : "transparent", 
-                          borderRadius: 6, 
-                          textAlign: "center",
-                          border: `1px solid ${hourOrders > 0 ? C.border2 : "transparent"}`
-                        }}>
-                          <div style={{ fontSize: 10, color: C.text3 }}>{hour}:00</div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: hourOrders > 0 ? C.amber2 : C.text3 }}>{hourOrders}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "14px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Kitchen Performance</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Avg Prep Time</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: C.blue }}>
-                        {customerMetrics?.avgPrepTime || 0}m
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Kitchen Efficiency</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: customerMetrics?.kitchenEfficiency >= 80 ? C.green : customerMetrics?.kitchenEfficiency >= 60 ? C.amber : C.red }}>
-                        {customerMetrics?.kitchenEfficiency || 0}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "14px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Customer Segmentation</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {(() => {
-                      const segments = [];
-                      if (customerMetrics?.ordersCompleted >= 20) segments.push({ label: "VIP", color: C.amber });
-                      else if (customerMetrics?.ordersCompleted >= 10) segments.push({ label: "Regular", color: C.green });
-                      else segments.push({ label: "New", color: C.blue });
-                      
-                      if ((customerMetrics?.totalSpend || 0) >= 5000) segments.push({ label: "High Spender", color: C.purple });
-                      if ((customerMetrics?.avgOrderValue || 0) >= 300) segments.push({ label: "Premium", color: "#FF8C42" });
-                      if (profile.tags.includes("Corporate")) segments.push({ label: "Corporate", color: C.text2 });
-                      
-                      return segments.map(s => (
-                        <span key={s.label} style={{ ...pill("#1a1a2e", s.color), fontSize: 10 }}>{s.label}</span>
-                      ));
-                    })()}
-                  </div>
-                </div>
-
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "14px" }}>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Retention Insights</div>
-                  <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.6 }}>
-                    {(() => {
-                      const risk = churnRisk(profile);
-                      if (risk.label === "Active") return "✅ This customer is highly engaged and visits frequently.";
-                      if (risk.label === "Good") return "👍 Good engagement. Consider sending a personalized offer to encourage another visit.";
-                      if (risk.label === "Cooling") return "⚠️ Engagement is declining. Consider a re-engagement campaign.";
-                      if (risk.label === "At Risk") return "🚨 High risk of churn. Immediate action recommended - send a special offer.";
-                      return "❌ Customer has churned. Consider a win-back campaign.";
-                    })()}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* TAB: LOYALTY */}
-            {profileTab === "loyalty" && (
-              <>
-                <div style={{ background: "#1a1a2e", border: `1px solid ${C.amber3}`, borderRadius: 12, padding: "16px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 12, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>Loyalty Points Balance</div>
-                  <div style={{ fontSize: 32, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{profile.loyaltyPoints || 0}</div>
-                  <div style={{ fontSize: 11, color: C.text3, marginTop: 4 }}>points earned</div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Redeemable Amount</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: C.green }}>₹{calculateRedeemable(profile.loyaltyPoints || 0)}</div>
-                  </div>
-                  <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Points per ₹1</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "monospace", color: C.blue }}>{POINTS_PER_RUPEE}</div>
-                  </div>
-                </div>
-
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Points Progress</div>
-                  <div style={{ height: 6, background: C.bg4, borderRadius: 3, marginBottom: 8, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 3, background: C.amber, width: `${Math.min(100, ((profile.loyaltyPoints || 0) % POINTS_REWARD_THRESHOLD) / POINTS_REWARD_THRESHOLD * 100)}%`, transition: "width .3s" }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: C.text2 }}>
-                    {(profile.loyaltyPoints || 0) % POINTS_REWARD_THRESHOLD} / {POINTS_REWARD_THRESHOLD} points to next reward
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setShowLoyaltyModal(true)}
-                  disabled={calculateRedeemable(profile.loyaltyPoints || 0) < MIN_REDEEM_AMOUNT}
-                  style={{ 
-                    ...btn("primary"), 
-                    fontSize: 12, 
-                    width: "100%",
-                    opacity: calculateRedeemable(profile.loyaltyPoints || 0) < MIN_REDEEM_AMOUNT ? 0.5 : 1,
-                    cursor: calculateRedeemable(profile.loyaltyPoints || 0) < MIN_REDEEM_AMOUNT ? "not-allowed" : "pointer"
-                  }}
-                >
-                  ⭐ Redeem Points (Min ₹{MIN_REDEEM_AMOUNT})
-                </button>
-
-                {/* Points earned per order */}
-                {hist.filter(h => h.status === "COMPLETED").length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Points Earned Per Order</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      {hist.filter(h => h.status === "COMPLETED").slice(0, 8).map((h, i) => {
-                        const pts = Math.floor((h.total || 0) * POINTS_PER_RUPEE);
-                        return (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", background: C.bg3, borderRadius: 7, fontSize: 11 }}>
-                            <span style={{ color: C.text3, fontFamily: "monospace", fontSize: 10, width: 64, flexShrink: 0 }}>
-                              {h.createdAt ? new Date(h.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "N/A"}
-                            </span>
-                            <span style={{ flex: 1, color: C.text2 }}>₹{h.total || 0}</span>
-                            <span style={{ color: C.amber2, fontFamily: "monospace", fontWeight: 700 }}>+{pts} pts</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
             {/* TAB: HISTORY */}
             {profileTab === "history" && (
               <>
-                <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 10 }}>Order History</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase" }}>Order History</div>
+                  <div style={{ fontSize: 10, color: C.text3 }}>{hist.length} total</div>
+                </div>
 
                 {/* Status filter */}
                 <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
                   {["ALL","COMPLETED","CANCELLED","PENDING"].map(s => (
-                    <button key={s} onClick={() => setHistFilter(s)} style={{ flex: 1, padding: "5px 4px", borderRadius: 6, border: `1px solid ${histFilter === s ? C.amber3 : C.border}`, background: histFilter === s ? C.bg4 : "transparent", color: histFilter === s ? C.amber2 : C.text3, fontSize: 9, fontWeight: 700, cursor: "pointer" }}>
+                    <button key={s} onClick={() => setHistFilter(s)} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: `1px solid ${histFilter === s ? C.amber3 : C.border}`, background: histFilter === s ? C.bg4 : "transparent", color: histFilter === s ? C.amber2 : C.text3, fontSize: 9, fontWeight: 700, cursor: "pointer", minHeight: 34 }}>
                       {s === "ALL" ? `All (${hist.length})` : s === "COMPLETED" ? `✓ Done` : s === "CANCELLED" ? `✕ Cancelled` : `… Pending`}
                     </button>
                   ))}
@@ -1083,13 +949,14 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
                 {hist.length > 1 && (() => {
                   const completed = hist.filter(h => h.status === "COMPLETED").slice(0, 12).reverse();
+                  if (completed.length < 2) return null;
                   const maxAmt = Math.max(...completed.map(h => h.total || 0), 1);
                   return (
                     <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
-                      <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Spend Trend (last {completed.length} orders)</div>
-                      <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 40 }}>
+                      <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Spend Trend — last {completed.length} orders</div>
+                      <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 44 }}>
                         {completed.map((h, i) => (
-                          <div key={i} title={`₹${h.total || 0}`} style={{ flex: 1, borderRadius: "2px 2px 0 0", background: C.amber3, height: `${Math.max(10, ((h.total || 0) / maxAmt) * 100)}%`, transition: "height .3s", cursor: "default" }} />
+                          <div key={i} title={`₹${h.total || 0}`} style={{ flex: 1, borderRadius: "3px 3px 0 0", background: C.amber3, height: `${Math.max(10, ((h.total || 0) / maxAmt) * 100)}%`, transition: "height .3s", cursor: "default", opacity: 0.7 + 0.3 * (i / completed.length) }} />
                         ))}
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.text3, marginTop: 4 }}>
@@ -1098,30 +965,52 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                     </div>
                   );
                 })()}
+
                 {hist.length === 0 ? (
-                  <div style={{ fontSize: 12, color: C.text3, padding: "12px 0" }}>No orders found for this customer</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {hist.filter(h => histFilter === "ALL" || h.status === histFilter).map((h, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: C.bg3, borderRadius: 8, fontSize: 12 }}>
-                        <div style={{ color: C.text3, fontFamily: "monospace", width: 72, flexShrink: 0, fontSize: 11 }}>
-                          {h.createdAt ? new Date(h.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "N/A"}
-                        </div>
-                        <div style={{ flex: 1, color: C.text }}>
-                          {h.items?.map(item => `${item.qty}x ${item.name}`).join(", ") || "Items"}
-                        </div>
-                        <div style={{ color: C.amber2, fontFamily: "monospace", fontWeight: 600 }}>₹{h.total || 0}</div>
-                        <span style={{ ...pill(h.status === "COMPLETED" ? "#0d2218" : h.status === "CANCELLED" ? "#2a0808" : "#1a1a2e", h.status === "COMPLETED" ? C.green : h.status === "CANCELLED" ? C.red : C.amber), fontSize: 9 }}>
-                          {h.status}
-                        </span>
-                      </div>
-                    ))}
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text3, padding: "8px 12px", borderTop: `1px solid ${C.border}`, marginTop: 4 }}>
-                      <span>{hist.filter(h => histFilter === "ALL" || h.status === histFilter).length} orders shown</span>
-                      <span style={{ color: C.amber2, fontFamily: "monospace" }}>₹{hist.filter(h => histFilter === "ALL" || h.status === histFilter).reduce((s, h) => s + (h.total || 0), 0)} total</span>
-                    </div>
+                  <div style={{ textAlign: "center", padding: "32px 0", color: C.text3 }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🧾</div>
+                    <div style={{ fontSize: 13, marginBottom: 4 }}>No orders yet</div>
+                    <div style={{ fontSize: 11 }}>This customer hasn't placed any orders</div>
                   </div>
-                )}
+                ) : (() => {
+                  const filtered = hist.filter(h => histFilter === "ALL" || h.status === histFilter);
+                  if (filtered.length === 0) return (
+                    <div style={{ fontSize: 12, color: C.text3, padding: "20px 0", textAlign: "center" }}>No {histFilter.toLowerCase()} orders</div>
+                  );
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {filtered.map((h, i) => (
+                        <div key={i} style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", border: `1px solid ${h.status === "CANCELLED" ? C.red + "22" : C.border}` }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: h.items?.length ? 6 : 0 }}>
+                            <div style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>
+                              {h.createdAt ? new Date(h.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "N/A"}
+                              {h.createdAt && <span style={{ marginLeft: 6 }}>{new Date(h.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ color: C.amber2, fontFamily: "monospace", fontWeight: 700, fontSize: 13 }}>₹{h.total || 0}</span>
+                              <span style={{ ...pill(h.status === "COMPLETED" ? C.greenBg : h.status === "CANCELLED" ? C.redBg : C.neutralBg, h.status === "COMPLETED" ? C.green : h.status === "CANCELLED" ? C.red : C.amber), fontSize: 9 }}>
+                                {h.status}
+                              </span>
+                            </div>
+                          </div>
+                          {h.items?.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                              {h.items.map((item, j) => (
+                                <span key={j} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: C.bg4, color: C.text2, border: `1px solid ${C.border}` }}>
+                                  {item.qty}× {item.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text3, padding: "8px 12px", borderTop: `1px solid ${C.border}`, marginTop: 2 }}>
+                        <span>{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
+                        <span style={{ color: C.amber2, fontFamily: "monospace", fontWeight: 600 }}>₹{filtered.reduce((s, h) => s + (h.total || 0), 0).toLocaleString()} total</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </>
             )}
 
@@ -1129,78 +1018,126 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
             {profileTab === "notes" && (
               <>
                 {/* Pinned Note */}
-                <div style={{ background: "#1a1a0d", border: `1px solid #4a4a10`, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, color: C.amber2, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>📌 Pinned Note <span style={{ color: C.text3, fontWeight: 400 }}>(shown on every visit)</span></div>
+                <div style={{ background: C.amberBg, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: C.amber2, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 6 }}>📌 Pinned Note <span style={{ color: C.text3, fontWeight: 400 }}>— shown at top of every visit</span></div>
                   <input
                     style={{ ...input, fontSize: 12, marginBottom: 8 }}
                     placeholder="e.g. Always asks for extra ice. Regulars discount approved."
                     value={pinnedNote}
                     onChange={e => setPinnedNote(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && savePinnedNote()}
                   />
-                  <button style={{ ...btn("ghost"), fontSize: 10 }} onClick={savePinnedNote}>Save Pinned Note</button>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 10, color: C.text3 }}>{pinnedNote.length} chars</span>
+                    <button style={{ ...btn("ghost"), fontSize: 10 }} onClick={savePinnedNote}>Save Pinned Note</button>
+                  </div>
                 </div>
 
-                <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 8 }}>Staff Notes</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase" }}>Staff Notes</div>
+                  <span style={{ fontSize: 10, color: C.text3 }}>{noteVal.length} chars</span>
+                </div>
                 <textarea
-                  style={{ ...input, resize: "none", lineHeight: 1.6, marginBottom: 8 }}
-                  rows={8}
-                  placeholder="Add notes about this customer…"
+                  style={{ ...input, resize: "none", lineHeight: 1.7, marginBottom: 8, fontFamily: "inherit" }}
+                  rows={9}
+                  placeholder={"Add notes about this customer…\n\nGood for:\n• Preferences & quirks\n• Past complaints\n• Special requests\n• Staff observations"}
                   value={noteVal}
                   onChange={e => setNoteVal(e.target.value)}
                 />
-                <button style={{ ...btn("primary"), fontSize: 11 }} onClick={updateNote}>Save Notes</button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...btn("primary"), fontSize: 11, flex: 1 }} onClick={updateNote}>Save Notes</button>
+                  {noteVal !== (profile.notes || "") && (
+                    <div style={{ display: "flex", alignItems: "center", fontSize: 10, color: C.amber2, gap: 4 }}>
+                      <span>●</span> Unsaved
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
             {/* TAB: COMMS */}
             {profileTab === "comms" && (
               <>
-                <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 12 }}>Log Communication</div>
+                {/* Contact quick-access */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {profile.phone && (
+                    <a href={`tel:${profile.phone}`} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 10px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border}`, color: C.green, fontSize: 11, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>
+                      📞 {profile.phone}
+                    </a>
+                  )}
+                  {profile.phone && (
+                    <a href={`https://wa.me/91${profile.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border}`, color: "#25D366", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
+                      💬 WA
+                    </a>
+                  )}
+                  {profile.email && (
+                    <a href={`mailto:${profile.email}`} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 10px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border}`, color: C.blue, fontSize: 11, fontWeight: 600, textDecoration: "none", overflow: "hidden" }}>
+                      📧 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.email}</span>
+                    </a>
+                  )}
+                </div>
+
+                <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 10 }}>Log Communication</div>
 
                 {/* Quick message templates */}
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
                   {[
-                    { icon: "🎁", label: "Birthday Offer", msg: `Hi ${profile.name.split(" ")[0]}, happy birthday! Enjoy a special treat on us today 🎂` },
-                    { icon: "⭐", label: "Loyalty Reward", msg: `Hi ${profile.name.split(" ")[0]}, you've earned a loyalty reward! Come visit us to redeem it.` },
+                    { icon: "🎁", label: "Birthday", msg: `Hi ${profile.name.split(" ")[0]}, happy birthday! Enjoy a special treat on us today 🎂` },
                     { icon: "🔄", label: "Win Back", msg: `Hi ${profile.name.split(" ")[0]}, we miss you! Come back soon and enjoy 10% off your next order.` },
-                    { icon: "📢", label: "Promo", msg: `Hi ${profile.name.split(" ")[0]}, we have a special offer just for you!` },
+                    { icon: "📢", label: "Promo", msg: `Hi ${profile.name.split(" ")[0]}, we have a special offer just for you this week!` },
+                    { icon: "⭐", label: "Thank You", msg: `Hi ${profile.name.split(" ")[0]}, thank you for visiting us! We hope to see you again soon ☕` },
                   ].map(t => (
-                    <button key={t.label} style={{ ...btn("ghost"), fontSize: 9, padding: "5px 8px" }} onClick={() => setCommMsg(t.msg)}>
+                    <button key={t.label} style={{ ...btn("ghost"), fontSize: 9, padding: "5px 9px" }} onClick={() => setCommMsg(t.msg)}>
                       {t.icon} {t.label}
                     </button>
                   ))}
                 </div>
 
-                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                  {["Email","SMS","WhatsApp","Call"].map(type => (
-                    <button key={type} onClick={() => setCommType(type)} style={{ flex: 1, padding: "6px 0", borderRadius: 6, border: `1px solid ${commType === type ? C.amber3 : C.border}`, background: commType === type ? C.bg4 : "transparent", color: commType === type ? C.amber2 : C.text3, fontSize: 10, cursor: "pointer", fontWeight: 600 }}>
+                <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
+                  {["SMS","WhatsApp","Email","Call"].map(type => (
+                    <button key={type} onClick={() => setCommType(type)} style={{ flex: 1, padding: "7px 0", borderRadius: 6, border: `1px solid ${commType === type ? C.amber3 : C.border}`, background: commType === type ? C.bg4 : "transparent", color: commType === type ? C.amber2 : C.text3, fontSize: 10, cursor: "pointer", fontWeight: 600 }}>
                       {type === "Email" ? "📧" : type === "SMS" ? "📱" : type === "WhatsApp" ? "💬" : "📞"} {type}
                     </button>
                   ))}
                 </div>
 
                 <textarea
-                  style={{ ...input, resize: "none", lineHeight: 1.6, marginBottom: 8 }}
+                  style={{ ...input, resize: "none", lineHeight: 1.6, marginBottom: 8, fontFamily: "inherit" }}
                   rows={4}
                   placeholder={`Write a ${commType.toLowerCase()} message…`}
                   value={commMsg}
                   onChange={e => setCommMsg(e.target.value)}
                 />
-                <button style={{ ...btn("primary"), fontSize: 11, marginBottom: 20 }} onClick={() => logComm(profile.id, commType, commMsg)}>
-                  Log {commType} Sent
+                <button
+                  style={{ ...btn("primary"), fontSize: 11, marginBottom: 20, width: "100%", opacity: commMsg.trim() ? 1 : 0.5, cursor: commMsg.trim() ? "pointer" : "not-allowed" }}
+                  disabled={!commMsg.trim()}
+                  onClick={() => logComm(profile.id, commType, commMsg)}
+                >
+                  ✓ Log {commType} as Sent
                 </button>
 
                 {/* Communication History */}
-                <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>History ({(profile.commLog || []).length})</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em" }}>History</div>
+                  <span style={{ fontSize: 10, color: C.text3 }}>{(profile.commLog || []).length} logged</span>
+                </div>
                 {(profile.commLog || []).length === 0 ? (
-                  <div style={{ fontSize: 12, color: C.text3, padding: "12px 0" }}>No communications logged yet</div>
+                  <div style={{ textAlign: "center", padding: "24px 0", color: C.text3 }}>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>💬</div>
+                    <div style={{ fontSize: 12 }}>No communications logged yet</div>
+                  </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {(profile.commLog || []).map((entry, i) => (
-                      <div key={i} style={{ background: C.bg3, borderRadius: 8, padding: "10px 12px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: C.amber2 }}>{entry.type === "Email" ? "📧" : entry.type === "SMS" ? "📱" : entry.type === "WhatsApp" ? "💬" : "📞"} {entry.type}</span>
-                          <span style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>{new Date(entry.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                      <div key={i} style={{ background: C.bg3, borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid ${entry.type === "Email" ? C.blue : entry.type === "WhatsApp" ? "#25D366" : entry.type === "Call" ? C.green : C.amber}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: entry.type === "Email" ? C.blue : entry.type === "WhatsApp" ? "#25D366" : entry.type === "Call" ? C.green : C.amber }}>
+                            {entry.type === "Email" ? "📧" : entry.type === "SMS" ? "📱" : entry.type === "WhatsApp" ? "💬" : "📞"} {entry.type}
+                            {entry.bulk && <span style={{ marginLeft: 5, color: C.text3, fontWeight: 400 }}>· bulk</span>}
+                          </span>
+                          <span style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>
+                            {new Date(entry.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} {new Date(entry.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
                         </div>
                         <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5 }}>{entry.message}</div>
                       </div>
@@ -1213,10 +1150,56 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         )}
       </div>
 
+      {/* Loyalty Redeem Modal */}
+      {showLoyaltyModal && profile && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowLoyaltyModal(false)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.amber3}`, borderRadius: 18, padding: 24, width: "min(340px, 92vw)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>⭐ Redeem Points</div>
+              <button onClick={() => setShowLoyaltyModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: C.text3, marginBottom: 4 }}>Available points</div>
+              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{(profile.loyaltyPoints || 0).toLocaleString()} pts</div>
+              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>= ₹{calculateRedeemable(profile.loyaltyPoints || 0)} redeemable</div>
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 11, color: C.text3, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Redeem Amount (₹)</label>
+              <input
+                style={{ ...input, fontSize: 14, fontFamily: "monospace" }}
+                type="number"
+                min={MIN_REDEEM_AMOUNT}
+                max={calculateRedeemable(profile.loyaltyPoints || 0)}
+                step="1"
+                placeholder={`Min ₹${MIN_REDEEM_AMOUNT}`}
+                value={redeemAmount}
+                onChange={e => setRedeemAmount(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && redeemPoints(profile.id, redeemAmount)}
+                autoFocus
+              />
+              {redeemAmount && Number(redeemAmount) > calculateRedeemable(profile.loyaltyPoints || 0) && (
+                <div style={{ fontSize: 10, color: C.warning, marginTop: 5 }}>Max redeemable is ₹{calculateRedeemable(profile.loyaltyPoints || 0)}</div>
+              )}
+            </div>
+            <div style={{ fontSize: 10, color: C.text3, marginBottom: 14, lineHeight: 1.5 }}>
+              This deducts {Number(redeemAmount) * POINTS_PER_RUPEE || "—"} points. Apply ₹{redeemAmount || "—"} as a discount on the customer's next order.
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button style={btn("ghost")} onClick={() => setShowLoyaltyModal(false)}>Cancel</button>
+              <button
+                style={{ ...btn("primary"), opacity: Number(redeemAmount) >= MIN_REDEEM_AMOUNT ? 1 : 0.5 }}
+                disabled={!Number(redeemAmount) || Number(redeemAmount) < MIN_REDEEM_AMOUNT}
+                onClick={() => redeemPoints(profile.id, redeemAmount)}
+              >Redeem ₹{redeemAmount || "—"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bulk Communication Modal */}
       {showBulkModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowBulkModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 420 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(420px, 92vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 15, fontWeight: 700 }}>💬 Message {bulkSelected.size} Customers</div>
               <button onClick={() => setShowBulkModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1 }}>×</button>
@@ -1254,9 +1237,9 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
       {/* Add Customer Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 360 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(360px, 92vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Add Customer</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{editMode ? "Edit Customer" : "Add Customer"}</div>
               <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
             </div>
             {[
@@ -1283,55 +1266,42 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
               <label style={label}>Tags (comma separated)</label>
               <input style={input} value={modalData.tags} onChange={e => setModalData({...modalData, tags: e.target.value})} placeholder="Regular, Corporate, VIP…" />
             </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={label}>Customer Type</label>
+              <select style={input} value={modalData.customerType} onChange={e => setModalData({...modalData, customerType: e.target.value})}>
+                <option value="">— Select type —</option>
+                {CUSTOMER_TYPES.map(t => <option key={t.key} value={t.key}>{t.icon} {t.label} — {t.desc}</option>)}
+              </select>
+            </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
               <button style={btn("ghost")} onClick={() => setShowModal(false)}>Cancel</button>
-              <button style={btn("primary")} onClick={saveModal}>Add Customer</button>
+              <button style={btn("primary")} onClick={saveModal}>{editMode ? "Save Changes" : "Add Customer"}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Loyalty Points Redemption Modal */}
-      {showLoyaltyModal && profile && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowLoyaltyModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.amber3}`, borderRadius: 18, padding: 24, width: 380 }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>⭐ Redeem Points</div>
-              <button aria-label="Close" onClick={() => setShowLoyaltyModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
-            </div>
-            <div style={{ background: "#1a1a2e", borderRadius: 10, padding: "14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Available Points</div>
-              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{profile.loyaltyPoints || 0}</div>
-              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>≈ ₹{calculateRedeemable(profile.loyaltyPoints || 0)} redeemable</div>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={label}>Amount to Redeem (₹)</label>
-              <input 
-                style={input} 
-                type="number" 
-                value={redeemAmount} 
-                onChange={e => setRedeemAmount(e.target.value)} 
-                onKeyDown={e => { if (e.key === "Enter" && redeemAmount && Number(redeemAmount) >= MIN_REDEEM_AMOUNT && Number(redeemAmount) <= calculateRedeemable(profile.loyaltyPoints || 0)) redeemPoints(profile.id, Number(redeemAmount)); }}
-                placeholder={`Min ₹${MIN_REDEEM_AMOUNT}`} 
-                min={MIN_REDEEM_AMOUNT}
-                max={calculateRedeemable(profile.loyaltyPoints || 0)}
-                autoFocus
-              />
-              <div style={{ fontSize: 10, color: C.text3, marginTop: 4 }}>
-                Points needed: {(Number(redeemAmount) || 0) * POINTS_PER_RUPEE}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button style={btn("ghost")} onClick={() => { setShowLoyaltyModal(false); setRedeemAmount(""); }}>Cancel</button>
-              <button 
-                style={btn("primary")} 
-                onClick={() => redeemPoints(profile.id, Number(redeemAmount))}
-                disabled={!redeemAmount || Number(redeemAmount) < MIN_REDEEM_AMOUNT || Number(redeemAmount) > calculateRedeemable(profile.loyaltyPoints || 0)}
-              >
-                Redeem ₹{redeemAmount || 0}
-              </button>
-            </div>
-          </div>
+      {/* Toast notification */}
+      {toast && (
+        <div style={{ position: "fixed", bottom: isMobile ? 76 : 28, left: "50%", transform: "translateX(-50%)", background: C.neutralBg, border: `1px solid ${toast.color}`, color: toast.color, borderRadius: 10, padding: "10px 20px", fontSize: 13, fontWeight: 600, zIndex: 200, pointerEvents: "none", boxShadow: "0 4px 20px rgba(0,0,0,.5)", whiteSpace: "nowrap" }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Mobile bottom nav */}
+      {isMobile && (
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 60, background: C.bg2, borderTop: `1px solid ${C.border2}`, display: "flex", alignItems: "stretch", zIndex: 150, paddingBottom: "env(safe-area-inset-bottom)" }}>
+          {[
+            { icon: "👥", label: "Customers", action: () => setSelected(null), active: !selected },
+            { icon: "➕", label: "Add", action: openAddModal, active: false, highlight: true },
+            { icon: "📊", label: "Dashboard", action: () => { setSelected(null); setSmartList(null); setSegmentFilter("ALL"); setTierFilter("ALL"); setTypeFilter("ALL"); }, active: false },
+            { icon: "⬇", label: "Export", action: exportCSV, active: false },
+          ].map(item => (
+            <button key={item.label} onClick={item.action} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, background: item.highlight ? C.amber3 : "transparent", border: "none", cursor: "pointer", color: item.active ? C.amber2 : item.highlight ? C.amber2 : C.text3, fontSize: 10, fontWeight: item.active || item.highlight ? 700 : 400, borderTop: item.active ? `2px solid ${C.amber2}` : "2px solid transparent" }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

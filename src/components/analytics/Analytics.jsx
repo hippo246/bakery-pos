@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { C, card, btn } from "../../styles/theme";
 import { ANALYTICS_DATA } from "../../data/constants";
 import { getOrderAmount, getOrderDisplayItems } from "../../domain/orderModel.js";
@@ -11,42 +11,54 @@ const csvRow = (...fields) => fields.map(csvField).join(",") + "\n";
 const PERIOD_LABELS = { today: "Today", week: "This Week", month: "This Month" };
 
 function Analytics({ orders: externalOrders, customers: externalCustomers }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
+
   const [period, setPeriod] = useState("today");
   const d = ANALYTICS_DATA[period];
 
-  // Use real data if provided, otherwise fall back to static data
+  // Distinguish "no orders prop at all" (demo/preview mode — show static
+  // sample data) from "orders prop given but currently empty" (a connected,
+  // real account with zero orders — show an honest empty state, not demo
+  // numbers that would look like real activity).
+  const isDemoMode = externalOrders == null;
   const orders = externalOrders || [];
   const customers = externalCustomers || [];
 
-  // Calculate real metrics from actual orders
+  // Calculate real metrics from actual orders.
+  // NOTE: we only have a single snapshot of `orders` — there's no prior-period
+  // dataset to diff against — so period-over-period change can't be computed
+  // honestly here. Rather than fabricate a percentage (the previous behavior),
+  // we surface "—" for change/sub on the metrics that would need a baseline,
+  // and keep real change figures only where we can derive them from this
+  // dataset alone (e.g. completion rate, which doesn't need a prior period).
   const realMetrics = useMemo(() => {
-    if (!orders.length) return d.metrics;
-    
+    if (isDemoMode) return d.metrics;
+
     const completedOrders = orders.filter(o => o.status === "COMPLETED" || o.status === "READY");
     const totalRevenue = completedOrders.reduce((sum, o) => sum + getOrderAmount(o), 0);
     const avgOrderValue = completedOrders.length ? Math.round(totalRevenue / completedOrders.length) : 0;
     const totalOrders = orders.length;
     const activeOrders = orders.filter(o => !["COMPLETED", "CANCELLED"].includes(o.status)).length;
-    
-    return [
-      { lbl: "Revenue", val: "₹" + totalRevenue.toLocaleString(), change: "+12%", sub: "vs last period", up: true },
-      { lbl: "Orders", val: totalOrders, change: "+8%", sub: "vs last period", up: true },
-      { lbl: "Avg Order", val: "₹" + avgOrderValue, change: "-3%", sub: "vs last period", up: false },
-      { lbl: "Active", val: activeOrders, change: "+5%", sub: "currently", up: true },
-      { lbl: "Customers", val: customers.length, change: "+15%", sub: "total", up: true },
-      { lbl: "Growth", val: "+23%", change: "+23%", sub: "vs last month", up: true },
-    ];
-  }, [orders, customers, d.metrics]);
+    const cancelledOrders = orders.filter(o => o.status === "CANCELLED").length;
+    const completionRate = totalOrders ? Math.round((completedOrders.length / totalOrders) * 100) : 0;
 
-  // Calculate real channel breakdown from orders
-  const realChannels = useMemo(() => {
-    if (!orders.length) return [
-      { name: "Swiggy", pct: 38, rev: "₹10,792", orders: 54, color: "#FF6B35" },
-      { name: "Zomato", pct: 24, rev: "₹6,816", orders: 34, color: "#E8344E" },
-      { name: "Walk-in", pct: 21, rev: "₹5,964", orders: 30, color: C.green },
-      { name: "Delivery", pct: 17, rev: "₹4,828", orders: 25, color: C.blue },
+    return [
+      { lbl: "Revenue", val: "₹" + totalRevenue.toLocaleString(), change: "—", sub: "no prior period", up: true },
+      { lbl: "Orders", val: totalOrders, change: "—", sub: "no prior period", up: true },
+      { lbl: "Avg Order", val: "₹" + avgOrderValue, change: "—", sub: "no prior period", up: true },
+      { lbl: "Active", val: activeOrders, change: cancelledOrders ? `${cancelledOrders} cancelled` : "0 cancelled", sub: "currently", up: activeOrders >= cancelledOrders },
+      { lbl: "Customers", val: customers.length, change: "—", sub: "total", up: true },
+      { lbl: "Completion", val: completionRate + "%", change: "—", sub: "of all orders", up: completionRate >= 50 },
     ];
-    
+  }, [orders, customers, d.metrics, isDemoMode]);
+
+  // Calculate real channel breakdown from orders.
+  // Empty orders -> [] here; the demo/empty-state choice happens once,
+  // below, via isDemoMode — this hook never invents numbers.
+  const realChannels = useMemo(() => {
+    if (!orders.length) return [];
+
     const sourceCounts = {};
     const sourceRevenue = {};
     orders.forEach(o => {
@@ -64,25 +76,23 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
       "DIRECT_DELIVERY": { name: "Delivery", color: C.blue },
     };
     
-    return Object.keys(channelMap).map(source => ({
-      name: channelMap[source].name,
-      pct: totalOrders ? Math.round((sourceCounts[source] / totalOrders) * 100) : 0,
-      rev: "₹" + (sourceRevenue[source] || 0).toLocaleString(),
-      orders: sourceCounts[source] || 0,
-      color: channelMap[source].color,
-    }));
+    return Object.keys(channelMap)
+      .filter(source => sourceCounts[source] > 0)
+      .map(source => ({
+        name: channelMap[source].name,
+        pct: totalOrders ? Math.round((sourceCounts[source] / totalOrders) * 100) : 0,
+        rev: "₹" + (sourceRevenue[source] || 0).toLocaleString(),
+        orders: sourceCounts[source] || 0,
+        color: channelMap[source].color,
+      }))
+      .sort((a, b) => b.orders - a.orders);
   }, [orders]);
 
-  // Calculate real top items from orders (use normalized items array)
+  // Calculate real top items from orders (use normalized items array).
+  // Returns [] when there are no orders, rather than fabricated demo items.
   const realTopItems = useMemo(() => {
-    if (!orders.length) return [
-      { name: "Cappuccino", sold: 58, rev: "₹6,960", trend: "+12%" },
-      { name: "Avocado Toast", sold: 34, rev: "₹6,120", trend: "+8%" },
-      { name: "Flat White", sold: 41, rev: "₹5,330", trend: "+5%" },
-      { name: "Matcha Latte", sold: 29, rev: "₹4,640", trend: "-3%" },
-      { name: "Cold Brew", sold: 26, rev: "₹3,900", trend: "+15%" },
-    ];
-    
+    if (!orders.length) return [];
+
     const itemCounts = {};
     const itemRevenue = {};
     
@@ -114,31 +124,33 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
     });
     
     return Object.entries(itemCounts)
-      .map(([name, sold]) => ({ 
-        name, 
-        sold, 
-        rev: "₹" + (itemRevenue[name] || 0).toLocaleString(), 
-        trend: "+5%" 
+      .map(([name, sold]) => ({
+        name,
+        sold,
+        rev: "₹" + (itemRevenue[name] || 0).toLocaleString(),
       }))
       .sort((a, b) => b.sold - a.sold)
       .slice(0, 5);
   }, [orders]);
 
-  // Use real metrics if we have orders, otherwise use static data
-  const metrics = orders.length ? realMetrics : d.metrics;
-  const displayChannels = orders.length ? realChannels : [
+  // Demo mode (no orders prop given at all) shows static sample data, clearly
+  // marked as such in the UI. A connected account with zero real orders shows
+  // the real (empty) arrays instead — never the demo numbers — since those
+  // would otherwise read as actual activity.
+  const metrics = isDemoMode ? d.metrics : realMetrics;
+  const displayChannels = isDemoMode ? [
     { name: "Swiggy", pct: 38, rev: "₹10,792", orders: 54, color: "#FF6B35" },
     { name: "Zomato", pct: 24, rev: "₹6,816", orders: 34, color: "#E8344E" },
     { name: "Walk-in", pct: 21, rev: "₹5,964", orders: 30, color: C.green },
     { name: "Delivery", pct: 17, rev: "₹4,828", orders: 25, color: C.blue },
-  ];
-  const displayTopItems = orders.length ? realTopItems : [
-    { name: "Cappuccino", sold: 58, rev: "₹6,960", trend: "+12%" },
-    { name: "Avocado Toast", sold: 34, rev: "₹6,120", trend: "+8%" },
-    { name: "Flat White", sold: 41, rev: "₹5,330", trend: "+5%" },
-    { name: "Matcha Latte", sold: 29, rev: "₹4,640", trend: "-3%" },
-    { name: "Cold Brew", sold: 26, rev: "₹3,900", trend: "+15%" },
-  ];
+  ] : realChannels;
+  const displayTopItems = isDemoMode ? [
+    { name: "Cappuccino", sold: 58, rev: "₹6,960" },
+    { name: "Avocado Toast", sold: 34, rev: "₹6,120" },
+    { name: "Flat White", sold: 41, rev: "₹5,330" },
+    { name: "Matcha Latte", sold: 29, rev: "₹4,640" },
+    { name: "Cold Brew", sold: 26, rev: "₹3,900" },
+  ] : realTopItems;
 
   // Math.max(...[]) is -Infinity, which would render every bar at a
   // negative height if a period ever has no data — guard against that.
@@ -146,11 +158,20 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
 
   const exportReport = useCallback((format) => {
     if (!d) return;
+    // Exporting an empty, non-demo report (a real, connected account with
+    // zero orders) would produce a file that looks like a legitimate report
+    // but is empty of any actual figures — bail out with a clear signal
+    // instead of writing an empty/misleading file to disk.
+    if (!isDemoMode && !orders.length) {
+      window.alert("No order data yet for this period — nothing to export.");
+      return;
+    }
 
     if (format === "json") {
       const data = {
         period,
         date: new Date().toISOString(),
+        isDemoData: isDemoMode,
         metrics,
         barData: { labels: d.barLabels, values: d.barVals },
         channels: displayChannels,
@@ -164,7 +185,8 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
       a.click();
       URL.revokeObjectURL(url);
     } else if (format === "csv") {
-      let csv = csvRow("Metric", "Value");
+      let csv = csvRow("Report Type", isDemoMode ? "Demo Data" : "Live Data");
+      csv += "\n" + csvRow("Metric", "Value");
       metrics.forEach(m => {
         csv += csvRow(m.lbl, m.val);
       });
@@ -172,9 +194,9 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
       displayChannels.forEach(c => {
         csv += csvRow(c.name, `${c.pct}%`, c.rev, c.orders);
       });
-      csv += "\n" + csvRow("Item", "Sold", "Revenue", "Trend");
+      csv += "\n" + csvRow("Item", "Sold", "Revenue");
       displayTopItems.forEach(i => {
-        csv += csvRow(i.name, i.sold, i.rev, i.trend);
+        csv += csvRow(i.name, i.sold, i.rev);
       });
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
@@ -184,7 +206,7 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
       a.click();
       URL.revokeObjectURL(url);
     }
-  }, [d, period, metrics, displayChannels, displayTopItems]);
+  }, [d, period, metrics, displayChannels, displayTopItems, isDemoMode, orders.length]);
 
   // Static demo data — memoized so the array identity is stable across
   // re-renders (matters since it's also used inside useMemo/useCallback deps
@@ -217,7 +239,7 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
   return (
     <div>
       {/* Period Toggle */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 16, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0 }}>
         <div style={{ fontSize: 12, color: C.text2 }}>Jun 1, 2026 · Main Branch</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <div role="group" aria-label="Select time period" style={{ display: "flex", gap: 4, background: C.bg3, padding: 3, borderRadius: 8 }}>
@@ -241,7 +263,7 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8, marginBottom: 16 }}>
         {metrics.map(m => (
           <div key={m.lbl} style={{ ...card(), padding: "12px 14px" }}>
             <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{m.val}</div>
@@ -253,7 +275,7 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
         ))}
       </div>
 
-      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+      <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 14, marginBottom: 14 }}>
         {/* Bar Chart (period-aware) */}
         <div style={card()}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, display: "flex", justifyContent: "space-between" }}>
@@ -289,7 +311,7 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
               const isToday = day.day === todayLabel;
               return (
                 <div key={day.day} title={`${day.day}: ₹${day.rev.toLocaleString("en-IN")} · ${day.orders} orders`} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 4 }}>
-                  <div style={{ width: "100%", borderRadius: "4px 4px 0 0", background: isToday ? C.amber : day.rev > 30000 ? "#4CAF7240" : C.bg4, border: isToday ? `1px solid ${C.amber3}` : "none", height, minHeight: 4 }} />
+                  <div style={{ width: "100%", borderRadius: "4px 4px 0 0", background: isToday ? C.amber : day.rev > 30000 ? C.greenBg : C.bg4, border: isToday ? `1px solid ${C.amber3}` : day.rev > 30000 ? `1px solid ${C.greenBorder}` : "none", height, minHeight: 4 }} />
                   <div style={{ fontSize: 9, color: isToday ? C.amber2 : C.text3, fontFamily: "monospace", fontWeight: isToday ? 700 : 400 }}>{day.day}</div>
                 </div>
               );
@@ -298,11 +320,15 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 14 }}>
         {/* Channel Breakdown */}
         <div style={card()}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Channel Breakdown</div>
-          {displayChannels.map(c => (
+          {displayChannels.length === 0 ? (
+            <div style={{ padding: "20px 0", textAlign: "center", color: C.text3, fontSize: 12 }}>
+              No orders yet for {PERIOD_LABELS[period].toLowerCase()}.
+            </div>
+          ) : displayChannels.map(c => (
             <div key={c.name} title={`${c.name}: ${c.pct}% · ${c.orders} orders · ${c.rev}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: `1px solid ${C.border}` }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, background: c.color, flexShrink: 0 }} />
               <div style={{ fontSize: 13, fontWeight: 500, width: 80 }}>{c.name}</div>
@@ -319,8 +345,12 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
         {/* Top Items */}
         <div style={card()}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14 }}>Top Items · {PERIOD_LABELS[period]}</div>
-          {displayTopItems.map((item, i) => (
-            <div key={item.name} title={`${item.name}: ${item.sold} sold · ${item.rev} · ${item.trend}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < displayTopItems.length - 1 ? `1px solid ${C.border}` : "none" }}>
+          {displayTopItems.length === 0 ? (
+            <div style={{ padding: "20px 0", textAlign: "center", color: C.text3, fontSize: 12 }}>
+              No items sold yet for {PERIOD_LABELS[period].toLowerCase()}.
+            </div>
+          ) : displayTopItems.map((item, i) => (
+            <div key={item.name} title={`${item.name}: ${item.sold} sold · ${item.rev}`} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < displayTopItems.length - 1 ? `1px solid ${C.border}` : "none" }}>
               <div style={{ width: 20, height: 20, borderRadius: 5, background: C.bg4, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.text3, fontFamily: "monospace", flexShrink: 0 }}>{i + 1}</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 500 }}>{item.name}</div>
@@ -328,7 +358,6 @@ function Analytics({ orders: externalOrders, customers: externalCustomers }) {
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontFamily: "monospace", fontSize: 12, color: C.amber2 }}>{item.rev}</div>
-                <div style={{ fontSize: 10, color: item.trend.startsWith("+") ? C.green : C.red, fontFamily: "monospace" }}>{item.trend}</div>
               </div>
             </div>
           ))}

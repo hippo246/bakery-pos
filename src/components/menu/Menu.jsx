@@ -61,7 +61,7 @@ function Menu({ menuItems, setMenuItems }) {
               <span style={{ fontSize: 10, fontFamily: "monospace", background: catFilter === cat ? C.amber3 : C.bg4, color: catFilter === cat ? C.amber2 : C.text3, padding: "2px 5px", borderRadius: 3 }}>{catCount}</span>
             </button>
           )})}
-          <span style={{ fontSize: 11, color: C.text3, marginLeft: 8 }}>{activeCount}/{menuItems.length} active{eightySixedCount > 0 && <span style={{ color: "#FF8C42", marginLeft: 6 }}>· {eightySixedCount} 86'd</span>}</span>
+          <span style={{ fontSize: 11, color: C.text3, marginLeft: 8 }}>{activeCount}/{menuItems.length} active{eightySixedCount > 0 && <span style={{ color: C.warning, marginLeft: 6 }}>· {eightySixedCount} 86'd</span>}</span>
         </div>
         <button style={btn("primary")} onClick={openNew}>＋ Add Item</button>
       </div>
@@ -78,13 +78,13 @@ function Menu({ menuItems, setMenuItems }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 10 }} className="menu-grid">
               {items.map(m => (
-                <div key={m.id} style={{ background: m.eightySixed ? "#1a0d0d" : m.active ? C.bg2 : C.bg3, border: `1px solid ${m.eightySixed ? "#3a1a1a" : C.border}`, borderRadius: 12, padding: "12px 14px", opacity: m.active && !m.eightySixed ? 1 : 0.6, transition: "opacity .2s" }}>
+                <div key={m.id} style={{ background: m.eightySixed ? C.redBg : m.active ? C.bg2 : C.bg3, border: `1px solid ${m.eightySixed ? C.redBorder : C.border}`, borderRadius: 12, padding: "12px 14px", opacity: m.active && !m.eightySixed ? 1 : 0.6, transition: "opacity .2s" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                     <div style={{ fontSize: 22 }}>{m.emoji}</div>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      {m.popular && <span style={{ ...pill("#2a2008", C.amber), fontSize: 9 }}>★ TOP</span>}
-                      {m.eightySixed && <span style={{ ...pill("#2a0808", C.red), fontSize: 9 }}>86'D</span>}
-                      <span style={{ ...pill(m.active ? "#0d2218" : "#2a0808", m.active ? C.green : C.red), fontSize: 9 }}>{m.active ? "ACTIVE" : "OFF"}</span>
+                      {m.popular && <span style={{ ...pill(C.amberBg, C.amber), fontSize: 9 }}>★ TOP</span>}
+                      {m.eightySixed && <span style={{ ...pill(C.redBg, C.red), fontSize: 9 }}>86'D</span>}
+                      <span style={{ ...pill(m.active ? C.greenBg : C.redBg, m.active ? C.green : C.red), fontSize: 9 }}>{m.active ? "ACTIVE" : "OFF"}</span>
                     </div>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{m.name}</div>
@@ -103,9 +103,9 @@ function Menu({ menuItems, setMenuItems }) {
                     <div style={{ display: "flex", gap: 5 }}>
                       <button onClick={() => togglePopular(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${C.border2}`, background: "transparent", color: m.popular ? C.amber : C.text3, fontSize: 11, cursor: "pointer" }} title="Toggle popular">★</button>
                       <button onClick={() => openEdit(m)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer" }}>✎</button>
-                      <button onClick={() => toggle86(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${m.eightySixed ? "#5a1a1a" : "#1a2a2a"}`, background: "transparent", color: m.eightySixed ? C.red : C.text3, fontSize: 10, cursor: "pointer", fontWeight: 700 }} title="86 (out of stock)">{m.eightySixed ? "↺" : "86"}</button>
-                      <button onClick={() => toggleActive(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${m.active ? "#2a1010" : "#1a2a1a"}`, background: "transparent", color: m.active ? C.red : C.green, fontSize: 11, cursor: "pointer" }}>{m.active ? "×" : "✓"}</button>
-                      <button onClick={() => deleteItem(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid #3a1a1a`, background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer" }} title="Delete item">🗑</button>
+                      <button onClick={() => toggle86(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${m.eightySixed ? C.redBorder : C.greenBorder}`, background: "transparent", color: m.eightySixed ? C.red : C.text3, fontSize: 10, cursor: "pointer", fontWeight: 700 }} title="86 (out of stock)">{m.eightySixed ? "↺" : "86"}</button>
+                      <button onClick={() => toggleActive(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${m.active ? C.redBorder : C.greenBorder}`, background: "transparent", color: m.active ? C.red : C.green, fontSize: 11, cursor: "pointer" }}>{m.active ? "×" : "✓"}</button>
+                      <button onClick={() => deleteItem(m.id)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.mutedRed, fontSize: 11, cursor: "pointer" }} title="Delete item">🗑</button>
                     </div>
                   </div>
                 </div>
@@ -118,7 +118,7 @@ function Menu({ menuItems, setMenuItems }) {
       {/* Add/Edit Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 380 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(380px,95vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{editItem ? "Edit Item" : "Add Menu Item"}</div>
               <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setShowModal(false)}>×</span>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { C, pill, card, btn, input, label, STATUS_FLOW, STATUS_FLOW_LABEL, STATUS_COLORS, SRC_COLORS, PEAK_SOP, MENU_CATS } from "../../styles/theme";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { C, pill, card, btn, input, label, STATUS_FLOW, STATUS_FLOW_LABEL, STATUS_COLORS, SRC_COLORS, PEAK_SOP, MENU_CATS, srcLabel } from "../../styles/theme";
 import { INIT_TABLES } from "../../data/tableConstants";
 import { createOrder, normalizeOrder, updateOrderStatus, getOrderDisplayItems, getOrderCustomerName, getOrderAmount } from "../../domain/orderModel.js";
 import { deductInventoryForOrder, canFulfillOrder, restoreInventoryForCancelledOrder } from "../../domain/inventoryModel.js";
@@ -11,8 +11,9 @@ import { getOrCreateCustomerFromOrder, updateCustomerAfterOrder } from "../../do
 import { markTableOccupied, markTableAvailable } from "../../domain/tableModel.js";
 import { formatCurrency } from "../../domain/money.js";
 
-function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, staff, discounts, inventory, setInventory, customers, setCustomers }) {
-  console.log("Orders component rendering", { orders, menuItems, inventory });
+function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, setTables, staff, discounts, inventory, setInventory, customers, setCustomers }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
 
   // Mode toggle: 'active' or 'pos'
   const [mode, setMode] = useState('active');
@@ -44,6 +45,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
   const [itemNotes, setItemNotes] = useState("");
   const [stockWarningModal, setStockWarningModal] = useState(null);
   const [managerOverride, setManagerOverride] = useState(false);
+  const [posMobileTab, setPosMobileTab] = useState("menu"); // "menu" | "cart"
 
   // Use the passed tables, staff, and discounts instead of local constants
   const availableTables = tables || INIT_TABLES;
@@ -58,13 +60,44 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
   const MENU_CATEGORIES = ["All", "Coffee", "Food", "Special", "Popular", "Available only"];
 
   // Toast notification helper
-  const showToast = (message, type = 'success') => {
+  const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
+  }, []);
+
+  // Filter helpers — defined before the memos that use them
+  const isStatusFilter = (f) => STATUS_FILTERS.includes(f);
+  const isSrcFilter = (f) => SOURCE_FILTERS.slice(1).includes(f);
+
+  // Memoized counts
+  const counts = useMemo(() => {
+    const c = {};
+    orders.forEach((o) => { c[o.status] = (c[o.status] || 0) + 1; });
+    return c;
+  }, [orders]);
+
+  // Memoized filtered orders
+  const filtered = useMemo(() => {
+    let result = orders;
+    if (filter !== "ALL") {
+      if (isStatusFilter(filter)) result = orders.filter((o) => o.status === filter);
+      else if (isSrcFilter(filter)) result = orders.filter((o) => o.source === filter);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((o) =>
+        getOrderCustomerName(o).toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q) ||
+        (o.customerPhone && o.customerPhone.includes(q)) ||
+        (o.tableId && o.tableId.toLowerCase().includes(q)) ||
+        getOrderDisplayItems(o).toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [orders, filter, search]);
 
   // Cart operations
-  const addToCart = (menuItem) => {
+  const addToCart = useCallback((menuItem) => {
     if (!menuItem.active || menuItem.eightySixed) {
       showToast(`${menuItem.name} is not available`, 'error');
       return;
@@ -85,40 +118,41 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
         notes: ''
       }];
     });
-  };
+  }, [showToast]);
 
-  const removeFromCart = (itemId) => {
+  const removeFromCart = useCallback((itemId) => {
     setCart(prev => prev.filter(item => item.id !== itemId));
-  };
+  }, []);
 
-  const updateCartQty = (itemId, delta) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const newQty = Math.max(1, item.qty + delta);
-        return { ...item, qty: newQty };
-      }
-      return item;
+  const updateCartQty = useCallback((itemId, delta) => {
+    setCart(prev => prev.flatMap(item => {
+      if (item.id !== itemId) return [item];
+      const newQty = item.qty + delta;
+      if (newQty <= 0) return []; // remove item when decremented to 0
+      return [{ ...item, qty: newQty }];
     }));
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCart([]);
     setAppliedDiscount(null);
     setDiscountCode("");
     setDiscountError("");
-  };
+  }, []);
 
-  const updateCartItemNotes = (itemId, notes) => {
+  const updateCartItemNotes = useCallback((itemId, notes) => {
     setCart(prev => prev.map(item => 
       item.id === itemId ? { ...item, notes } : item
     ));
-  };
+  }, []);
 
-  // Calculate cart totals
-  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const cartDiscount = appliedDiscount ? calculateDiscountAmount({ total: cartSubtotal }, appliedDiscount) : 0;
-  const cartTax = Math.round((cartSubtotal - cartDiscount) * 0.18);
-  const cartTotal = cartSubtotal - cartDiscount + cartTax;
+  // Calculate cart totals (memoized)
+  const { cartSubtotal, cartDiscount, cartTax, cartTotal } = useMemo(() => {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const discount = appliedDiscount ? calculateDiscountAmount({ total: subtotal }, appliedDiscount) : 0;
+    const tax = Math.round((subtotal - discount) * 0.18);
+    return { cartSubtotal: subtotal, cartDiscount: discount, cartTax: tax, cartTotal: subtotal - discount + tax };
+  }, [cart, appliedDiscount]);
 
   // Apply discount
   const applyDiscount = () => {
@@ -195,26 +229,9 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     const stockCheck = canFulfillOrder(tempOrder, inventory, BASIC_RECIPES);
     
     if (!stockCheck.canFulfill) {
-      const missingItemsStr = stockCheck.missingItems.map(m => `${m.name} (need ${m.required} ${m.unit}, have ${m.available} ${m.unit})`).join(', ');
       setStockWarningModal({
         missingItems: stockCheck.missingItems,
-        missingItemsStr,
         orderItems,
-        sourceMap: {
-          "DINE_IN": "WALK_IN",
-          "TAKEAWAY": "WALK_IN",
-          "DIRECT_DELIVERY": "DIRECT_DELIVERY",
-          "SWIGGY": "SWIGGY",
-          "ZOMATO": "ZOMATO"
-        },
-        paymentStatusMap: {
-          "CASH": "PAID",
-          "UPI": "PAID",
-          "CARD": "PAID",
-          "SPLIT": "PARTIAL",
-          "ONLINE": "PAID",
-          "COD": "COD"
-        }
       });
       return;
     }
@@ -301,7 +318,24 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
   const confirmOrderWithOverride = () => {
     if (!stockWarningModal) return;
 
-    const { orderItems, sourceMap, paymentStatusMap } = stockWarningModal;
+    const { orderItems } = stockWarningModal;
+
+    const sourceMap = {
+      "DINE_IN": "WALK_IN",
+      "TAKEAWAY": "WALK_IN",
+      "DIRECT_DELIVERY": "DIRECT_DELIVERY",
+      "SWIGGY": "SWIGGY",
+      "ZOMATO": "ZOMATO"
+    };
+
+    const paymentStatusMap = {
+      "CASH": "PAID",
+      "UPI": "PAID",
+      "CARD": "PAID",
+      "SPLIT": "PARTIAL",
+      "ONLINE": "PAID",
+      "COD": "COD"
+    };
 
     // Create order using domain model
     const newOrder = createOrder({
@@ -364,50 +398,26 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     showToast("Order placed with manager override");
   };
 
-  // Active Orders filtering
-  const isStatusFilter = (f) => STATUS_FILTERS.includes(f);
-  const isSrcFilter = (f) => SOURCE_FILTERS.slice(1).includes(f);
+  const toggleSelect = useCallback((id) => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
 
-  let filtered = orders;
-  if (filter !== "ALL") {
-    if (isStatusFilter(filter)) filtered = orders.filter((o) => o.status === filter);
-    else if (isSrcFilter(filter)) filtered = orders.filter((o) => o.source === filter);
-  }
-  if (search.trim()) {
-    const q = search.trim().toLowerCase();
-    filtered = filtered.filter((o) => 
-      getOrderCustomerName(o).toLowerCase().includes(q) || 
-      o.id.toLowerCase().includes(q) ||
-      (o.customerPhone && o.customerPhone.includes(q)) ||
-      (o.tableId && o.tableId.toLowerCase().includes(q)) ||
-      getOrderDisplayItems(o).toLowerCase().includes(q)
-    );
-  }
-
-  const toggleSelect = (id) => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-  const advanceSelected = () => {
-    setOrders(orders.map(o => selected.has(o.id) && STATUS_FLOW[o.status] ? { ...o, status: STATUS_FLOW[o.status] } : o));
+  const advanceSelected = useCallback(() => {
+    setOrders(prev => prev.map(o => selected.has(o.id) && STATUS_FLOW[o.status] ? { ...o, status: STATUS_FLOW[o.status] } : o));
     setSelected(new Set());
-  };
-  const cancelSelected = () => {
-    setOrders(orders.map(o => selected.has(o.id) && ["NEW","ACCEPTED","PREPARING"].includes(o.status) ? { ...o, status: "CANCELLED" } : o));
-    setSelected(new Set());
-  };
+  }, [selected, setOrders]);
 
-  const generateReceipt = (order) => {
+  const cancelSelected = useCallback(() => {
+    setOrders(prev => prev.map(o => selected.has(o.id) && ["NEW","ACCEPTED","PREPARING"].includes(o.status) ? { ...o, status: "CANCELLED" } : o));
+    setSelected(new Set());
+  }, [selected, setOrders]);
+
+  const generateReceipt = useCallback((order) => {
     setReceiptOrder(order);
     setShowReceipt(true);
-  };
+  }, []);
 
-  const updateStatus = (id, status) => {
-    setOrders(orders.map((o) => {
-      if (o.id === id) {
-        const updated = updateOrderStatus(o, status);
-        return updated;
-      }
-      return o;
-    }));
-  };
+  const updateStatus = useCallback((id, status) => {
+    setOrders(prev => prev.map((o) => o.id === id ? updateOrderStatus(o, status) : o));
+  }, [setOrders]);
 
   // Safe receipt generation with escaped values
   const printReceipt = () => {
@@ -495,10 +505,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     printWindow.print();
   };
 
-  const counts = {};
-  orders.forEach((o) => { counts[o.status] = (counts[o.status] || 0) + 1; });
-
-  const srcLabel = (s) => ({ WALK_IN: "Walk-in", SWIGGY: "Swiggy", ZOMATO: "Zomato", DIRECT_DELIVERY: "Delivery" }[s] || s);
+  const activeCount = orders.filter(o => !["COMPLETED","CANCELLED"].includes(o.status)).length;
 
   return (
     <div>
@@ -511,10 +518,14 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             flex: 1,
             padding: '12px',
             fontSize: 14,
-            fontWeight: 600
+            fontWeight: 600,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8
           }}
         >
           Active Orders
+          {activeCount > 0 && (
+            <span style={{ background: mode === 'active' ? "rgba(0,0,0,.25)" : C.amberDim, color: mode === 'active' ? C.onColor : C.amber2, fontSize: 11, fontFamily: "monospace", fontWeight: 700, padding: "2px 7px", borderRadius: 10 }}>{activeCount}</span>
+          )}
         </button>
         <button 
           onClick={() => setMode('pos')}
@@ -523,10 +534,14 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             flex: 1,
             padding: '12px',
             fontSize: 14,
-            fontWeight: 600
+            fontWeight: 600,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8
           }}
         >
           New Order / POS
+          {cart.length > 0 && (
+            <span style={{ background: mode === 'pos' ? "rgba(0,0,0,.25)" : C.amberDim, color: mode === 'pos' ? C.onColor : C.amber2, fontSize: 11, fontFamily: "monospace", fontWeight: 700, padding: "2px 7px", borderRadius: 10 }}>{cart.length}</span>
+          )}
         </button>
       </div>
 
@@ -536,15 +551,16 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
           position: 'fixed',
           top: 20,
           right: 20,
-          background: toast.type === 'error' ? '#5a1a1a' : '#1a3a1a',
+          background: toast.type === 'error' ? C.redBg : C.greenBg,
           border: `1px solid ${toast.type === 'error' ? C.red : C.green}`,
           borderRadius: 8,
           padding: '12px 16px',
           color: toast.type === 'error' ? C.red : C.green,
           fontSize: 13,
           zIndex: 1000,
-          animation: 'fadeIn 0.3s ease'
+          animation: 'toastIn 0.25s ease'
         }}>
+          <style>{`@keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
           {toast.message}
         </div>
       )}
@@ -552,7 +568,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       {mode === 'active' ? (
         <>
           {/* Summary Row */}
-          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 16 }}>
             {[
               { label: "Active Orders", val: orders.filter(o => !["COMPLETED","CANCELLED"].includes(o.status)).length, color: C.amber2 },
               { label: "Need Action", val: (counts["NEW"] || 0) + (counts["READY"] || 0), color: C.red },
@@ -573,7 +589,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             return (
               <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
                 {sops.map(s => (
-                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderRadius: 9, background: s.level === "alert" ? "#2a0808" : "#281f00", border: `1px solid ${s.level === "alert" ? "#5a1a1a" : "#4a3800"}` }}>
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderRadius: 9, background: s.level === "alert" ? C.redBg : C.amberBg, border: `1px solid ${s.level === "alert" ? C.redBorder : C.amberBorder}` }}>
                     <span style={{ fontSize: 15 }}>{s.level === "alert" ? "🔴" : "🟡"}</span>
                     <div style={{ flex: 1 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: s.level === "alert" ? C.red : C.amber, marginRight: 8 }}>{s.label}</span>
@@ -587,24 +603,34 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
           })()}
 
           {/* Controls */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "nowrap", minWidth: "max-content" }}>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
               <div style={{ position: "relative" }}>
                 <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.text3 }}>🔍</span>
                 <input style={{ ...input, paddingLeft: 28, width: 180 }} placeholder="Search orders…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
+              {/* ALL filter */}
+              <button onClick={() => setFilter("ALL")} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${filter === "ALL" ? C.amber3 : C.border2}`, background: filter === "ALL" ? C.amberDim : C.bg3, color: filter === "ALL" ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, minHeight: 44 }}>
+                All
+                <span style={{ background: filter === "ALL" ? C.amber3 : C.bg4, color: filter === "ALL" ? C.amber2 : C.text3, fontSize: 10, padding: "2px 5px", borderRadius: 3, fontFamily: "monospace" }}>{orders.length}</span>
+              </button>
               {STATUS_FILTERS.concat(SOURCE_FILTERS.slice(1)).map((f) => {
                 const active = filter === f;
-                const count = f === "ALL" ? orders.length : isStatusFilter(f) 
+                const count = isStatusFilter(f)
                   ? orders.filter(o => o.status === f).length
                   : orders.filter(o => o.source === f).length;
+                if (count === 0 && !active) return null;
                 return (
                   <button key={f} onClick={() => setFilter(f)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${active ? C.amber3 : C.border2}`, background: active ? C.amberDim : C.bg3, color: active ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, minHeight: 44, minWidth: 44 }}>
-                    {f === "ALL" ? "All" : f === "WALK_IN" ? "Walk-in" : f === "DIRECT_DELIVERY" ? "Delivery" : f.charAt(0) + f.slice(1).toLowerCase().replace("_", " ")}
+                    {f === "WALK_IN" ? "Walk-in" : f === "DIRECT_DELIVERY" ? "Delivery" : f.charAt(0) + f.slice(1).toLowerCase().replace(/_/g, " ")}
                     {count > 0 && <span style={{ background: active ? C.amber3 : C.bg4, color: active ? C.amber2 : C.text3, fontSize: 10, padding: "2px 5px", borderRadius: 3, fontFamily: "monospace" }}>{count}</span>}
                   </button>
                 );
               })}
+            </div>
+            </div>
             </div>
           </div>
 
@@ -630,7 +656,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               const timeElapsed = getMinutesElapsed(o.createdAt);
               const isOld = !["COMPLETED","CANCELLED"].includes(o.status) && timeElapsed > 15;
               return (
-                <div key={o.id} style={{ background: isOld ? "#1a0d0d" : C.bg2, border: `1px solid ${expanded ? C.border2 : isOld ? "#3a1a1a" : C.border}`, borderRadius: 12, overflow: "hidden", transition: "border-color .15s" }}>
+                <div key={o.id} style={{ background: isOld ? C.redBg : C.bg2, border: `1px solid ${expanded ? C.border2 : isOld ? C.redBorder : C.border}`, borderRadius: 12, overflow: "hidden", transition: "border-color .15s" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", cursor: "pointer" }} onClick={() => setExpandedId(expanded ? null : o.id)}>
                     <input type="checkbox" checked={selected.has(o.id)} onChange={(e) => { e.stopPropagation(); toggleSelect(o.id); }} onClick={e => e.stopPropagation()} style={{ accentColor: C.amber, cursor: "pointer", flexShrink: 0 }} />
                     <div style={{ fontFamily: "monospace", fontSize: 11, color: C.text3, width: 58, flexShrink: 0 }}>{o.id}</div>
@@ -649,10 +675,18 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                   </div>
 
                   {expanded && (
-                    <div style={{ borderTop: `1px solid ${C.border}`, padding: "12px 14px", background: C.bg3, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <div style={{ borderTop: `1px solid ${C.border}`, padding: "12px 14px", background: C.bg3, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
                       <div style={{ flex: 1, minWidth: 200 }}>
                         <div style={{ fontSize: 11, color: C.text3, marginBottom: 5, textTransform: "uppercase", letterSpacing: ".06em" }}>Items</div>
                         <div style={{ fontSize: 12, color: C.text }}>{getOrderDisplayItems(o)}</div>
+                        {o.notes && <div style={{ fontSize: 11, color: C.amber, marginTop: 6, fontStyle: "italic" }}>📝 {o.notes}</div>}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 11, color: C.text2, minWidth: 120 }}>
+                        {o.tableId && <div><span style={{ color: C.text3 }}>Table: </span>{o.tableId}</div>}
+                        {o.customerPhone && <div><span style={{ color: C.text3 }}>Phone: </span>{o.customerPhone}</div>}
+                        {o.customerAddress && <div><span style={{ color: C.text3 }}>Addr: </span>{o.customerAddress}</div>}
+                        {o.paymentMethod && <div><span style={{ color: C.text3 }}>Pay: </span>{o.paymentMethod}</div>}
+                        {o.discountAmount > 0 && <div style={{ color: C.green }}>Disc: -₹{o.discountAmount}</div>}
                       </div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                         {nextStatus && (
@@ -664,7 +698,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                           <button onClick={(e) => { e.stopPropagation(); updateStatus(o.id, "CANCELLED"); }} style={btn("danger")}>Cancel</button>
                         )}
                         {o.paymentStatus === "COD" && o.status === "COMPLETED" && (
-                          <button onClick={(e) => { e.stopPropagation(); setOrders(orders.map(x => x.id === o.id ? { ...x, paymentStatus: "PAID" } : x)); }} style={{ ...btn("success"), fontSize: 11 }}>Mark Paid</button>
+                          <button onClick={(e) => { e.stopPropagation(); setOrders(prev => prev.map(x => x.id === o.id ? { ...x, paymentStatus: "PAID" } : x)); }} style={{ ...btn("success"), fontSize: 11 }}>Mark Paid</button>
                         )}
                         <button onClick={(e) => { e.stopPropagation(); generateReceipt(o); }} style={{ ...btn("ghost"), fontSize: 11, padding: "6px 12px" }}>🧾 Receipt</button>
                       </div>
@@ -678,55 +712,44 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       ) : (
         /* POS Mode */
         <>
-          {/* Mobile-friendly CSS */}
           <style>{`
-            @media (max-width: 1024px) {
+            @media (max-width: 900px) {
               .pos-layout {
-                grid-template-columns: 1fr 300px !important;
+                grid-template-columns: 1fr 280px !important;
               }
               .pos-categories {
                 display: none !important;
               }
             }
-            @media (max-width: 768px) {
+            @media (max-width: 700px) {
               .pos-layout {
-                grid-template-columns: 1fr !important;
-                grid-template-rows: 1fr auto !important;
-                height: auto !important;
-              }
-              .pos-cart {
-                position: fixed !important;
-                bottom: 0 !important;
-                left: 0 !important;
-                right: 0 !important;
-                z-index: 50 !important;
-                border-radius: 18px 18px 0 0 !important;
-                max-height: 70vh !important;
-                transform: translateY(calc(100% - 60px));
-                transition: transform 0.3s ease;
-              }
-              .pos-cart.open {
-                transform: translateY(0);
-              }
-              .pos-cart-header {
                 display: flex !important;
-                justify-content: space-between;
-                align-items: center;
-                padding: 16px;
-                border-bottom: 1px solid var(--border);
-                cursor: pointer;
+                flex-direction: column !important;
+                height: auto !important;
+                gap: 12px !important;
               }
-              .pos-cart-header::after {
-                content: "▲";
-                font-size: 12px;
+              .pos-menu-panel { max-height: 55vh; overflow-y: auto; }
+              .pos-cart {
+                border-radius: 14px !important;
               }
-              .pos-cart.open .pos-cart-header::after {
-                content: "▼";
-              }
+              .pos-mobile-menu { display: flex !important; }
+              .pos-mobile-cart { display: flex !important; }
+            }
+            @media (min-width: 701px) {
+              .pos-mobile-tab-bar { display: none !important; }
+              .pos-mobile-menu { display: flex !important; }
+              .pos-mobile-cart { display: flex !important; }
             }
           `}</style>
+
+          {/* Mobile tab switcher for POS — only shows on small screens */}
+          <div className="pos-mobile-tab-bar" style={{ display: "none", gap: 0, marginBottom: 10, background: C.bg3, borderRadius: 10, padding: 3 }}>
+            {[["menu", "🍽 Menu"], ["cart", `🛒 Cart${cart.length > 0 ? ` (${cart.length})` : ""}`]].map(([t, lbl]) => (
+              <button key={t} onClick={() => setPosMobileTab(t)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: posMobileTab === t ? C.bg4 : "transparent", color: posMobileTab === t ? C.amber2 : C.text3, fontSize: 13, fontWeight: posMobileTab === t ? 700 : 400, cursor: "pointer" }}>{lbl}</button>
+            ))}
+          </div>
           
-          <div className="pos-layout" style={{ display: "grid", gridTemplateColumns: "200px 1fr 320px", gap: 16, height: "calc(100vh - 120px)" }}>
+          <div className="pos-layout" style={{ display: "grid", gridTemplateColumns: "180px 1fr 300px", gap: 12, height: "calc(100dvh - 160px)", minHeight: 0 }}>
             {/* Left: Menu Categories */}
             <div className="pos-categories" style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, overflowY: "auto" }}>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Categories</div>
@@ -762,7 +785,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             </div>
 
             {/* Middle: Menu Grid */}
-            <div style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, overflowY: "auto" }}>
+            <div className="pos-menu-panel" style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, overflowY: "auto", display: isMobile && posMobileTab !== "menu" ? "none" : undefined }}>
               <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>
                 {categoryFilter === "All" ? "All Items" : categoryFilter}
               </div>
@@ -817,7 +840,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                         {(!item.active || item.eightySixed) && (
                           <span style={{ 
                             fontSize: 9, 
-                            background: "#1a0d0d", 
+                            background: C.redBg, 
                             color: C.red, 
                             padding: "2px 6px", 
                             borderRadius: 4,
@@ -851,13 +874,11 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             {/* Right: Cart and Checkout */}
             <div 
               className={`pos-cart ${cart.length > 0 ? 'open' : ''}`}
-              style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, overflowY: "auto", display: "flex", flexDirection: "column" }}
+              style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, overflowY: "auto", display: isMobile && posMobileTab !== "cart" ? "none" : "flex", flexDirection: "column" }}
             >
-              <div className="pos-cart-header" style={{ display: "none", fontSize: 14, fontWeight: 700, color: C.text }}>
-                <span>Cart ({cart.length} items)</span>
-                <span>₹{cartTotal}</span>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>
+                Cart {cart.length > 0 && <span style={{ fontSize: 12, color: C.text3, fontWeight: 400 }}>({cart.length} item{cart.length !== 1 ? "s" : ""})</span>}
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: C.text }}>Cart</div>
               
               {cart.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: C.text3, fontSize: 13 }}>
@@ -949,7 +970,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                   {/* Order Type Selection */}
                   <div style={{ marginBottom: 16 }}>
                     <label style={label}>Order Type</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(70px,1fr))", gap: 6 }}>
                       {ORDER_TYPES.map(type => (
                         <button
                           key={type}
@@ -962,7 +983,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                             letterSpacing: ".04em"
                           }}
                         >
-                          {type.replace("_", " ")}
+                          {type.replace(/_/g, " ")}
                         </button>
                       ))}
                     </div>
@@ -973,7 +994,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                     <div style={{ marginBottom: 16 }}>
                       <label style={label}>Table</label>
                       <select
-                        style={{ ...input }}
+                        style={{ ...input, width: "100%" }}
                         value={selectedTable || ""}
                         onChange={(e) => setSelectedTable(e.target.value || null)}
                       >
@@ -1026,7 +1047,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                   <div style={{ marginBottom: 16 }}>
                     <label style={label}>Payment Method</label>
                     <select
-                      style={{ ...input }}
+                      style={{ ...input, width: "100%" }}
                       value={paymentMethod}
                       onChange={(e) => setPaymentMethod(e.target.value)}
                     >
@@ -1044,6 +1065,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                         style={{ ...input, flex: 1 }}
                         value={discountCode}
                         onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && applyDiscount()}
                         placeholder="Enter code"
                       />
                       <button
@@ -1179,7 +1201,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               </button>
               <button
                 onClick={confirmOrderWithOverride}
-                style={{ ...btn("primary"), background: "#2a1a00", borderColor: C.amber3, color: C.amber2 }}
+                style={{ ...btn("primary"), background: C.amberBg, borderColor: C.amber3, color: C.amber2 }}
               >
                 Manager Override
               </button>
@@ -1191,7 +1213,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       {/* Receipt Modal */}
       {showReceipt && receiptOrder && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowReceipt(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 380, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(380px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>Receipt</div>
               <button onClick={() => setShowReceipt(false)} style={{ background: "transparent", border: "none", color: C.text3, fontSize: 24, cursor: "pointer", padding: 8 }}>×</button>

@@ -41,6 +41,9 @@ const PREP_TIMES = {
 };
 
 function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
+
   const [view, setView] = useState("cards");
   const [doneLog, setDoneLog] = useState([]);
   const [sortBy, setSortBy] = useState("time");
@@ -240,12 +243,12 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
   };
 
   return (
-    <div style={{ display: "flex", gap: 14, height: "calc(100vh - 130px)" }}>
+    <div style={{ display: "flex", gap: 14, height: isMobile ? "auto" : "calc(100dvh - 160px)", minHeight: 400, flexDirection: isMobile && showDoneLog ? "column" : "row" }}>
       {/* Main KDS panel */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* ── Throughput bar ── */}
-        <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 12 }}>
+        <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 12 }}>
           {[
             { val: kdsCards.length, lbl: "Active Tickets", color: C.amber2 },
             { val: urgentCount, lbl: "Urgent", color: urgentCount > 0 ? C.red : C.text3 },
@@ -260,7 +263,8 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
         </div>
 
         {/* ── Toolbar ── */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 12, flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "nowrap", minWidth: "max-content" }}>
           {/* View toggle */}
           <div style={{ display: "flex", gap: 4, background: C.bg3, padding: 3, borderRadius: 8 }}>
             {[["cards","⊞ Cards"],["list","≡ List"],["station","⊟ Station"]].map(([v, lbl]) => (
@@ -282,7 +286,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
           {/* Bulk actions */}
           <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
             {kdsCards.filter(c => !c.held && c.urgency !== "urgent").length > 0 && (
-              <button onClick={bumpAllNonUrgent} style={{ padding: "10px 11px", borderRadius: 7, border: `1px solid #1a4020`, background: "#0d2010", color: C.green, fontSize: 11, cursor: "pointer", fontWeight: 700, minHeight: 44 }}>✓ Bump Non-Urgent</button>
+              <button onClick={bumpAllNonUrgent} style={{ padding: "10px 11px", borderRadius: 7, border: `1px solid ${C.greenBorder}`, background: C.greenBg, color: C.green, fontSize: 11, cursor: "pointer", fontWeight: 700, minHeight: 44 }}>✓ Bump Non-Urgent</button>
             )}
             {doneLog.length > 0 && (
               <button onClick={recallLast} style={{ padding: "10px 11px", borderRadius: 7, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>↩ Recall Last</button>
@@ -291,6 +295,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
               🕘 Log ({doneLog.length})
             </button>
           </div>
+        </div>
         </div>
 
         {/* ── Empty state ── */}
@@ -324,14 +329,14 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
 
         {/* ── Station split view ── */}
         {kdsCards.length > 0 && view === "station" && (
-          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, overflowY: "auto", flex: 1 }}>
+          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14, overflowY: "auto", flex: 1 }}>
             {["Bar", "Kitchen", "Packaging", "Dessert"].map(station => {
               const stCards = sorted.filter(c => c.station === station);
               const stationColors = {
-                Bar: { bg: "#0d1a28", border: "#1a3050", color: C.blue },
-                Kitchen: { bg: "#1a0d1a", border: "#2e1a3a", color: C.purple },
-                Packaging: { bg: "#0d1a15", border: "#1a3028", color: C.green },
-                Dessert: { bg: "#1a150d", border: "#302818", color: C.amber2 },
+                Bar: { bg: C.blueBg, border: C.blueBorder, color: C.blue },
+                Kitchen: { bg: C.purpleBg, border: C.purpleBorder, color: C.purple },
+                Packaging: { bg: C.greenBg, border: C.greenBorder, color: C.green },
+                Dessert: { bg: C.amberBg, border: C.amberBorder, color: C.amber2 },
               };
               const colors = stationColors[station] || stationColors.Bar;
               return (
@@ -418,7 +423,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
 
       {/* ── Done log side panel ── */}
       {showDoneLog && (
-        <div style={{ width: 260, background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 12px", overflowY: "auto", flexShrink: 0 }}>
+        <div style={{ width: isMobile ? "100%" : "min(260px, 85vw)", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 12px", overflowY: "auto", flexShrink: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: C.text2 }}>🕘 Completed Log</span>
             <button onClick={recallLast} disabled={!doneLog.length} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, border: `1px solid ${C.border2}`, background: "transparent", color: doneLog.length ? C.text2 : C.text3, cursor: doneLog.length ? "pointer" : "default" }}>↩ Recall</button>

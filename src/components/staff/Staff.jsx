@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_STAFF, STAFF_ROLES, STAFF_STATUS, SHIFT_TYPES } from "../../data/staffConstants";
 
 export default function Staff({ staff: externalStaff, setStaff: externalSetStaff, orders }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
   const [staff, setStaff] = useState(externalStaff || INIT_STAFF);
   const [roleFilter, setRoleFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -97,7 +99,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
   return (
     <div>
       {/* Summary Cards */}
-      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Staff", val: staff.length, color: C.amber2 },
           { label: "Active", val: activeCount, color: C.green },
@@ -145,7 +147,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
       {viewMode === "grid" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 10 }} className="staff-grid">
           {filtered.map(person => (
-            <div key={person.id} style={{ ...card(), padding: "16px", border: `1px solid ${person.status === "on_leave" ? "#3a2010" : C.border}`, background: person.status === "on_leave" ? "#1a1000" : C.bg2 }}>
+            <div key={person.id} style={{ ...card(), padding: "16px", border: `1px solid ${person.status === "on_leave" ? C.amberBorder : C.border}`, background: person.status === "on_leave" ? C.amberBg : C.bg2 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <div style={{ width: 48, height: 48, borderRadius: "50%", background: C.amber3, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: C.amber2 }}>
                   {person.avatar}
@@ -158,7 +160,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
               
               <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
                 {person.shifts.map(shift => (
-                  <span key={shift} style={{ ...pill("#1a1a2a", C.blue), fontSize: 9 }}>{shift}</span>
+                  <span key={shift} style={{ ...pill(C.neutralBg, C.blue), fontSize: 9 }}>{shift}</span>
                 ))}
               </div>
 
@@ -201,7 +203,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
                 <button onClick={() => updateStatus(person.id, person.status === "active" ? "on_leave" : "active")} style={{ padding: "10px 10px", borderRadius: 6, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 44 }}>
                   {person.status === "active" ? "⏸ Leave" : "▶ Active"}
                 </button>
-                <button onClick={() => deleteStaff(person.id)} style={{ padding: "10px 10px", borderRadius: 6, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer", minHeight: 44 }}>🗑</button>
+                <button onClick={() => deleteStaff(person.id)} style={{ padding: "10px 10px", borderRadius: 6, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.mutedRed, fontSize: 11, cursor: "pointer", minHeight: 44 }}>🗑</button>
               </div>
             </div>
           ))}
@@ -212,7 +214,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
       {viewMode === "list" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {filtered.map(person => (
-            <div key={person.id} style={{ ...card(), padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${person.status === "on_leave" ? "#3a2010" : C.border}`, background: person.status === "on_leave" ? "#1a1000" : C.bg2 }}>
+            <div key={person.id} style={{ ...card(), padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${person.status === "on_leave" ? C.amberBorder : C.border}`, background: person.status === "on_leave" ? C.amberBg : C.bg2 }}>
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: C.amber3, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: C.amber2, flexShrink: 0 }}>
                 {person.avatar}
               </div>
@@ -222,15 +224,15 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {person.shifts.map(shift => (
-                  <span key={shift} style={{ ...pill("#1a1a2a", C.blue), fontSize: 9 }}>{shift}</span>
+                  <span key={shift} style={{ ...pill(C.neutralBg, C.blue), fontSize: 9 }}>{shift}</span>
                 ))}
               </div>
-              <span style={{ ...pill(person.status === "active" ? "#0d2218" : "#2a0808", person.status === "active" ? C.green : person.status === "on_leave" ? C.amber : C.red), fontSize: 9 }}>
+              <span style={{ ...pill(person.status === "active" ? C.greenBg : C.redBg, person.status === "active" ? C.green : person.status === "on_leave" ? C.amber : C.red), fontSize: 9 }}>
                 {person.status.replace("_", " ")}
               </span>
               <div style={{ fontFamily: "monospace", fontSize: 12, color: C.amber2, width: 60, textAlign: "right" }}>₹{person.hourlyRate}/hr</div>
               <button onClick={() => openEdit(person)} style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer" }}>✎</button>
-              <button onClick={() => deleteStaff(person.id)} style={{ padding: "4px 8px", borderRadius: 5, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer" }}>🗑</button>
+              <button onClick={() => deleteStaff(person.id)} style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.mutedRed, fontSize: 11, cursor: "pointer" }}>🗑</button>
             </div>
           ))}
         </div>
@@ -243,7 +245,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
       {/* Add/Edit Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 420 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(420px,95vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{editStaff ? "Edit Staff" : "Add Staff Member"}</div>
               <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setShowModal(false)}>×</span>

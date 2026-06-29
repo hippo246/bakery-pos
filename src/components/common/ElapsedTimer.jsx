@@ -10,7 +10,7 @@ function ElapsedTimer({ startedAt, urgency }) {
   const mins = Math.floor(elapsed / 60);
   const secs = elapsed % 60;
   const color = urgency === "urgent" ? C.red : urgency === "soon" ? C.amber : C.green;
-  const bg = urgency === "urgent" ? "#2a1010" : urgency === "soon" ? "#2a1a08" : "#102010";
+  const bg = urgency === "urgent" ? C.redBg : urgency === "soon" ? C.amberBg : C.greenBg;
   return (
     <span style={{ ...pill(bg, color), fontSize: 12, padding: "4px 10px", minWidth: 52, justifyContent: "center" }}>
       {mins}:{String(secs).padStart(2, "0")}

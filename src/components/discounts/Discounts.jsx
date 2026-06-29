@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_DISCOUNTS, DISCOUNT_TYPES, DISCOUNT_STATUS, TIER_REQUIREMENTS } from "../../data/discountConstants";
 
 export default function Discounts({ discounts: externalDiscounts, setDiscounts: externalSetDiscounts }) {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
+  useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
   const [discounts, setDiscounts] = useState(externalDiscounts || INIT_DISCOUNTS);
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -91,7 +93,7 @@ export default function Discounts({ discounts: externalDiscounts, setDiscounts: 
   return (
     <div>
       {/* Summary Cards */}
-      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 8, marginBottom: 16 }}>
         {[
           { label: "Total Discounts", val: discounts.length, color: C.amber2 },
           { label: "Active", val: activeCount, color: C.green },
@@ -133,15 +135,15 @@ export default function Discounts({ discounts: externalDiscounts, setDiscounts: 
           const statusColor = discount.status === "active" && !expired ? C.green : expired ? C.red : C.text3;
           const exampleDiscount = calculateDiscount(1000, discount);
           return (
-            <div key={discount.id} style={{ ...card(), padding: "14px 16px", border: `1px solid ${discount.status === "active" && !expired ? C.border : "#3a1a1a"}`, background: discount.status === "active" && !expired ? C.bg2 : "#1a0d0d" }}>
+            <div key={discount.id} style={{ ...card(), padding: "14px 16px", border: `1px solid ${discount.status === "active" && !expired ? C.border : C.redBorder}`, background: discount.status === "active" && !expired ? C.bg2 : C.redBg }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{discount.code}</span>
-                    <span style={{ ...pill(discount.type === "percentage" ? "#1a1a2e" : "#2a1a00", discount.type === "percentage" ? C.blue : C.amber), fontSize: 9 }}>
+                    <span style={{ ...pill(discount.type === "percentage" ? C.blueBg : C.amberBg, discount.type === "percentage" ? C.blue : C.amber), fontSize: 9 }}>
                       {discount.type === "percentage" ? `-${discount.value}%` : `-₹${discount.value}`}
                     </span>
-                    <span style={{ ...pill(discount.status === "active" && !expired ? "#0d2218" : "#2a0808", statusColor), fontSize: 9 }}>
+                    <span style={{ ...pill(discount.status === "active" && !expired ? C.greenBg : C.redBg, statusColor), fontSize: 9 }}>
                       {expired ? "EXPIRED" : discount.status}
                     </span>
                   </div>
@@ -149,11 +151,11 @@ export default function Discounts({ discounts: externalDiscounts, setDiscounts: 
                 </div>
                 <div style={{ display: "flex", gap: 4 }}>
                   <button onClick={() => openEdit(discount)} style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer" }}>✎</button>
-                  <button onClick={() => deleteDiscount(discount.id)} style={{ padding: "4px 8px", borderRadius: 5, border: "1px solid #3a1a1a", background: "transparent", color: "#884444", fontSize: 11, cursor: "pointer" }}>🗑</button>
+                  <button onClick={() => deleteDiscount(discount.id)} style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.mutedRed, fontSize: 11, cursor: "pointer" }}>🗑</button>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 8, marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Min Order</div>
                   <div style={{ fontSize: 13, fontWeight: 600, fontFamily: "monospace", color: C.text2 }}>₹{discount.minOrder}</div>
@@ -174,7 +176,7 @@ export default function Discounts({ discounts: externalDiscounts, setDiscounts: 
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: C.text3 }}>
                 <div>
-                  {discount.tierRequired !== "All" && <span style={{ ...pill("#1a1a2e", C.purple), fontSize: 9, marginRight: 6 }}>{discount.tierRequired}+ only</span>}
+                  {discount.tierRequired !== "All" && <span style={{ ...pill(C.purpleBg, C.purple), fontSize: 9, marginRight: 6 }}>{discount.tierRequired}+ only</span>}
                   Example: ₹1000 order → -₹{exampleDiscount}
                 </div>
                 {discount.status === "active" && !expired && (
@@ -183,7 +185,7 @@ export default function Discounts({ discounts: externalDiscounts, setDiscounts: 
                   </button>
                 )}
                 {discount.status === "inactive" && (
-                  <button onClick={() => updateStatus(discount.id, "active")} style={{ padding: "4px 10px", borderRadius: 5, border: `1px solid #1a4020`, background: "transparent", color: C.green, fontSize: 11, cursor: "pointer" }}>
+                  <button onClick={() => updateStatus(discount.id, "active")} style={{ padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.greenBorder}`, background: "transparent", color: C.green, fontSize: 11, cursor: "pointer" }}>
                     Enable
                   </button>
                 )}
@@ -200,7 +202,7 @@ export default function Discounts({ discounts: externalDiscounts, setDiscounts: 
       {/* Add/Edit Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: 420 }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(420px,95vw)" }} onClick={e => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{editDiscount ? "Edit Discount" : "Add Discount"}</div>
               <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setShowModal(false)}>×</span>

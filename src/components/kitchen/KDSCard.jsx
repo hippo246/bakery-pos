@@ -55,13 +55,13 @@ function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemChec
   if (compact) {
     const prepStatus = getPrepTimeStatus();
     return (
-      <div style={{ background: card.held ? "#1a1000" : C.bg2, border: `1px solid ${card.held ? C.amber3 : urgencyBorder[card.urgency]}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, opacity: card.held ? 0.7 : 1 }}>
+      <div style={{ background: card.held ? C.amberBg : C.bg2, border: `1px solid ${card.held ? C.amber3 : urgencyBorder[card.urgency]}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10, opacity: card.held ? 0.7 : 1 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2, width: 64, flexShrink: 0 }}>
           <span style={{ fontFamily: "monospace", fontSize: 11, color: C.text3 }}>{card.id}</span>
           {card.held && <span style={{ fontSize: 9, color: C.amber, fontWeight: 700 }}>HELD</span>}
         </div>
         <span style={pill(SRC_COLORS[card.source]?.bg || C.bg4, SRC_COLORS[card.source]?.color || C.text2)}>{srcLabel(card.source)}</span>
-        {card.station && <span style={{ ...pill(card.station === "Bar" ? "#0d1a28" : "#1a0d1a", card.station === "Bar" ? C.blue : C.purple), fontSize: 9 }}>{card.station}</span>}
+        {card.station && <span style={{ ...pill(card.station === "Bar" ? C.blueBg : C.purpleBg, card.station === "Bar" ? C.blue : C.purple), fontSize: 9 }}>{card.station}</span>}
         <div style={{ flex: 1, fontSize: 12, color: C.text2 }}>{card.items.map(it => `${it.checked ? "✓ " : ""}${it.name} ×${it.qty}`).join(" · ")}</div>
         {card.note && <span style={{ fontSize: 11, color: C.amber }} title={card.note}>📝</span>}
         <span style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>{checkedCount}/{card.items.length}</span>
@@ -75,14 +75,14 @@ function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemChec
   }
 
   return (
-    <div style={{ background: card.held ? "#1c1500" : C.bg2, border: `2px solid ${card.held ? C.amber3 : urgencyBorder[card.urgency]}`, borderRadius: 14, padding: 14, boxShadow: card.held ? "none" : `0 0 18px ${urgencyGlow[card.urgency]}`, transition: "all .25s", opacity: card.held ? 0.75 : 1, display: "flex", flexDirection: "column" }}>
+    <div style={{ background: card.held ? C.amberBg : C.bg2, border: `2px solid ${card.held ? C.amber3 : urgencyBorder[card.urgency]}`, borderRadius: 14, padding: 14, boxShadow: card.held ? "none" : `0 0 18px ${urgencyGlow[card.urgency]}`, transition: "all .25s", opacity: card.held ? 0.75 : 1, display: "flex", flexDirection: "column" }}>
       {/* Card Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <span style={{ fontFamily: "monospace", fontSize: 11, color: C.text3 }}>{card.id}</span>
           <span style={pill(SRC_COLORS[card.source]?.bg || C.bg4, SRC_COLORS[card.source]?.color || C.text2)}>{srcLabel(card.source)}</span>
-          {card.station && <span style={{ ...pill(card.station === "Bar" ? "#0d1a28" : "#1a0d1a", card.station === "Bar" ? C.blue : C.purple), fontSize: 9 }}>{card.station}</span>}
-          {card.held && <span style={{ ...pill("#2a1a00", C.amber), fontSize: 9 }}>⏸ HELD{card.holdReason ? ` · ${card.holdReason}` : ""}</span>}
+          {card.station && <span style={{ ...pill(card.station === "Bar" ? C.blueBg : C.purpleBg, card.station === "Bar" ? C.blue : C.purple), fontSize: 9 }}>{card.station}</span>}
+          {card.held && <span style={{ ...pill(C.amberBg, C.amber), fontSize: 9 }}>⏸ HELD{card.holdReason ? ` · ${card.holdReason}` : ""}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 10, color: getPrepTimeStatus().color, fontFamily: "monospace", fontWeight: 600 }}>{getPrepTimeStatus().label}</span>
@@ -120,7 +120,7 @@ function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemChec
       {/* Items — per-item checkoff */}
       <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12, flex: 1 }}>
         {card.items.map((it, j) => (
-          <div key={j} onClick={() => onItemCheck(card.id, j)} style={{ background: it.checked ? "#0d2010" : C.bg3, border: `1px solid ${it.checked ? "#1a4020" : C.border}`, borderRadius: 7, padding: "7px 10px", cursor: "pointer", transition: "all .15s", opacity: it.checked ? 0.7 : 1 }}>
+          <div key={j} onClick={() => onItemCheck(card.id, j)} style={{ background: it.checked ? C.greenBg : C.bg3, border: `1px solid ${it.checked ? C.greenBorder : C.border}`, borderRadius: 7, padding: "7px 10px", cursor: "pointer", transition: "all .15s", opacity: it.checked ? 0.7 : 1 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, fontWeight: 600 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <span style={{ fontSize: 14, color: it.checked ? C.green : C.text3, transition: "color .15s" }}>{it.checked ? "✓" : "○"}</span>
@@ -144,7 +144,7 @@ function KDSCard({ card, onDone, onHold, onUrgencyChange, onNoteEdit, onItemChec
 
       {/* Action row */}
       <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-        <button onClick={() => onDone(card.id)} style={{ flex: 2, padding: "10px 0", borderRadius: 8, border: "none", background: checkedAll ? "#1a3a1a" : "#162614", color: checkedAll ? C.green : "#4a7a50", fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: ".03em", transition: "all .2s", minHeight: 44 }}>
+        <button onClick={() => onDone(card.id)} style={{ flex: 2, padding: "10px 0", borderRadius: 8, border: "none", background: checkedAll ? C.greenBg : C.bg4, color: checkedAll ? C.green : C.text2, fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: ".03em", transition: "all .2s", minHeight: 44 }}>
           {checkedAll ? "✓ Done" : `✓ Done (${checkedCount}/${card.items.length})`}
         </button>
         {card.held ? (

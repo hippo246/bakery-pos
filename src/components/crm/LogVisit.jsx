@@ -14,6 +14,7 @@ function LogVisit({ profile, addVisitEntry }) {
       return;
     }
     addVisitEntry(profile.id, logItems.trim(), Number(logAmt));
+    setLogItems("");
     setLogAmt("");
     setError("");
   };
@@ -21,7 +22,7 @@ function LogVisit({ profile, addVisitEntry }) {
   const onKeyDown = e => { if (e.key === "Enter") submit(); };
 
   return (
-    <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 16, border: `1px solid ${error ? "#5a2a2a" : C.border2}` }}>
+    <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 16, border: `1px solid ${error ? C.redBorder : C.border2}` }}>
       <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 8 }}>Log New Visit</div>
       <div style={{ display: "flex", gap: 6 }}>
         <input
@@ -48,7 +49,7 @@ function LogVisit({ profile, addVisitEntry }) {
           + Log
         </button>
       </div>
-      {error && <div style={{ fontSize: 10, color: "#FF8C42", marginTop: 6 }}>{error}</div>}
+      {error && <div style={{ fontSize: 10, color: C.warning, marginTop: 6 }}>{error}</div>}
     </div>
   );
 }
