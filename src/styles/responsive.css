@@ -7,58 +7,60 @@
 
   /* Grid helpers — collapse to fewer columns */
   .grid-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 
   .grid-6 {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 
   .grid-2 {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   /* Kitchen — single column so cards are full width and tappable */
   .kitchen-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   /* Menu — single column cards */
   .menu-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   /* Inventory — single column cards */
   .inventory-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   /* Staff — single column cards */
   .staff-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
 
   /* Tables — 2-col so table cards aren't enormous */
   .tables-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   /* POS layout — handled in Orders.jsx inline but belt-and-suspenders */
   .pos-layout {
-    display: flex !important;
-    flex-direction: column !important;
-    height: auto !important;
+    display: flex;
+    flex-direction: column;
+    height: auto;
   }
 
+  /* Category rail hidden on mobile — Orders.jsx uses a horizontal scroll strip instead */
   .pos-categories {
-    display: none !important;
+    display: none;
   }
 
   .pos-menu-panel {
     max-height: 55vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Prevent iOS from zooming into inputs */
@@ -71,15 +73,15 @@
 @media (min-width: 701px) and (max-width: 1024px) {
 
   .grid-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .grid-6 {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr);
   }
 
   .kitchen-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -94,18 +96,73 @@
 /* ── Landscape phone ──────────────────────────────────────── */
 @media (max-width: 700px) and (orientation: landscape) {
   .kitchen-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .tables-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Notched phones (iPhone landscape): push content away from camera cutout */
+  .pos-menu-panel,
+  .kitchen-grid,
+  .tables-grid {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
 /* ── Print ────────────────────────────────────────────────── */
 @media print {
+  /* Hide all navigation and chrome */
+  nav,
+  .pos-categories,
+  .pos-layout > *:not(.pos-menu-panel),
+  [aria-label="More navigation options"],
+  button {
+    display: none !important;
+  }
+
   body {
-    background: white !important;
-    color: black !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 12pt;
+  }
+
+  /* Cards print full-width, no shadows or glows */
+  .kitchen-grid,
+  .menu-grid,
+  .inventory-grid,
+  .staff-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12pt !important;
+    box-shadow: none !important;
+  }
+
+  /* Keep borders visible for card separation */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+/* ── Reduced motion ───────────────────────────────────────── */
+/* The JSX uses transition and cubic-bezier animations on cards, progress bars,
+   and checkboxes. Respect the OS preference. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* ── High contrast ────────────────────────────────────────── */
+/* Boost border visibility for users with forced-colors / high-contrast mode. */
+@media (forced-colors: active) {
+  .kitchen-grid > *,
+  .menu-grid > *,
+  .tables-grid > * {
+    border: 2px solid ButtonText;
   }
 }

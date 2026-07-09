@@ -3,6 +3,68 @@
 import { generateId } from './ids.js';
 import { now } from './dates.js';
 
+// ── Internal safe helpers ────────────────────────────────────────────────────
+
+function devWarn(...args) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[auditLogModel]', ...args);
+  }
+}
+
+function toSafeString(val, fallback = '') {
+  return typeof val === 'string' && val.trim() ? val.trim() : fallback;
+}
+
+function toSafeNullableString(val) {
+  return typeof val === 'string' && val.trim() ? val.trim() : null;
+}
+
+function toSafeTimestamp(val) {
+  if (val == null) return now();
+  if (typeof val === 'number' && Number.isFinite(val) && val > 0) return val;
+  if (val instanceof Date) {
+    const t = val.getTime();
+    return Number.isFinite(t) ? t : now();
+  }
+  if (typeof val === 'string' && val.trim()) {
+    const t = new Date(val).getTime();
+    return Number.isFinite(t) ? t : now();
+  }
+  devWarn('invalid timestamp, using now()', val);
+  return now();
+}
+
+function toSafeDetails(val) {
+  if (val == null) return {};
+  if (Array.isArray(val) || typeof val !== 'object') {
+    devWarn('details was not a plain object, wrapping', val);
+    return { value: val };
+  }
+  // Strip functions and symbols for JSON-safety
+  try {
+    return JSON.parse(JSON.stringify(val));
+  } catch {
+    devWarn('details not JSON-serializable, using {}');
+    return {};
+  }
+}
+
+function toSafeDateBound(val) {
+  if (val == null) return null;
+  if (typeof val === 'number' && Number.isFinite(val) && val > 0) return val;
+  if (val instanceof Date) {
+    const t = val.getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+  if (typeof val === 'string' && val.trim()) {
+    const t = new Date(val).getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+  return null;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Audit Log Entry schema
  * @typedef {Object} AuditLogEntry
@@ -21,14 +83,15 @@ import { now } from './dates.js';
  * @returns {AuditLogEntry} New audit log entry
  */
 export function createAuditLogEntry(input = {}) {
+  const safe = (input && typeof input === 'object' && !Array.isArray(input)) ? input : {};
   return {
-    id: input.id || generateId(),
-    timestamp: input.timestamp || now(),
-    module: input.module || 'GENERAL',
-    action: input.action || 'UNKNOWN',
-    userId: input.userId || null,
-    details: input.details || {},
-    entityId: input.entityId || null
+    id: toSafeString(safe.id) || generateId(),
+    timestamp: toSafeTimestamp(safe.timestamp),
+    module: toSafeString(safe.module, 'GENERAL'),
+    action: toSafeString(safe.action, 'UNKNOWN'),
+    userId: toSafeNullableString(safe.userId),
+    details: toSafeDetails(safe.details),
+    entityId: toSafeNullableString(safe.entityId)
   };
 }
 
@@ -38,16 +101,24 @@ export function createAuditLogEntry(input = {}) {
  * @returns {AuditLogEntry} Normalized audit log entry
  */
 export function normalizeAuditLogEntry(entry) {
-  if (!entry) return null;
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+    devWarn('malformed audit entry', entry);
+    return null;
+  }
+
+  // Support legacy field shapes
+  const rawTimestamp = entry.timestamp ?? entry.date ?? entry.createdAt;
+  const rawAction    = entry.action    ?? entry.type ?? entry.event;
+  const rawDetails   = entry.details   ?? entry.payload;
 
   return {
-    id: entry.id || generateId(),
-    timestamp: entry.timestamp || now(),
-    module: entry.module || 'GENERAL',
-    action: entry.action || 'UNKNOWN',
-    userId: entry.userId || null,
-    details: entry.details || {},
-    entityId: entry.entityId || null
+    id: toSafeString(entry.id) || generateId(),
+    timestamp: toSafeTimestamp(rawTimestamp),
+    module: toSafeString(entry.module, 'GENERAL'),
+    action: toSafeString(rawAction, 'UNKNOWN'),
+    userId: toSafeNullableString(entry.userId),
+    details: toSafeDetails(rawDetails),
+    entityId: toSafeNullableString(entry.entityId)
   };
 }
 
@@ -59,34 +130,60 @@ export function normalizeAuditLogEntry(entry) {
  */
 export function getAuditLogsByModule(logs, module) {
   if (!Array.isArray(logs)) return [];
-  return logs.filter(log => log.module === module);
+  const mod = toSafeString(module);
+  if (!mod) return [];
+  return logs.filter(log => log && typeof log === 'object' && log.module === mod);
 }
 
 /**
  * Filter audit logs by entity ID
- * @param {AuditLogEntry[]} logs - Audit log array
- * @param {string} entityId - Entity ID to filter by
- * @returns {AuditLogEntry[]} Filtered audit logs
  */
 export function getAuditLogsByEntity(logs, entityId) {
   if (!Array.isArray(logs)) return [];
-  return logs.filter(log => log.entityId === entityId);
+  const id = toSafeString(entityId);
+  if (!id) return [];
+  return logs.filter(log => log && typeof log === 'object' && log.entityId === id);
+}
+
+/**
+ * Filter audit logs by user ID
+ */
+export function getAuditLogsByUser(logs, userId) {
+  if (!Array.isArray(logs)) return [];
+  const id = toSafeString(userId);
+  if (!id) return [];
+  return logs.filter(log => log && typeof log === 'object' && log.userId === id);
 }
 
 /**
  * Filter audit logs by date range
- * @param {AuditLogEntry[]} logs - Audit log array
- * @param {string} startDate - Start date (ISO string)
- * @param {string} endDate - End date (ISO string)
- * @returns {AuditLogEntry[]} Filtered audit logs
  */
 export function getAuditLogsByDateRange(logs, startDate, endDate) {
   if (!Array.isArray(logs)) return [];
-  const start = new Date(startDate).getTime();
-  const end = new Date(endDate).getTime();
+
+  let start = toSafeDateBound(startDate);
+  let end   = toSafeDateBound(endDate);
+
+  if (start === null && end === null) {
+    devWarn('getAuditLogsByDateRange: both bounds invalid, returning all logs', startDate, endDate);
+    return [...logs];
+  }
+  if (start === null || end === null) {
+    devWarn('getAuditLogsByDateRange: one bound invalid, ignoring that side', startDate, endDate);
+  }
+  if (start !== null && end !== null && start > end) {
+    devWarn('startDate > endDate, swapping');
+    [start, end] = [end, start];
+  }
+
   return logs.filter(log => {
-    const logTime = new Date(log.timestamp).getTime();
-    return logTime >= start && logTime <= end;
+    if (!log || typeof log !== 'object') return false;
+    // log.timestamp is already a numeric ms value after normalization
+    const logTime = typeof log.timestamp === 'number' ? log.timestamp : toSafeDateBound(log.timestamp);
+    if (logTime === null) return false;
+    const afterStart = start === null || logTime >= start;
+    const beforeEnd  = end   === null || logTime <= end;
+    return afterStart && beforeEnd;
   });
 }
 
@@ -103,7 +200,7 @@ export const AUDIT_ACTIONS = {
   KDS_TICKET_MOVED: 'KDS_TICKET_MOVED',
   KDS_TICKET_BUMPED: 'KDS_TICKET_BUMPED',
   KDS_URGENCY_CHANGED: 'KDS_URGENCY_CHANGED',
-  
+
   // Inventory actions
   INVENTORY_ITEM_CREATED: 'INVENTORY_ITEM_CREATED',
   INVENTORY_ITEM_UPDATED: 'INVENTORY_ITEM_UPDATED',
@@ -112,7 +209,7 @@ export const AUDIT_ACTIONS = {
   INVENTORY_DEDUCTED: 'INVENTORY_DEDUCTED',
   INVENTORY_ADJUSTED: 'INVENTORY_ADJUSTED',
   INVENTORY_RESTORED: 'INVENTORY_RESTORED',
-  
+
   // Delivery actions
   DELIVERY_ORDER_CREATED: 'DELIVERY_ORDER_CREATED',
   DELIVERY_STATUS_CHANGED: 'DELIVERY_STATUS_CHANGED',
@@ -120,12 +217,28 @@ export const AUDIT_ACTIONS = {
   DELIVERY_RIDER_REASSIGNED: 'DELIVERY_RIDER_REASSIGNED',
   DELIVERY_COD_COLLECTED: 'DELIVERY_COD_COLLECTED',
   DELIVERY_FAILED: 'DELIVERY_FAILED',
-  
+  DELIVERY_DELIVERED: 'DELIVERY_DELIVERED',
+
   // Order actions
   ORDER_CREATED: 'ORDER_CREATED',
+  ORDER_UPDATED: 'ORDER_UPDATED',
+  ORDER_COMPLETED: 'ORDER_COMPLETED',
   ORDER_STATUS_CHANGED: 'ORDER_STATUS_CHANGED',
   ORDER_CANCELLED: 'ORDER_CANCELLED',
-  ORDER_PAYMENT_UPDATED: 'ORDER_PAYMENT_UPDATED'
+  ORDER_PAYMENT_UPDATED: 'ORDER_PAYMENT_UPDATED',
+
+  // Table actions
+  TABLE_RESERVED: 'TABLE_RESERVED',
+  TABLE_OCCUPIED: 'TABLE_OCCUPIED',
+  TABLE_CLEANING: 'TABLE_CLEANING',
+  TABLE_AVAILABLE: 'TABLE_AVAILABLE',
+
+  // CRM / Customer actions
+  CUSTOMER_UPDATED: 'CUSTOMER_UPDATED',
+  CUSTOMER_CREATED: 'CUSTOMER_CREATED',
+
+  // Settings
+  SETTINGS_UPDATED: 'SETTINGS_UPDATED'
 };
 
 /**
@@ -136,5 +249,58 @@ export const AUDIT_MODULES = {
   INVENTORY: 'INVENTORY',
   DELIVERY: 'DELIVERY',
   ORDERS: 'ORDERS',
+  TABLES: 'TABLES',
+  CRM: 'CRM',
+  STAFF: 'STAFF',
+  DISCOUNTS: 'DISCOUNTS',
+  SETTINGS: 'SETTINGS',
   GENERAL: 'GENERAL'
 };
+
+// ── Domain-scoped audit log factory helpers ──────────────────────────────────
+
+export function createOrderAuditLog(action, order, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.ORDERS,
+    action: toSafeString(action, AUDIT_ACTIONS.ORDER_CREATED),
+    entityId: order?.id ?? null,
+    userId: order?.userId ?? null,
+    details: { ...(order ? { orderId: order.id, source: order.source } : {}), ...details }
+  });
+}
+
+export function createInventoryAuditLog(action, item, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.INVENTORY,
+    action: toSafeString(action, AUDIT_ACTIONS.INVENTORY_ADJUSTED),
+    entityId: item?.id ?? null,
+    details: { ...(item ? { itemId: item.id, name: item.name } : {}), ...details }
+  });
+}
+
+export function createKdsAuditLog(action, ticket, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.KDS,
+    action: toSafeString(action, AUDIT_ACTIONS.KDS_TICKET_CREATED),
+    entityId: ticket?.id ?? null,
+    details: { ...(ticket ? { ticketId: ticket.id, station: ticket.station } : {}), ...details }
+  });
+}
+
+export function createDeliveryAuditLog(action, delivery, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.DELIVERY,
+    action: toSafeString(action, AUDIT_ACTIONS.DELIVERY_STATUS_CHANGED),
+    entityId: delivery?.id ?? null,
+    details: { ...(delivery ? { deliveryId: delivery.id } : {}), ...details }
+  });
+}
+
+export function sortAuditLogsNewestFirst(logs) {
+  if (!Array.isArray(logs)) return [];
+  return [...logs].sort((a, b) => {
+    const ta = toSafeDateBound(a?.timestamp) ?? 0;
+    const tb = toSafeDateBound(b?.timestamp) ?? 0;
+    return tb - ta;
+  });
+}

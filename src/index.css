@@ -3,9 +3,12 @@
 }
 
 html {
-  height: 100%;
-  /* Prevent iOS rubber-band scroll on the html element */
-  overflow: hidden;
+  /* 100dvh accounts for collapsible browser chrome on iOS/Android.
+     Falls back to 100vh on browsers that don't support dvh units. */
+  height: 100dvh;
+  /* Do NOT set overflow:hidden here — it breaks browser find-in-page
+     (Ctrl+F / Cmd+F) and assistive technology scroll on several browsers.
+     Let body and #root own the scroll containment instead. */
   overscroll-behavior: none;
 }
 
@@ -13,6 +16,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  min-height: 100dvh; /* guards against vh collapse on mobile */
   width: 100%;
   font-family: 'Sora', 'Inter', system-ui, sans-serif;
   background: var(--c-bg);

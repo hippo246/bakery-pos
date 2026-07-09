@@ -19,21 +19,87 @@ import { now, toTimestamp } from './dates.js';
 // Valid table statuses
 export const TABLE_STATUSES = ['available', 'occupied', 'cleaning', 'reserved'];
 
+// ── Internal safe helpers ────────────────────────────────────────────────────
+
+function devWarn(...args) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[tableModel]', ...args);
+  }
+}
+
+function toSafeString(val) {
+  return typeof val === 'string' ? val.trim() : '';
+}
+
+function toSafeCapacity(val) {
+  const n = Number(val);
+  if (!Number.isFinite(n) || n <= 0) {
+    devWarn('invalid capacity', val);
+    return 4;
+  }
+  return Math.floor(n);
+}
+
+function toSafeStatus(val) {
+  if (TABLE_STATUSES.includes(val)) return val;
+  devWarn('invalid table status', val);
+  return 'available';
+}
+
+function toSafeNullableTimestamp(val) {
+  if (val == null) return null;
+  const n = Number(val);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function toSafeHistory(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(e => e && typeof e === 'object')
+    .map(e => ({
+      id: toSafeString(e.id) || generateId(),
+      type: toSafeString(e.type) || 'event',
+      message: toSafeString(e.message),
+      createdAt: toSafeNullableTimestamp(e.createdAt) ?? now(),
+      ...(e.details !== undefined ? { details: e.details } : {})
+    }))
+    .slice(0, 50);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Create a new table
  * @param {object} input - Table input data
  * @returns {Table} New table object
  */
 export function createTable(input = {}) {
+  const safe = (input && typeof input === 'object') ? input : {};
   return {
-    id: input.id || createTableId(),
-    number: input.number || '1',
-    capacity: input.capacity || 4,
-    status: input.status || 'available',
-    currentOrderId: input.currentOrderId || null,
-    customerId: input.customerId || null,
-    occupiedSince: input.occupiedSince || null,
-    notes: input.notes || ''
+    id: toSafeString(safe.id) || createTableId(),
+    number: toSafeString(safe.number || safe.tableNumber) || '1',
+    capacity: toSafeCapacity(safe.capacity),
+    status: toSafeStatus(safe.status),
+    currentOrderId: toSafeString(safe.currentOrderId || safe.orderId) || null,
+    customerId: toSafeString(safe.customerId) || null,
+    occupiedSince: toSafeNullableTimestamp(safe.occupiedSince || safe.occupiedAt),
+    notes: toSafeString(safe.notes),
+    // optional extended fields – only included when provided
+    ...(safe.type !== undefined     ? { type: toSafeString(safe.type) } : {}),
+    ...(safe.area !== undefined     ? { area: toSafeString(safe.area) } : {}),
+    ...(safe.waiterId !== undefined ? { waiterId: toSafeString(safe.waiterId) } : {}),
+    ...(safe.reservedFor !== undefined  ? { reservedFor: toSafeString(safe.reservedFor) } : {}),
+    ...(safe.reservedTime !== undefined ? { reservedTime: toSafeNullableTimestamp(safe.reservedTime) } : {}),
+    ...(safe.reservation !== undefined  ? { reservation: safe.reservation ?? null } : {}),
+    ...(safe.mergedTableIds !== undefined
+      ? { mergedTableIds: Array.isArray(safe.mergedTableIds) ? [...new Set(safe.mergedTableIds.filter(Boolean))] : [] }
+      : {}),
+    ...(safe.cleaningStartedAt !== undefined
+      ? { cleaningStartedAt: toSafeNullableTimestamp(safe.cleaningStartedAt) }
+      : {}),
+    ...(safe.history !== undefined ? { history: toSafeHistory(safe.history) } : {}),
+    createdAt: toSafeNullableTimestamp(safe.createdAt) ?? now(),
+    updatedAt: toSafeNullableTimestamp(safe.updatedAt) ?? now()
   };
 }
 
@@ -43,17 +109,42 @@ export function createTable(input = {}) {
  * @returns {Table} Normalized table
  */
 export function normalizeTable(table) {
-  if (!table) return null;
+  if (!table || typeof table !== 'object') {
+    devWarn('normalizeTable: malformed table', table);
+    return null;
+  }
+
+  // Support both currentOrder (object) and currentOrderId (string)
+  const currentOrderId =
+    toSafeString(table.currentOrderId || table.orderId ||
+      (table.currentOrder && typeof table.currentOrder === 'object' ? table.currentOrder.id : table.currentOrder)
+    ) || null;
 
   return {
-    id: table.id || createTableId(),
-    number: table.number || table.tableNumber || '1',
-    capacity: typeof table.capacity === 'number' ? table.capacity : 4,
-    status: TABLE_STATUSES.includes(table.status) ? table.status : 'available',
-    currentOrderId: table.currentOrderId || table.orderId || null,
-    customerId: table.customerId || null,
-    occupiedSince: toTimestamp(table.occupiedSince || table.occupiedAt || null),
-    notes: table.notes || ''
+    id: toSafeString(table.id) || createTableId(),
+    number: toSafeString(table.number || table.tableNumber) || '1',
+    capacity: toSafeCapacity(table.capacity),
+    status: toSafeStatus(table.status),
+    currentOrderId,
+    customerId: toSafeString(table.customerId) || null,
+    occupiedSince: toSafeNullableTimestamp(table.occupiedSince || table.occupiedAt),
+    notes: toSafeString(table.notes),
+    // optional fields – preserve when present
+    ...(table.type !== undefined     ? { type: toSafeString(table.type) } : {}),
+    ...(table.area !== undefined     ? { area: toSafeString(table.area) } : {}),
+    ...(table.waiterId !== undefined ? { waiterId: toSafeString(table.waiterId) } : {}),
+    ...(table.reservedFor !== undefined  ? { reservedFor: toSafeString(table.reservedFor) } : {}),
+    ...(table.reservedTime !== undefined ? { reservedTime: toSafeNullableTimestamp(table.reservedTime) } : {}),
+    ...(table.reservation !== undefined  ? { reservation: table.reservation ?? null } : {}),
+    ...(table.mergedTableIds !== undefined
+      ? { mergedTableIds: Array.isArray(table.mergedTableIds) ? [...new Set(table.mergedTableIds.filter(Boolean))] : [] }
+      : {}),
+    ...(table.cleaningStartedAt !== undefined
+      ? { cleaningStartedAt: toSafeNullableTimestamp(table.cleaningStartedAt) }
+      : {}),
+    ...(table.history !== undefined ? { history: toSafeHistory(table.history) } : {}),
+    createdAt: toSafeNullableTimestamp(table.createdAt) ?? now(),
+    updatedAt: toSafeNullableTimestamp(table.updatedAt) ?? now()
   };
 }
 
@@ -64,13 +155,15 @@ export function normalizeTable(table) {
  * @returns {Table} Updated table
  */
 export function assignOrderToTable(table, orderId) {
-  if (!table || !orderId) return table;
-
+  if (!table || typeof table !== 'object') return table;
+  if (!orderId) return table;
+  const ts = now();
   return {
     ...table,
     status: 'occupied',
-    currentOrderId: orderId,
-    occupiedSince: now()
+    currentOrderId: toSafeString(orderId) || null,
+    occupiedSince: ts,
+    updatedAt: ts
   };
 }
 
@@ -90,13 +183,17 @@ export function markTableOccupied(table, orderId) {
  * @returns {Table} Updated table
  */
 export function markTableCleaning(table) {
-  if (!table) return table;
-
+  if (!table || typeof table !== 'object') return table;
+  const ts = now();
+  // eslint-disable-next-line no-unused-vars
+  const { currentOrder: _drop, ...rest } = table;
   return {
-    ...table,
+    ...rest,
     status: 'cleaning',
     currentOrderId: null,
-    occupiedSince: null
+    occupiedSince: null,
+    cleaningStartedAt: ts,
+    updatedAt: ts
   };
 }
 
@@ -106,14 +203,18 @@ export function markTableCleaning(table) {
  * @returns {Table} Updated table
  */
 export function markTableAvailable(table) {
-  if (!table) return table;
-
+  if (!table || typeof table !== 'object') return table;
+  // Drop optional keys entirely rather than leaving them as undefined
+  // eslint-disable-next-line no-unused-vars
+  const { currentOrder: _a, reservedFor: _b, reservedTime: _c, reservation: _d, ...rest } = table;
   return {
-    ...table,
+    ...rest,
     status: 'available',
     currentOrderId: null,
     customerId: null,
-    occupiedSince: null
+    occupiedSince: null,
+    cleaningStartedAt: null,
+    updatedAt: now()
   };
 }
 
@@ -123,13 +224,21 @@ export function markTableAvailable(table) {
  * @param {string} customerId - Customer ID
  * @returns {Table} Updated table
  */
-export function markTableReserved(table, customerId) {
-  if (!table || !customerId) return table;
-
+export function markTableReserved(table, customerId, reservationInfo = {}) {
+  if (!table || typeof table !== 'object') return table;
+  if (!customerId) {
+    devWarn('markTableReserved: customerId missing');
+    return table;
+  }
+  const safe = (reservationInfo && typeof reservationInfo === 'object') ? reservationInfo : {};
   return {
     ...table,
     status: 'reserved',
-    customerId
+    customerId: toSafeString(customerId) || null,
+    ...(safe.reservedFor !== undefined  ? { reservedFor: toSafeString(safe.reservedFor) } : {}),
+    ...(safe.reservedTime !== undefined ? { reservedTime: toSafeNullableTimestamp(safe.reservedTime) } : {}),
+    ...(safe.reservation !== undefined  ? { reservation: safe.reservation ?? null } : {}),
+    updatedAt: now()
   };
 }
 
@@ -139,8 +248,50 @@ export function markTableReserved(table, customerId) {
  * @returns {number} Duration in minutes, or 0 if not occupied
  */
 export function getOccupancyDuration(table) {
-  if (!table || !table.occupiedSince || table.status !== 'occupied') return 0;
-  return Math.floor((now() - table.occupiedSince) / 60000);
+  if (!table || table.status !== 'occupied') return 0;
+  const since = toSafeNullableTimestamp(table.occupiedSince);
+  if (since === null) return 0;
+  const diff = now() - since;
+  if (!Number.isFinite(diff) || diff < 0) return 0;
+  return Math.floor(diff / 60000);
+}
+
+/**
+ * Get cleaning duration in minutes
+ * @param {Table} table - Table object
+ * @returns {number} Duration in minutes, or 0
+ */
+export function getCleaningDuration(table) {
+  if (!table || table.status !== 'cleaning') return 0;
+  const since = toSafeNullableTimestamp(table.cleaningStartedAt);
+  if (since === null) return 0;
+  const diff = now() - since;
+  if (!Number.isFinite(diff) || diff < 0) return 0;
+  return Math.floor(diff / 60000);
+}
+
+/**
+ * Append a history event to a table (immutable, newest first, max 50)
+ * @param {Table} table
+ * @param {{ type: string, message: string, details?: any }} event
+ * @returns {Table}
+ */
+export function appendTableHistoryEvent(table, event) {
+  if (!table || typeof table !== 'object') return table;
+  const safe = (event && typeof event === 'object') ? event : {};
+  const entry = {
+    id: generateId(),
+    type: toSafeString(safe.type) || 'event',
+    message: toSafeString(safe.message),
+    createdAt: now(),
+    ...(safe.details !== undefined ? { details: safe.details } : {})
+  };
+  const existing = Array.isArray(table.history) ? table.history : [];
+  return {
+    ...table,
+    history: [entry, ...existing].slice(0, 50),
+    updatedAt: now()
+  };
 }
 
 /**
@@ -149,34 +300,51 @@ export function getOccupancyDuration(table) {
  * @returns {boolean} True if available
  */
 export function isTableAvailable(table) {
-  return table.status === 'available';
+  return !!table && table.status === 'available';
 }
 
 /**
  * Check if table is occupied
- * @param {Table} table - Table object
- * @returns {boolean} True if occupied
  */
 export function isTableOccupied(table) {
-  return table.status === 'occupied';
+  return !!table && table.status === 'occupied';
 }
 
 /**
  * Check if table needs cleaning
- * @param {Table} table - Table object
- * @returns {boolean} True if cleaning
  */
 export function isTableCleaning(table) {
-  return table.status === 'cleaning';
+  return !!table && table.status === 'cleaning';
 }
 
 /**
  * Check if table is reserved
- * @param {Table} table - Table object
- * @returns {boolean} True if reserved
  */
 export function isTableReserved(table) {
-  return table.status === 'reserved';
+  return !!table && table.status === 'reserved';
+}
+
+/**
+ * Check if a table can be reserved (available or reserved with no conflict)
+ */
+export function canReserveTable(table) {
+  if (!table || typeof table !== 'object') return false;
+  return table.status === 'available';
+}
+
+/**
+ * Check if two reservation time windows conflict (within toleranceMinutes)
+ * @param {number} existingTime - Existing reservation timestamp
+ * @param {number} newTime - Proposed reservation timestamp
+ * @param {number} toleranceMinutes - Conflict window (default 60)
+ * @returns {boolean}
+ */
+export function hasReservationConflict(existingTime, newTime, toleranceMinutes = 60) {
+  const a = toSafeNullableTimestamp(existingTime);
+  const b = toSafeNullableTimestamp(newTime);
+  if (a === null || b === null) return false;
+  const diffMin = Math.abs(a - b) / 60000;
+  return Number.isFinite(diffMin) && diffMin < toleranceMinutes;
 }
 
 /**
@@ -186,7 +354,7 @@ export function isTableReserved(table) {
  */
 export function getAvailableTables(tables) {
   if (!Array.isArray(tables)) return [];
-  return tables.filter(table => isTableAvailable(table));
+  return tables.filter(table => table && typeof table === 'object' && isTableAvailable(table));
 }
 
 /**
@@ -196,18 +364,36 @@ export function getAvailableTables(tables) {
  */
 export function getOccupiedTables(tables) {
   if (!Array.isArray(tables)) return [];
-  return tables.filter(table => isTableOccupied(table));
+  return tables.filter(table => table && typeof table === 'object' && isTableOccupied(table));
 }
 
 /**
- * Find table by number
+ * Find table by number. Coerces both sides to string so numeric IDs still match.
  * @param {Table[]} tables - Array of tables
- * @param {string} number - Table number
+ * @param {string|number} number - Table number
  * @returns {Table|null} Found table or null
  */
 export function findTableByNumber(tables, number) {
-  if (!Array.isArray(tables)) return null;
-  return tables.find(table => table.number === number) || null;
+  if (!Array.isArray(tables) || number == null) return null;
+  const target = String(number);
+  return tables.find(t => t && String(t.number) === target) || null;
+}
+
+/**
+ * Get turnover time: minutes from when the table was first occupied
+ * to when cleaning started. Returns null if either timestamp is missing.
+ * Useful for tracking average dine time and table throughput.
+ * @param {Table} table
+ * @returns {number|null} Minutes, or null if insufficient data
+ */
+export function getTableTurnoverTime(table) {
+  if (!table) return null;
+  const occupied = toSafeNullableTimestamp(table.occupiedSince);
+  const cleaning = toSafeNullableTimestamp(table.cleaningStartedAt);
+  if (occupied === null || cleaning === null) return null;
+  const diff = cleaning - occupied;
+  if (!Number.isFinite(diff) || diff < 0) return null;
+  return Math.floor(diff / 60000);
 }
 
 /**
@@ -217,6 +403,8 @@ export function findTableByNumber(tables, number) {
  * @returns {Table|null} Found table or null
  */
 export function findTableByOrderId(tables, orderId) {
-  if (!Array.isArray(tables)) return null;
-  return tables.find(table => table.currentOrderId === orderId) || null;
+  if (!Array.isArray(tables) || !orderId) return null;
+  return tables.find(t => t && (t.currentOrderId === orderId ||
+    (t.currentOrder && typeof t.currentOrder === 'object' && t.currentOrder.id === orderId))
+  ) || null;
 }

@@ -1,17 +1,50 @@
 // Money/currency utilities
 
+// ── Internal safe helpers ────────────────────────────────────────────────────
+
+function devWarn(...args) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[money]', ...args);
+  }
+}
+
+function toSafeNumber(value, fallback = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    if (value != null && value !== '') devWarn('invalid money value', value, '→', fallback);
+    return fallback;
+  }
+  return n;
+}
+
+function toNonNegativeNumber(value, fallback = 0) {
+  const n = toSafeNumber(value, fallback);
+  if (n < 0) {
+    devWarn('negative money value clamped', value, '→ 0');
+    return 0;
+  }
+  return n;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Format amount as Indian Rupees
  * @param {number} amount - The amount to format
  * @returns {string} Formatted string like "₹1,234.56"
  */
 export function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(amount);
+  const safe = toSafeNumber(amount, 0);
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(safe);
+  } catch {
+    return `₹${safe.toFixed(2)}`;
+  }
 }
 
 /**
@@ -20,10 +53,15 @@ export function formatCurrency(amount) {
  * @returns {string} Formatted string like "1,234.56"
  */
 export function formatAmount(amount) {
-  return new Intl.NumberFormat('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(amount);
+  const safe = toSafeNumber(amount, 0);
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(safe);
+  } catch {
+    return safe.toFixed(2);
+  }
 }
 
 /**
@@ -33,11 +71,13 @@ export function formatAmount(amount) {
  */
 export function calculateSubtotal(items) {
   if (!Array.isArray(items)) return 0;
-  return items.reduce((sum, item) => {
-    const qty = item.qty || 0;
-    const price = item.price || 0;
-    return sum + (qty * price);
+  const total = items.reduce((sum, item) => {
+    if (!item || typeof item !== 'object') return sum;
+    const qty = toNonNegativeNumber(item.qty, 0);
+    const price = toNonNegativeNumber(item.price, 0);
+    return sum + qty * price;
   }, 0);
+  return roundCurrency(Math.max(0, total));
 }
 
 /**
@@ -47,25 +87,35 @@ export function calculateSubtotal(items) {
  * @returns {number} Tax amount
  */
 export function calculateTax(subtotal, taxRate = 0.18) {
-  return Math.round(subtotal * taxRate * 100) / 100;
+  const safeSub = toNonNegativeNumber(subtotal, 0);
+  const safeRate = toNonNegativeNumber(taxRate, 0);
+  return roundCurrency(safeSub * safeRate);
 }
 
 /**
- * Calculate total with discount and tax
- * @param {number} subtotal - Subtotal amount
- * @param {number} discountAmount - Discount amount
- * @param {number} taxRate - Tax rate as decimal
- * @returns {object} Object with subtotal, discountAmount, taxAmount, total
+ * Calculate total with discount and tax.
+ * Tax is applied on the post-discount (taxable) amount — correct for Indian GST.
+ * @param {number} subtotal - Pre-discount subtotal
+ * @param {number} discountAmount - Discount to deduct before tax
+ * @param {number} taxRate - GST rate as decimal (default 0.18 = 18%)
+ * @returns {{ subtotal, discountAmount, taxableAmount, taxAmount, cgst, sgst, total }}
  */
 export function calculateOrderTotals(subtotal, discountAmount = 0, taxRate = 0.18) {
-  const taxableAmount = Math.max(0, subtotal - discountAmount);
+  const safeSub = toNonNegativeNumber(subtotal, 0);
+  const safeDiscount = Math.min(toNonNegativeNumber(discountAmount, 0), safeSub);
+  const taxableAmount = roundCurrency(Math.max(0, safeSub - safeDiscount));
   const taxAmount = calculateTax(taxableAmount, taxRate);
-  const total = taxableAmount + taxAmount;
-  
+  // Split evenly for CGST + SGST (standard for intra-state GST)
+  const halfTax = roundCurrency(taxAmount / 2);
+  const total = roundCurrency(Math.max(0, taxableAmount + taxAmount));
+
   return {
-    subtotal,
-    discountAmount,
+    subtotal: roundCurrency(safeSub),
+    discountAmount: roundCurrency(safeDiscount),
+    taxableAmount,
     taxAmount,
+    cgst: halfTax,
+    sgst: halfTax,
     total
   };
 }
@@ -76,14 +126,86 @@ export function calculateOrderTotals(subtotal, discountAmount = 0, taxRate = 0.1
  * @returns {number} Rounded amount
  */
 export function roundCurrency(amount) {
-  return Math.round(amount * 100) / 100;
+  const n = toSafeNumber(amount, 0);
+  return Math.round(n * 100) / 100;
 }
 
 /**
- * Validate amount is non-negative
- * @param {number} amount - Amount to validate
- * @returns {boolean} True if valid
+ * Return a safe non-negative rounded money value (alias for display/storage)
+ */
+export function safeMoney(value) {
+  return roundCurrency(toNonNegativeNumber(value, 0));
+}
+
+/**
+ * Clamp discount so it never exceeds the subtotal
+ */
+export function clampDiscountAmount(subtotal, discountAmount) {
+  const safeSub = toNonNegativeNumber(subtotal, 0);
+  const safeDisc = toNonNegativeNumber(discountAmount, 0);
+  return roundCurrency(Math.min(safeDisc, safeSub));
+}
+
+/**
+ * Calculate a single line total (qty × price)
+ */
+export function calculateLineTotal(item) {
+  if (!item || typeof item !== 'object') return 0;
+  const qty = toNonNegativeNumber(item.qty, 0);
+  const price = toNonNegativeNumber(item.price, 0);
+  return roundCurrency(qty * price);
+}
+
+/**
+ * Format a rate/ratio as a percentage string, e.g. 0.18 → "18%"
+ */
+export function formatPercent(value) {
+  const n = toSafeNumber(value, 0);
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'percent',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(n);
+  } catch {
+    return `${roundCurrency(n * 100)}%`;
+  }
+}
+
+/**
+ * Validate amount is non-negative finite number
+ * @param {number} amount
+ * @returns {boolean}
  */
 export function isValidAmount(amount) {
-  return typeof amount === 'number' && !isNaN(amount) && amount >= 0;
+  return Number.isFinite(amount) && amount >= 0;
+}
+
+/**
+ * Split a total into equal parts, distributing any rounding remainder
+ * to the first part. Useful for splitting bills.
+ * @param {number} total - Total amount to split
+ * @param {number} ways - Number of ways to split (≥1)
+ * @returns {number[]} Array of split amounts summing exactly to total
+ */
+export function splitAmount(total, ways) {
+  const safeTotal = toNonNegativeNumber(total, 0);
+  const safeWays = Math.max(1, Math.floor(Number(ways) || 1));
+  const base = roundCurrency(Math.floor((safeTotal / safeWays) * 100) / 100);
+  const remainder = roundCurrency(safeTotal - base * safeWays);
+  return Array.from({ length: safeWays }, (_, i) =>
+    i === 0 ? roundCurrency(base + remainder) : base
+  );
+}
+
+/**
+ * Calculate change to return to customer (cash payments)
+ * @param {number} total - Amount due
+ * @param {number} tendered - Amount given by customer
+ * @returns {number} Change amount (0 if tendered < total)
+ */
+export function calculateChange(total, tendered) {
+  const due = toNonNegativeNumber(total, 0);
+  const given = toNonNegativeNumber(tendered, 0);
+  return roundCurrency(Math.max(0, given - due));
 }

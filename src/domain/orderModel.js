@@ -67,68 +67,114 @@ export const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'SPLIT', 'ONLINE', 'COD']
 // Valid stations
 export const STATIONS = ['Bar', 'Kitchen', 'Packaging', 'Dessert'];
 
+const DEV = process.env.NODE_ENV !== 'production';
+
+function devWarn(msg, value) {
+  if (DEV) console.warn(`[orderModel] ${msg}`, value ?? '');
+}
+
+/**
+ * Clamp a value to a safe number, returning fallback if NaN/non-finite
+ */
+function safeNum(val, fallback = 0) {
+  const n = Number(val);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+// Keyword → station map; checked in insertion order, first match wins.
+// Extend this when menu grows — O(n) over keywords, not over items.
+const _STATION_KEYWORDS = [
+  ['Packaging', ['parcel', 'packing', 'packaging', 'takeaway', 'takeout', 'carry', 'box']],
+  ['Dessert',   ['cake', 'pie', 'muffin', 'cookie', 'brownie', 'ice cream', 'gelato', 'dessert', 'waffle', 'doughnut', 'donut', 'tart', 'pudding', 'pastry', 'macaron']],
+  ['Kitchen',   ['sandwich', 'burger', 'pizza', 'pasta', 'salad', 'soup', 'toast', 'egg', 'pancake', 'wrap', 'roll', 'rice', 'noodle', 'fry', 'grill', 'panini', 'quiche', 'omelette', 'shakshuka', 'idli', 'dosa', 'upma', 'poha', 'paratha']],
+  ['Bar',       ['coffee', 'cappuccino', 'latte', 'espresso', 'americano', 'mocha', 'macchiato', 'flat white', 'cold brew', 'chai', 'tea', 'juice', 'smoothie', 'shake', 'lassi', 'water', 'soda', 'lemonade', 'drink', 'beer', 'wine', 'frappe', 'matcha', 'kombucha']],
+];
+
+/**
+ * Determine station based on item name (safe if name missing).
+ * Packaging is checked first — a "Packaging box" should always route there.
+ */
+function determineStation(itemName) {
+  if (!itemName || typeof itemName !== 'string') return 'Bar';
+  const name = itemName.toLowerCase();
+  for (const [station, keywords] of _STATION_KEYWORDS) {
+    if (keywords.some(kw => name.includes(kw))) return station;
+  }
+  return 'Bar';
+}
+
+/**
+ * Normalize a single order item safely
+ */
+function normalizeOrderItem(item) {
+  if (!item || typeof item !== 'object') {
+    devWarn('skipping malformed item', item);
+    return null;
+  }
+  const name = item.name || item.itemName || 'Unknown Item';
+  const qty = Math.max(1, Math.round(safeNum(item.qty ?? item.quantity, 1)));
+  const price = safeNum(item.price ?? item.unitPrice, 0);
+  const station = STATIONS.includes(item.station) ? item.station : determineStation(name);
+  return {
+    id: item.id || generateId(),
+    menuItemId: item.menuItemId || generateId(),
+    name: typeof name === 'string' && name.trim() ? name.trim() : 'Unknown Item',
+    qty,
+    price,
+    modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
+    station,
+    notes: typeof item.notes === 'string' ? item.notes : ''
+  };
+}
+
 /**
  * Create a new order from input data
  * @param {object} input - Order input data
  * @returns {Order} New order object
  */
 export function createOrder(input = {}) {
-  const items = input.items || [];
-  const subtotal = calculateSubtotal(items);
-  const { discountAmount, taxAmount, total } = calculateOrderTotals(
-    subtotal,
-    input.discountAmount || 0,
-    input.taxRate || 0.18
-  );
+  const safeInput = input && typeof input === 'object' ? input : {};
+
+  const source = ORDER_SOURCES.includes(safeInput.source) ? safeInput.source : 'WALK_IN';
+  if (safeInput.source && !ORDER_SOURCES.includes(safeInput.source)) devWarn('invalid source', safeInput.source);
+
+  const status = ORDER_STATUSES.includes(safeInput.status) ? safeInput.status : 'NEW';
+  if (safeInput.status && !ORDER_STATUSES.includes(safeInput.status)) devWarn('invalid status', safeInput.status);
+
+  const paymentStatus = PAYMENT_STATUSES.includes(safeInput.paymentStatus) ? safeInput.paymentStatus : 'UNPAID';
+  const paymentMethod = PAYMENT_METHODS.includes(safeInput.paymentMethod) ? safeInput.paymentMethod : null;
+
+  const rawItems = Array.isArray(safeInput.items) ? safeInput.items : [];
+  const items = rawItems.map(normalizeOrderItem).filter(Boolean);
+
+  const subtotal = safeNum(calculateSubtotal(items));
+  const discountAmountRaw = safeNum(safeInput.discountAmount, 0);
+  const taxRate = safeNum(safeInput.taxRate, 0.18);
+  const { discountAmount, taxAmount, total: rawTotal } = calculateOrderTotals(subtotal, discountAmountRaw, taxRate);
+  const total = Math.max(0, safeNum(rawTotal));
 
   return {
-    id: input.id || createOrderId(),
-    source: input.source || 'WALK_IN',
-    customerId: input.customerId || null,
-    customerName: input.customerName || 'Guest',
-    customerPhone: input.customerPhone || '',
-    tableId: input.tableId || null,
-    staffId: input.staffId || null,
-    items: items.map(item => ({
-      id: item.id || generateId(),
-      menuItemId: item.menuItemId || generateId(),
-      name: item.name,
-      qty: item.qty || 1,
-      price: item.price || 0,
-      modifiers: item.modifiers || [],
-      station: item.station || determineStation(item.name),
-      notes: item.notes || ''
-    })),
-    subtotal,
-    discountCode: input.discountCode || null,
-    discountAmount,
-    taxAmount,
+    id: safeInput.id || createOrderId(),
+    source,
+    customerId: safeInput.customerId || null,
+    customerName: safeInput.customerName || 'Guest',
+    customerPhone: safeInput.customerPhone || '',
+    tableId: safeInput.tableId || null,
+    staffId: safeInput.staffId || null,
+    items,
+    subtotal: safeNum(subtotal),
+    discountCode: safeInput.discountCode || null,
+    discountAmount: safeNum(discountAmount),
+    taxAmount: safeNum(taxAmount),
     total,
-    status: input.status || 'NEW',
-    paymentStatus: input.paymentStatus || 'UNPAID',
-    paymentMethod: input.paymentMethod || null,
-    notes: input.notes || '',
-    createdAt: input.createdAt || now(),
-    updatedAt: input.updatedAt || now(),
-    completedAt: input.completedAt || null
+    status,
+    paymentStatus,
+    paymentMethod,
+    notes: typeof safeInput.notes === 'string' ? safeInput.notes : '',
+    createdAt: safeInput.createdAt || now(),
+    updatedAt: safeInput.updatedAt || now(),
+    completedAt: safeInput.completedAt || null
   };
-}
-
-/**
- * Determine station based on item name (simple heuristic)
- * @param {string} itemName - Item name
- * @returns {string} Station name
- */
-function determineStation(itemName) {
-  const name = itemName.toLowerCase();
-  const barItems = ['coffee', 'cappuccino', 'latte', 'espresso', 'americano', 'mocha', 'tea', 'juice', 'smoothie', 'shake'];
-  const kitchenItems = ['sandwich', 'burger', 'pizza', 'pasta', 'salad', 'soup', 'toast', 'eggs', 'pancake'];
-  const dessertItems = ['cake', 'pie', 'muffin', 'cookie', 'brownie', 'ice cream', 'dessert'];
-
-  if (barItems.some(item => name.includes(item))) return 'Bar';
-  if (kitchenItems.some(item => name.includes(item))) return 'Kitchen';
-  if (dessertItems.some(item => name.includes(item))) return 'Dessert';
-  return 'Bar'; // Default
 }
 
 /**
@@ -137,57 +183,89 @@ function determineStation(itemName) {
  * @returns {Order} Normalized order
  */
 export function normalizeOrder(order) {
-  if (!order) return null;
+  if (!order || typeof order !== 'object') return null;
+
+  // Support legacy item formats: itemDetails array or plain items
+  const rawItems = Array.isArray(order.items) ? order.items
+    : Array.isArray(order.itemDetails) ? order.itemDetails
+    : [];
+  const items = rawItems.map(normalizeOrderItem).filter(Boolean);
+
+  const subtotal = safeNum(
+    typeof order.subtotal === 'number' ? order.subtotal : calculateSubtotal(items)
+  );
+  const discountAmount = safeNum(order.discountAmount, 0);
+  const taxAmount = safeNum(order.taxAmount, 0);
+  const total = Math.max(0, safeNum(
+    order.total ?? order.amount ?? (subtotal - discountAmount + taxAmount)
+  ));
+
+  const rawStatus = order.status;
+  const status = ORDER_STATUSES.includes(rawStatus) ? rawStatus : 'NEW';
+  if (rawStatus && !ORDER_STATUSES.includes(rawStatus)) devWarn('invalid status in normalizeOrder', rawStatus);
+
+  const rawSource = order.source;
+  const source = ORDER_SOURCES.includes(rawSource) ? rawSource : 'WALK_IN';
+  if (rawSource && !ORDER_SOURCES.includes(rawSource)) devWarn('invalid source in normalizeOrder', rawSource);
+
+  const rawPayStatus = order.paymentStatus ?? order.payStatus;
+  const paymentStatus = PAYMENT_STATUSES.includes(rawPayStatus) ? rawPayStatus : 'UNPAID';
+  const paymentMethod = PAYMENT_METHODS.includes(order.paymentMethod) ? order.paymentMethod : null;
+
+  const createdAt = toTimestamp(order.createdAt ?? order.time ?? now());
+  const updatedAt = toTimestamp(order.updatedAt ?? now());
+  const completedAt = order.completedAt ?? (status === 'COMPLETED' ? now() : null);
 
   return {
     id: order.id || createOrderId(),
-    source: ORDER_SOURCES.includes(order.source) ? order.source : 'WALK_IN',
+    source,
     customerId: order.customerId || null,
     customerName: order.customerName || order.customer || 'Guest',
     customerPhone: order.customerPhone || order.phone || '',
     tableId: order.tableId || order.table || null,
     staffId: order.staffId || order.staff || null,
-    items: Array.isArray(order.items) ? order.items.map(item => ({
-      id: item.id || generateId(),
-      menuItemId: item.menuItemId || generateId(),
-      name: item.name || 'Unknown',
-      qty: item.qty || item.quantity || 1,
-      price: item.price || 0,
-      modifiers: Array.isArray(item.modifiers) ? item.modifiers : [],
-      station: STATIONS.includes(item.station) ? item.station : determineStation(item.name),
-      notes: item.notes || ''
-    })) : [],
-    subtotal: typeof order.subtotal === 'number' ? order.subtotal : calculateSubtotal(order.items || []),
+    items,
+    subtotal,
     discountCode: order.discountCode || null,
-    discountAmount: typeof order.discountAmount === 'number' ? order.discountAmount : 0,
-    taxAmount: typeof order.taxAmount === 'number' ? order.taxAmount : 0,
-    total: typeof order.total === 'number' ? order.total : (typeof order.amount === 'number' ? order.amount : 0),
-    status: ORDER_STATUSES.includes(order.status) ? order.status : 'NEW',
-    paymentStatus: PAYMENT_STATUSES.includes(order.paymentStatus) ? order.paymentStatus : 
-                  PAYMENT_STATUSES.includes(order.payStatus) ? order.payStatus : 'UNPAID',
-    paymentMethod: PAYMENT_METHODS.includes(order.paymentMethod) ? order.paymentMethod : null,
-    notes: order.notes || order.note || '',
-    createdAt: toTimestamp(order.createdAt || order.time || now()),
-    updatedAt: toTimestamp(order.updatedAt || now()),
-    completedAt: order.completedAt || (order.status === 'COMPLETED' ? now() : null)
+    discountAmount,
+    taxAmount,
+    total,
+    status,
+    paymentStatus,
+    paymentMethod,
+    notes: typeof (order.notes ?? order.note) === 'string' ? (order.notes ?? order.note) : '',
+    createdAt: safeNum(createdAt, now()),
+    updatedAt: safeNum(updatedAt, now()),
+    completedAt
   };
 }
 
 /**
- * Calculate order totals (subtotal, discount, tax, total)
+ * Calculate order totals (subtotal, discount, tax, total) from a live order object.
+ * Respects the order's own taxRate if present.
  * @param {Order} order - Order object
- * @returns {object} Totals object
+ * @returns {{ subtotal, discountAmount, taxableAmount, taxAmount, cgst, sgst, total }}
  */
 export function calculateOrderTotalsFromOrder(order) {
-  const subtotal = calculateSubtotal(order.items);
-  const { discountAmount, taxAmount, total } = calculateOrderTotals(subtotal, order.discountAmount);
-  
-  return {
-    subtotal,
-    discountAmount,
-    taxAmount,
-    total
-  };
+  const subtotal = calculateSubtotal(order?.items ?? []);
+  const taxRate = safeNum(order?.taxRate, 0.18);
+  return calculateOrderTotals(subtotal, order?.discountAmount ?? 0, taxRate);
+}
+
+/**
+ * Group order items by their preparation station.
+ * Useful for splitting a single order into per-station KDS tickets.
+ * @param {Order} order - Order object
+ * @returns {Record<string, OrderItem[]>} Map of station → items
+ */
+export function groupOrderItemsByStation(order) {
+  if (!order || !Array.isArray(order.items)) return {};
+  return order.items.reduce((acc, item) => {
+    if (!item) return acc;
+    const station = item.station || 'Bar';
+    (acc[station] ??= []).push(item);
+    return acc;
+  }, {});
 }
 
 /**
@@ -196,8 +274,14 @@ export function calculateOrderTotalsFromOrder(order) {
  * @returns {string} Display string like "Cappuccino × 2, Croissant × 1"
  */
 export function getOrderDisplayItems(order) {
-  if (!order.items || !Array.isArray(order.items)) return '';
-  return order.items.map(item => `${item.name} × ${item.qty}`).join(', ');
+  if (!order || typeof order !== 'object') return 'No items';
+  // Support legacy string format
+  if (typeof order.items === 'string') return order.items || 'No items';
+  if (!Array.isArray(order.items) || order.items.length === 0) return 'No items';
+  return order.items
+    .filter(item => item && item.name && (item.qty ?? 1) > 0)
+    .map(item => `${item.name} × ${Math.max(1, item.qty || 1)}`)
+    .join(', ') || 'No items';
 }
 
 /**
@@ -206,16 +290,18 @@ export function getOrderDisplayItems(order) {
  * @returns {string} Customer name
  */
 export function getOrderCustomerName(order) {
-  return order.customerName || 'Guest';
+  if (!order || typeof order !== 'object') return 'Guest';
+  return order.customerName || order.customer || 'Guest';
 }
 
 /**
- * Get order amount (total)
+ * Get order amount (total), never NaN
  * @param {Order} order - Order object
  * @returns {number} Order total
  */
 export function getOrderAmount(order) {
-  return order.total || order.amount || 0;
+  if (!order || typeof order !== 'object') return 0;
+  return safeNum(order.total ?? order.amount ?? order.subtotal, 0);
 }
 
 /**
@@ -225,20 +311,16 @@ export function getOrderAmount(order) {
  * @returns {Order} Updated order object
  */
 export function updateOrderStatus(order, nextStatus) {
-  if (!ORDER_STATUSES.includes(nextStatus)) {
-    throw new Error(`Invalid status: ${nextStatus}`);
+  if (!order || typeof order !== 'object') throw new Error('updateOrderStatus: invalid order');
+  if (!ORDER_STATUSES.includes(nextStatus)) throw new Error(`Invalid status: ${nextStatus}`);
+  if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
+    devWarn(`Cannot transition from terminal status ${order.status} to ${nextStatus}`);
+    return { ...order }; // return copy, no mutation
   }
 
-  const updated = {
-    ...order,
-    status: nextStatus,
-    updatedAt: now()
-  };
-
-  if (nextStatus === 'COMPLETED') {
-    updated.completedAt = now();
-  }
-
+  const updated = { ...order, status: nextStatus, updatedAt: now() };
+  if (nextStatus === 'COMPLETED') updated.completedAt = updated.completedAt || now();
+  if (nextStatus === 'CANCELLED') updated.cancelledAt = now();
   return updated;
 }
 
@@ -248,17 +330,41 @@ export function updateOrderStatus(order, nextStatus) {
  * @returns {boolean} True if status can be advanced
  */
 export function canAdvanceOrderStatus(order) {
+  if (!order || typeof order !== 'object') return false;
   const nextStatus = ORDER_STATUS_FLOW[order.status];
-  return nextStatus !== null;
+  return nextStatus != null;
 }
 
 /**
  * Get next status for order
  * @param {Order} order - Order object
- * @returns {string|null} Next status or null if no next status
+ * @returns {string|null} Next status or null if terminal
  */
 export function getNextOrderStatus(order) {
-  return ORDER_STATUS_FLOW[order.status] || null;
+  if (!order || typeof order !== 'object') return null;
+  return ORDER_STATUS_FLOW[order.status] ?? null;
+}
+
+/**
+ * Check if a status string is terminal (no further transitions)
+ * @param {string} status
+ * @returns {boolean}
+ */
+export function isTerminalOrderStatus(status) {
+  return status === 'COMPLETED' || status === 'CANCELLED';
+}
+
+/**
+ * Check if a status transition is valid
+ * @param {string} from - Current status
+ * @param {string} to - Target status
+ * @returns {boolean}
+ */
+export function canTransitionOrderStatus(from, to) {
+  if (!ORDER_STATUSES.includes(from) || !ORDER_STATUSES.includes(to)) return false;
+  if (isTerminalOrderStatus(from)) return false;
+  if (to === 'CANCELLED') return true; // Allow cancel from any non-terminal status
+  return ORDER_STATUS_FLOW[from] === to;
 }
 
 /**
@@ -267,7 +373,7 @@ export function getNextOrderStatus(order) {
  * @returns {boolean} True if cancelled
  */
 export function isOrderCancelled(order) {
-  return order.status === 'CANCELLED';
+  return order?.status === 'CANCELLED';
 }
 
 /**
@@ -276,7 +382,7 @@ export function isOrderCancelled(order) {
  * @returns {boolean} True if completed
  */
 export function isOrderCompleted(order) {
-  return order.status === 'COMPLETED';
+  return order?.status === 'COMPLETED';
 }
 
 /**
@@ -294,5 +400,5 @@ export function isOrderActive(order) {
  * @returns {boolean} True if paid
  */
 export function isOrderPaid(order) {
-  return order.paymentStatus === 'PAID';
+  return order?.paymentStatus === 'PAID';
 }

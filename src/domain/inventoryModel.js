@@ -33,22 +33,61 @@ import { now, toTimestamp } from './dates.js';
  * @property {string} unit - Unit of measurement
  */
 
+const DEV = process.env.NODE_ENV !== 'production';
+function devWarn(msg, value) { if (DEV) console.warn(`[inventoryModel] ${msg}`, value ?? ''); }
+
+function toNonNegativeNumber(val, fallback = 0) {
+  const n = Number(val);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function safeString(val, fallback = '') {
+  return (val && typeof val === 'string') ? val.trim() : fallback;
+}
+
+function safeDateString(val) {
+  if (!val) return new Date().toISOString().split('T')[0];
+  const d = new Date(val);
+  return Number.isFinite(d.getTime()) ? d.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+}
+
+function normalizeStockMovement(mv) {
+  if (!mv || typeof mv !== 'object') return null;
+  return {
+    id: mv.id || generateId(),
+    type: safeString(mv.type, 'adjustment'),
+    qty: toNonNegativeNumber(mv.qty),
+    previousQty: toNonNegativeNumber(mv.previousQty),
+    newQty: toNonNegativeNumber(mv.newQty),
+    reason: safeString(mv.reason),
+    createdAt: mv.createdAt || new Date().toISOString()
+  };
+}
+
 /**
  * Create a new inventory item
  * @param {object} input - Inventory item input data
  * @returns {InventoryItem} New inventory item
  */
 export function createInventoryItem(input = {}) {
+  const safeInput = input && typeof input === 'object' ? input : {};
+  const rawMovements = Array.isArray(safeInput.movements) ? safeInput.movements : [];
+  const movements = rawMovements.map(normalizeStockMovement).filter(Boolean).slice(-50);
+
   return {
-    id: input.id || createInventoryId(),
-    name: input.name || 'Unknown',
-    category: input.category || 'Ingredients',
-    quantity: typeof input.quantity === 'number' ? input.quantity : 0,
-    unit: input.unit || 'pieces',
-    minStock: typeof input.minStock === 'number' ? input.minStock : 10,
-    cost: typeof input.cost === 'number' ? input.cost : 0,
-    supplier: input.supplier || '',
-    lastRestock: input.lastRestock || new Date().toISOString().split('T')[0]
+    id: safeInput.id || createInventoryId(),
+    name: safeString(safeInput.name, 'Unknown Item'),
+    category: safeString(safeInput.category, 'Ingredients'),
+    quantity: toNonNegativeNumber(safeInput.quantity, 0),
+    unit: safeString(safeInput.unit, 'pieces'),
+    minStock: toNonNegativeNumber(safeInput.minStock, 10),
+    cost: toNonNegativeNumber(safeInput.cost, 0),
+    supplier: safeString(safeInput.supplier, ''),
+    lastRestock: safeDateString(safeInput.lastRestock),
+    expiryDate: safeInput.expiryDate ? safeDateString(safeInput.expiryDate) : null,
+    batchNo: safeString(safeInput.batchNo, ''),
+    movements,
+    updatedAt: safeInput.updatedAt || new Date().toISOString()
   };
 }
 
@@ -58,18 +97,27 @@ export function createInventoryItem(input = {}) {
  * @returns {InventoryItem} Normalized inventory item
  */
 export function normalizeInventoryItem(item) {
-  if (!item) return null;
+  if (!item || typeof item !== 'object') {
+    devWarn('skipping malformed inventory item', item);
+    return null;
+  }
+  const rawMovements = Array.isArray(item.movements) ? item.movements : [];
+  const movements = rawMovements.map(normalizeStockMovement).filter(Boolean).slice(-50);
 
   return {
     id: item.id || createInventoryId(),
-    name: item.name || 'Unknown',
-    category: item.category || 'Ingredients',
-    quantity: typeof item.quantity === 'number' ? item.quantity : 0,
-    unit: item.unit || 'pieces',
-    minStock: typeof item.minStock === 'number' ? item.minStock : 10,
-    cost: typeof item.cost === 'number' ? item.cost : 0,
-    supplier: item.supplier || '',
-    lastRestock: item.lastRestock || new Date().toISOString().split('T')[0]
+    name: safeString(item.name, 'Unknown Item'),
+    category: safeString(item.category, 'Ingredients'),
+    quantity: toNonNegativeNumber(item.quantity, 0),
+    unit: safeString(item.unit, 'pieces'),
+    minStock: toNonNegativeNumber(item.minStock, 10),
+    cost: toNonNegativeNumber(item.cost, 0),
+    supplier: safeString(item.supplier, ''),
+    lastRestock: safeDateString(item.lastRestock),
+    expiryDate: item.expiryDate ? safeDateString(item.expiryDate) : null,
+    batchNo: safeString(item.batchNo, ''),
+    movements,
+    updatedAt: item.updatedAt || new Date().toISOString()
   };
 }
 
@@ -79,7 +127,10 @@ export function normalizeInventoryItem(item) {
  * @returns {boolean} True if low stock
  */
 export function isLowStock(item) {
-  return item.quantity <= item.minStock;
+  if (!item || typeof item !== 'object') return false;
+  const qty = toNonNegativeNumber(item.quantity);
+  const min = toNonNegativeNumber(item.minStock);
+  return qty <= min;
 }
 
 /**
@@ -88,7 +139,8 @@ export function isLowStock(item) {
  * @returns {boolean} True if out of stock
  */
 export function isOutOfStock(item) {
-  return item.quantity === 0;
+  if (!item || typeof item !== 'object') return false;
+  return toNonNegativeNumber(item.quantity) <= 0;
 }
 
 /**
@@ -98,7 +150,7 @@ export function isOutOfStock(item) {
  */
 export function getOutOfStockItems(inventory) {
   if (!Array.isArray(inventory)) return [];
-  return inventory.filter(item => isOutOfStock(item));
+  return inventory.filter(item => item && isOutOfStock(item));
 }
 
 /**
@@ -108,7 +160,9 @@ export function getOutOfStockItems(inventory) {
  * @returns {Recipe|null} Recipe or null if not found
  */
 export function getRecipeForMenuItem(menuItemId, recipes = []) {
-  return recipes.find(r => r.menuItemId === menuItemId) || null;
+  if (!menuItemId || typeof menuItemId !== 'string') return null;
+  if (!Array.isArray(recipes)) return null;
+  return recipes.find(r => r && String(r.menuItemId) === String(menuItemId)) || null;
 }
 
 /**
@@ -119,51 +173,55 @@ export function getRecipeForMenuItem(menuItemId, recipes = []) {
  * @returns {object} Object with canFulfill (boolean) and missingItems (array)
  */
 export function canFulfillOrder(order, inventory, recipes = []) {
-  if (!order || !order.items || !Array.isArray(inventory)) {
+  if (!order || !Array.isArray(order.items) || !Array.isArray(inventory)) {
     return { canFulfill: true, missingItems: [] };
   }
 
   const missingItems = [];
 
-  // Process each order item
   order.items.forEach(orderItem => {
+    if (!orderItem || typeof orderItem !== 'object') {
+      devWarn('skipping malformed order item in canFulfillOrder', orderItem);
+      return;
+    }
     const recipe = getRecipeForMenuItem(orderItem.menuItemId, recipes);
-    
-    if (!recipe) {
-      // No recipe found, assume it can be fulfilled
+    if (!recipe) return;
+
+    if (!Array.isArray(recipe.ingredients)) {
+      devWarn('recipe has no ingredients array', recipe.menuItemId);
       return;
     }
 
-    // Check each recipe ingredient
     recipe.ingredients.forEach(ingredient => {
-      const inventoryItem = inventory.find(inv => inv.id === ingredient.inventoryItemId);
-      
+      if (!ingredient || typeof ingredient !== 'object') return;
+      const inventoryItem = inventory.find(inv => inv && inv.id === ingredient.inventoryItemId);
+      const required = toNonNegativeNumber(ingredient.quantity) * toNonNegativeNumber(orderItem.qty, 1);
+
       if (!inventoryItem) {
         missingItems.push({
-          name: ingredient.inventoryItemName,
-          required: ingredient.quantity * orderItem.qty,
+          inventoryItemId: ingredient.inventoryItemId || null,
+          name: safeString(ingredient.inventoryItemName, 'Unknown'),
+          required,
           available: 0,
-          unit: ingredient.unit
+          unit: safeString(ingredient.unit, '')
         });
         return;
       }
 
-      const totalRequired = ingredient.quantity * orderItem.qty;
-      if (inventoryItem.quantity < totalRequired) {
+      const available = toNonNegativeNumber(inventoryItem.quantity);
+      if (available < required) {
         missingItems.push({
-          name: ingredient.inventoryItemName,
-          required: totalRequired,
-          available: inventoryItem.quantity,
-          unit: ingredient.unit
+          inventoryItemId: inventoryItem.id,
+          name: safeString(inventoryItem.name, 'Unknown'),
+          required,
+          available,
+          unit: safeString(ingredient.unit, inventoryItem.unit)
         });
       }
     });
   });
 
-  return {
-    canFulfill: missingItems.length === 0,
-    missingItems
-  };
+  return { canFulfill: missingItems.length === 0, missingItems };
 }
 
 /**
@@ -174,65 +232,70 @@ export function canFulfillOrder(order, inventory, recipes = []) {
  * @returns {object} Object with updatedInventory, warnings, and updatedOrder
  */
 export function deductInventoryForOrder(order, inventory, recipes = []) {
-  if (!order || !order.items || !Array.isArray(inventory)) {
-    return { updatedInventory: inventory, warnings: [], updatedOrder: order };
+  if (!order || !Array.isArray(order.items) || !Array.isArray(inventory)) {
+    return { updatedInventory: inventory || [], warnings: [], updatedOrder: order };
   }
-
-  // Check if inventory already deducted for this order
   if (order.inventoryDeducted) {
     return { updatedInventory: inventory, warnings: [], updatedOrder: order };
   }
 
-  const updatedInventory = [...inventory];
+  const updatedInventory = inventory.map(item => ({ ...item }));
   const warnings = [];
 
-  // Process each order item
   order.items.forEach(orderItem => {
+    if (!orderItem || typeof orderItem !== 'object') {
+      devWarn('skipping malformed order item in deductInventoryForOrder', orderItem);
+      return;
+    }
     const recipe = getRecipeForMenuItem(orderItem.menuItemId, recipes);
-    
-    if (!recipe) {
-      // No recipe found, skip this item
+    if (!recipe) return;
+
+    if (!Array.isArray(recipe.ingredients)) {
+      devWarn('recipe missing ingredients array', recipe.menuItemId);
       return;
     }
 
-    // Deduct each recipe ingredient
     recipe.ingredients.forEach(ingredient => {
-      const inventoryItem = updatedInventory.find(inv => inv.id === ingredient.inventoryItemId);
-      
-      if (!inventoryItem) {
-        warnings.push(`Inventory item not found: ${ingredient.inventoryItemName}`);
+      if (!ingredient || typeof ingredient !== 'object') return;
+      const idx = updatedInventory.findIndex(inv => inv && inv.id === ingredient.inventoryItemId);
+
+      if (idx === -1) {
+        warnings.push(`Inventory item not found: ${safeString(ingredient.inventoryItemName, ingredient.inventoryItemId)}`);
         return;
       }
 
-      const totalDeduction = ingredient.quantity * orderItem.qty;
-      const newQuantity = Math.max(0, inventoryItem.quantity - totalDeduction);
+      const item = updatedInventory[idx];
+      const totalDeduction = toNonNegativeNumber(ingredient.quantity) * toNonNegativeNumber(orderItem.qty, 1);
+      const prevQty = toNonNegativeNumber(item.quantity);
+      const newQuantity = Math.max(0, prevQty - totalDeduction);
 
-      if (newQuantity < inventoryItem.minStock) {
-        warnings.push(`Low stock warning: ${inventoryItem.name} (${newQuantity} ${inventoryItem.unit} remaining)`);
+      if (newQuantity < toNonNegativeNumber(item.minStock)) {
+        warnings.push(`Low stock warning: ${item.name} (${newQuantity} ${item.unit} remaining)`);
+      }
+      if (newQuantity === 0 && prevQty > 0) {
+        warnings.push(`Out of stock: ${item.name}`);
       }
 
-      if (newQuantity === 0 && inventoryItem.quantity > 0) {
-        warnings.push(`Out of stock: ${inventoryItem.name}`);
-      }
+      const movement = normalizeStockMovement({
+        type: 'deduction',
+        qty: totalDeduction,
+        previousQty: prevQty,
+        newQty: newQuantity,
+        reason: `Order ${order.id || ''}`,
+        createdAt: new Date().toISOString()
+      });
 
-      // Update inventory item
-      const index = updatedInventory.findIndex(inv => inv.id === inventoryItem.id);
-      if (index !== -1) {
-        updatedInventory[index] = {
-          ...updatedInventory[index],
-          quantity: newQuantity,
-          lastRestock: new Date().toISOString().split('T')[0]
-        };
-      }
+      const existingMovements = Array.isArray(item.movements) ? item.movements : [];
+      updatedInventory[idx] = {
+        ...item,
+        quantity: newQuantity,
+        movements: [...existingMovements, movement].slice(-50),
+        updatedAt: new Date().toISOString()
+      };
     });
   });
 
-  // Mark order as inventory deducted
-  const updatedOrder = {
-    ...order,
-    inventoryDeducted: true
-  };
-
+  const updatedOrder = { ...order, inventoryDeducted: true };
   return { updatedInventory, warnings, updatedOrder };
 }
 
@@ -244,50 +307,51 @@ export function deductInventoryForOrder(order, inventory, recipes = []) {
  * @returns {object} Object with updatedInventory
  */
 export function restoreInventoryForCancelledOrder(order, inventory, recipes = []) {
-  if (!order || !order.items || !Array.isArray(inventory)) {
-    return { updatedInventory: inventory };
+  if (!order || !Array.isArray(order.items) || !Array.isArray(inventory)) {
+    return { updatedInventory: inventory || [], updatedOrder: order };
+  }
+  if (!order.inventoryDeducted || order.inventoryRestored) {
+    return { updatedInventory: inventory, updatedOrder: order };
   }
 
-  // Only restore if inventory was deducted
-  if (!order.inventoryDeducted) {
-    return { updatedInventory: inventory };
-  }
+  const updatedInventory = inventory.map(item => ({ ...item }));
 
-  const updatedInventory = [...inventory];
-
-  // Process each order item to restore inventory
   order.items.forEach(orderItem => {
+    if (!orderItem || typeof orderItem !== 'object') return;
     const recipe = getRecipeForMenuItem(orderItem.menuItemId, recipes);
-    
-    if (!recipe) {
-      // No recipe found, skip this item
-      return;
-    }
+    if (!recipe || !Array.isArray(recipe.ingredients)) return;
 
-    // Restore each recipe ingredient
     recipe.ingredients.forEach(ingredient => {
-      const inventoryItem = updatedInventory.find(inv => inv.id === ingredient.inventoryItemId);
-      
-      if (!inventoryItem) {
-        return;
-      }
+      if (!ingredient || typeof ingredient !== 'object') return;
+      const idx = updatedInventory.findIndex(inv => inv && inv.id === ingredient.inventoryItemId);
+      if (idx === -1) return;
 
-      const totalRestoration = ingredient.quantity * orderItem.qty;
-      const newQuantity = inventoryItem.quantity + totalRestoration;
+      const item = updatedInventory[idx];
+      const totalRestoration = toNonNegativeNumber(ingredient.quantity) * toNonNegativeNumber(orderItem.qty, 1);
+      const prevQty = toNonNegativeNumber(item.quantity);
+      const newQuantity = prevQty + totalRestoration;
 
-      // Update inventory item
-      const index = updatedInventory.findIndex(inv => inv.id === inventoryItem.id);
-      if (index !== -1) {
-        updatedInventory[index] = {
-          ...updatedInventory[index],
-          quantity: newQuantity,
-          lastRestock: new Date().toISOString().split('T')[0]
-        };
-      }
+      const movement = normalizeStockMovement({
+        type: 'restoration',
+        qty: totalRestoration,
+        previousQty: prevQty,
+        newQty: newQuantity,
+        reason: `Cancellation restore: Order ${order.id || ''}`,
+        createdAt: new Date().toISOString()
+      });
+
+      const existingMovements = Array.isArray(item.movements) ? item.movements : [];
+      updatedInventory[idx] = {
+        ...item,
+        quantity: newQuantity,
+        movements: [...existingMovements, movement].slice(-50),
+        updatedAt: new Date().toISOString()
+      };
     });
   });
 
-  return { updatedInventory };
+  const updatedOrder = { ...order, inventoryRestored: true };
+  return { updatedInventory, updatedOrder };
 }
 
 /**
@@ -298,17 +362,30 @@ export function restoreInventoryForCancelledOrder(order, inventory, recipes = []
  * @returns {InventoryItem[]} Updated inventory
  */
 export function restockInventoryItem(inventory, itemId, amount) {
-  if (!Array.isArray(inventory) || amount <= 0) return inventory;
+  if (!Array.isArray(inventory) || !itemId) return inventory || [];
+  const safeAmount = toNonNegativeNumber(amount);
+  if (safeAmount <= 0) return inventory;
 
   return inventory.map(item => {
-    if (item.id === itemId) {
-      return {
-        ...item,
-        quantity: item.quantity + amount,
-        lastRestock: new Date().toISOString().split('T')[0]
-      };
-    }
-    return item;
+    if (!item || item.id !== itemId) return item;
+    const prevQty = toNonNegativeNumber(item.quantity);
+    const newQuantity = prevQty + safeAmount;
+    const movement = normalizeStockMovement({
+      type: 'restock',
+      qty: safeAmount,
+      previousQty: prevQty,
+      newQty: newQuantity,
+      reason: 'Manual restock',
+      createdAt: new Date().toISOString()
+    });
+    const existingMovements = Array.isArray(item.movements) ? item.movements : [];
+    return {
+      ...item,
+      quantity: newQuantity,
+      lastRestock: new Date().toISOString().split('T')[0],
+      movements: [...existingMovements, movement].slice(-50),
+      updatedAt: new Date().toISOString()
+    };
   });
 }
 
@@ -319,7 +396,13 @@ export function restockInventoryItem(inventory, itemId, amount) {
  */
 export function getTotalInventoryValue(inventory) {
   if (!Array.isArray(inventory)) return 0;
-  return inventory.reduce((sum, item) => sum + (item.quantity * item.cost), 0);
+  const total = inventory.reduce((sum, item) => {
+    if (!item || typeof item !== 'object') return sum;
+    const qty = toNonNegativeNumber(item.quantity);
+    const cost = toNonNegativeNumber(item.cost);
+    return sum + (qty * cost);
+  }, 0);
+  return Number.isFinite(total) ? Math.round(total * 100) / 100 : 0;
 }
 
 /**
@@ -329,7 +412,7 @@ export function getTotalInventoryValue(inventory) {
  */
 export function getLowStockItems(inventory) {
   if (!Array.isArray(inventory)) return [];
-  return inventory.filter(item => isLowStock(item));
+  return inventory.filter(item => item && isLowStock(item));
 }
 
 /**
@@ -339,8 +422,8 @@ export function getLowStockItems(inventory) {
  * @returns {InventoryItem[]} Filtered inventory
  */
 export function getInventoryByCategory(inventory, category) {
-  if (!Array.isArray(inventory)) return [];
-  return inventory.filter(item => item.category === category);
+  if (!Array.isArray(inventory) || !category) return [];
+  return inventory.filter(item => item && item.category === category);
 }
 
 /**

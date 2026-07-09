@@ -137,53 +137,68 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
   const handleSetDeliveryOrders = setDeliveryOrders || setOrdersState;
 
   const filtered = useMemo(() => {
-    return ordersState.filter(order => {
+    const safeOrders = Array.isArray(ordersState) ? ordersState : [];
+    const q = search.trim().toLowerCase();
+    return safeOrders.filter(order => {
+      if (!order || typeof order !== "object") return false;
       const matchesPartner = partnerFilter === "ALL" || order.source === partnerFilter;
       const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
-      const matchesSearch = !search.trim() || 
-        order.orderId.toLowerCase().includes(search.toLowerCase()) ||
-        order.platformOrderId.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer.phone.includes(search);
+      if (!q) return matchesPartner && matchesStatus;
+      const cust = order.customer || {};
+      const rider = order.rider || {};
+      const matchesSearch =
+        safeStr(order.orderId).toLowerCase().includes(q) ||
+        safeStr(order.platformOrderId).toLowerCase().includes(q) ||
+        safeStr(cust.name).toLowerCase().includes(q) ||
+        safeStr(cust.phone).includes(q) ||
+        safeStr(cust.address).toLowerCase().includes(q) ||
+        safeStr(rider.name).toLowerCase().includes(q) ||
+        safeStr(order.source).toLowerCase().includes(q) ||
+        safeStr(order.status).toLowerCase().includes(q) ||
+        safeStr(order.paymentStatus).toLowerCase().includes(q);
       return matchesPartner && matchesStatus && matchesSearch;
     });
   }, [ordersState, partnerFilter, statusFilter, search]);
 
   const analytics = useMemo(() => {
-    const totalOrders = ordersState.length;
-    const totalRevenue = ordersState.reduce((sum, o) => sum + o.total, 0);
-    const totalCommission = ordersState.reduce((sum, o) => sum + o.commission, 0);
-    const netRevenue = totalRevenue - totalCommission;
+    const safeOrders = Array.isArray(ordersState) ? ordersState : [];
+    const totalOrders = safeOrders.length;
+    const totalRevenue = safeOrders.reduce((sum, o) => sum + safeMoney(o.total), 0);
+    const totalCommission = safeOrders.reduce((sum, o) => sum + safeMoney(o.commission), 0);
+    const netRevenue = Math.max(0, totalRevenue - totalCommission);
     
     const partnerStats = {
-      DIRECT_DELIVERY: ordersState.filter(o => o.source === "DIRECT_DELIVERY"),
-      SWIGGY: ordersState.filter(o => o.source === "SWIGGY"),
-      ZOMATO: ordersState.filter(o => o.source === "ZOMATO")
+      DIRECT_DELIVERY: safeOrders.filter(o => o.source === "DIRECT_DELIVERY"),
+      SWIGGY: safeOrders.filter(o => o.source === "SWIGGY"),
+      ZOMATO: safeOrders.filter(o => o.source === "ZOMATO")
     };
 
     const statusCounts = {};
     DELIVERY_STATUSES.forEach(status => {
-      statusCounts[status] = ordersState.filter(o => o.status === status).length;
+      statusCounts[status] = safeOrders.filter(o => o.status === status).length;
     });
 
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
     
     // Additional metrics
-    const activeDeliveries = ordersState.filter(o => ["PACKING", "READY_FOR_PICKUP", "PICKED_UP", "OUT_FOR_DELIVERY"].includes(o.status)).length;
-    const codPending = ordersState.filter(o => o.paymentStatus === "COD" && o.status !== "DELIVERED").length;
-    const deliveredToday = ordersState.filter(o => {
+    const activeDeliveries = safeOrders.filter(o => ["PACKING", "READY_FOR_PICKUP", "PICKED_UP", "OUT_FOR_DELIVERY"].includes(o.status)).length;
+    const codPending = safeOrders.filter(o => o.paymentStatus === "COD" && !["DELIVERED", "FAILED", "CANCELLED"].includes(o.status)).length;
+    const deliveredToday = safeOrders.filter(o => {
       const today = new Date().toDateString();
-      return o.status === "DELIVERED" && new Date(o.createdAt).toDateString() === today;
+      const created = o.createdAt ? new Date(o.createdAt) : null;
+      return o.status === "DELIVERED" && created && !isNaN(created) && created.toDateString() === today;
     }).length;
-    const failedCount = ordersState.filter(o => o.status === "FAILED").length;
+    const failedCount = safeOrders.filter(o => o.status === "FAILED").length;
     
     // Calculate average delivery time for delivered orders
-    const deliveredOrders = ordersState.filter(o => o.status === "DELIVERED" && o.estimatedDelivery);
+    const deliveredOrders = safeOrders.filter(o => o.status === "DELIVERED" && o.estimatedDelivery && o.createdAt);
     const avgDeliveryTime = deliveredOrders.length > 0 
       ? deliveredOrders.reduce((sum, o) => {
-          const actualTime = new Date(o.estimatedDelivery).getTime() - new Date(o.createdAt).getTime();
-          return sum + actualTime;
-        }, 0) / deliveredOrders.length / 60000 // Convert to minutes
+          const t1 = new Date(o.estimatedDelivery).getTime();
+          const t2 = new Date(o.createdAt).getTime();
+          const diff = (!isNaN(t1) && !isNaN(t2)) ? t1 - t2 : 0;
+          return sum + diff;
+        }, 0) / deliveredOrders.length / 60000
       : 0;
 
     return {
@@ -203,9 +218,18 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
     };
   }, [ordersState]);
 
+  const TERMINAL_STATUSES = ["DELIVERED", "FAILED", "CANCELLED"];
+  const STATUS_ORDER = ["PACKING", "READY_FOR_PICKUP", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED", "FAILED", "CANCELLED"];
+
   const updateOrderStatus = (orderId, newStatus) => {
     const order = ordersState.find(o => o.id === orderId);
     if (!order) return;
+
+    // Terminal states cannot transition further
+    if (TERMINAL_STATUSES.includes(order.status)) {
+      alert(`Order is already ${order.status.replace(/_/g, " ")} and cannot be changed.`);
+      return;
+    }
 
     // Rule: cannot go OUT_FOR_DELIVERY until order is READY
     if (newStatus === "OUT_FOR_DELIVERY" && order.status !== "READY_FOR_PICKUP") {
@@ -213,9 +237,38 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
       return;
     }
 
+    // Backwards-transition guard (allow CANCELLED from anywhere active, FAILED from active)
+    const currentIdx = STATUS_ORDER.indexOf(order.status);
+    const newIdx = STATUS_ORDER.indexOf(newStatus);
+    const isSpecial = newStatus === "FAILED" || newStatus === "CANCELLED";
+    if (!isSpecial && newIdx < currentIdx) {
+      if (!window.confirm(`Move order backwards from ${order.status.replace(/_/g, " ")} to ${newStatus.replace(/_/g, " ")}? This is unusual.`)) return;
+    }
+
+    // FAILED requires a reason
+    if (newStatus === "FAILED") {
+      const reason = window.prompt("Enter failure reason (required):");
+      if (!reason || !reason.trim()) { alert("Failure reason is required."); return; }
+      const now = new Date().toISOString();
+      handleSetDeliveryOrders(ordersState.map(o =>
+        o.id === orderId ? { ...o, status: "FAILED", failureReason: reason.trim(), failedAt: now, updatedAt: now } : o
+      ));
+      // Free rider
+      if (order.rider) setRiders(riders.map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
+      return;
+    }
+
+    // CANCELLED requires confirmation
+    if (newStatus === "CANCELLED") {
+      if (!window.confirm("Cancel this delivery order? This cannot be undone.")) return;
+    }
+
+    const now = new Date().toISOString();
+    const extra = newStatus === "DELIVERED" ? { deliveredAt: now } : {};
+
     // Update delivery order status
     handleSetDeliveryOrders(ordersState.map(o => 
-      o.id === orderId ? { ...o, status: newStatus } : o
+      o.id === orderId ? { ...o, status: newStatus, updatedAt: now, ...extra } : o
     ));
     
     // Sync with main orders if exists
@@ -269,13 +322,18 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
   };
 
   const assignRider = (orderId, riderId) => {
-    const rider = riders.find(r => r.id === riderId);
-    if (!rider) return;
+    if (!riderId) return;
+    const safeRiders = Array.isArray(riders) ? riders : [];
+    const rider = safeRiders.find(r => r.id === riderId);
+    if (!rider) { alert("Rider not found."); return; }
+    if (rider.status !== "available") {
+      if (!window.confirm(`${rider.name} is currently ${rider.status.replace(/_/g, " ")}. Assign anyway?`)) return;
+    }
+    const now = new Date().toISOString();
     handleSetDeliveryOrders(ordersState.map(o => 
-      o.id === orderId ? { ...o, rider: { id: rider.id, name: rider.name, phone: rider.phone, vehicle: rider.vehicle } } : o
+      o.id === orderId ? { ...o, rider: { id: rider.id, name: rider.name, phone: safeStr(rider.phone), vehicle: safeStr(rider.vehicle, "Bike") }, assignedAt: now, updatedAt: now } : o
     ));
-    // Update rider status
-    setRiders(riders.map(r => r.id === riderId ? { ...r, status: "on_delivery" } : r));
+    setRiders(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === riderId ? { ...r, status: "on_delivery" } : r));
   };
 
   const markPacked = (orderId) => {
@@ -293,51 +351,53 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
   const markDelivered = (orderId) => {
     const order = ordersState.find(o => o.id === orderId);
     if (!order) return;
+    if (TERMINAL_STATUSES.includes(order.status)) { alert("Order already in terminal state."); return; }
+
+    const now = new Date().toISOString();
+    // If COD, mark payment collected
+    const paymentUpdate = order.paymentMode === "COD" ? { paymentStatus: "PAID" } : {};
+    handleSetDeliveryOrders(ordersState.map(o => 
+      o.id === orderId ? { ...o, status: "DELIVERED", deliveredAt: now, updatedAt: now, ...paymentUpdate } : o
+    ));
     
-    // If COD, update payment status to PAID
-    if (order.paymentStatus === "COD") {
-      handleSetDeliveryOrders(ordersState.map(o => 
-        o.id === orderId ? { ...o, status: "DELIVERED", paymentStatus: "PAID" } : o
-      ));
-      
-      // Sync with main orders
-      if (orders && setOrders) {
-        const mainOrder = orders.find(o => o.id === order.orderId);
-        if (mainOrder) {
-          setOrders(orders.map(o => 
-            o.id === mainOrder.id ? { ...o, status: "DELIVERED", paymentStatus: "PAID" } : o
-          ));
-        }
+    // Sync with main orders
+    if (orders && setOrders) {
+      const mainOrder = orders.find(o => o.id === order.orderId);
+      if (mainOrder) {
+        setOrders(orders.map(o => 
+          o.id === mainOrder.id ? { ...o, status: "DELIVERED", ...paymentUpdate } : o
+        ));
       }
-    } else {
-      updateOrderStatus(orderId, "DELIVERED");
     }
     
     // Update rider status to available
-    if (order.rider) {
-      setRiders(riders.map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
+    if (order.rider && order.rider.id) {
+      setRiders(prev => prev.map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
     }
   };
 
   const markFailed = (orderId) => {
+    // Delegate to updateOrderStatus which handles reason prompt and rider release
     updateOrderStatus(orderId, "FAILED");
-    // Update rider status to available
-    const order = ordersState.find(o => o.id === orderId);
-    if (order && order.rider) {
-      setRiders(riders.map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
-    }
   };
 
   const reassignRider = (orderId, newRiderId) => {
     const order = ordersState.find(o => o.id === orderId);
     if (!order) return;
-    
-    // Free up old rider
-    if (order.rider) {
-      setRiders(riders.map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
+    if (!newRiderId) {
+      // Clearing rider — require confirmation
+      if (!window.confirm("Remove the currently assigned rider from this order?")) return;
+      if (order.rider && order.rider.id) {
+        setRiders(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
+      }
+      const now = new Date().toISOString();
+      handleSetDeliveryOrders(ordersState.map(o => o.id === orderId ? { ...o, rider: null, updatedAt: now } : o));
+      return;
     }
-    
-    // Assign new rider
+    // Free up old rider first
+    if (order.rider && order.rider.id) {
+      setRiders(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
+    }
     assignRider(orderId, newRiderId);
   };
 
@@ -361,8 +421,18 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
   };
 
   const cancelOrder = (orderId) => {
-    if (!window.confirm("Are you sure you want to cancel this delivery order?")) return;
+    const order = ordersState.find(o => o.id === orderId);
+    if (!order) return;
+    if (TERMINAL_STATUSES.includes(order.status)) { alert(`Order is already ${order.status.replace(/_/g, " ")}.`); return; }
+    const active = ["PICKED_UP", "OUT_FOR_DELIVERY"].includes(order.status);
+    const msg = active
+      ? `Order is ${order.status.replace(/_/g, " ")} and may be with the rider. Cancel anyway?`
+      : "Cancel this delivery order?";
+    if (!window.confirm(msg)) return;
     updateOrderStatus(orderId, "CANCELLED");
+    if (order.rider && order.rider.id) {
+      setRiders(prev => (Array.isArray(prev) ? prev : []).map(r => r.id === order.rider.id ? { ...r, status: "available" } : r));
+    }
   };
 
   const getStatusColor = (status) => {
@@ -379,135 +449,200 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    if (!dateString) return "—";
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    if (!dateString) return "—";
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
   };
+
+  // Safe number formatter – never shows NaN or undefined
+  const safeMoney = (val) => {
+    const n = Number(val);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const safeStr = (val, fallback = "") => (val == null ? fallback : String(val).trim() || fallback);
 
   return (
     <div>
-      <div className="grid-6" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 6, marginBottom: 14 }}>
         {[
-          { label: "Total Orders", val: analytics.totalOrders, color: C.amber2 },
-          { label: "Active", val: analytics.activeDeliveries, color: C.blue },
-          { label: "Revenue", val: "₹" + analytics.totalRevenue.toLocaleString(), color: C.green },
-          { label: "COD Pending", val: analytics.codPending, color: C.amber },
-          { label: "Delivered Today", val: analytics.deliveredToday, color: C.green },
-          { label: "Failed", val: analytics.failedCount, color: C.red }
+          { label: "Orders", val: analytics.totalOrders ?? 0, color: C.text1, sub: null },
+          { label: "In flight", val: analytics.activeDeliveries ?? 0, color: C.blue, sub: "active now" },
+          { label: "Revenue", val: "₹" + safeMoney(analytics.totalRevenue).toLocaleString(), color: C.green, sub: `net ₹${safeMoney(analytics.netRevenue).toLocaleString()}` },
+          { label: "COD uncollected", val: analytics.codPending ?? 0, color: analytics.codPending > 0 ? C.amber : C.text3, sub: null },
+          { label: "Delivered today", val: analytics.deliveredToday ?? 0, color: C.green, sub: null },
+          { label: "Failed", val: analytics.failedCount ?? 0, color: analytics.failedCount > 0 ? C.red : C.text3, sub: null }
         ].map(m => (
-          <div key={m.label} style={{ ...card(), padding: "12px 14px" }}>
-            <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace", color: m.color }}>{m.val}</div>
-            <div style={{ fontSize: 10, color: C.text3, marginTop: 3, textTransform: "uppercase", letterSpacing: ".06em" }}>{m.label}</div>
+          <div key={m.label} style={{ ...card(), padding: "10px 12px", borderRadius: 10 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "monospace", color: m.color, lineHeight: 1 }}>{m.val}</div>
+            <div style={{ fontSize: 10, color: C.text3, marginTop: 4, fontWeight: 500 }}>{m.label}</div>
+            {m.sub && <div style={{ fontSize: 9, color: C.text3, marginTop: 1, opacity: 0.7 }}>{m.sub}</div>}
           </div>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
-        <div style={{ position: "relative" }}>
-          <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.text3 }}>🔍</span>
-          <input style={{ ...input, paddingLeft: 28, width: 180 }} placeholder="Search orders…" value={search} onChange={e => setSearch(e.target.value)} />
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: C.text3, pointerEvents: "none" }}>⌕</span>
+          <input style={{ ...input, paddingLeft: 26, width: 170, fontSize: 12 }} placeholder="Order, customer, rider…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        
-        {Object.entries(DELIVERY_PARTNERS).map(([key, partner]) => (
-          <button 
-            key={key} 
-            onClick={() => setPartnerFilter(key)}
-            style={{ 
-              padding: "10px 12px", 
-              borderRadius: 6, 
-              border: `1px solid ${partnerFilter === key ? partner.color : C.border2}`, 
-              background: partnerFilter === key ? `${partner.color}20` : C.bg3, 
-              color: partnerFilter === key ? partner.color : C.text2, 
-              fontSize: 12, 
-              cursor: "pointer", 
-              minHeight: 44,
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}
-          >
-            {partner.icon} {partner.name}
-          </button>
-        ))}
 
-        <select 
-          style={{ ...input, fontSize: 11, padding: "5px 8px", minHeight: 44 }} 
-          value={statusFilter} 
+        <div style={{ display: "flex", gap: 4, background: C.bg3, borderRadius: 8, padding: 3, border: `1px solid ${C.border}` }}>
+          <button
+            onClick={() => setPartnerFilter("ALL")}
+            style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: partnerFilter === "ALL" ? C.bg2 : "transparent", color: partnerFilter === "ALL" ? C.text1 : C.text3, fontSize: 11, cursor: "pointer", fontWeight: partnerFilter === "ALL" ? 600 : 400, boxShadow: partnerFilter === "ALL" ? `0 1px 3px rgba(0,0,0,.15)` : "none" }}
+          >All</button>
+          {Object.entries(DELIVERY_PARTNERS).map(([key, partner]) => (
+            <button
+              key={key}
+              onClick={() => setPartnerFilter(partnerFilter === key ? "ALL" : key)}
+              style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: partnerFilter === key ? `${partner.color}22` : "transparent", color: partnerFilter === key ? partner.color : C.text3, fontSize: 11, cursor: "pointer", fontWeight: partnerFilter === key ? 700 : 400, transition: "all .12s" }}
+            >
+              {partner.name.split(" ")[0]}
+            </button>
+          ))}
+        </div>
+
+        <select
+          style={{ ...input, fontSize: 11, padding: "5px 8px", height: 32, minHeight: "unset" }}
+          value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
         >
-          <option value="ALL">All Statuses</option>
+          <option value="ALL">All statuses</option>
           {DELIVERY_STATUSES.map(status => (
-            <option key={status} value={status}>{status.replace(/_/g, " ")}</option>
+            <option key={status} value={status}>{status.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase())}</option>
           ))}
         </select>
 
-        <button 
-          onClick={() => setShowSettings(true)}
-          style={{ ...btn("ghost"), padding: "10px 12px", minHeight: 44, fontSize: 12 }}
-        >
-          ⚙️ Settings
-        </button>
-
-        <button 
-          onClick={() => { setModalType("riders"); setShowModal(true); }}
-          style={{ ...btn("ghost"), padding: "10px 12px", minHeight: 44, fontSize: 12 }}
-        >
-          🏍️ Riders
-        </button>
-
-        <button 
-          onClick={() => { setModalType("settlements"); setShowModal(true); }}
-          style={{ ...btn("ghost"), padding: "10px 12px", minHeight: 44, fontSize: 12 }}
-        >
-          💰 Settlements
-        </button>
-
-        <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-          <button 
-            onClick={() => {
-              const packingOrders = filtered.filter(o => o.status === "PACKING");
-              if (packingOrders.length === 0) return;
-              if (!window.confirm(`Mark ${packingOrders.length} orders as ready for pickup?`)) return;
-              packingOrders.forEach(o => markPacked(o.id));
-            }}
-            style={{ ...btn("ghost"), padding: "10px 12px", minHeight: 44, fontSize: 12 }}
-          >
-            📦 Bulk Ready
-          </button>
-          <button 
-            onClick={() => {
-              const readyOrders = filtered.filter(o => o.status === "READY_FOR_PICKUP");
-              if (readyOrders.length === 0) return;
-              if (!window.confirm(`Mark ${readyOrders.length} orders as picked up?`)) return;
-              readyOrders.forEach(o => markPickedUp(o.id));
-            }}
-            style={{ ...btn("ghost"), padding: "10px 12px", minHeight: 44, fontSize: 12 }}
-          >
-            🏍️ Bulk Pickup
-          </button>
+        <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
+          <button
+            onClick={() => { setModalType("riders"); setShowModal(true); }}
+            style={{ ...btn("ghost"), padding: "5px 10px", fontSize: 11, height: 32, minHeight: "unset" }}
+          >Riders</button>
+          <button
+            onClick={() => { setModalType("settlements"); setShowModal(true); }}
+            style={{ ...btn("ghost"), padding: "5px 10px", fontSize: 11, height: 32, minHeight: "unset" }}
+          >Settlements</button>
+          <button
+            onClick={() => setShowSettings(true)}
+            style={{ ...btn("ghost"), padding: "5px 10px", fontSize: 11, height: 32, minHeight: "unset" }}
+          >Settings</button>
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {(filtered.filter(o => o.status === "PACKING").length > 0 || filtered.filter(o => o.status === "READY_FOR_PICKUP").length > 0) && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+          {filtered.filter(o => o.status === "PACKING").length > 0 && (
+            <button
+              onClick={() => {
+                const packingOrders = filtered.filter(o => o.status === "PACKING");
+                if (!window.confirm(`Mark ${packingOrders.length} order${packingOrders.length > 1 ? "s" : ""} as ready for pickup?`)) return;
+                packingOrders.forEach(o => markPacked(o.id));
+              }}
+              style={{ ...btn("ghost"), padding: "5px 12px", fontSize: 11, height: 30, minHeight: "unset", borderStyle: "dashed" }}
+            >
+              Mark all packing ready ({filtered.filter(o => o.status === "PACKING").length})
+            </button>
+          )}
+          {filtered.filter(o => o.status === "READY_FOR_PICKUP").length > 0 && (
+            <button
+              onClick={() => {
+                const readyOrders = filtered.filter(o => o.status === "READY_FOR_PICKUP");
+                if (!window.confirm(`Mark ${readyOrders.length} order${readyOrders.length > 1 ? "s" : ""} as picked up?`)) return;
+                readyOrders.forEach(o => markPickedUp(o.id));
+              }}
+              style={{ ...btn("ghost"), padding: "5px 12px", fontSize: 11, height: 30, minHeight: "unset", borderStyle: "dashed" }}
+            >
+              Mark all ready as picked up ({filtered.filter(o => o.status === "READY_FOR_PICKUP").length})
+            </button>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {filtered.length === 0 && (
+          <div style={{ ...card(), padding: "32px 16px", textAlign: "center", color: C.text3, fontSize: 13 }}>
+            No orders match these filters
+          </div>
+        )}
         {filtered.map(o => {
-          const p = DELIVERY_PARTNERS[o.source];
+          const p = DELIVERY_PARTNERS[o.source] || { color: "#999", icon: "📦", name: safeStr(o.source, "Unknown") };
+          const cust = o.customer || {};
+          const total = safeMoney(o.total);
+          const codAmt = safeMoney(o.codAmount);
+          const isActive = ["PACKING","READY_FOR_PICKUP","PICKED_UP","OUT_FOR_DELIVERY"].includes(o.status);
+          const isCodPending = o.paymentMode === "COD" && o.paymentStatus !== "PAID" && isActive;
+          const noRider = isActive && !o.rider;
+          const isFailed = o.status === "FAILED";
+          const isDelivered = o.status === "DELIVERED";
+          const isCancelled = o.status === "CANCELLED";
+          const statusColor = getStatusColor(o.status);
+          const statusLabel = safeStr(o.status, "UNKNOWN").replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase());
+          const orderId = safeStr(o.platformOrderId) || safeStr(o.orderId, "—");
+          const elapsedMin = o.createdAt ? Math.round((Date.now() - new Date(o.createdAt)) / 60000) : null;
+          const etaMin = o.estimatedDelivery ? Math.round((new Date(o.estimatedDelivery) - Date.now()) / 60000) : null;
+          const isLate = etaMin !== null && etaMin < 0 && isActive;
+
           return (
-            <div key={o.id} style={{ ...card(), padding: "14px", border: `1px solid ${p.color}40`, cursor: "pointer" }} onClick={() => { setSelectedOrder(o); setShowModal(true); }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 24 }}>{p.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>{o.platformOrderId || o.orderId}</div>
-                  <div style={{ fontSize: 12, color: C.text3 }}>{o.customer.name} · {o.customer.phone}</div>
+            <div
+              key={o.id}
+              style={{
+                ...card(),
+                padding: "12px 14px",
+                border: `1px solid ${isFailed || isCancelled ? `${C.red}30` : isDelivered ? `${C.green}25` : `${p.color}35`}`,
+                cursor: "pointer",
+                opacity: isCancelled ? 0.65 : 1,
+                borderLeft: `3px solid ${statusColor}`,
+                borderRadius: 10,
+              }}
+              onClick={() => { setSelectedOrder(o); setModalType("details"); setShowModal(true); }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* Partner dot + order ID */}
+                <div style={{ flexShrink: 0, width: 8, height: 8, borderRadius: "50%", background: p.color, marginTop: 1 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", letterSpacing: "-.01em" }}>{orderId}</span>
+                    <span style={{ fontSize: 10, color: p.color, fontWeight: 600 }}>{p.name.split(" ")[0]}</span>
+                    {elapsedMin !== null && (
+                      <span style={{ fontSize: 10, color: C.text3 }}>{elapsedMin < 60 ? `${elapsedMin}m ago` : `${Math.round(elapsedMin/60)}h ago`}</span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 2, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: C.text2 }}>{safeStr(cust.name, "Unknown")}</span>
+                    {safeStr(cust.phone) && <span style={{ fontSize: 11, color: C.text3 }}>{cust.phone}</span>}
+                    {o.rider && <span style={{ fontSize: 11, color: C.text3 }}>· {o.rider.name}</span>}
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>₹{o.total}</div>
-                  <span style={{ ...pill(C.neutralBg, getStatusColor(o.status)), fontSize: 9 }}>{o.status.replace(/_/g, " ")}</span>
+
+                {/* Right: amount + status */}
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "monospace", color: isDelivered ? C.green : C.text1 }}>
+                    ₹{total.toLocaleString()}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, justifyContent: "flex-end", marginTop: 3 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: statusColor, fontWeight: 600 }}>{statusLabel}</span>
+                  </div>
                 </div>
               </div>
-              {o.paymentStatus === "COD" && (
-                <div style={{ fontSize: 11, color: C.amber, marginTop: 4 }}>COD: ₹{o.codAmount}</div>
+
+              {/* Alerts row */}
+              {(noRider || isCodPending || isFailed || isLate) && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 7, paddingTop: 7, borderTop: `1px solid ${C.border}` }}>
+                  {noRider && <span style={{ fontSize: 10, color: C.amber, background: `${C.amber}18`, borderRadius: 4, padding: "2px 7px", fontWeight: 500 }}>No rider assigned</span>}
+                  {isCodPending && <span style={{ fontSize: 10, color: C.amber, background: `${C.amber}18`, borderRadius: 4, padding: "2px 7px", fontWeight: 500 }}>COD ₹{codAmt} uncollected</span>}
+                  {isLate && <span style={{ fontSize: 10, color: C.red, background: `${C.red}18`, borderRadius: 4, padding: "2px 7px", fontWeight: 500 }}>{Math.abs(etaMin)}m overdue</span>}
+                  {isFailed && o.failureReason && <span style={{ fontSize: 10, color: C.red, background: `${C.red}18`, borderRadius: 4, padding: "2px 7px", fontWeight: 500 }}>{o.failureReason}</span>}
+                </div>
               )}
             </div>
           );
@@ -515,130 +650,231 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
       </div>
 
       {/* Order Details Modal */}
-      {showModal && modalType === "details" && selectedOrder && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(450px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>{selectedOrder.platformOrderId || selectedOrder.orderId}</div>
-              <span style={{ cursor: "pointer", color: C.text3 }} onClick={() => setShowModal(false)}>×</span>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Customer</div>
-              <div>{selectedOrder.customer.name} · {selectedOrder.customer.phone}</div>
-              <div style={{ fontSize: 12, color: C.text3 }}>{selectedOrder.customer.address}</div>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Items</div>
-              {selectedOrder.items.map((i, idx) => <div key={idx}>{i.qty}x {i.name} - ₹{i.price}</div>)}
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+      {showModal && modalType === "details" && selectedOrder && (() => {
+        const so = selectedOrder;
+        const cust = so.customer || {};
+        const items = Array.isArray(so.items) ? so.items : [];
+        const safeRiders = Array.isArray(riders) ? riders : [];
+        const isTerminal = TERMINAL_STATUSES.includes(so.status);
+        const isActive = ["PACKING","READY_FOR_PICKUP","PICKED_UP","OUT_FOR_DELIVERY"].includes(so.status);
+        const isCodPending = so.paymentMode === "COD" && so.paymentStatus !== "PAID" && !["DELIVERED","FAILED","CANCELLED"].includes(so.status);
+        const partnerInfo = DELIVERY_PARTNERS[so.source] || { color: "#999", name: safeStr(so.source, "Unknown") };
+        return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 14, padding: 20, width: "min(460px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${C.border}` }}>
               <div>
-                <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Status</div>
-                <select style={{ ...input }} value={selectedOrder.status} onChange={e => updateOrderStatus(selectedOrder.id, e.target.value)}>
-                  {DELIVERY_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-                </select>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Payment</div>
-                <div style={{ fontSize: 12 }}>{selectedOrder.paymentStatus} ({selectedOrder.paymentMode})</div>
-                {selectedOrder.paymentStatus === "COD" && (
-                  <button onClick={() => collectCOD(selectedOrder.id)} style={{ ...btn("primary"), padding: "4px 8px", fontSize: 10, marginTop: 4 }}>
-                    Collect COD
-                  </button>
-                )}
-              </div>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Rider</div>
-              {selectedOrder.rider ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div>{selectedOrder.rider.name} · {selectedOrder.rider.phone}</div>
-                  <button onClick={() => reassignRider(selectedOrder.id, null)} style={{ ...btn("ghost"), padding: "4px 8px", fontSize: 10 }}>
-                    Reassign
-                  </button>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "monospace", letterSpacing: "-.01em" }}>{safeStr(so.platformOrderId) || safeStr(so.orderId, "—")}</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: partnerInfo.color, fontWeight: 600 }}>{partnerInfo.name}</span>
+                  <span style={{ width: 3, height: 3, borderRadius: "50%", background: C.text3 }} />
+                  <span style={{ fontSize: 11, color: getStatusColor(so.status), fontWeight: 600 }}>
+                    {safeStr(so.status).replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase())}
+                  </span>
+                  {so.createdAt && (() => { const d = new Date(so.createdAt); return !isNaN(d) ? (
+                    <span style={{ fontSize: 10, color: C.text3 }}>· {formatDate(so.createdAt)} {formatTime(so.createdAt)}</span>
+                  ) : null; })()}
                 </div>
-              ) : (
-                <select style={{ ...input }} onChange={e => assignRider(selectedOrder.id, e.target.value)}>
-                  <option value="">Assign Rider</option>
-                  {riders.filter(r => r.status === "available").map(r => (
-                    <option key={r.id} value={r.id}>{r.name} ({r.vehicle})</option>
-                  ))}
-                </select>
+              </div>
+              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 20, lineHeight: 1, padding: "0 0 0 8px", marginTop: -2 }}>×</button>
+            </div>
+
+            {/* Customer */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 10, color: C.text3, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 }}>Customer</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{safeStr(cust.name, "Unknown")}</div>
+              <div style={{ fontSize: 12, color: C.text3, marginTop: 2 }}>{safeStr(cust.phone, "No phone on file")}</div>
+              {safeStr(cust.address) && (
+                <div style={{ fontSize: 12, color: C.text3, marginTop: 2, wordBreak: "break-word" }}>
+                  {cust.address}{safeStr(cust.pincode) ? ` – ${cust.pincode}` : ""}
+                </div>
+              )}
+              {so.specialInstructions && (
+                <div style={{ marginTop: 6, fontSize: 11, color: C.amber, background: `${C.amber}12`, borderRadius: 6, padding: "4px 8px" }}>
+                  Note: {so.specialInstructions}
+                </div>
               )}
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: C.text3, marginBottom: 4 }}>Quick Actions</div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {selectedOrder.status === "PACKING" && (
-                  <button onClick={() => markPacked(selectedOrder.id)} style={{ ...btn("primary"), padding: "6px 12px", fontSize: 11 }}>
-                    Mark Ready
-                  </button>
-                )}
-                {selectedOrder.status === "READY_FOR_PICKUP" && selectedOrder.rider && (
-                  <button onClick={() => markPickedUp(selectedOrder.id)} style={{ ...btn("primary"), padding: "6px 12px", fontSize: 11 }}>
-                    Mark Picked Up
-                  </button>
-                )}
-                {selectedOrder.status === "PICKED_UP" && (
-                  <button onClick={() => markOutForDelivery(selectedOrder.id)} style={{ ...btn("primary"), padding: "6px 12px", fontSize: 11 }}>
-                    Out for Delivery
-                  </button>
-                )}
-                {selectedOrder.status === "OUT_FOR_DELIVERY" && (
-                  <button onClick={() => markDelivered(selectedOrder.id)} style={{ ...btn("primary"), padding: "6px 12px", fontSize: 11 }}>
-                    Mark Delivered
-                  </button>
-                )}
-                {["PACKING", "READY_FOR_PICKUP", "PICKED_UP", "OUT_FOR_DELIVERY"].includes(selectedOrder.status) && (
-                  <button onClick={() => markFailed(selectedOrder.id)} style={{ ...btn("ghost"), padding: "6px 12px", fontSize: 11, color: C.red, borderColor: C.red }}>
-                    Mark Failed
-                  </button>
-                )}
+
+            {/* Items + pricing */}
+            <div style={{ marginBottom: 14, background: C.bg3, borderRadius: 8, padding: "10px 12px" }}>
+              <div style={{ fontSize: 10, color: C.text3, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>Order</div>
+              {items.length === 0
+                ? <div style={{ fontSize: 12, color: C.text3 }}>No items</div>
+                : items.map((i, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+                      <span style={{ color: C.text2 }}>{safeMoney(i.qty) || 1}× {safeStr(i.name, "Item")}</span>
+                      <span style={{ fontFamily: "monospace", color: C.text1 }}>₹{safeMoney(i.price).toLocaleString()}</span>
+                    </div>
+                  ))
+              }
+              <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6 }}>
+                {[
+                  { label: "Subtotal", val: `₹${safeMoney(so.subtotal).toLocaleString()}` },
+                  { label: "Delivery", val: `₹${safeMoney(so.deliveryFee).toLocaleString()}` },
+                  { label: "Commission", val: `₹${safeMoney(so.commission).toLocaleString()}`, dim: true },
+                  { label: "Total", val: `₹${safeMoney(so.total).toLocaleString()}`, bold: true },
+                ].map(cell => (
+                  <div key={cell.label}>
+                    <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".05em" }}>{cell.label}</div>
+                    <div style={{ fontSize: 12, fontFamily: "monospace", fontWeight: cell.bold ? 700 : 400, color: cell.dim ? C.text3 : C.text1 }}>{cell.val}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <button style={btn("primary")} onClick={() => setShowModal(false)}>Close</button>
+
+            {/* Payment */}
+            <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: C.text3, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>Payment</div>
+                <div style={{ fontSize: 12 }}>
+                  <span style={{ fontWeight: 600, color: so.paymentStatus === "PAID" ? C.green : C.amber }}>{safeStr(so.paymentStatus, "UNKNOWN")}</span>
+                  <span style={{ color: C.text3 }}> · {safeStr(so.paymentMode, "—")}</span>
+                  {so.paymentMode === "COD" && <span style={{ color: C.text3 }}> · ₹{safeMoney(so.codAmount).toLocaleString()}</span>}
+                </div>
+              </div>
+              {isCodPending && (
+                <button onClick={() => collectCOD(so.id)} style={{ ...btn("primary"), padding: "6px 12px", fontSize: 11 }}>
+                  Collect cash
+                </button>
+              )}
+            </div>
+
+            {/* Failed notice */}
+            {so.status === "FAILED" && (
+              <div style={{ marginBottom: 14, padding: "8px 12px", background: `${C.red}12`, borderRadius: 8, border: `1px solid ${C.red}30` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 3 }}>Delivery failed</div>
+                <div style={{ fontSize: 12, color: C.text2 }}>{safeStr(so.failureReason, "No reason recorded")}</div>
+                {so.failedAt && <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{formatDate(so.failedAt)} {formatTime(so.failedAt)}</div>}
+              </div>
+            )}
+
+            {/* Rider */}
+            {!isTerminal && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: C.text3, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Rider</div>
+                {so.rider ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, fontSize: 12 }}>
+                      <span style={{ fontWeight: 600 }}>{safeStr(so.rider.name)}</span>
+                      <span style={{ color: C.text3 }}> · {safeStr(so.rider.phone)}</span>
+                    </div>
+                    <button onClick={() => reassignRider(so.id, null)} style={{ ...btn("ghost"), padding: "4px 8px", fontSize: 10 }}>
+                      Remove
+                    </button>
+                    <select style={{ ...input, fontSize: 11, flex: 1, minWidth: 120 }} defaultValue="" onChange={e => { if (e.target.value) reassignRider(so.id, e.target.value); }}>
+                      <option value="">Reassign…</option>
+                      {safeRiders.map(r => (
+                        <option key={r.id} value={r.id}>{r.name} · {safeStr(r.vehicle)}{r.status !== "available" ? " (busy)" : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <select style={{ ...input, fontSize: 12 }} defaultValue="" onChange={e => { if (e.target.value) assignRider(so.id, e.target.value); }}>
+                    <option value="">Assign a rider…</option>
+                    {safeRiders.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} · {safeStr(r.vehicle)}{r.status !== "available" ? " (busy)" : ""}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+
+            {/* Status selector (non-terminal) */}
+            {!isTerminal && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: C.text3, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Status</div>
+                <select style={{ ...input, fontSize: 12 }} value={so.status} onChange={e => updateOrderStatus(so.id, e.target.value)}>
+                  {DELIVERY_STATUSES.map(s => <option key={s} value={s}>{s.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase())}</option>)}
+                </select>
+              </div>
+            )}
+
+            {/* Actions */}
+            {isActive && (
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14, paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
+                {so.status === "PACKING" && (
+                  <button onClick={() => markPacked(so.id)} style={{ ...btn("primary"), padding: "7px 14px", fontSize: 12, flex: 1 }}>
+                    Ready for pickup
+                  </button>
+                )}
+                {so.status === "READY_FOR_PICKUP" && so.rider && (
+                  <button onClick={() => markPickedUp(so.id)} style={{ ...btn("primary"), padding: "7px 14px", fontSize: 12, flex: 1 }}>
+                    Rider picked up
+                  </button>
+                )}
+                {so.status === "PICKED_UP" && (
+                  <button onClick={() => markOutForDelivery(so.id)} style={{ ...btn("primary"), padding: "7px 14px", fontSize: 12, flex: 1 }}>
+                    Out for delivery
+                  </button>
+                )}
+                {so.status === "OUT_FOR_DELIVERY" && (
+                  <button onClick={() => markDelivered(so.id)} style={{ ...btn("primary"), padding: "7px 14px", fontSize: 12, flex: 1 }}>
+                    Delivered
+                  </button>
+                )}
+                <button onClick={() => { markFailed(so.id); }} style={{ ...btn("ghost"), padding: "7px 12px", fontSize: 11, color: C.red, borderColor: `${C.red}50` }}>
+                  Failed
+                </button>
+                <button onClick={() => cancelOrder(so.id)} style={{ ...btn("ghost"), padding: "7px 12px", fontSize: 11 }}>
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            <button style={{ ...btn("ghost"), width: "100%", fontSize: 12 }} onClick={() => setShowModal(false)}>Close</button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Riders Modal */}
       {showModal && modalType === "riders" && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(600px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Rider Management</div>
-              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 14, padding: 20, width: "min(540px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${C.border}` }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>Riders</div>
+                <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>
+                  {(Array.isArray(riders) ? riders : []).filter(r => r.status === "available").length} available · {(Array.isArray(riders) ? riders : []).filter(r => r.status === "on_delivery").length} on delivery
+                </div>
+              </div>
+              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {riders.map(rider => {
-                const partner = DELIVERY_PARTNERS[rider.partner];
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {(Array.isArray(riders) ? riders : []).map(rider => {
+                if (!rider || typeof rider !== "object") return null;
+                const partner = DELIVERY_PARTNERS[rider.partner] || { color: "#999", name: safeStr(rider.partner, "Unknown") };
+                const rating = safeMoney(rider.rating);
+                const deliveries = safeMoney(rider.deliveries);
+                const statusColor = rider.status === "available" ? C.green : rider.status === "on_delivery" ? C.amber : C.red;
+                const statusLabel = rider.status === "available" ? "Available" : rider.status === "on_delivery" ? "On delivery" : safeStr(rider.status).replace(/_/g, " ");
                 return (
-                  <div key={rider.id} style={{ ...card(), padding: "14px", border: `1px solid ${partner.color}40` }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                      <div style={{ fontSize: 24 }}>🏍️</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700 }}>{rider.name}</div>
-                        <div style={{ fontSize: 12, color: C.text3 }}>{rider.phone} · {rider.vehicle}</div>
+                  <div key={rider.id} style={{ ...card(), padding: "12px 14px", borderRadius: 9, display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600 }}>{safeStr(rider.name, "Unnamed")}</span>
+                        <span style={{ fontSize: 10, color: partner.color, fontWeight: 600 }}>{partner.name.split(" ")[0]}</span>
+                        <span style={{ fontSize: 10, color: C.text3 }}>{safeStr(rider.vehicle)}</span>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <span style={{ ...pill(`${partner.color}20`, partner.color), fontSize: 9 }}>{partner.name}</span>
-                        <div style={{ fontSize: 12, marginTop: 4 }}>⭐ {rider.rating}</div>
-                      </div>
+                      <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{safeStr(rider.phone, "—")}</div>
                     </div>
-                    <div style={{ display: "flex", gap: 8, fontSize: 11, color: C.text3 }}>
-                      <span>{rider.deliveries} deliveries</span>
-                      <span>•</span>
-                      <span style={{ color: rider.status === "available" ? C.green : rider.status === "on_delivery" ? C.amber : C.red }}>
-                        {rider.status.replace(/_/g, " ")}
-                      </span>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: statusColor }}>{statusLabel}</div>
+                      <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>
+                        {rating > 0 && `★ ${rating}`}{deliveries > 0 && ` · ${deliveries} trips`}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <button style={{ ...btn("primary"), marginTop: 16, width: "100%" }} onClick={() => setShowModal(false)}>
+            <button style={{ ...btn("ghost"), marginTop: 14, width: "100%", fontSize: 12 }} onClick={() => setShowModal(false)}>
               Close
             </button>
           </div>
@@ -647,55 +883,73 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
 
       {/* Settlements Modal */}
       {showModal && modalType === "settlements" && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(600px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Settlement Tracking</div>
-              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 14, padding: 20, width: "min(560px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Settlements</div>
+              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {settlements.map(settlement => {
-                const partner = DELIVERY_PARTNERS[settlement.partner];
+              {(Array.isArray(settlements) ? settlements : []).map(settlement => {
+                const partner = DELIVERY_PARTNERS[settlement.partner] || { name: safeStr(settlement.partner, "Unknown"), color: "#999" };
+                const gross = safeMoney(settlement.totalRevenue);
+                const commission = Math.min(safeMoney(settlement.commission), gross);
+                const net = Math.max(0, gross - commission);
+                const totalOrders = safeMoney(settlement.totalOrders);
+                const isPaid = settlement.status === "paid";
                 return (
-                  <div key={settlement.id} style={{ ...card(), padding: "14px", border: `1px solid ${partner.color}40` }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                      <div style={{ fontSize: 24 }}>{partner.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700 }}>{partner.name}</div>
-                        <div style={{ fontSize: 12, color: C.text3 }}>{settlement.period}</div>
+                  <div key={settlement.id} style={{ ...card(), padding: "14px 16px", borderRadius: 10, borderLeft: `3px solid ${partner.color}` }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700 }}>{partner.name}</div>
+                        <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>{safeStr(settlement.period, "—")}</div>
                       </div>
-                      <span style={{ ...pill(C.neutralBg, settlement.status === "paid" ? C.green : C.amber), fontSize: 9 }}>
-                        {settlement.status.toUpperCase()}
+                      <span style={{ fontSize: 10, fontWeight: 700, color: isPaid ? C.green : C.amber, background: isPaid ? `${C.green}15` : `${C.amber}15`, borderRadius: 5, padding: "3px 8px" }}>
+                        {isPaid ? "Paid" : "Pending"}
                       </span>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Orders</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{settlement.totalOrders}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Revenue</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.green }}>₹{settlement.totalRevenue.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em" }}>Net</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.blue }}>₹{settlement.netRevenue.toLocaleString()}</div>
-                      </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                      {[
+                        { label: "Orders", val: totalOrders, color: C.text1 },
+                        { label: "Revenue", val: `₹${gross.toLocaleString()}`, color: C.green },
+                        { label: "Commission", val: `₹${commission.toLocaleString()}`, color: C.red },
+                        { label: "Net", val: `₹${net.toLocaleString()}`, color: C.blue },
+                      ].map(cell => (
+                        <div key={cell.label}>
+                          <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>{cell.label}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: cell.color }}>{cell.val}</div>
+                        </div>
+                      ))}
                     </div>
 
-                    {settlement.paidDate && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: C.text3 }}>
-                        Paid on {new Date(settlement.paidDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                      </div>
-                    )}
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      {settlement.paidDate && (() => { const d = new Date(settlement.paidDate); return !isNaN(d) ? (
+                        <div style={{ fontSize: 10, color: C.text3 }}>
+                          Paid {d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </div>
+                      ) : <div />; })()}
+                      {!settlement.paidDate && <div />}
+                      {!isPaid && (
+                        <button
+                          style={{ ...btn("primary"), padding: "5px 12px", fontSize: 11 }}
+                          onClick={() => {
+                            if (!window.confirm(`Mark ${partner.name} settlement as paid?`)) return;
+                            const now = new Date().toISOString().slice(0, 10);
+                            setSettlements(prev => prev.map(s => s.id === settlement.id ? { ...s, status: "paid", paidDate: now } : s));
+                          }}
+                        >
+                          Mark paid
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            <button style={{ ...btn("primary"), marginTop: 16, width: "100%" }} onClick={() => setShowModal(false)}>
+            <button style={{ ...btn("ghost"), marginTop: 14, width: "100%", fontSize: 12 }} onClick={() => setShowModal(false)}>
               Close
             </button>
           </div>
@@ -704,104 +958,69 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
 
       {/* Settings Modal */}
       {showSettings && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowSettings(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(500px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>Delivery Partner Settings</div>
-              <button aria-label="Close" onClick={() => setShowSettings(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1, padding: 0 }}>×</button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowSettings(false)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 14, padding: 20, width: "min(500px,95vw)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 14, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>Partner settings</div>
+              <button aria-label="Close" onClick={() => setShowSettings(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 20, lineHeight: 1, padding: 0 }}>×</button>
             </div>
 
-            {Object.entries(DELIVERY_PARTNERS).map(([key, partner]) => {
+            {Object.entries(DELIVERY_PARTNERS).map(([key, partner], idx, arr) => {
               const settings = partnerSettings[key];
               return (
-                <div key={key} style={{ marginBottom: 20, paddingBottom: 20, borderBottom: `1px solid ${C.border}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                    <div style={{ fontSize: 28 }}>{partner.icon}</div>
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 700 }}>{partner.name}</div>
-                      <div style={{ fontSize: 11, color: C.text3 }}>{partner.settlementDays} days settlement · {partner.features.join(", ")}</div>
+                <div key={key} style={{ marginBottom: idx < arr.length - 1 ? 20 : 0, paddingBottom: idx < arr.length - 1 ? 20 : 0, borderBottom: idx < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: partner.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{partner.name}</span>
+                      <span style={{ fontSize: 10, color: C.text3, marginLeft: 8 }}>{partner.settlementDays}d settlement · {partner.features.join(", ")}</span>
                     </div>
+                    {/* Enabled toggle */}
+                    <button
+                      onClick={() => setPartnerSettings({ ...partnerSettings, [key]: { ...settings, enabled: !settings.enabled } })}
+                      style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: `1px solid ${settings.enabled ? C.green : C.border2}`, background: settings.enabled ? `${C.green}18` : C.bg3, color: settings.enabled ? C.green : C.text3, cursor: "pointer", fontWeight: 600 }}
+                    >
+                      {settings.enabled ? "On" : "Off"}
+                    </button>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 12, marginBottom: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                     <div>
-                      <label style={label}>Enabled</label>
-                      <select 
-                        style={{ ...input }} 
-                        value={settings.enabled ? "true" : "false"} 
-                        onChange={e => setPartnerSettings({
-                          ...partnerSettings,
-                          [key]: { ...settings, enabled: e.target.value === "true" }
-                        })}
+                      <label style={label}>Auto-accept orders</label>
+                      <select
+                        style={{ ...input, fontSize: 12 }}
+                        value={settings.autoAccept ? "true" : "false"}
+                        onChange={e => setPartnerSettings({ ...partnerSettings, [key]: { ...settings, autoAccept: e.target.value === "true" } })}
                       >
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
+                        <option value="false">Manual</option>
+                        <option value="true">Auto-accept</option>
                       </select>
                     </div>
-                    <div>
-                      <label style={label}>Auto Accept Orders</label>
-                      <select 
-                        style={{ ...input }} 
-                        value={settings.autoAccept ? "true" : "false"} 
-                        onChange={e => setPartnerSettings({
-                          ...partnerSettings,
-                          [key]: { ...settings, autoAccept: e.target.value === "true" }
-                        })}
-                      >
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(100px,1fr))", gap: 12 }}>
                     <div>
                       <label style={label}>Commission (%)</label>
-                      <input 
-                        style={{ ...input }} 
-                        type="number" 
-                        value={settings.commission} 
-                        onChange={e => setPartnerSettings({
-                          ...partnerSettings,
-                          [key]: { ...settings, commission: parseInt(e.target.value) || 0 }
-                        })}
-                      />
+                      <input style={{ ...input, fontSize: 12 }} type="number" value={settings.commission} onChange={e => setPartnerSettings({ ...partnerSettings, [key]: { ...settings, commission: parseInt(e.target.value) || 0 } })} />
                     </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <div>
-                      <label style={label}>Min Order (₹)</label>
-                      <input 
-                        style={{ ...input }} 
-                        type="number" 
-                        value={settings.minOrder} 
-                        onChange={e => setPartnerSettings({
-                          ...partnerSettings,
-                          [key]: { ...settings, minOrder: parseInt(e.target.value) || 0 }
-                        })}
-                      />
+                      <label style={label}>Min order (₹)</label>
+                      <input style={{ ...input, fontSize: 12 }} type="number" value={settings.minOrder} onChange={e => setPartnerSettings({ ...partnerSettings, [key]: { ...settings, minOrder: parseInt(e.target.value) || 0 } })} />
                     </div>
                     <div>
                       <label style={label}>Radius (km)</label>
-                      <input 
-                        style={{ ...input }} 
-                        type="number" 
-                        value={settings.radius} 
-                        onChange={e => setPartnerSettings({
-                          ...partnerSettings,
-                          [key]: { ...settings, radius: parseInt(e.target.value) || 0 }
-                        })}
-                      />
+                      <input style={{ ...input, fontSize: 12 }} type="number" value={settings.radius} onChange={e => setPartnerSettings({ ...partnerSettings, [key]: { ...settings, radius: parseInt(e.target.value) || 0 } })} />
                     </div>
                   </div>
                 </div>
               );
             })}
 
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...btn("ghost"), flex: 1 }} onClick={() => setShowSettings(false)}>
-                Cancel
+            <div style={{ display: "flex", gap: 8, marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+              <button style={{ ...btn("ghost"), flex: 1, fontSize: 12 }} onClick={() => setShowSettings(false)}>
+                Discard
               </button>
-              <button style={{ ...btn("primary"), flex: 1 }} onClick={() => setShowSettings(false)}>
-                Save Settings
+              <button style={{ ...btn("primary"), flex: 1, fontSize: 12 }} onClick={() => setShowSettings(false)}>
+                Save
               </button>
             </div>
           </div>

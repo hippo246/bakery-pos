@@ -26,28 +26,109 @@ import { now, toTimestamp } from './dates.js';
 // Valid discount types
 export const DISCOUNT_TYPES = ['percentage', 'fixed'];
 
+// Legacy alias support: treat "flat" as "fixed"
+const FLAT_ALIAS = 'flat';
+
+/** @internal Normalise a raw type string, mapping legacy aliases */
+function _safeType(raw) {
+  if (raw === FLAT_ALIAS) return 'fixed';
+  if (DISCOUNT_TYPES.includes(raw)) return raw;
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[discountModel] Unknown discount type "${raw}", defaulting to "percentage"`);
+  }
+  return 'percentage';
+}
+
+/** @internal Parse a numeric money/usage value; returns null when input is null/undefined, 0 on bad parse */
+function _safeNumber(val, fallback = 0) {
+  if (val === null || val === undefined) return fallback === null ? null : fallback;
+  const n = Number(val);
+  if (Number.isNaN(n)) return fallback === null ? null : fallback;
+  return n;
+}
+
+/** @internal Clamp a number to >= floor */
+function _clamp(val, floor = 0) {
+  return Math.max(floor, val);
+}
+
+/** @internal Safely parse and validate an expiry date; returns ISO string or null */
+function _safeExpiry(raw) {
+  if (!raw) return null;
+  try {
+    const ts = new Date(raw);
+    if (Number.isNaN(ts.getTime())) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[discountModel] Invalid expiryDate "${raw}", ignoring`);
+      }
+      return null;
+    }
+    return ts.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+/** @internal Safely resolve a timestamp; returns now() on failure */
+function _safeTimestamp(raw) {
+  if (!raw) return now();
+  try {
+    const ts = toTimestamp(raw);
+    return Number.isNaN(ts) ? now() : ts;
+  } catch {
+    return now();
+  }
+}
+
+/** @internal Resolve active flag from multiple legacy shapes */
+function _safeActive(obj) {
+  if (obj.active !== undefined) return Boolean(obj.active);
+  if (obj.status !== undefined) return obj.status === 'active' || obj.status === true;
+  return true;
+}
+
+/** @internal Default tiers */
+const DEFAULT_TIERS = ['bronze', 'silver', 'gold', 'platinum'];
+
 /**
  * Create a new discount
  * @param {object} input - Discount input data
  * @returns {Discount} New discount object
  */
 export function createDiscount(input = {}) {
+  // Guard: treat null/undefined input as empty object
+  const i = (input && typeof input === 'object') ? input : {};
+
+  const rawValue = _safeNumber(i.value, 0);
+  const rawMinOrder = _safeNumber(i.minOrder, 0);
+  const rawMaxDiscount = (i.maxDiscount === null || i.maxDiscount === undefined)
+    ? null : _safeNumber(i.maxDiscount, null);
+  const rawMaxUsage = (i.maxUsage === null || i.maxUsage === undefined)
+    ? null : _safeNumber(i.maxUsage, null);
+  const rawUsage = _safeNumber(i.currentUsage !== undefined ? i.currentUsage : i.usageCount, 0);
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (rawValue <= 0) console.warn('[discountModel] createDiscount: value should be > 0');
+    if (rawMaxDiscount !== null && rawMaxDiscount < 0) console.warn('[discountModel] createDiscount: maxDiscount should be >= 0');
+    if (rawMaxUsage !== null && rawMaxUsage < 0) console.warn('[discountModel] createDiscount: maxUsage should be >= 0');
+  }
+
   return {
-    id: input.id || createDiscountId(),
-    code: input.code || '',
-    name: input.name || '',
-    type: DISCOUNT_TYPES.includes(input.type) ? input.type : 'percentage',
-    value: typeof input.value === 'number' ? input.value : 0,
-    minOrder: typeof input.minOrder === 'number' ? input.minOrder : 0,
-    maxDiscount: typeof input.maxDiscount === 'number' ? input.maxDiscount : null,
-    maxUsage: typeof input.maxUsage === 'number' ? input.maxUsage : null,
-    currentUsage: typeof input.currentUsage === 'number' ? input.currentUsage : 0,
-    applicableTiers: Array.isArray(input.applicableTiers) ? input.applicableTiers : ['bronze', 'silver', 'gold', 'platinum'],
-    active: input.active !== undefined ? input.active : true,
-    expiryDate: input.expiryDate || null,
-    notes: input.notes || '',
-    createdAt: input.createdAt ? toTimestamp(input.createdAt) : now(),
-    updatedAt: input.updatedAt ? toTimestamp(input.updatedAt) : now()
+    id: i.id || createDiscountId(),
+    code: typeof i.code === 'string' ? i.code.trim().toUpperCase() : '',
+    name: typeof i.name === 'string' ? i.name.trim() : '',
+    type: _safeType(i.type),
+    value: _clamp(rawValue, 0),
+    minOrder: _clamp(rawMinOrder, 0),
+    maxDiscount: rawMaxDiscount !== null ? _clamp(rawMaxDiscount, 0) : null,
+    maxUsage: rawMaxUsage !== null ? _clamp(rawMaxUsage, 0) : null,
+    currentUsage: _clamp(rawUsage, 0),
+    applicableTiers: Array.isArray(i.applicableTiers) ? i.applicableTiers : [...DEFAULT_TIERS],
+    active: _safeActive(i),
+    expiryDate: _safeExpiry(i.expiryDate),
+    notes: typeof i.notes === 'string' ? i.notes.trim() : (typeof i.description === 'string' ? i.description.trim() : ''),
+    createdAt: _safeTimestamp(i.createdAt),
+    updatedAt: _safeTimestamp(i.updatedAt)
   };
 }
 
@@ -57,27 +138,68 @@ export function createDiscount(input = {}) {
  * @returns {Discount} Normalized discount
  */
 export function normalizeDiscount(discount) {
-  if (!discount) return null;
+  if (!discount || typeof discount !== 'object') return null;
+
+  // Resolve value from multiple legacy keys
+  const rawValue = _safeNumber(
+    discount.value !== undefined ? discount.value :
+    discount.percentage !== undefined ? discount.percentage :
+    discount.amount !== undefined ? discount.amount : 0,
+    0
+  );
+
+  // Resolve minOrder from legacy keys
+  const rawMinOrder = _safeNumber(
+    discount.minOrder !== undefined ? discount.minOrder :
+    discount.minimumOrder !== undefined ? discount.minimumOrder : 0,
+    0
+  );
+
+  // Resolve maxDiscount (nullable)
+  const rawMaxDiscount = (discount.maxDiscount !== null && discount.maxDiscount !== undefined)
+    ? _safeNumber(discount.maxDiscount, null) : null;
+
+  // Resolve maxUsage (nullable)
+  const rawMaxUsage = (discount.maxUsage !== null && discount.maxUsage !== undefined)
+    ? _safeNumber(discount.maxUsage, null) : null;
+
+  // Resolve currentUsage — support legacy "usageCount"
+  const rawUsage = _safeNumber(
+    discount.currentUsage !== undefined ? discount.currentUsage :
+    discount.usageCount !== undefined ? discount.usageCount : 0,
+    0
+  );
+
+  // Resolve applicableTiers — support legacy "tiers" and "tierRequired"
+  let tiers;
+  if (Array.isArray(discount.applicableTiers)) {
+    tiers = discount.applicableTiers;
+  } else if (Array.isArray(discount.tiers)) {
+    tiers = discount.tiers;
+  } else if (typeof discount.tierRequired === 'string') {
+    tiers = [discount.tierRequired];
+  } else {
+    tiers = [...DEFAULT_TIERS];
+  }
 
   return {
     id: discount.id || createDiscountId(),
-    code: discount.code || '',
-    name: discount.name || discount.discountName || '',
-    type: DISCOUNT_TYPES.includes(discount.type) ? discount.type : 'percentage',
-    value: typeof discount.value === 'number' ? discount.value : 
-           typeof discount.percentage === 'number' ? discount.percentage : 0,
-    minOrder: typeof discount.minOrder === 'number' ? discount.minOrder : 
-              typeof discount.minimumOrder === 'number' ? discount.minimumOrder : 0,
-    maxDiscount: typeof discount.maxDiscount === 'number' ? discount.maxDiscount : null,
-    maxUsage: typeof discount.maxUsage === 'number' ? discount.maxUsage : null,
-    currentUsage: typeof discount.currentUsage === 'number' ? discount.currentUsage : 0,
-    applicableTiers: Array.isArray(discount.applicableTiers) ? discount.applicableTiers : 
-                    Array.isArray(discount.tiers) ? discount.tiers : ['bronze', 'silver', 'gold', 'platinum'],
-    active: discount.active !== undefined ? discount.active : true,
-    expiryDate: discount.expiryDate || null,
-    notes: discount.notes || '',
-    createdAt: discount.createdAt ? toTimestamp(discount.createdAt) : now(),
-    updatedAt: discount.updatedAt ? toTimestamp(discount.updatedAt) : now()
+    code: typeof discount.code === 'string' ? discount.code.trim().toUpperCase() : '',
+    name: typeof discount.name === 'string' ? discount.name.trim() :
+          typeof discount.discountName === 'string' ? discount.discountName.trim() : '',
+    type: _safeType(discount.type),
+    value: _clamp(rawValue, 0),
+    minOrder: _clamp(rawMinOrder, 0),
+    maxDiscount: rawMaxDiscount !== null ? _clamp(rawMaxDiscount, 0) : null,
+    maxUsage: rawMaxUsage !== null ? _clamp(rawMaxUsage, 0) : null,
+    currentUsage: _clamp(rawUsage, 0),
+    applicableTiers: tiers,
+    active: _safeActive(discount),
+    expiryDate: _safeExpiry(discount.expiryDate),
+    notes: typeof discount.notes === 'string' ? discount.notes.trim() :
+           typeof discount.description === 'string' ? discount.description.trim() : '',
+    createdAt: _safeTimestamp(discount.createdAt),
+    updatedAt: _safeTimestamp(discount.updatedAt)
   };
 }
 
@@ -89,7 +211,7 @@ export function normalizeDiscount(discount) {
  * @returns {object} Validation result with valid flag and message
  */
 export function validateDiscount(order, customer, discount) {
-  if (!discount) {
+  if (!discount || typeof discount !== 'object') {
     return { valid: false, message: 'Discount not found' };
   }
 
@@ -98,28 +220,41 @@ export function validateDiscount(order, customer, discount) {
     return { valid: false, message: 'Discount is not active' };
   }
 
-  // Check expiry date
+  // Check expiry date — guard against bad toTimestamp results
   if (discount.expiryDate) {
-    const expiryTime = toTimestamp(discount.expiryDate);
-    if (now() > expiryTime) {
-      return { valid: false, message: 'Discount has expired' };
+    try {
+      const expiryTime = toTimestamp(discount.expiryDate);
+      if (!Number.isNaN(expiryTime) && now() > expiryTime) {
+        return { valid: false, message: 'Discount has expired' };
+      }
+    } catch {
+      // Malformed expiry: treat as non-expiring rather than crashing
     }
   }
 
-  // Check minimum order amount
-  const orderTotal = order.total || order.amount || 0;
-  if (orderTotal < discount.minOrder) {
-    return { valid: false, message: `Minimum order ₹${discount.minOrder} required` };
+  // Check minimum order amount — safe parse from multiple order shapes
+  const orderTotal = _safeNumber(
+    order && (order.subtotal !== undefined ? order.subtotal :
+              order.total !== undefined ? order.total :
+              order.amount !== undefined ? order.amount : 0),
+    0
+  );
+  const minOrder = _safeNumber(discount.minOrder, 0);
+  if (orderTotal < minOrder) {
+    return { valid: false, message: `Minimum order ₹${minOrder} required` };
   }
 
   // Check max usage
-  if (discount.maxUsage && discount.currentUsage >= discount.maxUsage) {
+  if (isDiscountUsageMaxed(discount)) {
     return { valid: false, message: 'Discount usage limit reached' };
   }
 
-  // Check customer tier requirement
-  if (customer && discount.applicableTiers && !discount.applicableTiers.includes(customer.tier)) {
-    return { valid: false, message: `Discount not available for ${customer.tier} tier` };
+  // Check customer tier requirement — safe: skip check if tier data missing
+  if (customer && discount.applicableTiers && Array.isArray(discount.applicableTiers) &&
+      discount.applicableTiers.length > 0 && customer.tier) {
+    if (!discount.applicableTiers.includes(customer.tier)) {
+      return { valid: false, message: `Discount not available for ${customer.tier} tier` };
+    }
   }
 
   return { valid: true, message: '' };
@@ -134,19 +269,33 @@ export function validateDiscount(order, customer, discount) {
 export function calculateDiscountAmount(order, discount) {
   if (!discount || !order) return 0;
 
-  const orderTotal = order.total || order.amount || 0;
+  const orderTotal = _safeNumber(
+    order.subtotal !== undefined ? order.subtotal :
+    order.total !== undefined ? order.total :
+    order.amount !== undefined ? order.amount : 0,
+    0
+  );
+  if (orderTotal <= 0) return 0;
 
-  if (discount.type === 'percentage') {
-    let discountAmount = (orderTotal * discount.value) / 100;
-    
-    // Apply max discount cap if set
-    if (discount.maxDiscount && discountAmount > discount.maxDiscount) {
-      discountAmount = discount.maxDiscount;
+  const discountValue = _safeNumber(discount.value, 0);
+  const discountType = _safeType(discount.type); // handles 'flat' → 'fixed'
+
+  if (discountType === 'percentage') {
+    // Cap percentage at 100 to prevent negative totals via the formula alone
+    const pct = Math.min(_clamp(discountValue, 0), 100);
+    let discountAmount = (orderTotal * pct) / 100;
+
+    // Apply maxDiscount cap
+    const cap = _safeNumber(discount.maxDiscount, null);
+    if (cap !== null && cap >= 0 && discountAmount > cap) {
+      discountAmount = cap;
     }
-    
-    return discountAmount;
-  } else if (discount.type === 'fixed') {
-    return Math.min(discount.value, orderTotal);
+
+    return _clamp(Math.min(discountAmount, orderTotal), 0);
+
+  } else if (discountType === 'fixed') {
+    // Fixed/flat cannot exceed the order total
+    return _clamp(Math.min(_clamp(discountValue, 0), orderTotal), 0);
   }
 
   return 0;
@@ -159,19 +308,25 @@ export function calculateDiscountAmount(order, discount) {
  * @returns {object} Updated order with discount applied
  */
 export function applyDiscountToOrder(order, discount) {
-  if (!order || !discount) return order;
+  if (!order) return order;
+  if (!discount) return { ...order };
 
-  const discountAmount = calculateDiscountAmount(order, discount);
-  const orderTotal = order.total || order.amount || 0;
-  const newTotal = Math.max(0, orderTotal - discountAmount);
+  const result = { ...order };
 
-  return {
-    ...order,
-    discountCode: discount.code,
-    discountAmount,
-    total: newTotal,
-    updatedAt: now()
-  };
+  const orderTotal = _safeNumber(
+    order.subtotal !== undefined ? order.subtotal :
+    order.total !== undefined ? order.total :
+    order.amount !== undefined ? order.amount : 0,
+    0
+  );
+  const discountAmount = calculateDiscountAmount({ ...order, subtotal: orderTotal }, discount);
+
+  result.discountCode = typeof discount.code === 'string' ? discount.code.trim().toUpperCase() : '';
+  result.discountAmount = _clamp(discountAmount, 0);
+  result.total = _clamp(orderTotal - result.discountAmount, 0);
+  result.updatedAt = now();
+
+  return result;
 }
 
 /**
@@ -184,9 +339,50 @@ export function incrementDiscountUsage(discount) {
 
   return {
     ...discount,
-    currentUsage: discount.currentUsage + 1,
+    currentUsage: _clamp(_safeNumber(discount.currentUsage, 0) + 1, 0),
     updatedAt: now()
   };
+}
+
+/**
+ * Decrement discount usage (e.g. on order cancellation)
+ * @param {Discount} discount
+ * @returns {Discount} Updated discount
+ */
+export function decrementDiscountUsage(discount) {
+  if (!discount) return discount;
+
+  return {
+    ...discount,
+    currentUsage: _clamp(_safeNumber(discount.currentUsage, 0) - 1, 0),
+    updatedAt: now()
+  };
+}
+
+/**
+ * Check if discount has hit its usage cap
+ * @param {Discount} discount
+ * @returns {boolean}
+ */
+export function isDiscountUsageMaxed(discount) {
+  if (!discount) return false;
+  const maxUsage = _safeNumber(discount.maxUsage, null);
+  if (maxUsage === null) return false;
+  const current = _safeNumber(discount.currentUsage, 0);
+  return current >= maxUsage;
+}
+
+/**
+ * Get remaining usages for a discount (null = unlimited)
+ * @param {Discount} discount
+ * @returns {number|null}
+ */
+export function getRemainingUsage(discount) {
+  if (!discount) return null;
+  const maxUsage = _safeNumber(discount.maxUsage, null);
+  if (maxUsage === null) return null;
+  const current = _safeNumber(discount.currentUsage, 0);
+  return _clamp(maxUsage - current, 0);
 }
 
 /**
@@ -196,7 +392,13 @@ export function incrementDiscountUsage(discount) {
  */
 export function isDiscountExpired(discount) {
   if (!discount || !discount.expiryDate) return false;
-  return now() > toTimestamp(discount.expiryDate);
+  try {
+    const ts = toTimestamp(discount.expiryDate);
+    if (Number.isNaN(ts)) return false;
+    return now() > ts;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -207,7 +409,9 @@ export function isDiscountExpired(discount) {
  */
 export function findDiscountByCode(discounts, code) {
   if (!Array.isArray(discounts)) return null;
-  return discounts.find(d => d.code === code && d.active) || null;
+  const normalized = typeof code === 'string' ? code.trim().toUpperCase() : '';
+  if (!normalized) return null;
+  return discounts.find(d => d.code === normalized && d.active) || null;
 }
 
 /**

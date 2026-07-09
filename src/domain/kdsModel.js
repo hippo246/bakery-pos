@@ -41,19 +41,57 @@ export const URGENCY_THRESHOLDS = {
 // Valid stations
 export const KDS_STATIONS = ['All', 'Bar', 'Kitchen', 'Packaging', 'Dessert'];
 
+// ── Internal safe helpers ────────────────────────────────────────────────────
+
+function toSafeString(val, max = 0) {
+  if (typeof val !== 'string') return '';
+  const s = val.trim();
+  return max > 0 ? s.slice(0, max) : s;
+}
+
+function toSafeTimestamp(val) {
+  const n = Number(val);
+  return Number.isFinite(n) && n > 0 ? n : now();
+}
+
+function toPositiveQty(val) {
+  const n = Number(val);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+function isValidStation(station) {
+  return typeof station === 'string' && KDS_STATIONS.includes(station);
+}
+
+function isValidUrgency(urgency) {
+  return URGENCY_LEVELS.includes(urgency);
+}
+
+function devWarn(...args) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[kdsModel]', ...args);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 /**
  * Calculate urgency based on elapsed time
  * @param {number} startedAt - Start timestamp
  * @returns {string} Urgency level
  */
 export function calculateUrgencyFromTime(startedAt) {
-  const elapsed = getMinutesElapsed(startedAt);
-  
-  if (elapsed >= URGENCY_THRESHOLDS.urgent) {
-    return 'urgent';
-  } else if (elapsed >= URGENCY_THRESHOLDS.soon) {
-    return 'soon';
+  const n = Number(startedAt);
+  if (!Number.isFinite(n) || n <= 0) return 'ok';
+  let elapsed;
+  try {
+    elapsed = getMinutesElapsed(n);
+  } catch {
+    return 'ok';
   }
+  if (!Number.isFinite(elapsed) || elapsed < 0) return 'ok';
+  if (elapsed >= URGENCY_THRESHOLDS.urgent) return 'urgent';
+  if (elapsed >= URGENCY_THRESHOLDS.soon) return 'soon';
   return 'ok';
 }
 
@@ -64,26 +102,44 @@ export function calculateUrgencyFromTime(startedAt) {
  * @returns {KdsTicket} New KDS ticket
  */
 export function createKdsTicketFromOrder(order, station) {
-  if (!order || !order.items) return null;
+  if (!order || typeof order !== 'object') {
+    devWarn('createKdsTicketFromOrder: missing/malformed order', order);
+    return null;
+  }
+  if (!isValidStation(station) || station === 'All') {
+    devWarn('createKdsTicketFromOrder: invalid station', station);
+    return null;
+  }
+  const rawItems = Array.isArray(order.items) ? order.items : [];
+  const stationItems = rawItems
+    .filter(item => item && typeof item === 'object' && item.station === station)
+    .map(item => {
+      const qty = toPositiveQty(item.qty);
+      const mod = Array.isArray(item.modifiers)
+        ? toSafeString(item.modifiers.join(', '))
+        : toSafeString(item.mod || item.modifier || '');
+      return {
+        name: toSafeString(item.name) || 'Item',
+        qty,
+        mod,
+        checked: false,
+        ...(item.notes !== undefined ? { notes: toSafeString(item.notes) } : {})
+      };
+    });
 
-  // Filter items by station
-  const stationItems = order.items.filter(item => item.station === station);
   if (stationItems.length === 0) return null;
+
+  const startedAt = toSafeTimestamp(toTimestamp(order.createdAt || now()));
 
   return {
     id: createKdsTicketId(),
-    orderId: order.id,
-    source: order.source || 'WALK_IN',
+    orderId: order.id || '',
+    source: toSafeString(order.source) || 'WALK_IN',
     station,
-    items: stationItems.map(item => ({
-      name: item.name,
-      qty: item.qty,
-      mod: item.modifiers ? item.modifiers.join(', ') : '',
-      checked: false
-    })),
-    note: order.notes || '',
-    startedAt: toTimestamp(order.createdAt || now()),
-    urgency: calculateUrgencyFromTime(toTimestamp(order.createdAt || now())),
+    items: stationItems,
+    note: toSafeString(order.notes || order.note),
+    startedAt,
+    urgency: calculateUrgencyFromTime(startedAt),
     held: false,
     holdReason: '',
     completed: false,
@@ -97,16 +153,23 @@ export function createKdsTicketFromOrder(order, station) {
  * @returns {KdsTicket[]} Array of KDS tickets
  */
 export function createKdsTicketsFromOrder(order) {
-  if (!order || !order.items) return [];
+  if (!order || typeof order !== 'object') {
+    devWarn('createKdsTicketsFromOrder: missing/malformed order', order);
+    return [];
+  }
+  if (!Array.isArray(order.items)) return [];
 
+  const seenStations = new Set();
   const tickets = [];
-  const stations = [...new Set(order.items.map(item => item.station))];
 
-  stations.forEach(station => {
+  order.items.forEach(item => {
+    if (!item || typeof item !== 'object') return;
+    const station = item.station;
+    if (!isValidStation(station) || station === 'All') return;
+    if (seenStations.has(station)) return;
+    seenStations.add(station);
     const ticket = createKdsTicketFromOrder(order, station);
-    if (ticket) {
-      tickets.push(ticket);
-    }
+    if (ticket) tickets.push(ticket);
   });
 
   return tickets;
@@ -118,29 +181,47 @@ export function createKdsTicketsFromOrder(order) {
  * @returns {KdsTicket} Normalized KDS ticket
  */
 export function normalizeKdsTicket(ticket) {
-  if (!ticket) return null;
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('normalizeKdsTicket: malformed ticket', ticket);
+    return null;
+  }
 
-  const startedAt = toTimestamp(ticket.startedAt || ticket.createdAt || now());
-  
+  const startedAt = toSafeTimestamp(toTimestamp(ticket.startedAt || ticket.createdAt || now()));
+  const validStation = isValidStation(ticket.station) && ticket.station !== 'All'
+    ? ticket.station
+    : 'Bar';
+
+  const items = Array.isArray(ticket.items)
+    ? ticket.items
+        .filter(item => item && typeof item === 'object')
+        .map(item => ({
+          name: toSafeString(item.name) || 'Item',
+          qty: toPositiveQty(item.qty),
+          mod: toSafeString(item.mod || item.modifier || ''),
+          checked: typeof item.checked === 'boolean' ? item.checked : false,
+          ...(item.notes !== undefined ? { notes: toSafeString(item.notes) } : {})
+        }))
+    : [];
+
+  const completedAt = ticket.completedAt != null
+    ? (Number.isFinite(Number(ticket.completedAt)) ? Number(ticket.completedAt) : null)
+    : null;
+
   return {
     id: ticket.id || createKdsTicketId(),
-    orderId: ticket.orderId || ticket.id,
-    source: ticket.source || 'WALK_IN',
-    station: STATIONS.includes(ticket.station) ? ticket.station : 'Bar',
-    items: Array.isArray(ticket.items) ? ticket.items.map(item => ({
-      name: item.name || 'Unknown',
-      qty: item.qty || 1,
-      mod: item.mod || item.modifier || '',
-      checked: typeof item.checked === 'boolean' ? item.checked : false
-    })) : [],
-    note: ticket.note || ticket.notes || '',
+    orderId: ticket.orderId || ticket.id || '',
+    source: toSafeString(ticket.source) || 'WALK_IN',
+    station: validStation,
+    items,
+    note: toSafeString(ticket.note || ticket.notes || ''),
     startedAt,
-    urgency: URGENCY_LEVELS.includes(ticket.urgency) ? ticket.urgency : 
-              calculateUrgencyFromTime(startedAt),
+    urgency: isValidUrgency(ticket.urgency)
+      ? ticket.urgency
+      : calculateUrgencyFromTime(startedAt),
     held: Boolean(ticket.held),
-    holdReason: ticket.holdReason || '',
+    holdReason: toSafeString(ticket.holdReason, 200),
     completed: Boolean(ticket.completed),
-    completedAt: ticket.completedAt || null
+    completedAt
   };
 }
 
@@ -167,10 +248,13 @@ export function updateKdsUrgency(ticket, newUrgency) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function recalculateUrgency(ticket) {
-  return {
-    ...ticket,
-    urgency: calculateUrgencyFromTime(ticket.startedAt)
-  };
+  if (!ticket || typeof ticket !== 'object') return ticket;
+  if (ticket.completed) return ticket;
+  if (ticket.held) return ticket;
+  if (ticket.manualUrgency) return ticket;
+  const newUrgency = calculateUrgencyFromTime(ticket.startedAt);
+  if (newUrgency === ticket.urgency) return ticket;
+  return { ...ticket, urgency: newUrgency };
 }
 
 /**
@@ -180,10 +264,16 @@ export function recalculateUrgency(ticket) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function holdKdsTicket(ticket, reason = '') {
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('holdKdsTicket: missing ticket');
+    return ticket;
+  }
+  if (ticket.completed) return ticket;
   return {
     ...ticket,
     held: true,
-    holdReason: reason
+    holdReason: toSafeString(reason, 200),
+    updatedAt: now()
   };
 }
 
@@ -193,10 +283,15 @@ export function holdKdsTicket(ticket, reason = '') {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function releaseKdsTicket(ticket) {
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('releaseKdsTicket: missing ticket');
+    return ticket;
+  }
   return {
     ...ticket,
     held: false,
-    holdReason: ''
+    holdReason: '',
+    updatedAt: now()
   };
 }
 
@@ -206,9 +301,16 @@ export function releaseKdsTicket(ticket) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function startKdsTicket(ticket) {
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('startKdsTicket: missing ticket');
+    return ticket;
+  }
+  if (ticket.completed) return ticket;
+  if (ticket.startedAt && Number.isFinite(Number(ticket.startedAt))) return ticket;
   return {
     ...ticket,
-    startedAt: toTimestamp(now())
+    startedAt: toSafeTimestamp(toTimestamp(now())),
+    updatedAt: now()
   };
 }
 
@@ -218,11 +320,20 @@ export function startKdsTicket(ticket) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function completeKdsTicket(ticket) {
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('completeKdsTicket: missing ticket');
+    return ticket;
+  }
+  if (ticket.completed) return ticket;
+  const completedAt = toSafeTimestamp(toTimestamp(now()));
   return {
     ...ticket,
     completed: true,
-    completedAt: toTimestamp(now()),
-    items: ticket.items.map(item => ({ ...item, checked: true }))
+    completedAt,
+    updatedAt: completedAt,
+    items: Array.isArray(ticket.items)
+      ? ticket.items.map(item => ({ ...item, checked: true }))
+      : []
   };
 }
 
@@ -233,13 +344,20 @@ export function completeKdsTicket(ticket) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function moveKdsTicketToStation(ticket, newStation) {
-  if (!STATIONS.includes(newStation)) {
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('moveKdsTicketToStation: missing ticket');
+    return ticket;
+  }
+  if (!isValidStation(newStation) || newStation === 'All') {
+    devWarn('moveKdsTicketToStation: invalid station', newStation);
     throw new Error(`Invalid station: ${newStation}`);
   }
-
+  if (ticket.completed) return ticket;
+  if (ticket.station === newStation) return ticket;
   return {
     ...ticket,
-    station: newStation
+    station: newStation,
+    updatedAt: now()
   };
 }
 
@@ -249,7 +367,17 @@ export function moveKdsTicketToStation(ticket, newStation) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function bumpKdsTicket(ticket) {
-  return completeKdsTicket(ticket);
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('bumpKdsTicket: missing ticket');
+    return ticket;
+  }
+  if (ticket.completed) return ticket;
+  const ts = now();
+  return completeKdsTicket({
+    ...ticket,
+    bumpCount: (Number.isFinite(ticket.bumpCount) ? ticket.bumpCount : 0) + 1,
+    bumpedAt: ts
+  });
 }
 
 /**
@@ -260,18 +388,23 @@ export function bumpKdsTicket(ticket) {
  * @returns {KdsTicket} Updated KDS ticket
  */
 export function toggleKdsItemCheck(ticket, itemIndex, checked) {
-  if (!ticket.items || !ticket.items[itemIndex]) return ticket;
-
-  const updatedItems = [...ticket.items];
-  updatedItems[itemIndex] = {
-    ...updatedItems[itemIndex],
-    checked
-  };
-
-  return {
-    ...ticket,
-    items: updatedItems
-  };
+  if (!ticket || typeof ticket !== 'object') {
+    devWarn('toggleKdsItemCheck: missing ticket');
+    return ticket;
+  }
+  if (ticket.completed) return ticket;
+  if (!Array.isArray(ticket.items)) {
+    devWarn('toggleKdsItemCheck: ticket.items is not an array');
+    return ticket;
+  }
+  if (!Number.isInteger(itemIndex) || itemIndex < 0 || itemIndex >= ticket.items.length) {
+    devWarn('toggleKdsItemCheck: invalid item index', itemIndex);
+    return ticket;
+  }
+  const updatedItems = ticket.items.map((item, i) =>
+    i === itemIndex ? { ...item, checked: typeof checked === 'boolean' ? checked : !item.checked } : item
+  );
+  return { ...ticket, items: updatedItems, updatedAt: now() };
 }
 
 /**
@@ -280,7 +413,7 @@ export function toggleKdsItemCheck(ticket, itemIndex, checked) {
  * @returns {boolean} True if all items checked
  */
 export function areAllItemsChecked(ticket) {
-  if (!ticket.items || ticket.items.length === 0) return true;
+  if (!ticket || !Array.isArray(ticket.items) || ticket.items.length === 0) return true;
   return ticket.items.every(item => item.checked);
 }
 
@@ -290,7 +423,7 @@ export function areAllItemsChecked(ticket) {
  * @returns {number} Count of checked items
  */
 export function getCheckedItemCount(ticket) {
-  if (!ticket.items) return 0;
+  if (!ticket || !Array.isArray(ticket.items)) return 0;
   return ticket.items.filter(item => item.checked).length;
 }
 
@@ -300,9 +433,28 @@ export function getCheckedItemCount(ticket) {
  * @returns {number} Progress percentage (0-100)
  */
 export function getKdsProgress(ticket) {
-  if (!ticket.items || ticket.items.length === 0) return 100;
+  if (!ticket || !Array.isArray(ticket.items) || ticket.items.length === 0) return 100;
   const checkedCount = getCheckedItemCount(ticket);
   return Math.round((checkedCount / ticket.items.length) * 100);
+}
+
+/**
+ * Get elapsed minutes since ticket was started.
+ * Returns 0 for completed or invalid tickets.
+ * Convenience wrapper so callers don't need to import from dates.js.
+ * @param {KdsTicket} ticket
+ * @returns {number} Whole minutes elapsed
+ */
+export function getKdsElapsedMinutes(ticket) {
+  if (!ticket || ticket.completed) return 0;
+  const n = Number(ticket.startedAt);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  try {
+    const elapsed = getMinutesElapsed(n);
+    return Number.isFinite(elapsed) && elapsed >= 0 ? Math.floor(elapsed) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -312,8 +464,11 @@ export function getKdsProgress(ticket) {
  * @returns {boolean} True if all tickets for order are completed
  */
 export function areAllOrderTicketsCompleted(orderId, tickets) {
-  const orderTickets = tickets.filter(t => t.orderId === orderId);
-  if (orderTickets.length === 0) return true;
+  if (!orderId || !Array.isArray(tickets)) return false;
+  const orderTickets = tickets.filter(
+    t => t && typeof t === 'object' && t.orderId === orderId
+  );
+  if (orderTickets.length === 0) return false;
   return orderTickets.every(t => t.completed);
 }
 
@@ -324,20 +479,25 @@ export function areAllOrderTicketsCompleted(orderId, tickets) {
  * @returns {KdsTicket[]} Updated tickets (cancelled tickets removed)
  */
 export function cancelOrderTickets(orderId, tickets) {
-  return tickets.filter(t => t.orderId !== orderId);
+  if (!orderId || !Array.isArray(tickets)) return Array.isArray(tickets) ? tickets : [];
+  return tickets.filter(t => !t || typeof t !== 'object' || t.orderId !== orderId);
 }
 
 /**
- * Get tickets filtered by station
+ * Get tickets filtered by station.
+ * By default excludes completed tickets; pass includeCompleted=true for recall/history views.
  * @param {KdsTicket[]} tickets - All KDS tickets
  * @param {string} station - Station filter ('All' for all stations)
+ * @param {boolean} [includeCompleted=false]
  * @returns {KdsTicket[]} Filtered tickets
  */
-export function getTicketsByStation(tickets, station) {
-  if (station === 'All' || !station) {
-    return tickets.filter(t => !t.completed);
-  }
-  return tickets.filter(t => t.station === station && !t.completed);
+export function getTicketsByStation(tickets, station, includeCompleted = false) {
+  if (!Array.isArray(tickets)) return [];
+  const safeTickets = tickets.filter(t => t && typeof t === 'object');
+  const byStation = (station === 'All' || !station)
+    ? safeTickets
+    : safeTickets.filter(t => t.station === station);
+  return includeCompleted ? byStation : byStation.filter(t => !t.completed);
 }
 
 /**
@@ -346,7 +506,8 @@ export function getTicketsByStation(tickets, station) {
  * @returns {KdsTicket[]} Active tickets
  */
 export function getActiveTickets(tickets) {
-  return tickets.filter(t => !t.completed && !t.held);
+  if (!Array.isArray(tickets)) return [];
+  return tickets.filter(t => t && typeof t === 'object' && !t.completed && !t.held);
 }
 
 /**
@@ -355,5 +516,6 @@ export function getActiveTickets(tickets) {
  * @returns {KdsTicket[]} Held tickets
  */
 export function getHeldTickets(tickets) {
-  return tickets.filter(t => t.held && !t.completed);
+  if (!Array.isArray(tickets)) return [];
+  return tickets.filter(t => t && typeof t === 'object' && t.held && !t.completed);
 }
