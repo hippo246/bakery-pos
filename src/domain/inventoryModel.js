@@ -1,7 +1,6 @@
 // Inventory domain model with recipe-based deduction
 
 import { generateId, createInventoryId } from './ids.js';
-import { now, toTimestamp } from './dates.js';
 
 /**
  * Standard Inventory Item schema
@@ -33,8 +32,7 @@ import { now, toTimestamp } from './dates.js';
  * @property {string} unit - Unit of measurement
  */
 
-const DEV = process.env.NODE_ENV !== 'production';
-function devWarn(msg, value) { if (DEV) console.warn(`[inventoryModel] ${msg}`, value ?? ''); }
+function devWarn(msg, value) { console.warn(`[inventoryModel] ${msg}`, value ?? ''); }
 
 function toNonNegativeNumber(val, fallback = 0) {
   const n = Number(val);
@@ -235,8 +233,15 @@ export function deductInventoryForOrder(order, inventory, recipes = []) {
   if (!order || !Array.isArray(order.items) || !Array.isArray(inventory)) {
     return { updatedInventory: inventory || [], warnings: [], updatedOrder: order };
   }
+  
+  // FIX: Check if inventory is already deducted
   if (order.inventoryDeducted) {
     return { updatedInventory: inventory, warnings: [], updatedOrder: order };
+  }
+
+  // FIX: Validate order items before deduction
+  if (!order.items || order.items.length === 0) {
+    return { updatedInventory: inventory, warnings: ['No items to deduct'], updatedOrder: order };
   }
 
   const updatedInventory = inventory.map(item => ({ ...item }));
@@ -267,13 +272,15 @@ export function deductInventoryForOrder(order, inventory, recipes = []) {
       const item = updatedInventory[idx];
       const totalDeduction = toNonNegativeNumber(ingredient.quantity) * toNonNegativeNumber(orderItem.qty, 1);
       const prevQty = toNonNegativeNumber(item.quantity);
+      
+      // FIX: Prevent negative inventory
       const newQuantity = Math.max(0, prevQty - totalDeduction);
-
-      if (newQuantity < toNonNegativeNumber(item.minStock)) {
-        warnings.push(`Low stock warning: ${item.name} (${newQuantity} ${item.unit} remaining)`);
-      }
+      
+      // FIX: Warn if deduction would exceed available stock (already handled by canFulfillOrder)
       if (newQuantity === 0 && prevQty > 0) {
         warnings.push(`Out of stock: ${item.name}`);
+      } else if (newQuantity < toNonNegativeNumber(item.minStock)) {
+        warnings.push(`Low stock warning: ${item.name} (${newQuantity} ${item.unit} remaining)`);
       }
 
       const movement = normalizeStockMovement({

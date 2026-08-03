@@ -38,10 +38,8 @@ export const CUSTOMER_STATUSES = ['active', 'inactive', 'blocked'];
 // Valid preferred channels
 export const PREFERRED_CHANNELS = ['whatsapp', 'sms', 'email', 'none'];
 
-const DEV = process.env.NODE_ENV !== 'production';
-
 function devWarn(msg, value) {
-  if (DEV) console.warn(`[customerModel] ${msg}`, value ?? '');
+  console.warn(`[customerModel] ${msg}`, value ?? '');
 }
 
 function safeNum(val, fallback = 0) {
@@ -280,7 +278,7 @@ export function updateCustomerAfterOrder(customer, order) {
  * @param {string} name - Customer name (for new customer creation)
  * @returns {Customer|null} Found customer or null
  */
-export function findCustomerByPhone(phone, customers, name = 'Guest') {
+export function findCustomerByPhone(phone, customers) {
   if (!phone || !Array.isArray(customers)) return null;
   const normalized = normalizePhone(phone);
   if (!normalized) return null;

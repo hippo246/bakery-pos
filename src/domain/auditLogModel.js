@@ -6,9 +6,7 @@ import { now } from './dates.js';
 // ── Internal safe helpers ────────────────────────────────────────────────────
 
 function devWarn(...args) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('[auditLogModel]', ...args);
-  }
+  console.warn('[auditLogModel]', ...args);
 }
 
 function toSafeString(val, fallback = '') {
@@ -238,7 +236,38 @@ export const AUDIT_ACTIONS = {
   CUSTOMER_CREATED: 'CUSTOMER_CREATED',
 
   // Settings
-  SETTINGS_UPDATED: 'SETTINGS_UPDATED'
+  SETTINGS_UPDATED: 'SETTINGS_UPDATED',
+
+  // Security & Access
+  LOGIN: 'LOGIN',
+  LOGOUT: 'LOGOUT',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
+  ROLE_CREATED: 'ROLE_CREATED',
+  ROLE_UPDATED: 'ROLE_UPDATED',
+  ROLE_DELETED: 'ROLE_DELETED',
+  ROLE_ASSIGNED: 'ROLE_ASSIGNED',
+  PERMISSION_GRANTED: 'PERMISSION_GRANTED',
+  PERMISSION_REVOKED: 'PERMISSION_REVOKED',
+  BRANCH_ACCESS_CHANGED: 'BRANCH_ACCESS_CHANGED',
+  EXPORT_ATTEMPT: 'EXPORT_ATTEMPT',
+  IMPORT_ATTEMPT: 'IMPORT_ATTEMPT',
+  SECURITY_SETTINGS_CHANGED: 'SECURITY_SETTINGS_CHANGED',
+  AUDIT_LOG_ACCESSED: 'AUDIT_LOG_ACCESSED',
+  AUDIT_LOG_EXPORTED: 'AUDIT_LOG_EXPORTED',
+
+  // Workflow Engine
+  WORKFLOW_CREATED: 'WORKFLOW_CREATED',
+  WORKFLOW_UPDATED: 'WORKFLOW_UPDATED',
+  WORKFLOW_DELETED: 'WORKFLOW_DELETED',
+  WORKFLOW_EXECUTION_STARTED: 'WORKFLOW_EXECUTION_STARTED',
+  WORKFLOW_EXECUTION_PAUSED: 'WORKFLOW_EXECUTION_PAUSED',
+  WORKFLOW_EXECUTION_RESUMED: 'WORKFLOW_EXECUTION_RESUMED',
+  WORKFLOW_EXECUTION_COMPLETED: 'WORKFLOW_EXECUTION_COMPLETED',
+  WORKFLOW_EXECUTION_CANCELLED: 'WORKFLOW_EXECUTION_CANCELLED',
+  WORKFLOW_EXECUTION_FAILED: 'WORKFLOW_EXECUTION_FAILED',
+  TASK_COMPLETED: 'TASK_COMPLETED',
+  TASK_SKIPPED: 'TASK_SKIPPED',
+  TASK_FAILED: 'TASK_FAILED',
 };
 
 /**
@@ -252,8 +281,9 @@ export const AUDIT_MODULES = {
   TABLES: 'TABLES',
   CRM: 'CRM',
   STAFF: 'STAFF',
-  DISCOUNTS: 'DISCOUNTS',
   SETTINGS: 'SETTINGS',
+  SECURITY: 'SECURITY',
+  WORKFLOWS: 'WORKFLOWS',
   GENERAL: 'GENERAL'
 };
 
@@ -293,6 +323,75 @@ export function createDeliveryAuditLog(action, delivery, details = {}) {
     action: toSafeString(action, AUDIT_ACTIONS.DELIVERY_STATUS_CHANGED),
     entityId: delivery?.id ?? null,
     details: { ...(delivery ? { deliveryId: delivery.id } : {}), ...details }
+  });
+}
+
+export function createSecurityAuditLog(action, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: toSafeString(action, AUDIT_ACTIONS.LOGIN),
+    details
+  });
+}
+
+export function createPermissionDeniedAuditLog(action, requiredPermission, context = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: AUDIT_ACTIONS.PERMISSION_DENIED,
+    details: {
+      attemptedAction: action,
+      requiredPermission,
+      ...context
+    }
+  });
+}
+
+export function createRoleAuditLog(action, role, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: toSafeString(action, AUDIT_ACTIONS.ROLE_UPDATED),
+    entityId: role?.id ?? null,
+    details: { ...(role ? { roleId: role.id, roleName: role.name, roleType: role.type } : {}), ...details }
+  });
+}
+
+export function createExportAuditLog(exportType, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: AUDIT_ACTIONS.EXPORT_ATTEMPT,
+    details: { exportType, ...details }
+  });
+}
+
+export function createImportAuditLog(importType, details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: AUDIT_ACTIONS.IMPORT_ATTEMPT,
+    details: { importType, ...details }
+  });
+}
+
+export function createBackupAuditLog(details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: 'BACKUP_CREATED',
+    details
+  });
+}
+
+export function createRestoreAuditLog(details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: 'RESTORE_COMPLETED',
+    details
+  });
+}
+
+export function createRemoteSessionAuditLog(details = {}) {
+  return createAuditLogEntry({
+    module: AUDIT_MODULES.SECURITY,
+    action: details.action || 'REMOTE_SESSION',
+    details
   });
 }
 

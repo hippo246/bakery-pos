@@ -8,9 +8,7 @@ import { toTimestamp, now } from './dates.js';
 // ---------------------------------------------------------------------------
 
 function _warn(msg) {
-  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
-    console.warn('[normalize]', msg);
-  }
+  console.warn('[normalize]', msg);
 }
 
 function safeString(val, fallback = '') {
@@ -53,7 +51,7 @@ function normalizeLegacyItems(legacyOrder) {
       .map(s => s.trim())
       .filter(Boolean)
       .map((itemStr, idx) => {
-        const match = itemStr.match(/^(.+?)\s*[×x\*]\s*(\d+)$/i);
+        const match = itemStr.match(/^(.+?)\s*[×x*]\s*(\d+)$/i);
         return {
           id: generateId(),
           menuItemId: `menu-${idx}`,

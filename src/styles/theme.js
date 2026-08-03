@@ -3,7 +3,7 @@ export { TIER_COLORS, STATUS_COLORS, SRC_COLORS, PEAK_SOP, MENU_CATS } from "../
 // ── HELPERS ──
 /** Maps an order source key to a human-readable label. */
 export const srcLabel = (s) =>
-  ({ WALK_IN: "Walk-in", SWIGGY: "Swiggy", ZOMATO: "Zomato", DIRECT_DELIVERY: "Delivery" }[s] ?? s);
+  ({ WALK_IN: "Walk-in", SWIGGY: "Swiggy", ZOMATO: "Zomato", DIRECT_DELIVERY: "Delivery", QR_ORDERING: "QR Order" }[s] ?? s);
 
 /** Returns up to 2 uppercase initials from a name string. */
 export const initials = (n = "") =>
@@ -110,109 +110,249 @@ export const C = {
  */
 export const THEME_CSS = `
   :root {
-    /* Backgrounds — stepped warmth, espresso-roast depth */
-    --c-bg:        #080705;
-    --c-bg2:       #0F0D0B;
-    --c-bg3:       #181410;
-    --c-bg4:       #201C17;
-
-    /* Amber — pulled from single-origin honey, not safety-vest yellow */
-    --c-amber:     #D4901A;
-    --c-amber2:    #F2B84B;
-    --c-amber3:    #6B3E00;
-    --c-amber-dim: rgba(212,144,26,0.12);
-
-    /* Text — warm whites, no blue cast */
-    --c-text:      #EDE8DF;
-    --c-text2:     #8A7E74;
-    --c-text3:     #4E4740;
-
-    /* Semantic — slightly desaturated so they don't scream */
-    --c-green:     #3FA666;
-    --c-red:       #D44E4E;
-    --c-blue:      #4E8EC4;
-    --c-purple:    #8B64C0;
-
-    /* Borders — hairlines, not walls */
-    --c-border:    #1E1A15;
-    --c-border2:   #2C2620;
-
-    --c-danger-bg: #220606;
-    --c-success-bg:#061A0D;
-
-    /* Tinted state surfaces */
-    --c-red-bg:       #220606;
-    --c-red-border:   #361212;
-    --c-green-bg:     #061A0D;
-    --c-green-border: #103820;
-    --c-amber-bg:     #1E1100;
-    --c-amber-border: #3C2C00;
-    --c-blue-bg:      #06111E;
-    --c-blue-border:  #122440;
-    --c-purple-bg:    #120820;
-    --c-purple-border:#2E1852;
-    --c-neutral-bg:   #141210;
-
-    --c-on-amber2:   #160E02;
-    --c-on-amber3:   #F2E6C4;
-
-    --c-warning:        #E8762A;
-    --c-warning-bg:     #1E0C00;
-    --c-warning-border: #4A2000;
-
-    --c-muted-red: #965050;
-
-    --c-banner-gradient: linear-gradient(135deg, #0F2820 0%, #1A0E2E 100%);
+    /* ── CafeOS Design Tokens ──────────────────────────────────────── */
+    
+    /* Backgrounds — midnight obsidian depth */
+    --cafe-bg:              #09090b;
+    --cafe-bg-elevated:     #121214;
+    --cafe-bg-surface:      #18181b;
+    --cafe-bg-card:         #27272a;
+    --cafe-bg-hover:        #3f3f46;
+    --cafe-bg-primary:      #09090b;
+    --cafe-bg-secondary:    #18181b;
+    
+    /* Accent — vibrant electric amber for striking contrast */
+    --cafe-accent:          #f59e0b;
+    --cafe-accent-light:    #fbbf24;
+    --cafe-accent-dark:     #d97706;
+    --cafe-accent-dim:      rgba(245,158,11,0.15);
+    --cafe-accent-bg:       rgba(245,158,11,0.1);
+    --cafe-accent-border:   rgba(245,158,11,0.4);
+    
+    /* Text hierarchy — ultra crisp whites and cool grays */
+    --cafe-text-primary:    #fafafa;
+    --cafe-text-secondary:  #a1a1aa;
+    --cafe-text-tertiary:   #71717a;
+    --cafe-text-muted:      #52525b;
+    
+    /* Semantic colors — vivid and punchy */
+    --cafe-success:         #10b981;
+    --cafe-success-bg:      rgba(16,185,129,0.1);
+    --cafe-success-border:  rgba(16,185,129,0.3);
+    
+    --cafe-danger:          #ef4444;
+    --cafe-danger-bg:       rgba(239,68,68,0.1);
+    --cafe-danger-border:   rgba(239,68,68,0.3);
+    
+    --cafe-warning:         #f97316;
+    --cafe-warning-bg:      rgba(249,115,22,0.1);
+    --cafe-warning-border:  rgba(249,115,22,0.3);
+    
+    --cafe-info:            #3b82f6;
+    --cafe-info-bg:         rgba(59,130,246,0.1);
+    --cafe-info-border:     rgba(59,130,246,0.3);
+    
+    /* Borders — delicate glass-like definition */
+    --cafe-border:          #3f3f46;
+    --cafe-border-light:    #27272a;
+    --cafe-border-focus:    var(--cafe-accent);
+    
+    /* Shadows — deep and dimensional */
+    --cafe-shadow-sm:       0 1px 3px rgba(0,0,0,0.4);
+    --cafe-shadow-md:       0 4px 12px rgba(0,0,0,0.5);
+    --cafe-shadow-lg:       0 8px 32px rgba(0,0,0,0.6);
+    --cafe-shadow-glow:     0 0 20px rgba(245,158,11,0.25);
+    
+    /* Radius — warm, not overly rounded */
+    --cafe-radius-sm:       6px;
+    --cafe-radius-md:       8px;
+    --cafe-radius-lg:       12px;
+    --cafe-radius-xl:       16px;
+    
+    /* Spacing scale */
+    --cafe-space-xs:        4px;
+    --cafe-space-sm:        8px;
+    --cafe-space-md:        12px;
+    --cafe-space-lg:        16px;
+    --cafe-space-xl:        20px;
+    --cafe-space-2xl:       24px;
+    --cafe-space-3xl:       32px;
+    
+    /* Typography scale */
+    --cafe-font-xs:         11px;
+    --cafe-font-sm:         12px;
+    --cafe-font-base:       14px;
+    --cafe-font-lg:         16px;
+    --cafe-font-xl:         18px;
+    --cafe-font-2xl:        24px;
+    --cafe-font-3xl:        32px;
+    
+    /* Status colors for operations */
+    --cafe-status-new:      #3b82f6;
+    --cafe-status-prep:     #f97316;
+    --cafe-status-ready:    #10b981;
+    --cafe-status-completed:#71717a;
+    --cafe-status-cancelled:#ef4444;
+    
+    /* Legacy compatibility — map to new system */
+    --c-bg:        var(--cafe-bg);
+    --c-bg2:       var(--cafe-bg-elevated);
+    --c-bg3:       var(--cafe-bg-surface);
+    --c-bg4:       var(--cafe-bg-card);
+    
+    --c-amber:     var(--cafe-accent);
+    --c-amber2:    var(--cafe-accent-light);
+    --c-amber3:    var(--cafe-accent-dark);
+    --c-amber-dim: var(--cafe-accent-dim);
+    
+    --c-text:      var(--cafe-text-primary);
+    --c-text2:     var(--cafe-text-secondary);
+    --c-text3:     var(--cafe-text-tertiary);
+    
+    --c-green:     var(--cafe-success);
+    --c-red:       var(--cafe-danger);
+    --c-blue:      var(--cafe-info);
+    --c-purple:    #a855f7;
+    --c-warning:   var(--cafe-warning);
+    
+    --c-border:    var(--cafe-border);
+    --c-border2:   var(--cafe-border-light);
+    
+    --c-red-bg:       var(--cafe-danger-bg);
+    --c-red-border:   var(--cafe-danger-border);
+    --c-green-bg:     var(--cafe-success-bg);
+    --c-green-border: var(--cafe-success-border);
+    --c-amber-bg:     var(--cafe-accent-bg);
+    --c-amber-border: var(--cafe-accent-border);
+    --c-blue-bg:      var(--cafe-info-bg);
+    --c-blue-border:  var(--cafe-info-border);
+    --c-purple-bg:    rgba(168,85,247,0.1);
+    --c-purple-border:rgba(168,85,247,0.3);
+    --c-neutral-bg:   var(--cafe-bg-surface);
+    
+    --c-on-amber2:   #09090b;
+    --c-on-amber3:   #fafafa;
+    
+    --c-warning-bg:     var(--cafe-warning-bg);
+    --c-warning-border: var(--cafe-warning-border);
+    
+    --c-muted-red: #b91c1c;
+    
+    --c-danger-bg: var(--cafe-danger-bg);
+    --c-success-bg:var(--cafe-success-bg);
+    
+    --c-banner-gradient: linear-gradient(135deg, #10b98120 0%, #3b82f620 100%);
   }
 
   .light {
-    --c-bg:        #F5F1EB;
-    --c-bg2:       #FDFBF8;
-    --c-bg3:       #EDE7DF;
-    --c-bg4:       #E2D9CE;
-
-    --c-amber:     #B86E00;
-    --c-amber2:    #6B3E00;
-    --c-amber3:    #F2B84B;
-    --c-amber-dim: rgba(184,110,0,0.10);
-
-    --c-text:      #18120A;
-    --c-text2:     #524840;
-    --c-text3:     #948578;
-
-    --c-green:     #186830;
-    --c-red:       #B03228;
-    --c-blue:      #1F5898;
-    --c-purple:    #5E34A0;
-
-    --c-border:    #D8CFC4;
-    --c-border2:   #C4B8AA;
-
-    --c-danger-bg: #FDF2F0;
-    --c-success-bg:#F0FDF4;
-
-    --c-red-bg:       #FDF2F0;
-    --c-red-border:   #EFCBC6;
-    --c-green-bg:     #F0FDF4;
-    --c-green-border: #C2E4CC;
-    --c-amber-bg:     #FEF6E4;
-    --c-amber-border: #EDD898;
-    --c-blue-bg:      #EBF2FC;
-    --c-blue-border:  #C2D8F0;
-    --c-purple-bg:    #F2EDFB;
-    --c-purple-border:#D8C4EE;
-    --c-neutral-bg:   #EDEAE4;
-
-    --c-on-amber2:   #F2E6C4;
-    --c-on-amber3:   #160E02;
-
-    --c-warning:        #964000;
-    --c-warning-bg:     #FEF4E8;
-    --c-warning-border: #EEC898;
-
-    --c-muted-red: #7A3E3E;
-
-    --c-banner-gradient: linear-gradient(135deg, #D8F0E6 0%, #EDE4FA 100%);
+    /* ── Light Theme ───────────────────────────────────────────────── */
+    
+    /* Backgrounds — pristine, crisp apple-like whites/grays */
+    --cafe-bg:              #f8fafc;
+    --cafe-bg-elevated:     #ffffff;
+    --cafe-bg-surface:      #f1f5f9;
+    --cafe-bg-card:         #ffffff;
+    --cafe-bg-hover:        #e2e8f0;
+    --cafe-bg-primary:      #f8fafc;
+    --cafe-bg-secondary:    #ffffff;
+    
+    /* Accent — rich energetic amber */
+    --cafe-accent:          #ea580c;
+    --cafe-accent-light:    #f97316;
+    --cafe-accent-dark:     #c2410c;
+    --cafe-accent-dim:      rgba(234,88,12,0.1);
+    --cafe-accent-bg:       rgba(234,88,12,0.06);
+    --cafe-accent-border:   rgba(234,88,12,0.25);
+    
+    /* Text hierarchy — sharp, high contrast darks */
+    --cafe-text-primary:    #0f172a;
+    --cafe-text-secondary:  #475569;
+    --cafe-text-tertiary:   #64748b;
+    --cafe-text-muted:      #94a3b8;
+    
+    /* Semantic colors — bright and accessible */
+    --cafe-success:         #059669;
+    --cafe-success-bg:      #ecfdf5;
+    --cafe-success-border:  #a7f3d0;
+    
+    --cafe-danger:          #dc2626;
+    --cafe-danger-bg:       #fef2f2;
+    --cafe-danger-border:   #fecaca;
+    
+    --cafe-warning:         #ea580c;
+    --cafe-warning-bg:      #fff7ed;
+    --cafe-warning-border:  #ffedd5;
+    
+    --cafe-info:            #2563eb;
+    --cafe-info-bg:         #eff6ff;
+    --cafe-info-border:     #bfdbfe;
+    
+    /* Borders — incredibly subtle grays */
+    --cafe-border:          #cbd5e1;
+    --cafe-border-light:    #e2e8f0;
+    --cafe-border-focus:    var(--cafe-accent);
+    
+    /* Shadows — soft, airy depth */
+    --cafe-shadow-sm:       0 1px 2px rgba(0,0,0,0.04);
+    --cafe-shadow-md:       0 4px 12px rgba(0,0,0,0.06);
+    --cafe-shadow-lg:       0 12px 32px rgba(0,0,0,0.08);
+    --cafe-shadow-glow:     0 0 16px rgba(234,88,12,0.15);
+    
+    /* Status colors — adjusted for light mode */
+    --cafe-status-new:      #2563eb;
+    --cafe-status-prep:     #ea580c;
+    --cafe-status-ready:    #059669;
+    --cafe-status-completed:#64748b;
+    --cafe-status-cancelled:#dc2626;
+    
+    /* Legacy compatibility */
+    --c-bg:        var(--cafe-bg);
+    --c-bg2:       var(--cafe-bg-elevated);
+    --c-bg3:       var(--cafe-bg-surface);
+    --c-bg4:       var(--cafe-bg-card);
+    
+    --c-amber:     var(--cafe-accent);
+    --c-amber2:    var(--cafe-accent-dark);
+    --c-amber3:    var(--cafe-accent-light);
+    --c-amber-dim: var(--cafe-accent-dim);
+    
+    --c-text:      var(--cafe-text-primary);
+    --c-text2:     var(--cafe-text-secondary);
+    --c-text3:     var(--cafe-text-tertiary);
+    
+    --c-green:     var(--cafe-success);
+    --c-red:       var(--cafe-danger);
+    --c-blue:      var(--cafe-info);
+    --c-purple:    #7B1FA2;
+    --c-warning:   var(--cafe-warning);
+    
+    --c-border:    var(--cafe-border);
+    --c-border2:   var(--cafe-border-light);
+    
+    --c-red-bg:       var(--cafe-danger-bg);
+    --c-red-border:   var(--cafe-danger-border);
+    --c-green-bg:     var(--cafe-success-bg);
+    --c-green-border: var(--cafe-success-border);
+    --c-amber-bg:     rgba(184,110,0,0.1);
+    --c-amber-border: rgba(184,110,0,0.25);
+    --c-blue-bg:      var(--cafe-info-bg);
+    --c-blue-border:  var(--cafe-info-border);
+    --c-purple-bg:    rgba(123,31,162,0.1);
+    --c-purple-border:rgba(123,31,162,0.25);
+    --c-neutral-bg:   var(--cafe-bg-surface);
+    
+    --c-on-amber2:   #F2EBE4;
+    --c-on-amber3:   #1A1208;
+    
+    --c-warning-bg:     var(--cafe-warning-bg);
+    --c-warning-border: var(--cafe-warning-border);
+    
+    --c-muted-red: #8E2424;
+    
+    --c-danger-bg: var(--cafe-danger-bg);
+    --c-success-bg:var(--cafe-success-bg);
+    
+    --c-banner-gradient: linear-gradient(135deg, #E8F5E9 0%, #F3E5F5 100%);
   }
 `;
 
@@ -233,30 +373,46 @@ export const getTheme = () =>
 
 // ── COMPONENT STYLES ──
 
-/** Compact status / source pill badge. */
+/** Compact status / source pill badge — CafeOS operational style. */
 export const pill = (bg, color, border) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: 4,
-  padding: "2px 7px",
-  borderRadius: 4,
-  fontSize: 10,
+  padding: "3px 8px",
+  borderRadius: "var(--cafe-radius-sm)",
+  fontSize: "var(--cafe-font-xs)",
   fontWeight: 600,
-  letterSpacing: "0.02em",
+  letterSpacing: "0.03em",
+  textTransform: "uppercase",
   background: bg,
   color,
   border: `1px solid ${border ?? color + "30"}`,
   whiteSpace: "nowrap",
-  lineHeight: "18px",
+  lineHeight: 1.4,
 });
 
-/** Base card surface. Pass an object to merge extra styles. */
-export const card = (extra = {}) => ({
-  background: C.bg2,
-  border: `1px solid ${C.border}`,
-  borderRadius: 10,
-  padding: "14px 16px",
-  boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+/** Base card surface — CafeOS premium card style. */
+// card() can be called as a function for extra props, OR spread as { ...card } for defaults.
+// Both patterns are used across the codebase.
+const _cardStyles = {
+  background: "var(--cafe-bg-card)",
+  border: `1px solid var(--cafe-border)`,
+  borderRadius: "var(--cafe-radius-lg)",
+  padding: "var(--cafe-space-lg)",
+  boxShadow: "var(--cafe-shadow-sm)",
+  transition: "box-shadow 0.15s ease, border-color 0.15s ease",
+};
+export const card = Object.assign(
+  (extra = {}) => ({ ..._cardStyles, ...extra }),
+  _cardStyles
+);
+
+/** Stat card for dashboard metrics. */
+export const statCard = (extra = {}) => ({
+  ...card(),
+  background: "var(--cafe-bg-elevated)",
+  border: `1px solid var(--cafe-border-light)`,
+  padding: "var(--cafe-space-xl)",
   ...extra,
 });
 
@@ -264,89 +420,198 @@ const BTN_BASE = {
   cursor: "pointer",
   minHeight: 44,
   minWidth: 44,
-  transition: "opacity .12s ease, background .12s ease, color .12s ease, box-shadow .12s ease",
+  transition: "all 0.15s ease",
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 6,
+  gap: 8,
+  fontFamily: "inherit",
+  fontWeight: 600,
+  letterSpacing: "-0.01em",
 };
 
-/** Returns inline styles for a button variant. */
+/** Returns inline styles for a button variant — CafeOS operational buttons. */
 export const btn = (variant) => {
   switch (variant) {
     case "primary":
       return {
         ...BTN_BASE,
         padding: "10px 20px",
-        borderRadius: 7,
-        border: `1px solid ${C.amber3}`,
-        background: C.amber2,
-        color: C.onAmber2,
-        fontSize: 13,
-        fontWeight: 600,
-        letterSpacing: "-0.01em",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+        borderRadius: "var(--cafe-radius-md)",
+        border: `1px solid var(--cafe-accent-dark)`,
+        background: "var(--cafe-accent)",
+        color: "#1A1208",
+        fontSize: "var(--cafe-font-base)",
+        boxShadow: "var(--cafe-shadow-sm)",
       };
     case "ghost":
       return {
         ...BTN_BASE,
         padding: "10px 16px",
-        borderRadius: 7,
-        border: `1px solid ${C.border2}`,
+        borderRadius: "var(--cafe-radius-md)",
+        border: `1px solid var(--cafe-border-light)`,
         background: "transparent",
-        color: C.text2,
-        fontSize: 13,
+        color: "var(--cafe-text-secondary)",
+        fontSize: "var(--cafe-font-base)",
         fontWeight: 500,
       };
     case "danger":
       return {
         ...BTN_BASE,
-        padding: "9px 14px",
-        borderRadius: 6,
-        border: `1px solid var(--c-red-border)`,
-        background: "var(--c-danger-bg)",
-        color: C.red,
-        fontSize: 13,
+        padding: "10px 16px",
+        borderRadius: "var(--cafe-radius-md)",
+        border: `1px solid var(--cafe-danger-border)`,
+        background: "var(--cafe-danger-bg)",
+        color: "var(--cafe-danger)",
+        fontSize: "var(--cafe-font-base)",
         fontWeight: 500,
       };
     case "success":
       return {
         ...BTN_BASE,
-        padding: "9px 14px",
-        borderRadius: 6,
-        border: `1px solid var(--c-green-border)`,
-        background: "var(--c-success-bg)",
-        color: C.green,
-        fontSize: 13,
+        padding: "10px 16px",
+        borderRadius: "var(--cafe-radius-md)",
+        border: `1px solid var(--cafe-success-border)`,
+        background: "var(--cafe-success-bg)",
+        color: "var(--cafe-success)",
+        fontSize: "var(--cafe-font-base)",
         fontWeight: 500,
+      };
+    case "icon":
+      return {
+        ...BTN_BASE,
+        padding: 8,
+        borderRadius: "var(--cafe-radius-sm)",
+        border: "1px solid transparent",
+        background: "transparent",
+        color: "var(--cafe-text-secondary)",
+        fontSize: "var(--cafe-font-lg)",
+        minWidth: 36,
+        minHeight: 36,
       };
     default:
       return { ...BTN_BASE };
   }
 };
 
-/** Shared input / select / textarea style. */
+/** Shared input / select / textarea style — CafeOS operational inputs. */
 export const input = {
-  background:   C.bg3,
-  border:       `1px solid ${C.border2}`,
-  borderRadius:  7,
+  background:   "var(--cafe-bg-surface)",
+  border:       `1px solid var(--cafe-border-light)`,
+  borderRadius:  "var(--cafe-radius-md)",
   padding:      "10px 12px",
-  color:         C.text,
-  fontSize:      14,
+  color:         "var(--cafe-text-primary)",
+  fontSize:      "var(--cafe-font-base)",
   width:        "100%",
   outline:      "none",
   fontFamily:   "inherit",
   boxSizing:    "border-box",
-  minHeight:     40,
-  transition:   "border-color .15s ease",
+  minHeight:    44,
+  transition:   "border-color 0.15s ease, box-shadow 0.15s ease",
 };
 
-/** Field label above inputs. */
+/** Field label above inputs — CafeOS clear labels. */
 export const label = {
-  fontSize:      11,
-  fontWeight:    500,
-  color:         C.text3,
-  letterSpacing: "0.01em",
-  marginBottom:  5,
+  fontSize:      "var(--cafe-font-xs)",
+  fontWeight:    600,
+  color:         "var(--cafe-text-tertiary)",
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  marginBottom:  "var(--cafe-space-sm)",
   display:       "block",
+};
+
+/** Table row hover state */
+export const tableRow = {
+  transition: "background 0.15s ease",
+  cursor: "pointer",
+};
+
+/** Status badge styles for operational states */
+export const statusBadge = (status) => {
+  const colors = {
+    new: { bg: "var(--cafe-status-new)", text: "#fff" },
+    preparing: { bg: "var(--cafe-status-prep)", text: "#fff" },
+    ready: { bg: "var(--cafe-status-ready)", text: "#fff" },
+    completed: { bg: "var(--cafe-status-completed)", text: "#fff" },
+    cancelled: { bg: "var(--cafe-status-cancelled)", text: "#fff" },
+  };
+  const config = colors[status] || { bg: "var(--cafe-text-tertiary)", text: "#fff" };
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "4px 10px",
+    borderRadius: "var(--cafe-radius-sm)",
+    fontSize: "var(--cafe-font-xs)",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    background: config.bg,
+    color: config.text,
+  };
+};
+
+/** Empty state container */
+const _emptyStateStyles = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "var(--cafe-space-3xl)",
+  color: "var(--cafe-text-tertiary)",
+  textAlign: "center",
+  minHeight: 200,
+};
+// emptyState works as { ...emptyState } OR emptyState() — both are used across the codebase
+export const emptyState = Object.assign(
+  (extra = {}) => ({ ..._emptyStateStyles, ...extra }),
+  _emptyStateStyles
+);
+
+/** Alert/warning banner */
+export const alertBanner = (variant = "info") => {
+  const configs = {
+    info: { bg: "var(--cafe-info-bg)", border: "var(--cafe-info-border)", text: "var(--cafe-info)" },
+    warning: { bg: "var(--cafe-warning-bg)", border: "var(--cafe-warning-border)", text: "var(--cafe-warning)" },
+    danger: { bg: "var(--cafe-danger-bg)", border: "var(--cafe-danger-border)", text: "var(--cafe-danger)" },
+    success: { bg: "var(--cafe-success-bg)", border: "var(--cafe-success-border)", text: "var(--cafe-success)" },
+  };
+  const config = configs[variant] || configs.info;
+  return {
+    padding: "var(--cafe-space-md) var(--cafe-space-lg)",
+    borderRadius: "var(--cafe-radius-md)",
+    background: config.bg,
+    border: `1px solid ${config.border}`,
+    color: config.text,
+    fontSize: "var(--cafe-font-sm)",
+    fontWeight: 500,
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--cafe-space-sm)",
+  };
+};
+
+/** Modal overlay */
+export const modalOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1000,
+  padding: "var(--cafe-space-lg)",
+};
+
+/** Modal content */
+export const modalContent = {
+  background: "var(--cafe-bg-card)",
+  border: `1px solid var(--cafe-border)`,
+  borderRadius: "var(--cafe-radius-lg)",
+  padding: "var(--cafe-space-xl)",
+  maxWidth: 500,
+  width: "100%",
+  maxHeight: "90vh",
+  overflow: "auto",
+  boxShadow: "var(--cafe-shadow-lg)",
 };

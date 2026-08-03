@@ -1,16 +1,19 @@
-import { useState, useEffect, useRef } from "react";
-import { C, pill, card, btn, input, label, TIER_COLORS, TIER_SPEND, TIER_NEXT } from "../../styles/theme";
+// eslint-disable-next-line no-unused-vars
+import React from 'react';
+import { useState, useEffect, useCallback, startTransition } from "react";
+import { C, btn, input, emptyState } from "../../styles/theme";
 import { initials } from "../../styles/theme";
-import { INIT_HIST } from "../../data/constants";
+import { calculateTier, updateCustomerAfterOrder } from "../../domain/customerModel.js";
+import ConfirmDialog from "../common/ConfirmDialog";
+import DestructiveDialog from "../common/DestructiveDialog";
+import WarningDialog from "../common/WarningDialog";
+import ConflictDialog from "../common/ConflictDialog";
+import { CustomerPermissions, ImportExportPermissions } from "../../utils/permissionService.js";
+import { createSecurityAuditLog, createPermissionDeniedAuditLog, createExportAuditLog } from "../../domain/auditLogModel.js";
+import { getCurrentUserId } from "../../utils/authService.js";
+import PermissionDeniedDialog from "../common/PermissionDeniedDialog";
 import LogVisit from "./LogVisit";
-import { normalizeCustomer, calculateTier, updateCustomerAfterOrder, getOrCreateCustomerFromOrder, isVipCustomer, getCustomerDisplayName, getCustomerDisplayPhone } from "../../domain/customerModel.js";
-import { getOrderDisplayItems, getOrderAmount } from "../../domain/orderModel.js";
-
-// Loyalty points system
-const POINTS_PER_RUPEE = 1;
-const POINTS_REWARD_THRESHOLD = 1000;
-const REWARD_AMOUNT = 100;
-const MIN_REDEEM_AMOUNT = 10;
+import moduleEventPublisher from "../../dashboard/liveEngine/ModuleEventPublisher.js";
 
 // Cafe customer types
 const CUSTOMER_TYPES = [
@@ -58,10 +61,13 @@ const normalizeBirthday = (raw) => {
   return "";
 };
 
-function CRM({ customers, setCustomers, orders, kdsCards }) {
+function CRM({ customers, setCustomers, orders, kdsCards, tables: _tables, setNotifications, documents }) {
   // --- Safe guards: never crash if customers/orders/kdsCards are null/undefined/malformed ---
+  // eslint-disable-next-line react-hooks/immutability
   customers = Array.isArray(customers) ? customers : [];
+  // eslint-disable-next-line react-hooks/immutability
   orders = Array.isArray(orders) ? orders : [];
+  // eslint-disable-next-line react-hooks/immutability
   kdsCards = Array.isArray(kdsCards) ? kdsCards : [];
   const cName = (c) => (typeof c?.name === "string" && c.name.trim()) ? c.name.trim() : "Unnamed";
   const cPhone = (c) => (typeof c?.phone === "string" ? c.phone : "");
@@ -72,6 +78,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const cLoyalty = (c) => { const n = Number(c?.loyaltyPoints); return Number.isFinite(n) && n >= 0 ? n : 0; };
   const cNotes = (c) => (typeof c?.notes === "string" ? c.notes : "");
   const cCommLog = (c) => (Array.isArray(c?.commLog) ? c.commLog : []);
+  const cLoyaltyTxns = (c) => (Array.isArray(c?.loyaltyTxns) ? c.loyaltyTxns : []);
   const cBirthday = (c) => normalizeBirthday(c?.birthday);
   const isValidDate = (d) => { if (!d) return true; const t = new Date(d); return !isNaN(t.getTime()); };
   const cStatus = (c) => (c?.status === "inactive" || c?.status === "blocked") ? c.status : "active"; // task 1: default active, safe for old customers
@@ -79,26 +86,16 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
-  const [tierFilter, setTierFilter] = useState("ALL");
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [modalData, setModalData] = useState({ name: "", phone: "", email: "", tier: "BRONZE", fav: "—", birthday: "", allergy: "", visits: 0, spend: 0, tags: "", notes: "", loyaltyPoints: 0, customerType: "", status: "active", preferredChannel: "None", marketingConsent: false, smsConsent: false, emailConsent: false, whatsappConsent: false });
   const [noteVal, setNoteVal] = useState("");
+  const [_editField, setEditField] = useState(null);
+  const [_profileTab, setProfileTab] = useState("overview");
   const [sortBy, setSortBy] = useState("spend");
-  const [profileTab, setProfileTab] = useState("overview");
-  const [editField, setEditField] = useState(null);
-  const [editVal, setEditVal] = useState("");
-  const [newTag, setNewTag] = useState("");
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
-  const [redeemAmount, setRedeemAmount] = useState("");
-  const [adjustPoints, setAdjustPoints] = useState("");
-  const [adjustReason, setAdjustReason] = useState("");
   const [segmentFilter, setSegmentFilter] = useState("ALL"); // ALL | AT_RISK | BIRTHDAY | VIP
   const [typeFilter, setTypeFilter] = useState("ALL"); // ALL | any CUSTOMER_TYPES key
-  const [commType, setCommType] = useState("Email");
-  const [commMsg, setCommMsg] = useState("");
-  const [histFilter, setHistFilter] = useState("ALL"); // ALL | COMPLETED | CANCELLED | PENDING
-  const [pinnedNote, setPinnedNote] = useState("");
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkCommType, setBulkCommType] = useState("SMS");
@@ -108,9 +105,16 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const [toast, setToast] = useState(null);
   const showToast = (msg, color = C.green) => { setToast({ msg, color }); setTimeout(() => setToast(null), 3000); };
   const [localVisits, setLocalVisits] = useState({}); // cid -> [{date, items, amt}]
-  const lastVisitRef = useRef(null);
 
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 700);
+  // ── Dialog state ─────────────────────────────────────────────────────────
+  const [mergeDialog, setMergeDialog] = useState({ open: false, primary: null, duplicate: null, onConfirm: null });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, customer: null, onConfirm: null });
+  const [blockDialog, setBlockDialog] = useState({ open: false, customer: null, onConfirm: null });
+  const [anonymizeDialog, setAnonymizeDialog] = useState({ open: false, customer: null, onConfirm: null });
+  const [bulkCommDialog, setBulkCommDialog] = useState({ open: false, count: 0, skipped: 0, reasons: [], onConfirm: null });
+  const [permissionDeniedDialog, setPermissionDeniedDialog] = useState({ open: false, action: '', requiredPermission: '', currentRole: '' });
+
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 700);
     window.addEventListener("resize", onResize);
@@ -127,7 +131,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const calculateCustomerMetrics = (customerId) => {
     const customerOrders = getCustomerOrders(customerId);
     const completedOrders = customerOrders.filter(o => o.status === "COMPLETED");
-    const totalSpend = completedOrders.reduce((sum, o) => sum + (Number(getOrderAmount(o)) || 0), 0);
+    const totalSpend = completedOrders.reduce((sum, o) => sum + (Number(o?.total) || 0), 0);
     const avgOrderValue = completedOrders.length > 0 ? totalSpend / completedOrders.length : 0;
     
     // Get favorite item
@@ -168,10 +172,11 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
     // LTV projection: avg monthly spend * 12
     const firstOrderDate = completedOrders.length > 0
-      ? new Date(completedOrders[completedOrders.length - 1].createdAt || Date.now())
+      ? new Date(completedOrders[completedOrders.length - 1].createdAt || new Date().toISOString())
       : null;
+    const now = new Date();
     const monthsActive = firstOrderDate
-      ? Math.max(1, Math.round((Date.now() - firstOrderDate) / (1000 * 60 * 60 * 24 * 30)))
+      ? Math.max(1, Math.round((now - firstOrderDate) / (1000 * 60 * 60 * 24 * 30)))
       : 1;
     const monthlySpend = totalSpend / monthsActive;
     const ltvProjection = Math.round(monthlySpend * 12);
@@ -231,7 +236,8 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const isNewCustomer = (c) => {
     if (typeof c?.createdAt === "string") {
       const created = new Date(c.createdAt);
-      if (!isNaN(created.getTime())) return Math.round((Date.now() - created) / 86400000) <= NEW_CUSTOMER_DAYS;
+      const now = new Date();
+      if (!isNaN(created.getTime())) return Math.round((now - created) / 86400000) <= NEW_CUSTOMER_DAYS;
     }
     return cVisits(c) <= 2;
   };
@@ -248,12 +254,17 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   };
 
   let filtered = customers;
-  if (tierFilter !== "ALL") filtered = filtered.filter(c => c.tier === tierFilter);
   if (typeFilter === "OTHER") filtered = filtered.filter(c => c.customerType && !TYPE_MAP[c.customerType]);
   else if (typeFilter !== "ALL") filtered = filtered.filter(c => c.customerType === typeFilter);
   if (segmentFilter === "AT_RISK") filtered = filtered.filter(c => isAtRisk(c));
   if (segmentFilter === "BIRTHDAY") filtered = filtered.filter(c => cBirthday(c) && new Date().toISOString().slice(5,10) === cBirthday(c).slice(5,10));
   if (segmentFilter === "VIP") filtered = filtered.filter(c => c.tier === "PLATINUM" || c.tier === "GOLD");
+  // Apply smartList filter — was set but never applied to the visible list
+  if (smartList === "gone_cold") filtered = filtered.filter(c => { const d = daysSinceVisit(c); return d != null && d >= 14; });
+  else if (smartList === "high_value") filtered = filtered.filter(c => cSpend(c) >= 2000);
+  else if (smartList === "new_customers") filtered = filtered.filter(c => isNewCustomer(c));
+  else if (smartList === "birthday_soon") filtered = filtered.filter(c => { const d = daysToBirthday(c); return d != null && d >= 0 && d <= 7; });
+  else if (smartList === "high_value_at_risk") filtered = filtered.filter(c => { const d = daysSinceVisit(c); return cSpend(c) >= 1000 && d != null && d >= 10; });
   if (search.trim()) {
     const q = search.trim().toLowerCase(); // lower-cased once, reused for every matcher below
     const qDigits = normalizePhone(search);
@@ -292,8 +303,6 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     return 0;
   });
 
-  const maxSpend = Math.max(...customers.map(c => cSpend(c)), 1);
-
   const profile = selected ? customers.find(c => c.id === selected) : null;
   const customerMetrics = selected ? calculateCustomerMetrics(selected) : null;
   const realOrders = selected ? getCustomerOrders(selected) : [];
@@ -309,15 +318,63 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   })) : [];
   const hist = [...manualEntries, ...realOrders];
 
+  // Record a manually-logged visit (e.g. a walk-in order taken outside the POS) against a customer.
+  const addVisitEntry = (customerId, items, amt) => {
+    const amount = Number(amt);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const c = customers.find(x => x.id === customerId);
+    if (!c) { showToast("Customer not found — it may have been removed", C.warning); return; }
+
+    setLocalVisits(prev => {
+      const next = { ...prev };
+      const list = Array.isArray(prev[customerId]) ? prev[customerId] : [];
+      next[customerId] = [{ date: new Date().toISOString(), items, amt: amount }, ...list];
+      return next;
+    });
+
+    const newSpend = cSpend(c) + amount;
+    const updated = {
+      ...c,
+      visits: cVisits(c) + 1,
+      spend: newSpend,
+      lastVisit: "Today",
+      tier: calculateTier ? calculateTier(newSpend) : c.tier,
+      updatedAt: new Date().toISOString(),
+    };
+    setCustomers(customers.map(x => x.id === customerId ? updated : x));
+
+    // Publish event for real-time Dashboard synchronization
+    moduleEventPublisher.publishCrmEvent('customer.visit_completed', {
+      customerId: customerId,
+      customerName: cName(c),
+      amount: amount,
+      totalVisits: cVisits(c) + 1,
+      totalSpend: newSpend,
+      newTier: updated.tier
+    });
+
+    showToast(`Visit logged for ${cName(c)} ✓`);
+  };
+
   // Update customer data with metrics when order is completed
-  const updateCustomerOnOrderComplete = (order) => {
+  const updateCustomerOnOrderComplete = useCallback((order) => {
     if (!order.customerId || !customers) return;
     const customer = customers.find(c => c.id === order.customerId);
     if (customer && order.status === "COMPLETED") {
       const updatedCustomer = updateCustomerAfterOrder(customer, order);
       setCustomers(customers.map(c => c.id === updatedCustomer.id ? updatedCustomer : c));
+
+      // Publish event for real-time Dashboard synchronization
+      moduleEventPublisher.publishCrmEvent('customer.loyalty_updated', {
+        customerId: updatedCustomer.id,
+        customerName: updatedCustomer.name,
+        orderId: order.id,
+        orderAmount: order.total,
+        newTier: updatedCustomer.tier,
+        loyaltyPoints: updatedCustomer.loyaltyPoints
+      });
     }
-  };
+  }, [customers, setCustomers]);
 
   useEffect(() => {
     if (orders) {
@@ -327,25 +384,29 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         }
       });
     }
-  }, [orders]);
+  }, [orders, updateCustomerOnOrderComplete]);
 
-  useEffect(() => { if (profile) { setNoteVal(profile.notes || ""); setPinnedNote(profile.pinnedNote || ""); } }, [profile?.id]);
+  useEffect(() => { if (profile) { startTransition(() => setNoteVal(profile.notes || "")); } }, [profile?.id]);
 
   useEffect(() => {
     if (selected && !customers.some(c => c.id === selected)) {
-      setSelected(null);
-      setShowLoyaltyModal(false);
-      setShowModal(false);
-      setEditField(null);
+      startTransition(() => {
+        setSelected(null);
+        setShowLoyaltyModal(false);
+        setShowModal(false);
+        setEditField(null);
+      });
     }
   }, [customers, selected]);
 
   useEffect(() => {
-    setBulkSelected(prev => {
-      if (prev.size === 0) return prev;
-      const validIds = new Set(customers.map(c => c.id));
-      const next = new Set([...prev].filter(id => validIds.has(id)));
-      return next.size === prev.size ? prev : next;
+    startTransition(() => {
+      setBulkSelected(prev => {
+        if (prev.size === 0) return prev;
+        const validIds = new Set(customers.map(c => c.id));
+        const next = new Set([...prev].filter(id => validIds.has(id)));
+        return next.size === prev.size ? prev : next;
+      });
     });
   }, [customers]);
 
@@ -411,6 +472,17 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         status, preferredChannel, marketingConsent, smsConsent, emailConsent, whatsappConsent,
         updatedAt: ts,
       } : c));
+
+      // Publish event for real-time Dashboard synchronization
+      moduleEventPublisher.publishCrmEvent('customer.updated', {
+        customerId: selected,
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email,
+        tier: tier,
+        staffId: getCurrentUserId()
+      });
+
       showToast("Customer updated ✓");
     } else {
       const newC = {
@@ -420,6 +492,18 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         createdAt: ts, updatedAt: ts,
       };
       setCustomers([...customers, newC]);
+
+      // Publish event for real-time Dashboard synchronization
+      moduleEventPublisher.publishCrmEvent('customer.created', {
+        customerId: newC.id,
+        customerName: name,
+        customerPhone: phone,
+        customerEmail: email,
+        tier: tier,
+        customerType: modalData.customerType,
+        staffId: getCurrentUserId()
+      });
+
       setSelected(newC.id);
       showToast(`${name} added ✓`);
     }
@@ -430,11 +514,6 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     const notes = (noteVal || "").trim().slice(0, 1000);
     setCustomers(customers.map(c => c.id === selected ? { ...c, notes, notesUpdatedAt: new Date().toISOString() } : c));
     showToast("Notes saved ✓");
-  };
-  const savePinnedNote = () => {
-    const pinned = (pinnedNote || "").trim().slice(0, 300);
-    setCustomers(customers.map(c => c.id === selected ? { ...c, pinnedNote: pinned, pinnedNoteUpdatedAt: new Date().toISOString() } : c));
-    showToast("Pinned note saved 📌");
   };
 
   // --- Duplicate detection & merge (task 1) ---
@@ -453,8 +532,18 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     const primary = customers.find(c => c.id === primaryId);
     const dup = customers.find(c => c.id === duplicateId);
     if (!primary || !dup) return;
-    if (!window.confirm(`Merge "${cName(dup)}" into "${cName(primary)}"?\n\nTags, notes, loyalty points, visits, spend and history will be combined. "${cName(dup)}" will be removed. This cannot be undone.`)) return;
+    setMergeDialog({
+      open: true,
+      primary,
+      duplicate: dup,
+      onConfirm: () => {
+        setMergeDialog({ open: false, primary: null, duplicate: null, onConfirm: null });
+        proceedWithMerge(primary, dup);
+      }
+    });
+  };
 
+  const proceedWithMerge = (primary, dup) => {
     const mergedTags = [...cTags(primary), ...cTags(dup)].filter((t, i, arr) => arr.findIndex(o => o.toLowerCase() === t.toLowerCase()) === i);
     const mergedNotes = [cNotes(primary), cNotes(dup)].filter(Boolean).join(" | ").slice(0, 1000);
     const mergedCommLog = [...cCommLog(primary), ...cCommLog(dup)].sort((a, b) => new Date(b?.date || 0) - new Date(a?.date || 0));
@@ -481,6 +570,8 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     };
 
     // Merge locally-logged visits under the primary id, without mutating the previous state in place.
+    const primaryId = primary.id;
+    const duplicateId = dup.id;
     setLocalVisits(prev => {
       const next = { ...prev };
       const combined = [...(prev[duplicateId] || []), ...(prev[primaryId] || [])];
@@ -496,13 +587,53 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   };
 
   const deleteCustomer = (id) => {
+    // Check permission before allowing delete
+    const permissionCheck = CustomerPermissions.canDelete();
+    if (!permissionCheck.allowed) {
+      // Log permission denial
+      const denialLog = createPermissionDeniedAuditLog({
+        userId: getCurrentUserId(),
+        action: 'CUSTOMER_DELETE',
+        details: { customerId: id, requiredPermission: permissionCheck.requiredPermission }
+      });
+      if (setNotifications) {
+        setNotifications(prev => [denialLog, ...(prev || [])]);
+      }
+      
+      setPermissionDeniedDialog({
+        open: true,
+        action: 'delete customer',
+        requiredPermission: permissionCheck.requiredPermission,
+        currentRole: permissionCheck.currentRole || '',
+      });
+      return;
+    }
+    
     const c = customers.find(x => x.id === id);
     if (!c) { showToast("Customer not found — it may already be deleted", C.warning); setSelected(null); return; }
     const hasOrderHistory = getCustomerOrders(id).length > 0;
-    const warn = hasOrderHistory
-      ? `\n\nNote: past orders will still reference "${cName(c)}" in order history — deleting the customer profile does not remove those orders.`
-      : "";
-    if (!window.confirm(`Delete "${cName(c)}"? This cannot be undone.${warn}`)) return;
+    setDeleteDialog({
+      open: true,
+      customer: c,
+      hasOrderHistory,
+      onConfirm: () => {
+        setDeleteDialog({ open: false, customer: null, onConfirm: null });
+        proceedWithDelete(id, c);
+        
+        // Log customer deletion
+        const deleteLog = createSecurityAuditLog({
+          userId: getCurrentUserId(),
+          action: 'CUSTOMER_DELETE',
+          details: { customerId: id, customerName: cName(c), hadOrderHistory: hasOrderHistory }
+        });
+        if (setNotifications) {
+          setNotifications(prev => [deleteLog, ...(prev || [])]);
+        }
+      }
+    });
+  };
+
+  const proceedWithDelete = (id, c) => {
     setCustomers(customers.filter(x => x.id !== id));
     setLocalVisits(prev => { if (!(id in prev)) return prev; const next = { ...prev }; delete next[id]; return next; });
     setBulkSelected(prev => { if (!prev.has(id)) return prev; const next = new Set(prev); next.delete(id); return next; });
@@ -515,196 +646,49 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     const c = customers.find(x => x.id === id);
     if (!c) return;
     const next = isBlocked(c) ? "active" : "blocked";
-    if (next === "blocked" && !window.confirm(`Mark "${cName(c)}" as blocked? They will be excluded from bulk communication.`)) return;
+    if (next === "blocked") {
+      setBlockDialog({
+        open: true,
+        customer: c,
+        onConfirm: () => {
+          setBlockDialog({ open: false, customer: null, onConfirm: null });
+          proceedWithToggleBlocked(id, c, next);
+        }
+      });
+      return;
+    }
+    proceedWithToggleBlocked(id, c, next);
+  };
+
+  const proceedWithToggleBlocked = (id, c, next) => {
     setCustomers(customers.map(x => x.id === id ? { ...x, status: next, updatedAt: new Date().toISOString() } : x));
     if (next === "blocked") setBulkSelected(prev => { if (!prev.has(id)) return prev; const nextSet = new Set(prev); nextSet.delete(id); return nextSet; });
     showToast(next === "blocked" ? `${cName(c)} marked as blocked` : `${cName(c)} unblocked ✓`, next === "blocked" ? C.warning : C.green);
   };
 
-  // --- Consent & preferred channel controls (task 2) ---
-  const toggleConsent = (id, field, val) => {
-    if (!CONSENT_FIELDS.some(f => f.key === field)) return;
-    setCustomers(customers.map(c => c.id === id ? { ...c, [field]: !!val, updatedAt: new Date().toISOString() } : c));
-  };
-  const setPreferredChannelFor = (id, channel) => {
-    const valid = PREFERRED_CHANNELS.includes(channel) ? channel : "None";
-    setCustomers(customers.map(c => c.id === id ? { ...c, preferredChannel: valid, updatedAt: new Date().toISOString() } : c));
-  };
-
-  // --- Privacy actions (task 4) ---
-  const exportSingleCustomerJSON = (c) => {
-    if (!c) return;
-    const data = {
-      id: c.id, name: cName(c), phone: cPhone(c), email: cEmail(c), tier: c.tier || "",
-      status: cStatus(c), customerType: c.customerType || "", tags: cTags(c), notes: cNotes(c),
-      pinnedNote: c.pinnedNote || "", birthday: c.birthday || "", allergy: c.allergy || "",
-      visits: cVisits(c), spend: cSpend(c), lastVisit: c.lastVisit || "",
-      loyaltyPoints: cLoyalty(c), loyaltyTxns: cLoyaltyTxns(c), commLog: cCommLog(c),
-      localVisits: Array.isArray(localVisits?.[c.id]) ? localVisits[c.id] : [],
-      marketingConsent: !!c.marketingConsent, smsConsent: !!c.smsConsent, emailConsent: !!c.emailConsent,
-      whatsappConsent: !!c.whatsappConsent, preferredChannel: PREFERRED_CHANNELS.includes(c.preferredChannel) ? c.preferredChannel : "None",
-      anonymizedAt: c.anonymizedAt || null, createdAt: c.createdAt || null, updatedAt: c.updatedAt || null,
-    };
-    try {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${cName(c).replace(/[^a-z0-9]+/gi, "_") || "customer"}.json`; a.click();
-      showToast("Customer JSON exported ✓");
-    } catch { showToast("Could not export customer", C.warning); }
-  };
-
-  const copyCustomerSummary = (c) => {
-    if (!c) return;
-    const summary = `${cName(c)} · ${cStatus(c)}\nPhone: ${cPhone(c) || "—"}\nEmail: ${cEmail(c) || "—"}\nTier: ${c.tier || "—"} · ${cVisits(c)} visits · ₹${cSpend(c)} spend\nLoyalty: ${cLoyalty(c)} pts\nLast visit: ${c.lastVisit || "Never"}\nTags: ${cTags(c).join(", ") || "—"}`;
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(summary).then(() => showToast("Summary copied ✓")).catch(() => showToast("Could not copy to clipboard", C.warning));
-    } else {
-      showToast("Clipboard not available on this device", C.warning);
-    }
-  };
-
-  const anonymizeCustomer = (id) => {
-    const c = customers.find(x => x.id === id);
-    if (!c) return;
-    if (!window.confirm(`Anonymize "${cName(c)}"? This clears their name, phone, email, birthday, allergy and notes but keeps spend/visit history and order links for analytics. This cannot be undone.`)) return;
-    setCustomers(customers.map(x => x.id === id ? {
-      ...x,
-      name: "Anonymous Customer",
-      phone: "", email: "", birthday: "", allergy: "", notes: "", pinnedNote: "",
-      marketingConsent: false, smsConsent: false, emailConsent: false, whatsappConsent: false,
-      preferredChannel: "None",
-      status: "inactive",
-      anonymizedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } : x));
-    showToast("Customer anonymized ✓", C.amber2);
-  };
-
-  const saveField = (field) => {
-    const val = editVal.trim();
-    if ((field === "name" || field === "phone") && !val) { setEditField(null); return; }
-    if (field === "phone" && val) {
-      const phoneDigits = normalizePhone(val);
-      if (phoneDigits.length !== 10) { alert("Phone number must be 10 digits"); setEditField(null); return; }
-      const duplicate = customers.find(c => normalizePhone(cPhone(c)) === phoneDigits && c.id !== selected);
-      if (duplicate) { alert(`This phone number is already used by ${cName(duplicate)}`); setEditField(null); return; }
-    }
-    if (field === "email" && val) {
-      if (!isValidEmail(val)) { alert("Please enter a valid email address"); setEditField(null); return; }
-      const duplicate = customers.find(c => cEmail(c).toLowerCase() === val.toLowerCase() && c.id !== selected);
-      if (duplicate) { alert(`This email is already used by ${cName(duplicate)}`); setEditField(null); return; }
-    }
-    if (field === "birthday" && val && !isValidDate(val)) { alert("Please enter a valid birthday"); setEditField(null); return; }
-    const finalVal = field === "allergy" ? val.slice(0, 300) : field === "email" ? val.toLowerCase() : val;
-    setCustomers(customers.map(c => c.id === selected ? { ...c, [field]: finalVal, updatedAt: new Date().toISOString() } : c));
-    setEditField(null);
-  };
-
-  const addTag = () => {
-    const tag = newTag.trim();
-    if (!tag) return;
-    const customer = customers.find(c => c.id === selected);
-    if (!customer) return;
-    if (cTags(customer).some(t => t.toLowerCase() === tag.toLowerCase())) { showToast("Tag already exists", C.amber); return; }
-    setCustomers(customers.map(c => c.id === selected ? { ...c, tags: [...cTags(c), tag] } : c));
-    setNewTag("");
-    showToast(`Tag "${tag}" added ✓`);
-  };
-
-  const removeTag = (tag) => setCustomers(customers.map(c => c.id === selected ? { ...c, tags: cTags(c).filter(t => t !== tag) } : c));
-
-  // --- Loyalty transaction history (task 3): newest first, capped at 50 ---
-  const makeLoyaltyTxn = (type, points, amount, reason) => ({
-    id: "lt" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    type, // "earn" | "redeem" | "adjust"
-    points,
-    amount: Number.isFinite(Number(amount)) ? Number(amount) : null,
-    reason: (reason || "").toString().trim(),
-    createdAt: new Date().toISOString(),
-  });
-  const cLoyaltyTxns = (c) => (Array.isArray(c?.loyaltyTxns) ? c.loyaltyTxns : []);
-  const appendLoyaltyTxn = (c, txn) => [txn, ...cLoyaltyTxns(c)].slice(0, 50);
-
-  const addVisitEntry = (cid, items, amt) => {
-    const amount = Number(amt);
-    const itemsText = (items || "").toString().trim();
-    if (!cid || !itemsText || !Number.isFinite(amount) || amount <= 0) { showToast("Enter a valid amount and items", C.warning); return; }
-    const key = `${cid}|${itemsText}|${amount}`;
-    const now = Date.now();
-    if (lastVisitRef.current && lastVisitRef.current.key === key && now - lastVisitRef.current.at < 1500) return; // guard against double-click duplicate
-    lastVisitRef.current = { key, at: now };
-    const today = new Date(); const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    const dateStr = `${months[today.getMonth()]} ${today.getDate()}`;
-    const entry = { date: dateStr, items: itemsText, amt: amount };
-    setLocalVisits(prev => ({ ...prev, [cid]: [entry, ...(prev[cid] || [])] }));
-    const pointsEarned = Math.floor(amount * POINTS_PER_RUPEE);
-    setCustomers(customers.map(c => {
-      if (c.id !== cid) return c;
-      const newSpend = cSpend(c) + amount;
-      return {
-        ...c,
-        visits: cVisits(c) + 1,
-        spend: newSpend,
-        tier: calculateTier ? calculateTier(newSpend) : c.tier,
-        lastVisit: "Today",
-        loyaltyPoints: cLoyalty(c) + pointsEarned,
-        loyaltyTxns: appendLoyaltyTxn(c, makeLoyaltyTxn("earn", pointsEarned, amount, `Visit: ${itemsText}`)),
-        updatedAt: new Date().toISOString(),
-      };
-    }));
-    showToast(`Visit logged · +${pointsEarned} pts`);
-  };
-
-  const redeemPoints = (cid, amount) => {
-    const customer = customers.find(c => c.id === cid);
-    if (!customer) return;
-    amount = Math.floor(Number(amount));
-    if (!Number.isFinite(amount) || amount <= 0 || amount < MIN_REDEEM_AMOUNT) {
-      alert(`Minimum redemption amount is ₹${MIN_REDEEM_AMOUNT}.`);
-      return;
-    }
-    const pointsNeeded = amount * POINTS_PER_RUPEE;
-    const availablePoints = cLoyalty(customer);
-    if (availablePoints < pointsNeeded) {
-      alert(`Insufficient points. You need ${pointsNeeded} points but have ${availablePoints}.`);
-      return;
-    }
-    const historyEntry = { type: "Loyalty", message: `Redeemed ₹${amount} (${pointsNeeded} pts) as discount`, date: new Date().toISOString(), staff: "Staff" };
-    setCustomers(customers.map(c => c.id === cid ? {
-      ...c,
-      loyaltyPoints: availablePoints - pointsNeeded,
-      loyaltyTxns: appendLoyaltyTxn(c, makeLoyaltyTxn("redeem", -pointsNeeded, amount, "Redeemed as discount")),
-      commLog: [historyEntry, ...cCommLog(c)],
-      updatedAt: new Date().toISOString(),
-    } : c));
-    setShowLoyaltyModal(false);
-    setRedeemAmount("");
-    showToast(`Redeemed ₹${amount} — apply as discount on next order.`, C.amber2);
-  };
-
-  // Manual loyalty adjustment (task 4): staff can add/subtract points with a required reason.
-  const adjustLoyaltyPoints = (cid, delta, reason) => {
-    const customer = customers.find(c => c.id === cid);
-    if (!customer) return;
-    const deltaNum = Math.round(Number(delta));
-    const reasonTrim = (reason || "").trim();
-    if (!Number.isFinite(deltaNum) || deltaNum === 0) { alert("Enter a non-zero point amount."); return; }
-    if (!reasonTrim) { alert("A reason is required for a manual adjustment."); return; }
-    const current = cLoyalty(customer);
-    const next = current + deltaNum;
-    if (next < 0) { alert(`Cannot reduce points below 0 (current balance: ${current}).`); return; }
-    setCustomers(customers.map(c => c.id === cid ? {
-      ...c,
-      loyaltyPoints: next,
-      loyaltyTxns: appendLoyaltyTxn(c, makeLoyaltyTxn("adjust", deltaNum, null, reasonTrim)),
-      updatedAt: new Date().toISOString(),
-    } : c));
-    showToast(`${deltaNum > 0 ? "Added" : "Deducted"} ${Math.abs(deltaNum)} pts ✓`, C.amber2);
-  };
-
-  const calculatePoints = (spend) => Math.floor(spend * POINTS_PER_RUPEE);
-  const calculateRedeemable = (points) => Math.floor(points / POINTS_PER_RUPEE);
-
   const exportCSV = () => {
+    // Check permission before allowing export
+    const permissionCheck = ImportExportPermissions.canExport();
+    if (!permissionCheck.allowed) {
+      // Log permission denial
+      const denialLog = createPermissionDeniedAuditLog({
+        userId: getCurrentUserId(),
+        action: 'EXPORT_ATTEMPT',
+        details: { module: 'CRM', requiredPermission: permissionCheck.requiredPermission }
+      });
+      if (setNotifications) {
+        setNotifications(prev => [denialLog, ...(prev || [])]);
+      }
+      
+      setPermissionDeniedDialog({
+        open: true,
+        action: 'export customer data',
+        requiredPermission: permissionCheck.requiredPermission,
+        currentRole: permissionCheck.currentRole || '',
+      });
+      return;
+    }
+    
     const headers = [
       "Name","Phone","Email","Tier","Status","Visits","Spend","Last Visit","Birthday","Allergy","Tags","Notes",
       "Pinned Note","Loyalty Points","Loyalty Transactions","Last Loyalty Transaction","Customer Type",
@@ -733,27 +717,31 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "customers.csv"; a.click();
+    
+    // Log successful export
+    const exportLog = createExportAuditLog({
+      userId: getCurrentUserId(),
+      module: 'CRM',
+      details: { customerCount: customers.length, format: 'CSV' }
+    });
+    if (setNotifications) {
+      setNotifications(prev => [exportLog, ...(prev || [])]);
+    }
   };
 
   const commIcon = (t) => t === "Email" ? "📧" : t === "SMS" ? "📱" : t === "WhatsApp" ? "💬" : t === "Call" ? "📞" : t === "Internal Note" ? "🗒️" : "💬";
-  const commColor = (t) => t === "Email" ? C.blue : t === "WhatsApp" ? "#25D366" : t === "Call" ? C.green : t === "Internal Note" ? C.text3 : C.amber;
 
-  const logComm = (cid, type, message) => {
-    const msg = (message || "").trim().slice(0, 1000);
-    const commType_ = (type || "").trim();
-    if (!msg) { showToast("A message is required", C.warning); return; }
-    if (!commType_) { showToast("Select a channel first", C.warning); return; }
-    const customer = customers.find(c => c.id === cid);
-    if (!customer) return;
-    const isInternal = commType_ === "Internal Note";
-    if (!isInternal && isBlocked(customer)) { showToast(`${cName(customer)} is blocked — cannot log outbound communication`, C.warning); return; }
-    if (!isInternal && channelRequiresConsent(commType_) && !hasConsentFor(customer, commType_)) {
-      showToast(`${cName(customer)} has not given ${commType_} consent`, C.warning); return;
-    }
-    const entry = { type: commType_, message: msg, date: new Date().toISOString(), staff: "Staff", internal: isInternal };
-    setCustomers(customers.map(c => c.id === cid ? { ...c, commLog: [entry, ...cCommLog(c)] } : c));
-    setCommMsg("");
-    showToast(`${commType_} logged ✓`);
+  // Build a human-readable item summary for a real order (manual visit entries already carry _label)
+  const getOrderDisplayItems = (order) => {
+    const items = Array.isArray(order?.items) ? order.items : [];
+    if (items.length === 0) return "Order";
+    return items
+      .map(it => {
+        const name = (it && typeof it.name === "string" && it.name.trim()) ? it.name.trim() : "Item";
+        const qty = Number(it?.qty);
+        return Number.isFinite(qty) && qty > 1 ? `${name} x${qty}` : name;
+      })
+      .join(", ");
   };
 
   const todayBirthdays = customers.filter(c => cBirthday(c) && new Date().toISOString().slice(5,10) === cBirthday(c).slice(5,10)).length;
@@ -782,7 +770,7 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const applySmartList = (base) => {
     if (!smartList) return base;
     if (smartList === "gone_cold") return base.filter(c => { const d = daysSinceVisit(c); return d != null && d >= GONE_COLD_DAYS; });
-    if (smartList === "loyalty_ready") return base.filter(c => calculateRedeemable(cLoyalty(c)) >= MIN_REDEEM_AMOUNT);
+    if (smartList === "loyalty_ready") return []; // Loyalty disabled - always empty
     if (smartList === "high_value") return base.filter(c => cSpend(c) >= HIGH_VALUE_THRESHOLD);
     if (smartList === "new_customers") return base.filter(c => isNewCustomer(c));
     if (smartList === "birthday_soon") return base.filter(c => { const d = daysToBirthday(c); return d != null && d >= 0 && d <= BIRTHDAY_SOON_DAYS; });
@@ -794,7 +782,6 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   const todayOrders = (orders || []).filter(o => { const d = new Date(o.createdAt || 0); const t = new Date(); return d.toDateString() === t.toDateString(); });
   const todayRevenue = todayOrders.filter(o => o.status === "COMPLETED").reduce((s, o) => s + (o.total || 0), 0);
   const todayNewCustomers = customers.filter(c => c.lastVisit === "Today" && c.visits === 1).length;
-  const loyaltyReadyCount = customers.filter(c => calculateRedeemable(cLoyalty(c)) >= MIN_REDEEM_AMOUNT).length;
   const totalRevenue = customers.reduce((s, c) => s + cSpend(c), 0);
   const avgVisitsPerCustomer = customers.length > 0 ? (customers.reduce((s, c) => s + cVisits(c), 0) / customers.length).toFixed(1) : 0;
 
@@ -823,7 +810,19 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
     if (blockedSkipped > 0) reasons.push(`${blockedSkipped} blocked`);
     if (contactSkipped > 0) reasons.push(`${contactSkipped} missing contact info`);
     if (consentSkipped > 0) reasons.push(`${consentSkipped} no consent`);
-    if (!window.confirm(`Log "${commType_}" message for ${eligible.length} customer${eligible.length !== 1 ? "s" : ""}${skippedCount > 0 ? ` (${skippedCount} will be skipped: ${reasons.join(", ")})` : ""}?`)) return;
+    setBulkCommDialog({
+      open: true,
+      count: eligible.length,
+      skipped: skippedCount,
+      reasons,
+      onConfirm: () => {
+        setBulkCommDialog({ open: false, count: 0, skipped: 0, reasons: [], onConfirm: null });
+        proceedWithBulkComm(eligible, commType_, msg, isInternal, skippedCount, reasons);
+      }
+    });
+  };
+
+  const proceedWithBulkComm = (eligible, commType_, msg, isInternal, skippedCount, reasons) => {
     const eligibleIds = new Set(eligible.map(c => c.id));
     const entry = { type: commType_, message: msg, date: new Date().toISOString(), staff: "Staff", bulk: true, internal: isInternal };
     setCustomers(customers.map(c => eligibleIds.has(c.id) ? { ...c, commLog: [entry, ...cCommLog(c)] } : c));
@@ -841,44 +840,70 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
   let displayList = applySmartList(filtered);
 
   return (
-    <div style={{ display: isMobile ? "block" : "grid", gridTemplateColumns: "300px 1fr", gap: 16, height: isMobile ? "auto" : "calc(100dvh - 160px)", minHeight: 0, position: "relative" }}>
-      {/* Left: Customer List — hidden on mobile when a profile is open */}
-      <div style={{ display: isMobile && selected ? "none" : "flex", flexDirection: "column", gap: 8, overflow: "hidden", height: isMobile ? "calc(100dvh - 60px)" : "auto" }}>
-        {/* Quick Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 2 }}>
-          {[
-            { label: "Regulars", val: customers.length, color: C.text2, accent: C.border2 },
-            { label: "Drifting", val: atRiskCount, color: atRiskCount > 0 ? C.warning : C.text3, accent: atRiskCount > 0 ? C.warning : C.border },
-            { label: "Birthdays", val: todayBirthdays, color: todayBirthdays > 0 ? C.purple : C.text3, accent: todayBirthdays > 0 ? C.purple : C.border },
-          ].map(s => (
-            <div key={s.label} style={{ background: C.bg3, borderRadius: 7, padding: "7px 8px", textAlign: "center", border: `1px solid ${C.border}`, borderTop: `2px solid ${s.accent}` }}>
-              <div style={{ fontSize: 19, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: s.color, letterSpacing: "-.03em", lineHeight: 1 }}>{s.val}</div>
-              <div style={{ fontSize: 8, color: C.text3, textTransform: "uppercase", letterSpacing: ".09em", marginTop: 3 }}>{s.label}</div>
-            </div>
-          ))}
+    <div style={{ display: isMobile ? "block" : "grid", gridTemplateColumns: "320px 1fr", gap: "var(--cafe-space-lg)", height: isMobile ? "auto" : "calc(100dvh - 160px)", minHeight: 0, position: "relative" }}>
+      {/* Left: Guest List — hidden on mobile when a profile is open */}
+      <div style={{ display: isMobile && selected ? "none" : "flex", flexDirection: "column", gap: "var(--cafe-space-md)", overflow: "hidden", height: isMobile ? "calc(100dvh - 60px)" : "auto" }}>
+        {/* Guest Book Header */}
+        <div style={{ marginBottom: "var(--cafe-space-sm)" }}>
+          <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em", marginBottom: 4 }}>
+            Guest Book
+          </div>
+          <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)", marginBottom: "var(--cafe-space-md)" }}>
+            Customer profiles, visits, preferences, and order history
+          </div>
+          
+          {/* Operational Stat Chips */}
+          <div style={{ display: "flex", gap: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
+            {[
+              { label: "Total Guests", count: customers.length, color: "var(--cafe-text-secondary)" },
+              { label: "Active", count: customers.filter(c => cStatus(c) === "active").length, color: "var(--cafe-success)" },
+              { label: "Drifting", count: atRiskCount, color: atRiskCount > 0 ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)" },
+              { label: "Birthdays", count: todayBirthdays, color: todayBirthdays > 0 ? "var(--cafe-purple)" : "var(--cafe-text-tertiary)" },
+              { label: "Dietary Notes", count: customers.filter(c => c.allergy).length, color: customers.filter(c => c.allergy).length > 0 ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)" },
+            ].map(chip => (
+              <div key={chip.label} style={{
+                background: "var(--cafe-bg-surface)",
+                border: `1px solid var(--cafe-border-light)`,
+                borderRadius: "var(--cafe-radius-md)",
+                padding: "8px 12px",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}>
+                <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {chip.label}
+                </span>
+                <span style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: chip.color, fontFamily: "monospace" }}>
+                  {chip.count}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 6 }}>
+        {/* Guest Book Toolbar */}
+        <div style={{ display: "flex", gap: "var(--cafe-space-sm)" }}>
           <div style={{ position: "relative", flex: 1 }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.text3 }}>🔍</span>
-            <input style={{ ...input, paddingLeft: 28, paddingRight: search ? 28 : undefined }} placeholder="Name, phone, tag, note…" value={search} onChange={e => setSearch(e.target.value)} />
+            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)" }}>⌕</span>
+            <input style={{ ...input, paddingLeft: 36, paddingRight: search ? 36 : undefined, borderRadius: "var(--cafe-radius-md)", fontSize: "var(--cafe-font-sm)" }} placeholder="Name, phone, tag, note…" value={search} onChange={e => setSearch(e.target.value)} />
             {search && (
-              <button onClick={() => setSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: C.text3, fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }} title="Clear search">×</button>
+              <button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", lineHeight: 1, padding: 0 }} title="Clear search">×</button>
             )}
           </div>
-          <button style={btn("primary")} onClick={openAddModal}>＋ Add</button>
-          <button style={{ ...btn("ghost"), fontSize: 11, padding: "6px 9px" }} onClick={exportCSV} title="Export to CSV">⬇ CSV</button>
+          <button style={{ ...btn("primary"), borderRadius: "var(--cafe-radius-md)", fontSize: "var(--cafe-font-sm)", fontWeight: 600, padding: "10px 18px", minHeight: 40 }} onClick={openAddModal}>+ Add Guest</button>
+          <button style={{ ...btn("ghost"), borderRadius: "var(--cafe-radius-md)", fontSize: "var(--cafe-font-sm)", padding: "10px 16px", minHeight: 40 }} onClick={exportCSV} title="Export to CSV">↓ Export</button>
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-          <select style={{ ...input, fontSize: 11, padding: "5px 8px", flex: 1, minHeight: 44 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+        {/* Sort and Type Filters */}
+        <div style={{ display: "flex", gap: "var(--cafe-space-sm)", alignItems: "center", flexWrap: "wrap" }}>
+          <select style={{ ...input, fontSize: "var(--cafe-font-sm)", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", flex: 1, minHeight: 40 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
             <option value="spend">Sort: Top Spenders</option>
             <option value="visits">Sort: Most Visits</option>
             <option value="recent">Sort: Most Recent</option>
             <option value="name">Sort: Name A–Z</option>
             <option value="risk">Sort: Churn Risk</option>
           </select>
-          <select style={{ ...input, fontSize: 11, padding: "5px 8px", flex: 1, minHeight: 44 }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+          <select style={{ ...input, fontSize: "var(--cafe-font-sm)", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", flex: 1, minHeight: 40 }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
             <option value="ALL">All Types</option>
             {CUSTOMER_TYPES.map(t => (
               <option key={t.key} value={t.key}>{t.icon} {t.label}</option>
@@ -888,70 +913,69 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         </div>
 
         {/* Segment Filter */}
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
           {[
             { key: "ALL", label: "Everyone" },
             { key: "AT_RISK", label: "⚠ Drifting" },
-            { key: "VIP", label: "⭐ VIP" },
+            { key: "VIP", label: "⭐ High Value" },
             { key: "BIRTHDAY", label: "🎂 Today" },
           ].map(s => (
-            <button key={s.key} onClick={() => setSegmentFilter(s.key)} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: `1px solid ${segmentFilter === s.key ? C.amber3 : C.border}`, background: segmentFilter === s.key ? C.amberBg : C.bg3, color: segmentFilter === s.key ? C.amber2 : C.text3, fontSize: 9, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", minHeight: 36, minWidth: 0, letterSpacing: ".04em", boxShadow: segmentFilter === s.key ? `inset 0 0 0 1px ${C.amber3}` : "none" }}>
+            <button key={s.key} onClick={() => setSegmentFilter(s.key)} style={{ 
+              padding: "10px 16px", 
+              borderRadius: "var(--cafe-radius-md)", 
+              border: `1px solid ${segmentFilter === s.key ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`, 
+              background: segmentFilter === s.key ? "var(--cafe-accent-bg)" : "transparent", 
+              color: segmentFilter === s.key ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", 
+              fontSize: "var(--cafe-font-sm)", 
+              fontWeight: segmentFilter === s.key ? 600 : 500, 
+              cursor: "pointer", 
+              whiteSpace: "nowrap", 
+              minHeight: 40,
+              transition: "all 0.15s ease"
+            }}>
               {s.label}
             </button>
           ))}
         </div>
 
-        {/* Tier Filter */}
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          {["ALL", "PLATINUM", "GOLD", "SILVER", "BRONZE"].map(t => {
-            const tc = TIER_COLORS[t] || { color: C.text2, bg: C.bg3 };
-            const active = tierFilter === t;
-            return (
-              <button key={t} onClick={() => setTierFilter(t)} style={{ flex: 1, padding: "7px 4px", borderRadius: 6, border: `1px solid ${active ? tc.color : C.border}`, background: active ? tc.bg : C.bg3, color: active ? tc.color : C.text3, fontSize: 10, fontWeight: 700, cursor: "pointer", letterSpacing: ".04em", minHeight: 36, boxShadow: active ? `0 0 8px ${tc.glow || "transparent"}` : "none" }}>
-                {t === "ALL" ? `All ${tierCounts.ALL}` : `${t.slice(0,2)} ${tierCounts[t] || 0}`}
-              </button>
-            );
-          })}
+        {/* Bulk Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--cafe-space-sm)" }}>
+          {(segmentFilter !== "ALL" || typeFilter !== "ALL" || smartList) && (
+            <button onClick={() => { setSegmentFilter("ALL"); setTypeFilter("ALL"); setSmartList(null); }} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-xs)", padding: "8px 14px", color: "var(--cafe-warning)", borderColor: "var(--cafe-warning-border)", borderRadius: "var(--cafe-radius-sm)" }}>✕ Clear filters</button>
+          )}
+          <button onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }} style={{ ...btn(bulkMode ? "primary" : "ghost"), fontSize: "var(--cafe-font-xs)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", minHeight: 36 }}>
+            {bulkMode ? `${bulkSelected.size} selected` : "Select"}
+          </button>
+          {bulkMode && bulkSelected.size > 0 && (
+            <button onClick={() => setShowBulkModal(true)} style={{ ...btn("primary"), fontSize: "var(--cafe-font-xs)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", minHeight: 36 }}>
+              Message {bulkSelected.size}
+            </button>
+          )}
+          {bulkMode && (
+            <button onClick={() => setBulkSelected(new Set(displayList.map(c => c.id)))} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-xs)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", minHeight: 36 }}>All</button>
+          )}
+          {bulkMode && bulkSelected.size > 0 && (
+            <button onClick={() => setBulkSelected(new Set())} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-xs)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", minHeight: 36 }}>None</button>
+          )}
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5, paddingRight: 2, paddingBottom: isMobile ? 8 : 0 }}>
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)", paddingRight: 2, paddingBottom: isMobile ? 8 : 0 }}>
           {/* Smart list label */}
           {smartList && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: C.amberBg, border: `1px solid ${C.amber3}`, borderRadius: 8, fontSize: 11 }}>
-              <span style={{ color: C.amber2, fontWeight: 600 }}>
-                {smartList === "gone_cold" ? "🧊 Regulars Gone Cold" : smartList === "loyalty_ready" ? "⭐ Loyalty Ready" : smartList === "high_value" ? "💎 High Value" : smartList === "birthday_soon" ? "🎂 Birthday Soon" : smartList === "high_value_at_risk" ? "🚨 High Value At Risk" : "🌱 New Customers"}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "var(--cafe-accent-bg)", border: `1px solid var(--cafe-accent-border)`, borderRadius: "var(--cafe-radius-md)", fontSize: "var(--cafe-font-sm)" }}>
+              <span style={{ color: "var(--cafe-accent)", fontWeight: 600 }}>
+                {smartList === "gone_cold" ? "🧊 Regulars Gone Cold" : smartList === "high_value" ? "💎 High Value" : smartList === "birthday_soon" ? "🎂 Birthday Soon" : smartList === "high_value_at_risk" ? "🚨 High Value At Risk" : "🌱 New Customers"}
               </span>
-              <span style={{ color: C.text3 }}>({displayList.length})</span>
-              <button onClick={() => setSmartList(null)} style={{ marginLeft: "auto", ...btn("ghost"), fontSize: 9, padding: "2px 7px" }}>✕ Clear</button>
+              <span style={{ color: "var(--cafe-text-tertiary)" }}>({displayList.length})</span>
+              <button onClick={() => setSmartList(null)} style={{ marginLeft: "auto", ...btn("ghost"), fontSize: "var(--cafe-font-xs)", padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)" }}>✕ Clear</button>
             </div>
           )}
 
-          {/* Bulk mode toggle */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {(tierFilter !== "ALL" || segmentFilter !== "ALL" || typeFilter !== "ALL" || smartList) && (
-              <button onClick={() => { setTierFilter("ALL"); setSegmentFilter("ALL"); setTypeFilter("ALL"); setSmartList(null); }} style={{ ...btn("ghost"), fontSize: 10, padding: "5px 10px", color: C.warning, borderColor: C.warningBorder }}>✕ Clear filters</button>
-            )}
-            <button onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }} style={{ ...btn(bulkMode ? "primary" : "ghost"), fontSize: 10, padding: "5px 10px" }}>
-              {bulkMode ? `${bulkSelected.size} selected` : "Select"}
-            </button>
-            {bulkMode && bulkSelected.size > 0 && (
-              <button onClick={() => setShowBulkModal(true)} style={{ ...btn("primary"), fontSize: 10, padding: "5px 10px" }}>
-                Message {bulkSelected.size}
-              </button>
-            )}
-            {bulkMode && (
-              <button onClick={() => setBulkSelected(new Set(displayList.map(c => c.id)))} style={{ ...btn("ghost"), fontSize: 10, padding: "5px 10px" }}>All</button>
-            )}
-            {bulkMode && bulkSelected.size > 0 && (
-              <button onClick={() => setBulkSelected(new Set())} style={{ ...btn("ghost"), fontSize: 10, padding: "5px 10px" }}>None</button>
-            )}
-          </div>
-
           {displayList.map(c => {
-            const tc = TIER_COLORS[c.tier] || {};
             const active = selected === c.id;
             const risk = churnRisk(c);
             const atRisk = isAtRisk(c);
+            const typeInfo = c.customerType ? TYPE_MAP[c.customerType] : null;
             return (
               <div key={c.id} onClick={() => {
                 if (bulkMode) {
@@ -961,60 +985,75 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                 } else {
                   setSelected(c.id); setProfileTab("overview");
                 }
-              }} style={{ background: active ? C.bg3 : C.bg2, border: `1px solid ${bulkSelected.has(c.id) ? C.amber3 : active ? C.amber3 : isBlocked(c) ? C.redBorder : atRisk ? C.warningBorder : C.border}`, borderLeft: `3px solid ${active ? C.amber : isBlocked(c) ? C.red : atRisk ? C.warning : "transparent"}`, borderRadius: 8, padding: "10px 11px", cursor: "pointer", transition: "background .1s, border-color .1s", opacity: isBlocked(c) ? 0.65 : 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              }} style={{ 
+                background: active ? C.bg3 : C.bg2, 
+                border: `1px solid ${bulkSelected.has(c.id) ? C.amber3 : active ? C.amber3 : isBlocked(c) ? C.redBorder : atRisk ? C.warningBorder : C.border}`, 
+                borderLeft: `3px solid ${active ? C.amber : isBlocked(c) ? C.red : atRisk ? C.warning : "transparent"}`, 
+                borderRadius: 8, 
+                padding: "14px 16px", 
+                cursor: "pointer", 
+                transition: "background .15s, border-color .15s", 
+                opacity: isBlocked(c) ? 0.6 : 1,
+                boxShadow: active ? "0 2px 8px rgba(0,0,0,.12)" : "none"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   {bulkMode && (
-                    <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${bulkSelected.has(c.id) ? C.amber2 : C.border2}`, background: bulkSelected.has(c.id) ? C.amber2 : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: C.onAmber2, fontWeight: 700 }}>
+                    <div style={{ width: 20, height: 20, borderRadius: 4, border: `2px solid ${bulkSelected.has(c.id) ? C.amber2 : C.border2}`, background: bulkSelected.has(c.id) ? C.amber2 : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 11, color: C.onAmber2, fontWeight: 700 }}>
                       {bulkSelected.has(c.id) ? "✓" : ""}
                     </div>
                   )}
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: tc.bg || C.bg4, border: `1.5px solid ${tc.color || C.border2}`, boxShadow: active ? `0 0 10px ${tc.glow || "transparent"}` : "none", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: tc.color || C.text2, flexShrink: 0, letterSpacing: ".03em", fontFamily: "'JetBrains Mono', monospace" }}>{initials(cName(c))}</div>
+                  <div style={{ 
+                    width: 44, height: 44, 
+                    borderRadius: 10, 
+                    background: typeInfo ? typeInfo.color + "22" : C.bg4, 
+                    border: `1.5px solid ${typeInfo ? typeInfo.color : C.border2}`, 
+                    display: "flex", alignItems: "center", justifyContent: "center", 
+                    fontSize: 14, fontWeight: 700, 
+                    color: typeInfo ? typeInfo.color : C.text2, 
+                    flexShrink: 0, letterSpacing: ".03em", fontFamily: "monospace"
+                  }}>
+                    {typeInfo ? typeInfo.icon : initials(cName(c))}
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-.01em" }}>{cName(c)}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                      {c.customerType && TYPE_MAP[c.customerType] ? (
-                        <span style={{ fontSize: 9, color: TYPE_MAP[c.customerType].color }} title={TYPE_MAP[c.customerType].label}>{TYPE_MAP[c.customerType].icon} {TYPE_MAP[c.customerType].label}</span>
-                      ) : c.customerType ? (
-                        <span style={{ fontSize: 9, color: C.text3 }}>❓ {String(c.customerType).slice(0, 20)}</span>
+                    <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-.01em" }}>{cName(c)}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                      {typeInfo ? (
+                        <span style={{ fontSize: 11, color: typeInfo.color, fontWeight: 600 }}>{typeInfo.icon} {typeInfo.label}</span>
                       ) : (
-                        <span style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>{cPhone(c) || cEmail(c) || "No contact"}</span>
+                        <span style={{ fontSize: 12, color: C.text3, fontFamily: "monospace" }}>{cPhone(c) || cEmail(c) || "No contact"}</span>
                       )}
                     </div>
-                    {c.customerType && <div style={{ fontSize: 10, color: C.text3, fontFamily: "monospace", marginTop: 1 }}>{cPhone(c) || cEmail(c) || "—"}</div>}
+                    {typeInfo && <div style={{ fontSize: 12, color: C.text3, fontFamily: "monospace", marginTop: 2 }}>{cPhone(c) || cEmail(c) || "—"}</div>}
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
-                    <span style={{ ...pill(tc.bg || C.bg4, tc.color || C.text2), fontSize: 9, letterSpacing: ".06em" }}>{c.tier}</span>
-                    <div style={{ display: "flex", gap: 3, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                      {isBlocked(c) && <span style={{ ...pill(C.redBg, C.red), fontSize: 8 }}>🚫</span>}
-                      {!isBlocked(c) && cStatus(c) === "inactive" && <span style={{ ...pill(C.neutralBg, C.text3), fontSize: 8 }}>OFF</span>}
-                      {c.allergy && <span title={`Allergy: ${c.allergy}`} style={{ fontSize: 10 }}>⚠️</span>}
-                      {c.birthday && new Date().toISOString().slice(5,10) === c.birthday?.slice(5,10) && <span title="Birthday today!" style={{ fontSize: 10 }}>🎂</span>}
-                      {atRisk && <span style={{ ...pill(C.warningBg, C.warning), fontSize: 8 }}>RISK</span>}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {isBlocked(c) && <span style={{ padding: "2px 6px", borderRadius: 4, background: C.redBg, color: C.red, fontSize: 10, fontWeight: 600 }}>🚫 Blocked</span>}
+                      {!isBlocked(c) && cStatus(c) === "inactive" && <span style={{ padding: "2px 6px", borderRadius: 4, background: C.neutralBg, color: C.text3, fontSize: 10, fontWeight: 600 }}>Inactive</span>}
+                      {c.allergy && <span style={{ padding: "2px 6px", borderRadius: 4, background: C.redBg, color: C.red, fontSize: 10, fontWeight: 600 }} title={`Allergy: ${c.allergy}`}>⚠️ Allergy</span>}
+                      {c.birthday && new Date().toISOString().slice(5,10) === c.birthday?.slice(5,10) && <span style={{ padding: "2px 6px", borderRadius: 4, background: C.purple + "22", color: C.purple, fontSize: 10, fontWeight: 600 }} title="Birthday today!">🎂 Birthday</span>}
+                      {atRisk && <span style={{ padding: "2px 6px", borderRadius: 4, background: C.warningBg, color: C.warning, fontSize: 10, fontWeight: 600 }}>Drifting</span>}
                     </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 10, marginTop: 7, fontSize: 11, color: C.text2, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12, color: C.text2, alignItems: "center" }}>
                   <span style={{ color: C.text3 }}>{cVisits(c)} {cVisits(c) === 1 ? "visit" : "visits"}</span>
-                  <span style={{ fontFamily: "monospace", color: C.amber2, fontWeight: 600 }}>₹{cSpend(c).toLocaleString()}</span>
+                  <span style={{ fontFamily: "monospace", color: C.amber2, fontWeight: 700 }}>₹{cSpend(c).toLocaleString()}</span>
                   <span title={`Last visit: ${c.lastVisit || "Never"}`} style={{ marginLeft: "auto", color: risk.color, fontSize: 10, fontWeight: 600 }}>{risk.label}</span>
-                </div>
-                <div style={{ marginTop: 8, height: 3, background: C.bg4, borderRadius: 2, overflow: "hidden" }}>
-                  <div style={{ height: "100%", borderRadius: 2, background: tc.color || C.amber, width: `${Math.min(100, (cSpend(c) / maxSpend) * 100)}%`, transition: "width .5s ease", boxShadow: active ? `0 0 6px ${tc.glow || "transparent"}` : "none" }} />
                 </div>
               </div>
             );
           })}
           {displayList.length === 0 && (
-            <div style={{ textAlign: "center", padding: "36px 16px", color: C.text3, fontSize: 13 }}>
-              <div style={{ fontSize: 34, marginBottom: 10 }}>{search ? "🔍" : segmentFilter !== "ALL" ? "✅" : "☕"}</div>
-              <div style={{ fontWeight: 700, color: C.text2, marginBottom: 6, fontSize: 14 }}>
-                {search ? `No match for "${search}"` : segmentFilter === "AT_RISK" ? "Everyone's coming in" : segmentFilter === "BIRTHDAY" ? "No birthdays today" : segmentFilter === "VIP" ? "No VIPs yet" : "No customers yet"}
+            <div style={emptyState}>
+              <div style={{ fontSize: 40, marginBottom: "var(--cafe-space-md)", opacity: 0.3 }}>{search ? "🔍" : segmentFilter !== "ALL" ? "✅" : "☕"}</div>
+              <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 4 }}>
+                {search ? `No match for "${search}"` : segmentFilter === "AT_RISK" ? "Everyone's coming in" : segmentFilter === "BIRTHDAY" ? "No birthdays today" : segmentFilter === "VIP" ? "No high value guests yet" : "No customers yet"}
               </div>
-              <div style={{ fontSize: 11, lineHeight: 1.6, color: C.text3 }}>
+              <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)", marginBottom: "var(--cafe-space-lg)" }}>
                 {search ? "Try their phone number, a tag, or a note keyword" : segmentFilter !== "ALL" ? "Clear the filter to see all customers" : "Start building your regulars list"}
               </div>
               {!search && segmentFilter === "ALL" && (
-                <button style={{ ...btn("primary"), fontSize: 11, marginTop: 14 }} onClick={openAddModal}>＋ First customer</button>
+                <button style={{ ...btn("primary"), fontSize: "var(--cafe-font-sm)", padding: "10px 18px", borderRadius: "var(--cafe-radius-md)" }} onClick={openAddModal}>+ First Guest</button>
               )}
             </div>
           )}
@@ -1031,55 +1070,54 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
         )}
         {!profile ? (
           <div style={{ overflowY: "auto" }}>
-            {/* Owner Dashboard */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".14em", marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>☕ Today</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8, marginBottom: 10 }}>
+            {/* Guest Book Dashboard */}
+            <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>☕ Today</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "var(--cafe-space-sm)", marginBottom: "var(--cafe-space-sm)" }}>
                 {[
-                  { val: `₹${todayRevenue.toLocaleString()}`, lbl: "Revenue", color: C.amber2, accent: C.amber3 },
-                  { val: todayOrders.filter(o=>o.status==="COMPLETED").length, lbl: "Orders", color: C.green, accent: C.green + "44" },
-                  { val: todayNewCustomers, lbl: "New Faces", color: C.blue, accent: C.blue + "44" },
+                  { val: `₹${todayRevenue.toLocaleString()}`, lbl: "Revenue", color: "var(--cafe-accent)", accent: "var(--cafe-accent-border)" },
+                  { val: todayOrders.filter(o=>o.status==="COMPLETED").length, lbl: "Orders", color: "var(--cafe-success)", accent: "var(--cafe-success-border)" },
+                  { val: todayNewCustomers, lbl: "New Faces", color: "var(--cafe-info)", accent: "var(--cafe-info-border)" },
                 ].map(s => (
-                  <div key={s.lbl} style={{ background: C.bg3, borderRadius: 8, padding: "12px 10px", textAlign: "center", border: `1px solid ${C.border}`, borderBottom: `2px solid ${s.accent}` }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: s.color, letterSpacing: "-.03em", lineHeight: 1 }}>{s.val}</div>
-                    <div style={{ fontSize: 8, color: C.text3, marginTop: 4, textTransform: "uppercase", letterSpacing: ".1em", lineHeight: 1.3 }}>{s.lbl}</div>
+                  <div key={s.lbl} style={{ background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", padding: "14px 12px", textAlign: "center", border: `1px solid var(--cafe-border-light)`, borderBottom: `2px solid ${s.accent}` }}>
+                    <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, fontFamily: "monospace", color: s.color, letterSpacing: "-0.02em", lineHeight: 1 }}>{s.val}</div>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.3 }}>{s.lbl}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "var(--cafe-space-sm)", marginBottom: "var(--cafe-space-md)" }}>
                 {[
-                  { val: `₹${totalRevenue.toLocaleString()}`, lbl: "All-time", color: C.text2 },
-                  { val: avgVisitsPerCustomer, lbl: "Avg visits", color: C.text2 },
-                  { val: loyaltyReadyCount, lbl: "Reward ready", color: loyaltyReadyCount > 0 ? C.amber2 : C.text3 },
+                  { val: `₹${totalRevenue.toLocaleString()}`, lbl: "All-time", color: "var(--cafe-text-secondary)" },
+                  { val: avgVisitsPerCustomer, lbl: "Avg visits", color: "var(--cafe-text-secondary)" },
+                  { val: customers.filter(c => c.allergy).length, lbl: "Dietary notes", color: customers.filter(c => c.allergy).length > 0 ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)" },
                 ].map(s => (
-                  <div key={s.lbl} style={{ background: C.bg3, borderRadius: 7, padding: "9px 8px", textAlign: "center", border: `1px solid ${C.border}` }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: s.color, letterSpacing: "-.01em" }}>{s.val}</div>
-                    <div style={{ fontSize: 8, color: C.text3, marginTop: 2, textTransform: "uppercase", letterSpacing: ".09em", lineHeight: 1.3 }}>{s.lbl}</div>
+                  <div key={s.lbl} style={{ background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", padding: "12px 10px", textAlign: "center", border: `1px solid var(--cafe-border-light)` }}>
+                    <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, fontFamily: "monospace", color: s.color, letterSpacing: "-0.01em" }}>{s.val}</div>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.3 }}>{s.lbl}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Smart Lists */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".14em", marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>🎯 Smart Lists</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Guest Groups */}
+            <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>🎯 Guest Groups</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
                 {[
-                  { key: "gone_cold", icon: "🧊", label: "Regulars Gone Cold", desc: `No visit in ${GONE_COLD_DAYS}+ days`, count: customers.filter(c => { const d = daysSinceVisit(c); return d != null && d >= GONE_COLD_DAYS; }).length, color: C.warning },
-                  { key: "loyalty_ready", icon: "⭐", label: "Loyalty Ready to Redeem", desc: "Enough points for a reward", count: loyaltyReadyCount, color: C.amber2 },
-                  { key: "high_value", icon: "💎", label: "High Value Customers", desc: `Lifetime spend ₹${HIGH_VALUE_THRESHOLD.toLocaleString()}+`, count: customers.filter(c => cSpend(c) >= HIGH_VALUE_THRESHOLD).length, color: C.purple },
-                  { key: "new_customers", icon: "🌱", label: "New Customers", desc: "Joined recently or 2 or fewer visits", count: customers.filter(c => isNewCustomer(c)).length, color: C.green },
-                  { key: "birthday_soon", icon: "🎂", label: "Birthday Soon", desc: `Within ${BIRTHDAY_SOON_DAYS} days`, count: customers.filter(c => { const d = daysToBirthday(c); return d != null && d >= 0 && d <= BIRTHDAY_SOON_DAYS; }).length, color: C.purple },
-                  { key: "high_value_at_risk", icon: "🚨", label: "High Value At Risk", desc: `Spend ₹${AT_RISK_MIN_SPEND.toLocaleString()}+, away ${AT_RISK_MIN_DAYS}+ days`, count: customers.filter(c => { const d = daysSinceVisit(c); return cSpend(c) >= AT_RISK_MIN_SPEND && d != null && d >= AT_RISK_MIN_DAYS; }).length, color: C.red },
+                  { key: "gone_cold", icon: "🧊", label: "Regulars Gone Cold", desc: `No visit in ${GONE_COLD_DAYS}+ days`, count: customers.filter(c => { const d = daysSinceVisit(c); return d != null && d >= GONE_COLD_DAYS; }).length, color: "var(--cafe-warning)" },
+                  { key: "high_value", icon: "💎", label: "High Value Guests", desc: `Lifetime spend ₹${HIGH_VALUE_THRESHOLD.toLocaleString()}+`, count: customers.filter(c => cSpend(c) >= HIGH_VALUE_THRESHOLD).length, color: "var(--cafe-purple)" },
+                  { key: "new_customers", icon: "🌱", label: "New Guests", desc: "Joined recently or 2 or fewer visits", count: customers.filter(c => isNewCustomer(c)).length, color: "var(--cafe-success)" },
+                  { key: "birthday_soon", icon: "🎂", label: "Birthday Soon", desc: `Within ${BIRTHDAY_SOON_DAYS} days`, count: customers.filter(c => { const d = daysToBirthday(c); return d != null && d >= 0 && d <= BIRTHDAY_SOON_DAYS; }).length, color: "var(--cafe-purple)" },
+                  { key: "high_value_at_risk", icon: "🚨", label: "High Value At Risk", desc: `Spend ₹${AT_RISK_MIN_SPEND.toLocaleString()}+, away ${AT_RISK_MIN_DAYS}+ days`, count: customers.filter(c => { const d = daysSinceVisit(c); return cSpend(c) >= AT_RISK_MIN_SPEND && d != null && d >= AT_RISK_MIN_DAYS; }).length, color: "var(--cafe-danger)" },
                 ].map(sl => (
                   <div key={sl.key} onClick={() => { setSmartList(smartList === sl.key ? null : sl.key); setSelected(null); }}
-                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: smartList === sl.key ? C.bg4 : C.bg3, border: `1px solid ${smartList === sl.key ? C.amber3 : C.border}`, borderLeft: `3px solid ${smartList === sl.key ? C.amber : sl.count > 0 ? sl.color : C.border}`, borderRadius: 8, cursor: "pointer", transition: "background .12s, border-color .12s", opacity: sl.count === 0 ? 0.5 : 1 }}>
-                    <span style={{ fontSize: 17, flexShrink: 0 }}>{sl.icon}</span>
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: smartList === sl.key ? "var(--cafe-bg-hover)" : "var(--cafe-bg-surface)", border: `1px solid ${smartList === sl.key ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`, borderLeft: `3px solid ${smartList === sl.key ? "var(--cafe-accent)" : sl.count > 0 ? sl.color : "var(--cafe-border)"}`, borderRadius: "var(--cafe-radius-md)", cursor: "pointer", transition: "background .12s, border-color .12s", opacity: sl.count === 0 ? 0.5 : 1 }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{sl.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: smartList === sl.key ? C.amber2 : C.text, letterSpacing: "-.01em" }}>{sl.label}</div>
-                      <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>{sl.desc}</div>
+                      <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: smartList === sl.key ? "var(--cafe-accent)" : "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>{sl.label}</div>
+                      <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{sl.desc}</div>
                     </div>
-                    <span style={{ ...pill(sl.count > 0 ? sl.color + "22" : C.bg4, sl.count > 0 ? sl.color : C.text3), fontSize: 11, fontWeight: 700, fontFamily: "monospace", minWidth: 24, textAlign: "center" }}>{sl.count}</span>
+                    <span style={{ padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", background: sl.count > 0 ? sl.color + "22" : "var(--cafe-bg-hover)", color: sl.count > 0 ? sl.color : "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", fontWeight: 700, fontFamily: "monospace", minWidth: 28, textAlign: "center" }}>{sl.count}</span>
                   </div>
                 ))}
               </div>
@@ -1087,9 +1125,9 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
             {/* Upcoming Birthdays */}
             {upcomingBirthdays.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".14em", marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>🎂 Coming Up</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>🎂 Coming Up</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
                   {upcomingBirthdays.map(c => {
                     const today = new Date(); today.setHours(0,0,0,0);
                     const bday = new Date(today.getFullYear(), parseInt(c.birthday.slice(5,7)) - 1, parseInt(c.birthday.slice(8,10)));
@@ -1097,13 +1135,13 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
                     const diff = Math.round((bday - today) / 86400000);
                     return (
                       <div key={c.id} onClick={() => { setSelected(c.id); setProfileTab("overview"); }}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: C.bg3, borderRadius: 7, cursor: "pointer", border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.purple}` }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 6, background: TIER_COLORS[c.tier]?.bg || C.bg4, border: `1px solid ${TIER_COLORS[c.tier]?.color || C.border2}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: TIER_COLORS[c.tier]?.color || C.text2, flexShrink: 0, fontFamily: "'JetBrains Mono', monospace" }}>{initials(c.name)}</div>
+                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", cursor: "pointer", border: `1px solid var(--cafe-border-light)`, borderLeft: `3px solid var(--cafe-purple)` }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-hover)", border: `1px solid var(--cafe-border-light)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--cafe-font-sm)", fontWeight: 700, color: "var(--cafe-text-secondary)", flexShrink: 0, fontFamily: "monospace" }}>{initials(c.name)}</div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>{c.name}</div>
-                          <div style={{ fontSize: 10, color: C.text3 }}>{diff === 1 ? "Tomorrow!" : `In ${diff} days`}</div>
+                          <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600 }}>{c.name}</div>
+                          <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>{diff === 1 ? "Tomorrow!" : `In ${diff} days`}</div>
                         </div>
-                        <button onClick={e => { e.stopPropagation(); setSelected(c.id); setProfileTab("comms"); setCommMsg(`Hi ${cName(c).split(" ")[0]}, wishing you a very happy birthday! 🎂 Come celebrate with us.`); }} style={{ ...btn("ghost"), fontSize: 9, padding: "4px 8px" }}>Send 🎁</button>
+                        <button onClick={e => { e.stopPropagation(); setBulkSelected(new Set([c.id])); setBulkCommType("WhatsApp"); setBulkCommMsg(`Hi ${cName(c).split(" ")[0]}, wishing you a very happy birthday! 🎂 Come celebrate with us.`); setShowBulkModal(true); }} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-xs)", padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)" }}>Send 🎁</button>
                       </div>
                     );
                   })}
@@ -1114,19 +1152,18 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
             {/* Action Needed */}
             {(() => {
               const actions = [];
-              if (atRiskCount > 0) actions.push({ icon: "🚨", text: `${atRiskCount} customers at churn risk`, action: () => setSegmentFilter("AT_RISK"), cta: "View" });
-              if (loyaltyReadyCount > 0) actions.push({ icon: "⭐", text: `${loyaltyReadyCount} customers have redeemable loyalty points`, action: () => setSmartList("loyalty_ready"), cta: "View" });
+              if (atRiskCount > 0) actions.push({ icon: "🚨", text: `${atRiskCount} guests at churn risk`, action: () => setSegmentFilter("AT_RISK"), cta: "View" });
               if (todayBirthdays > 0) actions.push({ icon: "🎂", text: `${todayBirthdays} birthday${todayBirthdays > 1 ? "s" : ""} today — send a treat!`, action: () => setSegmentFilter("BIRTHDAY"), cta: "View" });
               if (actions.length === 0) return null;
               return (
                 <div>
-                  <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".14em", marginBottom: 10, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>⚡ Needs Attention</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>⚡ Needs Attention</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
                     {actions.map((a, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: 10 }}>
-                        <span style={{ fontSize: 16 }}>{a.icon}</span>
-                        <div style={{ flex: 1, fontSize: 12, color: C.text2, lineHeight: 1.4 }}>{a.text}</div>
-                        <button onClick={a.action} style={{ ...btn("ghost"), fontSize: 10, padding: "4px 8px", whiteSpace: "nowrap" }}>{a.cta}</button>
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--cafe-warning-bg)", border: `1px solid var(--cafe-warning-border)`, borderRadius: "var(--cafe-radius-md)" }}>
+                        <span style={{ fontSize: 18 }}>{a.icon}</span>
+                        <div style={{ flex: 1, fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)" }}>{a.text}</div>
+                        <button onClick={a.action} style={{ ...btn("primary"), fontSize: "var(--cafe-font-xs)", padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-warning)", borderColor: "var(--cafe-warning-border)" }}>{a.cta}</button>
                       </div>
                     ))}
                   </div>
@@ -1135,648 +1172,293 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
             })()}
           </div>
         ) : (
-          <>
-            {/* Profile Header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-              {(() => {
-                const tc = TIER_COLORS[profile.tier] || {};
-                return (
-                  <div style={{ width: 52, height: 52, borderRadius: 12, background: tc.bg, border: `1px solid ${tc.color}`, boxShadow: `0 0 14px ${tc.glow}, 0 2px 6px rgba(0,0,0,0.4)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: tc.color, flexShrink: 0, fontFamily: "'JetBrains Mono', monospace", letterSpacing: ".04em" }}>
-                    {initials(cName(profile))}
+          <div style={{ overflowY: "auto" }}>
+            {/* Guest Profile Header */}
+            <div style={{ marginBottom: "var(--cafe-space-lg)", paddingBottom: "var(--cafe-space-md)", borderBottom: `1px solid var(--cafe-border-light)` }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+                <div style={{ 
+                  width: 64, height: 64, 
+                  borderRadius: "var(--cafe-radius-lg)", 
+                  background: profile.customerType && TYPE_MAP[profile.customerType] ? TYPE_MAP[profile.customerType].color + "22" : "var(--cafe-bg-surface)", 
+                  border: `2px solid ${profile.customerType && TYPE_MAP[profile.customerType] ? TYPE_MAP[profile.customerType].color : "var(--cafe-border-light)"}`, 
+                  display: "flex", alignItems: "center", justifyContent: "center", 
+                  fontSize: "var(--cafe-font-lg)", fontWeight: 700, 
+                  color: profile.customerType && TYPE_MAP[profile.customerType] ? TYPE_MAP[profile.customerType].color : "var(--cafe-text-secondary)", 
+                  flexShrink: 0, fontFamily: "monospace"
+                }}>
+                  {profile.customerType && TYPE_MAP[profile.customerType] ? TYPE_MAP[profile.customerType].icon : initials(cName(profile))}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em", marginBottom: 4 }}>{cName(profile)}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                    {profile.customerType && TYPE_MAP[profile.customerType] && (
+                      <span style={{ padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", background: TYPE_MAP[profile.customerType].color + "22", color: TYPE_MAP[profile.customerType].color, fontSize: "var(--cafe-font-xs)", fontWeight: 600 }}>{TYPE_MAP[profile.customerType].icon} {TYPE_MAP[profile.customerType].label}</span>
+                    )}
+                    {isBlocked(profile) && <span style={{ padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-xs)", fontWeight: 600 }}>🚫 Blocked</span>}
+                    {!isBlocked(profile) && cStatus(profile) === "inactive" && <span style={{ padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-hover)", color: "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-xs)", fontWeight: 600 }}>Inactive</span>}
                   </div>
-                );
-              })()}
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  {editField === "name" ? (
-                    <input autoFocus style={{ ...input, fontSize: 16, fontWeight: 700, padding: "3px 8px", width: 180 }} value={editVal} onChange={e => setEditVal(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") saveField("name"); if (e.key === "Escape") setEditField(null); }}
-                      onBlur={() => saveField("name")} />
-                  ) : (
-                    <div style={{ fontSize: 18, fontWeight: 700, cursor: "pointer", borderBottom: `1px dashed ${C.border2}` }} title="Click to edit" onClick={() => { setEditField("name"); setEditVal(profile.name || ""); }}>{cName(profile)}</div>
-                  )}
-                  <span style={{ ...pill(TIER_COLORS[profile.tier]?.bg, TIER_COLORS[profile.tier]?.color), fontSize: 10 }}>{profile.tier}</span>
-                  {cStatus(profile) !== "active" && (
-                    <span style={{ ...pill(isBlocked(profile) ? C.redBg : C.neutralBg, isBlocked(profile) ? C.red : C.text3), fontSize: 10 }}>
-                      {isBlocked(profile) ? "🚫 BLOCKED" : "INACTIVE"}
-                    </span>
-                  )}
-                  <span style={{ ...pill(C.neutralBg, churnRisk(profile).color), fontSize: 9, marginLeft: "auto" }}>{churnRisk(profile).label}</span>
-                  <button onClick={() => openEditModal(profile)} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px" }}>Edit</button>
-                  <button onClick={() => toggleBlocked(profile.id)} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px", color: isBlocked(profile) ? C.green : C.warning }} title={isBlocked(profile) ? "Unblock customer" : "Block from bulk messages"}>
-                    {isBlocked(profile) ? "Unblock" : "Block"}
-                  </button>
-                  <button onClick={() => exportSingleCustomerJSON(profile)} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px" }} title="Export as JSON">⬇</button>
-                  <button onClick={() => copyCustomerSummary(profile)} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px" }} title="Copy summary to clipboard">📋</button>
-                  <button onClick={() => anonymizeCustomer(profile.id)} style={{ ...btn("ghost"), fontSize: 11, padding: "4px 10px", color: C.text3 }} title="Erase personal details, keep spend history">🕶</button>
-                  <button onClick={() => deleteCustomer(profile.id)} style={{ padding: "3px 8px", borderRadius: 6, border: `1px solid ${C.redBorder}`, background: "transparent", color: C.red, fontSize: 11, cursor: "pointer" }} title="Delete this customer">🗑</button>
+                  <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)", fontFamily: "monospace" }}>{cPhone(profile) || cEmail(profile) || "No contact info"}</div>
                 </div>
-                <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
-                  {["phone","email","birthday","allergy"].map(field => (
-                    editField === field ? (
-                      <input key={field} autoFocus
-                        type={field === "birthday" ? "date" : "text"}
-                        style={{ ...input, fontSize: 11, padding: "2px 7px", width: field === "birthday" ? 130 : 160, fontFamily: "monospace" }}
-                        value={editVal} onChange={e => setEditVal(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") saveField(field); if (e.key === "Escape") setEditField(null); }}
-                        onBlur={() => saveField(field)} />
-                    ) : (
-                      <span key={field} style={{ fontSize: 11, color: field === "allergy" && profile[field] ? C.warning : C.text2, fontFamily: "monospace", cursor: "pointer", borderBottom: `1px dashed ${C.border2}` }} title={`Click to edit ${field}`} onClick={() => { setEditField(field); setEditVal(profile[field] || ""); }}>
-                        {field === "birthday" && profile[field] ? `🎂 ${new Date(profile[field]).toLocaleDateString("en-IN",{day:"numeric",month:"short"})}` :
-                         field === "allergy" && profile[field] ? `⚠️ ${profile[field]}` :
-                         profile[field] || `+ add ${field}`}
-                      </span>
-                    )
-                  ))}
-                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                <button onClick={() => openEditModal(profile)} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)" }}>Edit Profile</button>
+                <button onClick={() => toggleBlocked(profile.id)} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", color: isBlocked(profile) ? "var(--cafe-success)" : "var(--cafe-warning)", borderColor: isBlocked(profile) ? "var(--cafe-success-border)" : "var(--cafe-warning-border)" }}>{isBlocked(profile) ? "Unblock" : "Block"}</button>
+                {profile.phone && (
+                  <a href={`tel:${profile.phone}`} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>📞 Call</a>
+                )}
+                {profile.email && (
+                  <a href={`mailto:${profile.email}`} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", textDecoration: "none", display: "inline-flex", alignItems: "center" }}>📧 Email</a>
+                )}
+                <button onClick={() => deleteCustomer(profile.id)} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", color: "var(--cafe-danger)", borderColor: "var(--cafe-danger-border)" }}>Delete</button>
               </div>
             </div>
 
-            {/* Tier Progress Bar */}
-            {(() => {
-              const tc = TIER_COLORS[profile.tier] || {};
-              const next = TIER_NEXT[profile.tier];
-              const nextThreshold = TIER_SPEND[profile.tier];
-              const prevThreshold = profile.tier === "BRONZE" ? 0 : TIER_SPEND[{ SILVER: "BRONZE", GOLD: "SILVER", PLATINUM: "GOLD" }[profile.tier]];
-              const pct = next ? Math.min(100, Math.max(0, ((cSpend(profile) - prevThreshold) / (nextThreshold - prevThreshold)) * 100)) : 100;
-              return (
-                <div style={{ marginBottom: 16, background: C.bg3, borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.text3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>
-                    <span>{profile.tier}</span>
-                    {next ? <span>→ {next} · ₹{Math.max(0, nextThreshold - cSpend(profile)).toLocaleString()} to go</span> : <span style={{ color: tc.color }}>MAX TIER ✦</span>}
+            {/* Visit Summary */}
+            <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>Visit Summary</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "var(--cafe-space-sm)" }}>
+                {[
+                  { val: cVisits(profile), lbl: "Total Visits", color: "var(--cafe-text-secondary)" },
+                  { val: `₹${cSpend(profile).toLocaleString()}`, lbl: "Total Spend", color: "var(--cafe-accent)" },
+                  { val: customerMetrics?.avgOrderValue ? `₹${Math.round(customerMetrics.avgOrderValue)}` : "—", lbl: "Avg Order", color: "var(--cafe-text-secondary)" },
+                  { val: profile.lastVisit || "Never", lbl: "Last Visit", color: "var(--cafe-text-secondary)" },
+                ].map(s => (
+                  <div key={s.lbl} style={{ background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", padding: "14px 12px", border: `1px solid var(--cafe-border-light)` }}>
+                    <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, fontFamily: "monospace", color: s.color, letterSpacing: "-0.01em" }}>{s.val}</div>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.lbl}</div>
                   </div>
-                  <div style={{ height: 5, background: C.bg4, borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 3, background: tc.color || C.amber, width: `${pct}%`, transition: "width .5s", boxShadow: `0 0 8px ${tc.glow || "transparent"}` }} />
-                  </div>
+                ))}
+              </div>
+              {customerMetrics?.favoriteItem && (
+                <div style={{ marginTop: "var(--cafe-space-sm)", padding: "12px 16px", background: "var(--cafe-accent-bg)", border: `1px solid var(--cafe-accent-border)`, borderRadius: "var(--cafe-radius-md)" }}>
+                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-accent)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Favorite Item</div>
+                  <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)", fontWeight: 600 }}>{customerMetrics.favoriteItem}</div>
                 </div>
-              );
-            })()}
+              )}
+            </div>
 
-            {/* Possible Duplicate Warning */}
+            {/* Duplicate Warning */}
             {(() => {
               const dup = findDuplicateOf(profile);
               if (!dup) return null;
               return (
-                <div style={{ background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 16 }}>⚠️</span>
-                  <div style={{ flex: 1, minWidth: 120 }}>
-                    <div style={{ fontSize: 10, color: C.red, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>Possible Duplicate</div>
-                    <div style={{ fontSize: 12, color: C.text, wordBreak: "break-word" }}>Matches "{cName(dup)}" ({cPhone(dup) || cEmail(dup) || "same contact info"})</div>
+                <div style={{ marginBottom: "var(--cafe-space-lg)", padding: "12px 16px", background: "var(--cafe-warning-bg)", border: `1px solid var(--cafe-warning-border)`, borderRadius: "var(--cafe-radius-md)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                    <span style={{ fontSize: 18 }}>⚠️</span>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-warning)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Possible Duplicate Found</div>
                   </div>
-                  <button onClick={() => mergeCustomers(profile.id, dup.id)} style={{ ...btn("ghost"), fontSize: 10, padding: "5px 10px", color: C.red, borderColor: C.redBorder, whiteSpace: "nowrap" }}>⇄ Merge</button>
+                  <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)", marginBottom: 10 }}>
+                    This guest may be the same as <strong>{cName(dup)}</strong> ({cPhone(dup) || cEmail(dup) || "same contact info"})
+                  </div>
+                  <button onClick={() => mergeCustomers(profile.id, dup.id)} style={{ padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-warning-border)`, background: "var(--cafe-warning)", color: "#1A1208", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
+                    ⇄ Merge Profiles
+                  </button>
                 </div>
               );
             })()}
 
-            {/* Allergy Warning */}
-            {profile.allergy && (
-              <div style={{ background: C.warningBg, border: `1px solid ${C.warningBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16 }}>⚠️</span>
-                <div>
-                  <div style={{ fontSize: 10, color: C.warning, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>Allergy Alert</div>
-                  <div style={{ fontSize: 12, color: C.text }}>{profile.allergy}</div>
-                </div>
-              </div>
-            )}
-            {cBirthday(profile) && new Date().toISOString().slice(5,10) === cBirthday(profile).slice(5,10) && (
-              <div style={{ background: C.purpleBg, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16 }}>🎂</span>
-                <div style={{ fontSize: 12, color: C.purple }}>It's {cName(profile).split(" ")[0]}'s birthday today! Consider a free treat 🎁</div>
-              </div>
-            )}
-            {/* Birthday Soon banner (task 8) — only when not today, safe date math, no crash on invalid/missing birthday */}
-            {(() => {
-              if (!cBirthday(profile)) return null;
-              if (new Date().toISOString().slice(5,10) === cBirthday(profile).slice(5,10)) return null;
-              const d = daysToBirthday(profile);
-              if (d == null || d <= 0 || d > BIRTHDAY_SOON_DAYS) return null;
-              return (
-                <div style={{ background: C.purpleBg, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>🎂</span>
-                  <div style={{ fontSize: 12, color: C.purple }}>Birthday coming up in {d} day{d !== 1 ? "s" : ""} — plan a treat or offer.</div>
-                </div>
-              );
-            })()}
-
-            {/* Customer quality warnings — compact, wraps on mobile (task 9, 12) */}
-            {(() => {
-              const warnings = [];
-              if (!cPhone(profile) && !cEmail(profile)) warnings.push({ icon: "📵", text: "No phone or email on file" });
-              if (isBlocked(profile)) warnings.push({ icon: "🚫", text: "Blocked — excluded from bulk comms" });
-              if (!profile.marketingConsent && !profile.smsConsent && !profile.emailConsent && !profile.whatsappConsent) warnings.push({ icon: "🔕", text: "No contact consent on file" });
-              const d = daysSinceVisit(profile);
-              if (d != null && d >= GONE_COLD_DAYS) warnings.push({ icon: "🧊", text: "Gone cold — no visit in 30+ days" });
-              if (cSpend(profile) >= HIGH_VALUE_THRESHOLD && d != null && d >= AT_RISK_MIN_DAYS) warnings.push({ icon: "🚨", text: "High value but inactive" });
-              if (warnings.length === 0) return null;
-              return (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-                  {warnings.map((w, i) => (
-                    <span key={i} style={{ fontSize: 10, padding: "4px 8px", borderRadius: 6, background: C.bg3, border: `1px solid ${C.border}`, color: C.text2, display: "inline-flex", alignItems: "center", gap: 4, wordBreak: "break-word" }}>
-                      {w.icon} {w.text}
-                    </span>
-                  ))}
-                </div>
-              );
-            })()}
-            {profile.pinnedNote && (
-              <div style={{ background: C.amberBg, border: `1px solid ${C.amberBorder}`, borderRadius: 8, padding: "8px 12px", marginBottom: 12, display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <span style={{ fontSize: 14, marginTop: 1 }}>📌</span>
-                <div style={{ fontSize: 12, color: C.amber2, lineHeight: 1.5, flex: 1 }}>{profile.pinnedNote}</div>
+            {/* Dietary & Allergy Notes */}
+            {(profile.allergy || profile.dietTags) && (
+              <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>Dietary Notes</div>
+                {profile.allergy && (
+                  <div style={{ padding: "12px 16px", background: "var(--cafe-danger-bg)", border: `1px solid var(--cafe-danger-border)`, borderRadius: "var(--cafe-radius-md)", marginBottom: "var(--cafe-space-sm)" }}>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-danger)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>⚠️ Allergies</div>
+                    <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)" }}>{profile.allergy}</div>
+                  </div>
+                )}
+                {profile.dietTags && (
+                  <div style={{ padding: "12px 16px", background: "var(--cafe-success-bg)", border: `1px solid var(--cafe-success-border)`, borderRadius: "var(--cafe-radius-md)" }}>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-success)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Dietary Preferences</div>
+                    <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)" }}>{profile.dietTags}</div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Profile Tabs */}
-            <div style={{ display: "flex", gap: 3, marginBottom: 16, background: C.bg3, padding: 3, borderRadius: 9, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none" }}>
-              {[
-                { key: "overview", icon: "📊", label: "Overview" },
-                { key: "history", icon: "🧾", label: "Orders" },
-                { key: "notes", icon: "📝", label: "Notes" },
-                { key: "comms", icon: "💬", label: "Comms" },
-              ].map(t => (
-                <button key={t.key} onClick={() => setProfileTab(t.key)} style={{ flex: "1 1 auto", padding: isMobile ? "9px 6px" : "7px 6px", borderRadius: 7, border: "none", background: profileTab === t.key ? C.bg4 : "transparent", color: profileTab === t.key ? C.amber2 : C.text3, fontSize: isMobile ? 11 : 10, cursor: "pointer", fontWeight: profileTab === t.key ? 700 : 400, transition: "all .15s", whiteSpace: "nowrap", boxShadow: profileTab === t.key ? `inset 0 0 0 1px ${C.border2}` : "none" }}>
-                  <span style={{ fontSize: 14 }}>{t.icon}</span>
-                  <div style={{ fontSize: 9, marginTop: 2, letterSpacing: ".04em", textTransform: "uppercase" }}>{t.label}</div>
-                </button>
-              ))}
-            </div>
-
-            {/* TAB: OVERVIEW */}
-            {profileTab === "overview" && (
-              <>
-                {/* Action Needed callouts */}
-                {(() => {
-                  const items = [];
-                  const risk = churnRisk(profile);
-                  if (risk.label === "At Risk" || risk.label === "Churned") items.push({ color: C.red, bg: C.redBg, icon: "🚨", text: `${risk.label}: Last visit was ${profile.lastVisit}. Send a win-back offer.`, tab: "comms" });
-                  if (cBirthday(profile) && new Date().toISOString().slice(5,10) === cBirthday(profile).slice(5,10)) items.push({ color: C.purple, bg: C.purpleBg, icon: "🎂", text: "Birthday today! Consider a complimentary treat.", tab: "comms" });
-                  if (!profile.email) items.push({ color: C.text3, bg: C.bg3, icon: "📧", text: "No email on file — add it to enable email campaigns.", tab: null });
-                  if (items.length === 0) return null;
-                  return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
-                      {items.map((item, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: item.bg, border: `1px solid ${item.color}33`, borderRadius: 9 }}>
-                          <span style={{ fontSize: 15 }}>{item.icon}</span>
-                          <div style={{ flex: 1, fontSize: 11, color: C.text2, lineHeight: 1.4 }}>{item.text}</div>
-                          {item.tab && <button onClick={() => setProfileTab(item.tab)} style={{ ...btn("ghost"), fontSize: 9, padding: "3px 8px", whiteSpace: "nowrap", borderColor: item.color + "55", color: item.color }}>Go →</button>}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 16 }}>
-                  {[
-                    { val: customerMetrics?.ordersCompleted || profile.visits || 0, lbl: "Orders", color: C.text },
-                    { val: "₹" + (Number(customerMetrics?.totalSpend) || Number(profile.spend) || 0).toLocaleString(), lbl: "Lifetime", color: C.amber2 },
-                    { val: "₹" + Math.round((Number(customerMetrics?.totalSpend) || Number(profile.spend) || 0) / Math.max(1, Number(customerMetrics?.ordersCompleted) || Number(profile.visits) || 1)), lbl: "Per visit", color: C.green },
-                    { val: customerMetrics?.lastOrderDate ? new Date(customerMetrics.lastOrderDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : (profile.lastVisit || "Never"), lbl: "Last seen", color: C.blue },
-                  ].map(s => (
-                    <div key={s.lbl} style={{ background: C.bg3, borderRadius: 8, padding: "10px 6px", textAlign: "center", border: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: s.color, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "-.01em", lineHeight: 1.1 }}>{s.val}</div>
-                      <div style={{ fontSize: 8, color: C.text3, marginTop: 4, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.lbl}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Loyalty Points Card */}
-                {(() => {
-                  const pts = profile.loyaltyPoints || 0;
-                  const redeemable = calculateRedeemable(pts);
-                  const canRedeem = redeemable >= MIN_REDEEM_AMOUNT;
-                  return (
-                    <div style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", marginBottom: 16, border: `1px solid ${canRedeem ? C.amber3 : C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 20 }}>⭐</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 2 }}>Loyalty Points</div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: canRedeem ? C.amber2 : C.text, fontFamily: "monospace" }}>{pts.toLocaleString()} pts</div>
-                        <div style={{ fontSize: 10, color: C.text3, marginTop: 1 }}>Redeemable: ₹{redeemable} {canRedeem ? "· Ready!" : `· Need ${MIN_REDEEM_AMOUNT - redeemable} more`}</div>
-                      </div>
-                      <button
-                        style={{ ...btn(canRedeem ? "primary" : "ghost"), fontSize: 11, opacity: canRedeem ? 1 : 0.45, cursor: canRedeem ? "pointer" : "not-allowed", whiteSpace: "nowrap" }}
-                        disabled={!canRedeem}
-                        onClick={() => { setRedeemAmount(""); setAdjustPoints(""); setAdjustReason(""); setShowLoyaltyModal(true); }}
-                      >{canRedeem ? "Redeem →" : "Not yet"}</button>
-                    </div>
-                  );
-                })()}
-
-                <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                  <div style={{ flex: 1, background: C.bg3, borderRadius: 10, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Favourite Item</div>
-                    <div style={{ fontSize: 13, color: C.amber2, fontWeight: 600 }}>☕ {customerMetrics?.favoriteItem || profile.fav || "—"}</div>
-                  </div>
-                  <div style={{ flex: 1, background: C.bg3, borderRadius: 10, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Preferred Time</div>
-                    <div style={{ fontSize: 13, color: C.blue, fontWeight: 600 }}>
-                      {customerMetrics?.preferredHour != null
-                        ? (() => { const h = parseInt(customerMetrics.preferredHour); return `${h % 12 || 12}:00 ${h < 12 ? "AM" : "PM"}`; })()
-                        : "Not enough data"}
-                    </div>
-                  </div>
-                  {cBirthday(profile) && (
-                    <div style={{ flex: 1, background: C.bg3, borderRadius: 10, padding: "10px 12px" }}>
-                      <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 5 }}>Birthday</div>
-                      <div style={{ fontSize: 13, color: C.purple, fontWeight: 600 }}>🎂 {new Date(cBirthday(profile)).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Customer Type Card */}
-                {profile.customerType && TYPE_MAP[profile.customerType] && (() => {
-                  const ct = TYPE_MAP[profile.customerType];
-                  return (
-                    <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 16, border: `1px solid ${ct.color}33` }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                        <span style={{ fontSize: 18 }}>{ct.icon}</span>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: ct.color }}>{ct.label}</div>
-                          <div style={{ fontSize: 10, color: C.text3 }}>{ct.desc}</div>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 11, color: C.text2, background: C.bg4, borderRadius: 7, padding: "8px 10px", lineHeight: 1.5 }}>💡 {ct.tip}</div>
-                    </div>
-                  );
-                })()}
-
-                {/* Contact Consent & Preferred Channel (task 2) — compact, wraps on mobile */}
-                <div style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8, fontWeight: 700 }}>Contact Consent</div>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                    {CONSENT_FIELDS.map(f => (
-                      <label key={f.key} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.text2, cursor: "pointer" }}>
-                        <input type="checkbox" checked={!!profile[f.key]} onChange={e => toggleConsent(profile.id, f.key, e.target.checked)} />
-                        {f.lbl}
-                      </label>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 10, color: C.text3 }}>Preferred channel:</span>
-                    <select style={{ ...input, fontSize: 11, padding: "3px 8px", width: "auto" }} value={PREFERRED_CHANNELS.includes(profile.preferredChannel) ? profile.preferredChannel : "None"} onChange={e => setPreferredChannelFor(profile.id, e.target.value)}>
-                      {PREFERRED_CHANNELS.map(ch => <option key={ch} value={ch}>{ch}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <LogVisit key={profile.id} profile={profile} addVisitEntry={addVisitEntry} />
-
-                {/* Recent Activity — compact merged history (task 2) */}
-                <div style={{ fontSize: 9, color: C.text3, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8, fontWeight: 700 }}>Recent Activity</div>
-                {(() => {
-                  const items = [];
-                  hist.slice(0, 5).forEach(h => {
-                    const label = h?._manual ? `Visit logged: ${h._label || "item"}` : (Array.isArray(h?.items) && h.items.length ? h.items.map(i => `${i?.qty || 1}× ${i?.name || "item"}`).join(", ") : "Order");
-                    items.push({ kind: "order", date: h?.createdAt, label, amount: h?.total });
-                  });
-                  cCommLog(profile).slice(0, 5).forEach(e => items.push({ kind: "comm", date: e?.date, label: `${e?.type || "Message"}: ${(e?.message || "").slice(0, 60)}` }));
-                  if (profile.notesUpdatedAt) items.push({ kind: "note", date: profile.notesUpdatedAt, label: "Staff notes updated" });
-                  items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-                  const top = items.slice(0, 5);
-                  if (top.length === 0) {
-                    return <div style={{ fontSize: 11, color: C.text3, padding: "10px 0", marginBottom: 12 }}>No activity yet for this customer.</div>;
-                  }
-                  return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 16 }}>
-                      {top.map((it, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 11, color: C.text2, background: C.bg3, borderRadius: 7, padding: "6px 9px", wordBreak: "break-word" }}>
-                          <span style={{ flexShrink: 0 }}>{it.kind === "order" ? "🧾" : it.kind === "comm" ? "💬" : "📝"}</span>
-                          <span style={{ flex: 1, minWidth: 0 }}>{it.label}</span>
-                          {it.amount != null && <span style={{ fontFamily: "monospace", color: C.amber2, flexShrink: 0 }}>₹{it.amount}</span>}
-                          <span style={{ fontSize: 9, color: C.text3, flexShrink: 0, whiteSpace: "nowrap" }}>{it.date && !isNaN(new Date(it.date).getTime()) ? new Date(it.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : ""}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                {/* Tags */}
-                <div style={{ fontSize: 9, color: C.text3, letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8, fontWeight: 700 }}>Tags</div>
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-                  {cTags(profile).map(t => (
-                    <span key={t} style={{ fontSize: 10, padding: "3px 10px", borderRadius: 20, background: C.bg4, color: C.text2, border: `1px solid ${C.border2}`, display: "inline-flex", alignItems: "center", gap: 5, wordBreak: "break-word", maxWidth: "100%" }}>
-                      {t}
-                      <span style={{ cursor: "pointer", color: C.text3, fontSize: 13, lineHeight: 1, marginLeft: 2 }} onClick={() => removeTag(t)} title="Remove tag">×</span>
-                    </span>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 6, marginBottom: 18 }}>
-                  <input style={{ ...input, fontSize: 11, padding: "5px 9px" }} value={newTag} onChange={e => setNewTag(e.target.value)} placeholder="Add tag…" onKeyDown={e => e.key === "Enter" && addTag()} />
-                  <button style={{ ...btn("ghost"), fontSize: 11, whiteSpace: "nowrap" }} onClick={addTag}>+ Add</button>
-                </div>
-              </>
-            )}
-
-            {/* TAB: HISTORY */}
-            {profileTab === "history" && (
-              <>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div style={{ fontSize: 9, color: C.text3, letterSpacing: ".1em", textTransform: "uppercase", fontWeight: 700 }}>Order History</div>
-                  <div style={{ fontSize: 10, color: C.text3 }}>{hist.length} {hist.length === 1 ? "order" : "orders"}</div>
-                </div>
-
-                {/* Status filter */}
-                <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-                  {["ALL","COMPLETED","CANCELLED","PENDING"].map(s => (
-                    <button key={s} onClick={() => setHistFilter(s)} style={{ flex: 1, padding: "6px 4px", borderRadius: 6, border: `1px solid ${histFilter === s ? C.amber3 : C.border}`, background: histFilter === s ? C.bg4 : C.bg3, color: histFilter === s ? C.amber2 : C.text3, fontSize: 9, fontWeight: 700, cursor: "pointer", minHeight: 32 }}>
-                      {s === "ALL" ? `All (${hist.length})` : s === "COMPLETED" ? `✓ Done` : s === "CANCELLED" ? `✕ Void` : `… Pending`}
-                    </button>
-                  ))}
-                </div>
-
-                {hist.length > 1 && (() => {
-                  const completed = hist.filter(h => h.status === "COMPLETED").slice(0, 12).reverse();
-                  if (completed.length < 2) return null;
-                  const maxAmt = Math.max(...completed.map(h => h.total || 0), 1);
-                  return (
-                    <div style={{ background: C.bg3, borderRadius: 10, padding: "12px 14px", marginBottom: 12 }}>
-                      <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8, fontWeight: 700 }}>Spend — last {completed.length} orders</div>
-                      <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 52 }}>
-                        {completed.map((h, i) => {
-                          const pct = Math.max(8, ((h.total || 0) / maxAmt) * 100);
-                          const brightness = 0.55 + 0.45 * (i / completed.length);
-                          return (
-                            <div key={i} title={`₹${(h.total || 0).toLocaleString()}`} style={{ flex: 1, borderRadius: "4px 4px 0 0", background: C.amber3, height: `${pct}%`, transition: "height .35s ease", cursor: "default", opacity: brightness }} />
-                          );
-                        })}
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.text3, marginTop: 5 }}>
-                        <span>Oldest</span><span style={{ color: C.amber2 }}>₹{(completed[completed.length - 1]?.total || 0).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {hist.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "36px 0", color: C.text3 }}>
-                    <div style={{ fontSize: 30, marginBottom: 10 }}>🧾</div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: C.text2, marginBottom: 5 }}>No orders yet</div>
-                    <div style={{ fontSize: 11, lineHeight: 1.5 }}>When this customer places their first order, it'll appear here.</div>
-                  </div>
-                ) : (() => {
-                  const filtered = hist.filter(h => histFilter === "ALL" || h.status === histFilter);
-                  if (filtered.length === 0) return (
-                    <div style={{ fontSize: 12, color: C.text3, padding: "20px 0", textAlign: "center" }}>No {histFilter.toLowerCase()} orders</div>
-                  );
-                  return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {filtered.map((h, i) => (
-                        <div key={i} style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", border: `1px solid ${h.status === "CANCELLED" ? C.red + "22" : C.border}` }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: h.items?.length ? 6 : 0 }}>
-                            <div style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>
-                              {h.createdAt ? new Date(h.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "N/A"}
-                              {h.createdAt && <span style={{ marginLeft: 6 }}>{new Date(h.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ color: C.amber2, fontFamily: "monospace", fontWeight: 700, fontSize: 13 }}>₹{h.total || 0}</span>
-                              <span style={{ ...pill(h.status === "COMPLETED" ? C.greenBg : h.status === "CANCELLED" ? C.redBg : C.neutralBg, h.status === "COMPLETED" ? C.green : h.status === "CANCELLED" ? C.red : C.amber), fontSize: 9 }}>
-                                {h.status}
-                              </span>
-                            </div>
-                          </div>
-                          {h.items?.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                              {h.items.map((item, j) => (
-                                <span key={j} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: C.bg4, color: C.text2, border: `1px solid ${C.border}` }}>
-                                  {item.qty}× {item.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: C.text3, padding: "8px 12px", borderTop: `1px solid ${C.border}`, marginTop: 2 }}>
-                        <span>{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
-                        <span style={{ color: C.amber2, fontFamily: "monospace", fontWeight: 600 }}>₹{filtered.reduce((s, h) => s + (h.total || 0), 0).toLocaleString()} total</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </>
-            )}
-
-            {/* TAB: NOTES */}
-            {profileTab === "notes" && (
-              <>
-                {/* Pinned Note */}
-                <div style={{ background: C.amberBg, border: `1px solid ${C.amberBorder}`, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
-                  <div style={{ fontSize: 9, color: C.amber2, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 6, fontWeight: 700 }}>📌 Pinned Note <span style={{ color: C.text3, fontWeight: 400, letterSpacing: ".02em" }}>— surfaces on every visit</span></div>
-                  <input
-                    style={{ ...input, fontSize: 12, marginBottom: 8 }}
-                    placeholder="e.g. Always asks for extra ice. Regulars discount approved."
-                    value={pinnedNote}
-                    maxLength={300}
-                    onChange={e => setPinnedNote(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && savePinnedNote()}
-                  />
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 10, color: C.text3 }}>{pinnedNote.length} chars</span>
-                    <button style={{ ...btn("ghost"), fontSize: 10 }} onClick={savePinnedNote}>Save Pinned Note</button>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ fontSize: 9, color: C.text3, letterSpacing: ".1em", textTransform: "uppercase", fontWeight: 700 }}>Staff Notes</div>
-                  <span style={{ fontSize: 10, color: C.text3 }}>{noteVal.length} chars</span>
-                </div>
+            {/* Notes */}
+            <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>Notes</div>
+              <div style={{ background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", padding: "14px 16px", border: `1px solid var(--cafe-border-light)` }}>
                 <textarea
-                  style={{ ...input, resize: "none", lineHeight: 1.7, marginBottom: 8, fontFamily: "inherit" }}
-                  rows={9}
-                  maxLength={1000}
-                  placeholder={"Staff notes — preferences, quirks, complaints, special requests…\n\ne.g. Always adds sugar. Sensitive about wait times. Regulars discount approved by owner."}
+                  style={{ width: "100%", background: "transparent", border: "none", outline: "none", resize: "vertical", minHeight: 80, fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)", fontFamily: "inherit" }}
+                  placeholder="Add notes about this guest..."
                   value={noteVal}
                   onChange={e => setNoteVal(e.target.value)}
                 />
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <button style={{ ...btn("primary"), fontSize: 11, flex: 1 }} onClick={updateNote}>Save Notes</button>
-                  {noteVal !== (profile.notes || "") && (
-                    <div style={{ display: "flex", alignItems: "center", fontSize: 10, color: C.amber2, gap: 4 }}>
-                      <span>●</span> Unsaved
-                    </div>
-                  )}
-                  {noteVal === (profile.notes || "") && profile.notesUpdatedAt && (
-                    <div style={{ fontSize: 9, color: C.text3, whiteSpace: "nowrap" }}>Saved {new Date(profile.notesUpdatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
-                  )}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                  <button onClick={updateNote} style={{ ...btn("primary"), fontSize: "var(--cafe-font-xs)", padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)" }}>Save Notes</button>
                 </div>
-              </>
+              </div>
+            </div>
+
+            {/* Log a manual visit (e.g. a walk-in order taken outside the POS) */}
+            <LogVisit profile={profile} addVisitEntry={addVisitEntry} />
+
+            {/* Recent Orders */}
+            {hist.length > 0 && (
+              <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>Recent Orders</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
+                  {hist.slice(0, 10).map((order, i) => (
+                    <div key={order.id || i} style={{ padding: "12px 16px", background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, borderLeft: `3px solid ${order.status === "COMPLETED" ? "var(--cafe-success)" : order.status === "CANCELLED" ? "var(--cafe-danger)" : "var(--cafe-warning)"}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600 }}>{order._label || getOrderDisplayItems(order)}</div>
+                        <div style={{ fontSize: "var(--cafe-font-sm)", fontFamily: "monospace", color: "var(--cafe-accent)", fontWeight: 700 }}>₹{order.total?.toLocaleString() || order.amt?.toLocaleString()}</div>
+                      </div>
+                      <div style={{ display: "flex", gap: 12, fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>
+                        /* eslint-disable-next-line react-hooks/purity */
+                              <span>{new Date(order.createdAt || Date.now()).toLocaleDateString()}</span>
+                        <span>{order.status}</span>
+                        {order._manual && <span>Manual entry</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* TAB: COMMS */}
-            {profileTab === "comms" && (
-              <>
-                {/* Contact quick-access */}
-                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                  {profile.phone && (
-                    <a href={`tel:${profile.phone}`} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 10px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border}`, color: C.green, fontSize: 11, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>
-                      📞 {profile.phone}
-                    </a>
-                  )}
-                  {profile.phone && (
-                    <a href={`https://wa.me/91${profile.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "8px 12px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border}`, color: "#25D366", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                      💬 WA
-                    </a>
-                  )}
-                  {profile.email && (
-                    <a href={`mailto:${profile.email}`} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 10px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border}`, color: C.blue, fontSize: 11, fontWeight: 600, textDecoration: "none", overflow: "hidden" }}>
-                      📧 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile.email}</span>
-                    </a>
-                  )}
-                </div>
-
-                <div style={{ fontSize: 10, color: C.text3, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 10 }}>Log Communication</div>
-
-                {/* Quick message templates */}
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
-                  {[
-                    { icon: "🎂", label: "Birthday Offer", msg: `Hi ${cName(profile).split(" ")[0]}, happy birthday! Enjoy a special treat on us today 🎂` },
-                    { icon: "⭐", label: "Loyalty Reward", msg: `Hi ${cName(profile).split(" ")[0]}, you've earned ${cLoyalty(profile)} loyalty points — that's ₹${calculateRedeemable(cLoyalty(profile))} redeemable! Come redeem them on your next visit.` },
-                    { icon: "🔄", label: "Come Back Offer", msg: `Hi ${cName(profile).split(" ")[0]}, we miss you! Come back soon and enjoy 10% off your next order.` },
-                    { icon: "📝", label: "Review Request", msg: `Hi ${cName(profile).split(" ")[0]}, thanks for visiting us! We'd love it if you could leave us a quick review — it really helps.` },
-                  ].map(t => (
-                    <button key={t.label} style={{ ...btn("ghost"), fontSize: 9, padding: "5px 9px" }} onClick={() => setCommMsg(t.msg)}>
-                      {t.icon} {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: "flex", gap: 5, marginBottom: 8, flexWrap: "wrap" }}>
-                  {COMM_TYPES.map(type => (
-                    <button key={type} onClick={() => setCommType(type)} style={{ flex: "1 1 auto", minWidth: 64, padding: "7px 4px", borderRadius: 6, border: `1px solid ${commType === type ? C.amber3 : C.border}`, background: commType === type ? C.bg4 : "transparent", color: commType === type ? C.amber2 : C.text3, fontSize: 10, cursor: "pointer", fontWeight: 600 }}>
-                      {commIcon(type)} {type}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Consent / status hint for the selected channel (task 2, 3) */}
-                {commType !== "Internal Note" && (
-                  <div style={{ fontSize: 10, marginBottom: 8, wordBreak: "break-word", color: isBlocked(profile) ? C.red : (channelRequiresConsent(commType) && !hasConsentFor(profile, commType)) ? C.warning : C.text3 }}>
-                    {isBlocked(profile) ? "🚫 Customer is blocked — cannot log outbound communication." :
-                     channelRequiresConsent(commType) && !hasConsentFor(profile, commType) ? `⚠ No ${commType} consent on file for this customer.` :
-                     `✓ OK to contact via ${commType}`}
-                  </div>
-                )}
-
-                <textarea
-                  style={{ ...input, resize: "none", lineHeight: 1.6, marginBottom: 8, fontFamily: "inherit" }}
-                  rows={4}
-                  maxLength={1000}
-                  placeholder={`Write a ${commType.toLowerCase()} message…`}
-                  value={commMsg}
-                  onChange={e => setCommMsg(e.target.value)}
-                />
-                <button
-                  style={{ ...btn("primary"), fontSize: 11, marginBottom: 20, width: "100%", opacity: (commMsg.trim() && (commType === "Internal Note" || (!isBlocked(profile) && (!channelRequiresConsent(commType) || hasConsentFor(profile, commType))))) ? 1 : 0.5, cursor: commMsg.trim() ? "pointer" : "not-allowed" }}
-                  disabled={!commMsg.trim() || (commType !== "Internal Note" && (isBlocked(profile) || (channelRequiresConsent(commType) && !hasConsentFor(profile, commType))))}
-                  onClick={() => logComm(profile.id, commType, commMsg)}
-                >
-                  {commType === "Internal Note" ? "Save note" : `Mark ${commType} as sent`}
-                </button>
-
-                {/* Communication History */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                  <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700 }}>History</div>
-                  <span style={{ fontSize: 10, color: C.text3 }}>{(profile.commLog || []).length} logged</span>
-                </div>
-                {(profile.commLog || []).length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "28px 0", color: C.text3 }}>
-                    <div style={{ fontSize: 26, marginBottom: 8 }}>💬</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: C.text2, marginBottom: 4 }}>No messages logged yet</div>
-                    <div style={{ fontSize: 11, lineHeight: 1.5 }}>Send a birthday offer, loyalty nudge, or just check in — it'll appear here.</div>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    {(profile.commLog || []).map((entry, i) => (
-                      <div key={i} style={{ background: C.bg3, borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid ${commColor(entry.type)}` }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5, flexWrap: "wrap", gap: 4 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: commColor(entry.type) }}>
-                            {commIcon(entry.type)} {entry.type}
-                            {entry.bulk && <span style={{ marginLeft: 5, color: C.text3, fontWeight: 400 }}>· bulk</span>}
-                            {entry.internal && <span style={{ marginLeft: 5, color: C.text3, fontWeight: 400 }}>· internal</span>}
-                          </span>
-                          <span style={{ fontSize: 10, color: C.text3, fontFamily: "monospace" }}>
-                            {new Date(entry.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} {new Date(entry.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
+            {/* Documents */}
+            {documents && documents.length > 0 && (() => {
+              const customerDocs = documents.filter(d => 
+                d.customerId === profile.id || 
+                (d.customerPhone && d.customerPhone === profile.phone) ||
+                (d.customerName && d.customerName === profile.name)
+              );
+              if (customerDocs.length === 0) return null;
+              
+              return (
+                <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>Documents</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
+                    {customerDocs.slice(0, 5).map((doc, i) => (
+                      <div key={doc.id || i} style={{ padding: "12px 16px", background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, borderLeft: `3px solid ${doc.receiptNumber ? "var(--cafe-success)" : doc.invoiceNumber ? "var(--cafe-accent)" : doc.creditNoteNumber ? "var(--cafe-warning)" : "var(--cafe-purple)"}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600 }}>
+                            {doc.receiptNumber ? `Receipt: ${doc.receiptNumber}` : doc.invoiceNumber ? `Invoice: ${doc.invoiceNumber}` : doc.paymentReceiptNumber ? `Payment: ${doc.paymentReceiptNumber}` : `Credit: ${doc.creditNoteNumber}`}
+                          </div>
+                          <div style={{ fontSize: "var(--cafe-font-sm)", fontFamily: "monospace", color: "var(--cafe-accent)", fontWeight: 700 }}>
+                            ₹{doc.total?.toLocaleString() || doc.amountReceived?.toLocaleString() || doc.refundAmount?.toLocaleString()}
+                          </div>
                         </div>
-                        <div style={{ fontSize: 12, color: C.text2, lineHeight: 1.5, wordBreak: "break-word" }}>{entry.message}</div>
+                        <div style={{ display: "flex", gap: 12, fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>
+                          <span>{new Date(doc.issuedAt || doc.createdAt).toLocaleDateString()}</span>
+                          <span>{doc.paymentStatus || doc.status || 'N/A'}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </div>
+                </div>
+              );
+            })()}
 
-      {/* Loyalty Redeem Modal */}
-      {showLoyaltyModal && profile && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowLoyaltyModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.amber3}`, borderRadius: 18, padding: 24, width: "min(340px, 92vw)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>Redeem points</div>
-              <button onClick={() => setShowLoyaltyModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1 }}>×</button>
-            </div>
-            <div style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: C.text3, marginBottom: 4 }}>Available points</div>
-              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>{(profile.loyaltyPoints || 0).toLocaleString()} pts</div>
-              <div style={{ fontSize: 11, color: C.text3, marginTop: 2 }}>= ₹{calculateRedeemable(profile.loyaltyPoints || 0)} redeemable</div>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 11, color: C.text3, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Redeem Amount (₹)</label>
-              <input
-                style={{ ...input, fontSize: 14, fontFamily: "monospace" }}
-                type="number"
-                min={MIN_REDEEM_AMOUNT}
-                max={calculateRedeemable(profile.loyaltyPoints || 0)}
-                step="1"
-                placeholder={`Min ₹${MIN_REDEEM_AMOUNT}`}
-                value={redeemAmount}
-                onChange={e => setRedeemAmount(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && redeemPoints(profile.id, redeemAmount)}
-                autoFocus
-              />
-              {redeemAmount && Number(redeemAmount) > calculateRedeemable(profile.loyaltyPoints || 0) && (
-                <div style={{ fontSize: 10, color: C.warning, marginTop: 5 }}>Max redeemable is ₹{calculateRedeemable(profile.loyaltyPoints || 0)}</div>
-              )}
-            </div>
-            <div style={{ fontSize: 10, color: C.text3, marginBottom: 14, lineHeight: 1.5 }}>
-              This deducts {Number(redeemAmount) * POINTS_PER_RUPEE || "—"} points. Apply ₹{redeemAmount || "—"} as a discount on the customer's next order.
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginBottom: 16 }}>
-              <button style={btn("ghost")} onClick={() => setShowLoyaltyModal(false)}>Cancel</button>
-              <button
-                style={{ ...btn("primary"), opacity: Number(redeemAmount) >= MIN_REDEEM_AMOUNT ? 1 : 0.5 }}
-                disabled={!Number(redeemAmount) || Number(redeemAmount) < MIN_REDEEM_AMOUNT}
-                onClick={() => redeemPoints(profile.id, redeemAmount)}
-              >Redeem ₹{redeemAmount || "—"}</button>
-            </div>
-
-            {/* Manual adjustment (task 4) */}
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginBottom: cLoyaltyTxns(profile).length ? 12 : 0 }}>
-              <label style={{ fontSize: 10, color: C.text3, display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Manual Adjustment (staff)</label>
-              <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-                <input style={{ ...input, fontSize: 12, width: 90 }} type="number" placeholder="± pts" value={adjustPoints} onChange={e => setAdjustPoints(e.target.value)} />
-                <input style={{ ...input, fontSize: 12, flex: 1 }} placeholder="Reason (required)" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} maxLength={200} />
-              </div>
-              <button
-                style={{ ...btn("ghost"), fontSize: 10, width: "100%", opacity: adjustPoints && adjustReason.trim() ? 1 : 0.5, cursor: adjustPoints && adjustReason.trim() ? "pointer" : "not-allowed" }}
-                disabled={!adjustPoints || !adjustReason.trim()}
-                onClick={() => { adjustLoyaltyPoints(profile.id, adjustPoints, adjustReason); setAdjustPoints(""); setAdjustReason(""); }}
-              >Apply Adjustment</button>
-            </div>
-
-            {/* Recent loyalty transactions (task 3) */}
-            {cLoyaltyTxns(profile).length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 6 }}>Recent Activity</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {cLoyaltyTxns(profile).slice(0, 3).map(t => (
-                    <div key={t.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 10, color: C.text2, background: C.bg3, borderRadius: 6, padding: "5px 8px", wordBreak: "break-word" }}>
-                      <span style={{ flex: 1 }}>{t.type === "earn" ? "＋ Earned" : t.type === "redeem" ? "－ Redeemed" : "✎ Adjusted"}{t.reason ? ` · ${t.reason}` : ""}</span>
-                      <span style={{ fontFamily: "monospace", color: t.points >= 0 ? C.green : C.red, flexShrink: 0 }}>{t.points >= 0 ? "+" : ""}{t.points}</span>
+            {/* Communication Log */}
+            {cCommLog(profile).length > 0 && (
+              <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontFamily: "monospace", fontWeight: 700 }}>Communication Log</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
+                  {cCommLog(profile).slice(0, 5).map((log, i) => (
+                    <div key={i} style={{ padding: "12px 16px", background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span style={{ fontSize: "var(--cafe-font-xs)", fontWeight: 600 }}>{commIcon(log.type)} {log.type}</span>
+                        <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>{new Date(log.date).toLocaleDateString()}</span>
+                      </div>
+                      <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)" }}>{log.message}</div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Guest Modal */}
+      {showModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
+          <div style={{ background: "var(--cafe-bg-card)", border: `1px solid var(--cafe-border-light)`, borderRadius: "var(--cafe-radius-lg)", padding: 24, width: "min(400px, 92vw)", boxShadow: "var(--cafe-shadow-lg)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--cafe-text-primary)" }}>{editMode ? "Edit Guest" : "Add New Guest"}</div>
+              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: "var(--cafe-text-tertiary)", background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border-light)`, borderRadius: "var(--cafe-radius-sm)", fontSize: 16, lineHeight: 1, padding: "6px 10px", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            </div>
+            
+            {/* Basic Info Section */}
+            <div style={{ marginBottom: "var(--cafe-space-md)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontWeight: 700 }}>Basic Info</div>
+              {[
+                { lbl: "Name *", val: modalData.name, set: (v) => setModalData({...modalData, name: v}), ph: "Full name", type: "text" },
+                { lbl: "Phone", val: modalData.phone, set: (v) => setModalData({...modalData, phone: v}), ph: "10-digit number", type: "tel" },
+                { lbl: "Email", val: modalData.email, set: (v) => setModalData({...modalData, email: v}), ph: "email@example.com", type: "email" },
+              ].map(f => (
+                <div key={f.lbl} style={{ marginBottom: "var(--cafe-space-sm)" }}>
+                  <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>{f.lbl}</label>
+                  <input style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none", transition: "border-color 0.15s" }} type={f.type} value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph} />
+                </div>
+              ))}
+            </div>
+
+            {/* Preferences Section */}
+            <div style={{ marginBottom: "var(--cafe-space-md)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontWeight: 700 }}>Preferences</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--cafe-space-sm)", marginBottom: "var(--cafe-space-sm)" }}>
+                <div>
+                  <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>Birthday</label>
+                  <input style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none" }} type="date" value={modalData.birthday} onChange={e => setModalData({...modalData, birthday: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>Guest Type</label>
+                  <select style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none" }} value={modalData.customerType} onChange={e => setModalData({...modalData, customerType: e.target.value})}>
+                    <option value="">— Select —</option>
+                    {CUSTOMER_TYPES.map(t => <option key={t.key} value={t.key}>{t.icon} {t.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: "var(--cafe-space-sm)" }}>
+                <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>Allergies / Dietary Notes</label>
+                <input style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none" }} value={modalData.allergy} onChange={e => setModalData({...modalData, allergy: e.target.value})} placeholder="e.g. Nuts, Dairy, Gluten-free" />
+              </div>
+              <div>
+                <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>Tags</label>
+                <input style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none" }} value={modalData.tags} onChange={e => setModalData({...modalData, tags: e.target.value})} placeholder="Regular, Corporate, VIP…" />
+              </div>
+            </div>
+
+            {/* Status & Contact Section */}
+            <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--cafe-space-sm)", fontWeight: 700 }}>Status & Contact</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--cafe-space-sm)", marginBottom: "var(--cafe-space-sm)" }}>
+                <div>
+                  <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>Status</label>
+                  <select style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none" }} value={CUSTOMER_STATUSES.includes(modalData.status) ? modalData.status : "active"} onChange={e => setModalData({...modalData, status: e.target.value})}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block", fontWeight: 500 }}>Preferred Channel</label>
+                  <select style={{ width: "100%", padding: "10px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none" }} value={PREFERRED_CHANNELS.includes(modalData.preferredChannel) ? modalData.preferredChannel : "None"} onChange={e => setModalData({...modalData, preferredChannel: e.target.value})}>
+                    {PREFERRED_CHANNELS.map(ch => <option key={ch} value={ch}>{ch}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block", fontWeight: 500 }}>Consent to Contact</label>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  {CONSENT_FIELDS.map(f => (
+                    <label key={f.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)", cursor: "pointer" }}>
+                      <input type="checkbox" checked={!!modalData[f.key]} onChange={e => setModalData({...modalData, [f.key]: e.target.checked})} />
+                      {f.lbl}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button style={{ padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }} onClick={() => setShowModal(false)}>Cancel</button>
+              <button style={{ padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-accent-border)`, background: "var(--cafe-accent)", color: "#1A1208", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }} onClick={saveModal}>{editMode ? "Save Changes" : "Add Guest"}</button>
+            </div>
           </div>
         </div>
       )}
@@ -1784,128 +1466,43 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
       {/* Bulk Communication Modal */}
       {showBulkModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowBulkModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 18, padding: 24, width: "min(420px, 92vw)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.01em" }}>Message {bulkSelected.size} {bulkSelected.size === 1 ? "customer" : "customers"}</div>
-              <button onClick={() => setShowBulkModal(false)} style={{ cursor: "pointer", color: C.text3, background: "none", border: "none", fontSize: 18, lineHeight: 1 }}>×</button>
+          <div style={{ background: "var(--cafe-bg-card)", border: `1px solid var(--cafe-border-light)`, borderRadius: "var(--cafe-radius-lg)", padding: 24, width: "min(420px, 92vw)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--cafe-space-lg)" }}>
+              <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--cafe-text-primary)" }}>Message {bulkSelected.size} {bulkSelected.size === 1 ? "guest" : "guests"}</div>
+              <button onClick={() => setShowBulkModal(false)} style={{ cursor: "pointer", color: "var(--cafe-text-tertiary)", background: "none", border: "none", fontSize: 20, lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ background: C.bg3, borderRadius: 10, padding: "10px 12px", marginBottom: 14, fontSize: 11, color: C.text2 }}>
+            <div style={{ background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", padding: "12px 16px", marginBottom: "var(--cafe-space-md)", fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)" }}>
               {[...bulkSelected].map(id => customers.find(c => c.id === id)?.name).filter(Boolean).join(", ")}
             </div>
-            <div style={{ display: "flex", gap: 5, marginBottom: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
               {COMM_TYPES.map(t => (
-                <button key={t} onClick={() => setBulkCommType(t)} style={{ flex: "1 1 auto", minWidth: 64, padding: "6px 4px", borderRadius: 6, border: `1px solid ${bulkCommType === t ? C.amber3 : C.border}`, background: bulkCommType === t ? C.bg4 : "transparent", color: bulkCommType === t ? C.amber2 : C.text3, fontSize: 10, cursor: "pointer", fontWeight: 600 }}>
+                <button key={t} onClick={() => setBulkCommType(t)} style={{ flex: "1 1 auto", minWidth: 80, padding: "8px 12px", borderRadius: "var(--cafe-radius-md)", border: `1px solid ${bulkCommType === t ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`, background: bulkCommType === t ? "var(--cafe-accent-bg)" : "transparent", color: bulkCommType === t ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
                   {commIcon(t)} {t}
                 </button>
               ))}
             </div>
-            {/* Live eligibility preview — blocked/consent/contact-info aware (task 1, 2, 3, 10) */}
-            {(() => {
-              const sel = customers.filter(c => bulkSelected.has(c.id));
-              const isInternal = bulkCommType === "Internal Note";
-              const eligibleCount = sel.filter(c =>
-                (isInternal || !isBlocked(c)) &&
-                (!commNeedsEmail(bulkCommType) || !!cEmail(c)) &&
-                (!commNeedsPhone(bulkCommType) || !!cPhone(c)) &&
-                (isInternal || !channelRequiresConsent(bulkCommType) || hasConsentFor(c, bulkCommType))
-              ).length;
-              const skipped = sel.length - eligibleCount;
-              return (
-                <div style={{ fontSize: 10, color: skipped > 0 ? C.warning : C.text3, marginBottom: 10, wordBreak: "break-word" }}>
-                  {eligibleCount} eligible{skipped > 0 ? `, ${skipped} will be skipped (blocked, missing contact info, or no consent)` : ""}
-                </div>
-              );
-            })()}
-            {/* Quick templates */}
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
+            <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", marginBottom: "var(--cafe-space-sm)" }}>
+              {(() => {
+                const sel = customers.filter(c => bulkSelected.has(c.id));
+                const isInternal = bulkCommType === "Internal Note";
+                const eligibleCount = sel.filter(c => (isInternal || !isBlocked(c)) && (!commNeedsEmail(bulkCommType) || !!cEmail(c)) && (!commNeedsPhone(bulkCommType) || !!cPhone(c)) && (isInternal || !channelRequiresConsent(bulkCommType) || hasConsentFor(c, bulkCommType))).length;
+                const skipped = sel.length - eligibleCount;
+                return <span>{eligibleCount} eligible{skipped > 0 ? `, ${skipped} will be skipped` : ""}</span>;
+              })()}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: "var(--cafe-space-sm)" }}>
               {[
-                { label: "🎂 Birthday Offer", msg: "Hi! Happy birthday from all of us — enjoy a special treat on your next visit 🎂" },
-                { label: "⭐ Loyalty Reward", msg: "Hi! Your loyalty points are ready to redeem. Visit us today and get a reward!" },
-                { label: "🔄 Come Back Offer", msg: "Hi! We miss you at the café — come back soon and enjoy a special treat on us." },
-                { label: "📝 Review Request", msg: "Hi! Thanks for being a regular — we'd love it if you could leave us a quick review." },
+                { label: "🎂 Birthday", msg: "Hi! Happy birthday from all of us — enjoy a special treat on your next visit 🎂" },
+                { label: "🔄 Come Back", msg: "Hi! We miss you at the café — come back soon and enjoy a special treat on us." },
+                { label: "📝 Review", msg: "Hi! Thanks for being a regular — we'd love it if you could leave us a quick review." },
               ].map(t => (
-                <button key={t.label} style={{ ...btn("ghost"), fontSize: 9, padding: "4px 8px" }} onClick={() => setBulkCommMsg(t.msg)}>{t.label}</button>
+                <button key={t.label} style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border-light)`, background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-xs)", cursor: "pointer" }} onClick={() => setBulkCommMsg(t.msg)}>{t.label}</button>
               ))}
             </div>
-            <textarea style={{ ...input, resize: "none", lineHeight: 1.6, marginBottom: 12 }} rows={4} maxLength={1000} placeholder="Type your message…" value={bulkCommMsg} onChange={e => setBulkCommMsg(e.target.value)} />
-            <div style={{ fontSize: 10, color: C.text3, marginBottom: 14 }}>This will be logged in each customer's communication history.</div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button style={btn("ghost")} onClick={() => setShowBulkModal(false)}>Cancel</button>
-              <button style={btn("primary")} onClick={sendBulkComm} disabled={!bulkCommMsg.trim()}>Send to {bulkSelected.size} {bulkSelected.size === 1 ? "customer" : "customers"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Customer Modal */}
-      {showModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: 24, width: "min(360px, 92vw)", boxShadow: "0 24px 60px rgba(0,0,0,.7)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-.02em" }}>{editMode ? "Edit customer" : "New customer"}</div>
-              <button aria-label="Close" onClick={() => setShowModal(false)} style={{ cursor: "pointer", color: C.text3, background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 16, lineHeight: 1, padding: "3px 8px", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
-            </div>
-            {[
-              { lbl: "Name *", val: modalData.name, set: (v) => setModalData({...modalData, name: v}), ph: "Full name", type: "text" },
-              { lbl: "Phone (optional)", val: modalData.phone, set: (v) => setModalData({...modalData, phone: v}), ph: "10-digit number", type: "tel" },
-              { lbl: "Email (optional)", val: modalData.email, set: (v) => setModalData({...modalData, email: v}), ph: "email@example.com", type: "email" },
-            ].map(f => (
-              <div key={f.lbl} style={{ marginBottom: 12 }}>
-                <label style={label}>{f.lbl}</label>
-                <input style={input} type={f.type} value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph} />
-              </div>
-            ))}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-              <div>
-                <label style={label}>Birthday (optional)</label>
-                <input style={input} type="date" value={modalData.birthday} onChange={e => setModalData({...modalData, birthday: e.target.value})} />
-              </div>
-              <div>
-                <label style={label}>Allergy / Dietary</label>
-                <input style={input} value={modalData.allergy} onChange={e => setModalData({...modalData, allergy: e.target.value})} placeholder="e.g. Nuts, Dairy" />
-              </div>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={label}>Tags (comma separated)</label>
-              <input style={input} value={modalData.tags} onChange={e => setModalData({...modalData, tags: e.target.value})} placeholder="Regular, Corporate, VIP…" />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={label}>Customer Type</label>
-              <select style={input} value={modalData.customerType} onChange={e => setModalData({...modalData, customerType: e.target.value})}>
-                <option value="">— Select type —</option>
-                {CUSTOMER_TYPES.map(t => <option key={t.key} value={t.key}>{t.icon} {t.label} — {t.desc}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-              <div>
-                <label style={label}>Status</label>
-                <select style={input} value={CUSTOMER_STATUSES.includes(modalData.status) ? modalData.status : "active"} onChange={e => setModalData({...modalData, status: e.target.value})}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="blocked">Blocked</option>
-                </select>
-              </div>
-              <div>
-                <label style={label}>Preferred Channel</label>
-                <select style={input} value={PREFERRED_CHANNELS.includes(modalData.preferredChannel) ? modalData.preferredChannel : "None"} onChange={e => setModalData({...modalData, preferredChannel: e.target.value})}>
-                  {PREFERRED_CHANNELS.map(ch => <option key={ch} value={ch}>{ch}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={label}>Consent to Contact</label>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {CONSENT_FIELDS.map(f => (
-                  <label key={f.key} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: C.text2, cursor: "pointer" }}>
-                    <input type="checkbox" checked={!!modalData[f.key]} onChange={e => setModalData({...modalData, [f.key]: e.target.checked})} />
-                    {f.lbl}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 20 }}>
-              <button style={btn("ghost")} onClick={() => setShowModal(false)}>Discard</button>
-              <button style={btn("primary")} onClick={saveModal}>{editMode ? "Save changes" : "Add customer"}</button>
+            <textarea style={{ width: "100%", padding: "12px 16px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", outline: "none", resize: "none", lineHeight: 1.6, marginBottom: "var(--cafe-space-md)" }} rows={4} maxLength={1000} placeholder="Type your message…" value={bulkCommMsg} onChange={e => setBulkCommMsg(e.target.value)} />
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button style={{ padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }} onClick={() => setShowBulkModal(false)}>Cancel</button>
+              <button style={{ padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-accent-border)`, background: "var(--cafe-accent)", color: "#1A1208", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }} onClick={sendBulkComm} disabled={!bulkCommMsg.trim()}>Send Message</button>
             </div>
           </div>
         </div>
@@ -1913,21 +1510,103 @@ function CRM({ customers, setCustomers, orders, kdsCards }) {
 
       {/* Toast notification */}
       {toast && (
-        <div style={{ position: "fixed", bottom: isMobile ? 76 : 28, left: "50%", transform: "translateX(-50%)", background: C.bg3, border: `1px solid ${toast.color}55`, color: toast.color, borderRadius: 8, padding: "9px 20px", fontSize: 12, fontWeight: 700, zIndex: 200, pointerEvents: "none", boxShadow: `0 8px 32px rgba(0,0,0,.7), 0 0 0 1px ${toast.color}25`, whiteSpace: "nowrap", letterSpacing: ".02em" }}>
+        <div style={{ position: "fixed", bottom: isMobile ? 76 : 28, left: "50%", transform: "translateX(-50%)", background: "var(--cafe-bg-surface)", border: `1px solid ${toast.color}55`, color: toast.color, borderRadius: "var(--cafe-radius-md)", padding: "10px 20px", fontSize: "var(--cafe-font-sm)", fontWeight: 600, zIndex: 200, pointerEvents: "none", boxShadow: "var(--cafe-shadow-lg)", whiteSpace: "nowrap", letterSpacing: "0.02em" }}>
           {toast.msg}
         </div>
       )}
 
+      {/* Dialogs */}
+      <ConflictDialog
+        open={mergeDialog.open}
+        onClose={() => setMergeDialog({ open: false, primary: null, duplicate: null, onConfirm: null })}
+        onResolve={mergeDialog.onConfirm}
+        title="Merge Customer Records"
+        description="Combine duplicate customer profiles into one."
+        conflictType="duplicate"
+        currentRecord={mergeDialog.primary ? {
+          Name: cName(mergeDialog.primary),
+          Phone: cPhone(mergeDialog.primary) || "—",
+          Email: cEmail(mergeDialog.primary) || "—",
+          Visits: cVisits(mergeDialog.primary),
+          Spend: `₹${cSpend(mergeDialog.primary)}`
+        } : null}
+        incomingRecord={mergeDialog.duplicate ? {
+          Name: cName(mergeDialog.duplicate),
+          Phone: cPhone(mergeDialog.duplicate) || "—",
+          Email: cEmail(mergeDialog.duplicate) || "—",
+          Visits: cVisits(mergeDialog.duplicate),
+          Spend: `₹${cSpend(mergeDialog.duplicate)}`
+        } : null}
+      />
+
+      <DestructiveDialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, customer: null, onConfirm: null })}
+        onConfirm={deleteDialog.onConfirm}
+        title="Delete Customer"
+        description="This action cannot be undone."
+        recordName={cName(deleteDialog.customer)}
+        consequence={deleteDialog.hasOrderHistory 
+          ? "Past orders will still reference this customer in order history. Deleting the customer profile does not remove those orders."
+          : "This customer will be permanently removed from the guest book."
+        }
+        confirmLabel="Delete Customer"
+      />
+
+      <WarningDialog
+        open={blockDialog.open}
+        onClose={() => setBlockDialog({ open: false, customer: null, onConfirm: null })}
+        onConfirm={blockDialog.onConfirm}
+        title="Block Customer"
+        description="This customer will be excluded from bulk communication."
+        warning={`Mark "${cName(blockDialog.customer)}" as blocked?`}
+        consequence="Blocked customers will not receive bulk messages or communications."
+        confirmLabel="Block Customer"
+      />
+
+      <WarningDialog
+        open={anonymizeDialog.open}
+        onClose={() => setAnonymizeDialog({ open: false, customer: null, onConfirm: null })}
+        onConfirm={anonymizeDialog.onConfirm}
+        title="Anonymize Customer"
+        description="This clears personal data but keeps analytics history."
+        warning={`Anonymize "${cName(anonymizeDialog.customer)}"?`}
+        consequence="Name, phone, email, birthday, allergy, and notes will be cleared. Spend/visit history and order links will be retained for analytics. This cannot be undone."
+        confirmLabel="Anonymize Customer"
+      />
+
+      <ConfirmDialog
+        open={bulkCommDialog.open}
+        onClose={() => setBulkCommDialog({ open: false, count: 0, skipped: 0, reasons: [], onConfirm: null })}
+        onConfirm={bulkCommDialog.onConfirm}
+        title="Log Bulk Communication"
+        description={`Log message for ${bulkCommDialog.count} customer${bulkCommDialog.count !== 1 ? "s" : ""}.`}
+        summary={bulkCommDialog.skipped > 0 
+          ? `${bulkCommDialog.skipped} customer(s) will be skipped: ${bulkCommDialog.reasons.join(", ")}.`
+          : null
+        }
+        confirmLabel="Log Message"
+      />
+
+      <PermissionDeniedDialog
+        open={permissionDeniedDialog.open}
+        onClose={() => setPermissionDeniedDialog({ ...permissionDeniedDialog, open: false })}
+        action={permissionDeniedDialog.action}
+        requiredPermission={permissionDeniedDialog.requiredPermission}
+        currentRole={permissionDeniedDialog.currentRole}
+        contactMessage="Contact a manager or owner for access to manage customers."
+      />
+
       {/* Mobile bottom nav */}
       {isMobile && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 60, background: C.bg2, borderTop: `1px solid ${C.border2}`, display: "flex", alignItems: "stretch", zIndex: 150, paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, height: 60, background: "var(--cafe-bg-card)", borderTop: `1px solid var(--cafe-border-light)`, display: "flex", alignItems: "stretch", zIndex: 150, paddingBottom: "env(safe-area-inset-bottom)" }}>
           {[
             { icon: "👥", label: "Guests", action: () => setSelected(null), active: !selected },
             { icon: "＋", label: "Add", action: openAddModal, active: false, highlight: true },
-            { icon: "📊", label: "Overview", action: () => { setSelected(null); setSmartList(null); setSegmentFilter("ALL"); setTierFilter("ALL"); setTypeFilter("ALL"); }, active: false },
+            { icon: "📊", label: "Overview", action: () => { setSelected(null); setSmartList(null); setSegmentFilter("ALL"); setTypeFilter("ALL"); }, active: false },
             { icon: "⬇", label: "Export", action: exportCSV, active: false },
           ].map(item => (
-            <button key={item.label} onClick={item.action} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, background: item.highlight ? C.amber3 : "transparent", border: "none", cursor: "pointer", color: item.active ? C.amber2 : item.highlight ? C.amber2 : C.text3, fontSize: 9, fontWeight: item.active || item.highlight ? 700 : 400, borderTop: item.active ? `2px solid ${C.amber2}` : "2px solid transparent", letterSpacing: ".04em", textTransform: "uppercase" }}>
+            <button key={item.label} onClick={item.action} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, background: item.highlight ? "var(--cafe-accent-bg)" : "transparent", border: "none", cursor: "pointer", color: item.active ? "var(--cafe-accent)" : item.highlight ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-xs)", fontWeight: item.active || item.highlight ? 700 : 400, borderTop: item.active ? `2px solid var(--cafe-accent)` : "2px solid transparent", letterSpacing: "0.04em", textTransform: "uppercase" }}>
               <span style={{ fontSize: item.highlight ? 20 : 17, lineHeight: 1 }}>{item.icon}</span>
               {item.label}
             </button>

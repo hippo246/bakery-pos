@@ -1,6 +1,16 @@
-import { useState, useMemo, useEffect } from "react";
+import React from 'react';
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { C, card, btn, input, label, pill } from "../../styles/theme";
 import { INIT_STAFF, STAFF_ROLES, STAFF_STATUS, SHIFT_TYPES } from "../../data/staffConstants";
+import DestructiveDialog from "../common/DestructiveDialog";
+import WarningDialog from "../common/WarningDialog";
+import { triggerStaffNotification } from "../../utils/notificationTriggers.js";
+import { saveNotifications } from "../../utils/notificationService.js";
+import { StaffPermissions } from "../../utils/permissionService.js";
+import { createSecurityAuditLog, createPermissionDeniedAuditLog } from "../../domain/auditLogModel.js";
+import { getCurrentUserId } from "../../utils/authService.js";
+import PermissionDeniedDialog from "../common/PermissionDeniedDialog";
+import moduleEventPublisher from "../../dashboard/liveEngine/ModuleEventPublisher.js";
 
 // --- Safety helpers -----------------------------------------------------------
 const SAFE_ROLES   = Array.isArray(STAFF_ROLES)  && STAFF_ROLES.length  ? STAFF_ROLES  : ["All","Barista","Manager","Chef","Kitchen Staff","Waiter","Cashier","Cleaner"];
@@ -42,7 +52,7 @@ const normalizeStaffRecord = (s) => ({
   joinDate:   safeStr(s?.joinDate) || new Date().toISOString().split("T")[0],
 });
 
-export default function Staff({ staff: externalStaff, setStaff: externalSetStaff, orders }) {
+export default function Staff({ staff: externalStaff, setStaff: externalSetStaff, orders, tables, notifications, setNotifications }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
   useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
   const [staff, setStaff] = useState(() => safeArr(externalStaff).length ? safeArr(externalStaff) : SAFE_INIT);
@@ -53,11 +63,28 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
   const [editStaff, setEditStaff] = useState(null);
   const defaultRole = SAFE_ROLES.find(r => r !== "All") || "Barista";
   const [form, setForm] = useState({ name: "", role: defaultRole, phone: "", email: "", status: "active", hourlyRate: "", shifts: [] });
-  const [viewMode, setViewMode] = useState("grid"); // grid | list
+  const [formError, setFormError] = useState("");
+  const [viewMode, setViewMode] = useState("cards"); // cards | list
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
+
+  // ── Dialog state ─────────────────────────────────────────────────────────
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, name: null, hasOrders: false, onConfirm: null });
+  const [statusDialog, setStatusDialog] = useState({ open: false, staffId: null, currentStatus: null, newStatus: null, onConfirm: null });
+  const [permissionDeniedDialog, setPermissionDeniedDialog] = useState({ open: false, action: '', requiredPermission: '', currentRole: '' });
 
   // Use external setter if provided, otherwise use local state
   const handleSetStaff = externalSetStaff || setStaff;
+
+  // Notification helper
+  const addNotification = useCallback((notification) => {
+    if (!notification || !setNotifications) return;
+    setNotifications(prev => {
+      const updated = [notification, ...prev];
+      saveNotifications(updated);
+      return updated;
+    });
+  }, [setNotifications]);
 
   // Calculate staff performance metrics — safe against null staff, null orders,
   // malformed records, and zero-division. Never produces NaN in output.
@@ -95,7 +122,40 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
       ...safeArr(person.shifts),
     ].some(f => safeStr(f).toLowerCase().includes(q));
     return matchesRole && matchesStatus && matchesSearch;
-  });
+  }, [staff, orders, roleFilter, statusFilter, search]);
+
+  // Check for staff shift issues periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentTime = currentHour * 60 + currentMinute;
+
+      staff.forEach(person => {
+        if (!person || person.status !== 'active') return;
+
+        // Check for shift starting soon (within 15 minutes)
+        person.shifts.forEach(shift => {
+          if (!shift || typeof shift !== 'string') return;
+          const shiftTime = shift.split('-')[0]; // Get start time
+          if (!shiftTime) return;
+          
+          const [shiftHour, shiftMin] = shiftTime.split(':').map(Number);
+          const shiftMinutes = shiftHour * 60 + shiftMin;
+          const minutesUntil = shiftMinutes - currentTime;
+          
+          if (minutesUntil > 0 && minutesUntil <= 15) {
+            const notif = triggerStaffNotification(person, 'SHIFT_STARTING_SOON', {
+              minutesUntil
+            });
+            addNotification(notif);
+          }
+        });
+      });
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [staff, addNotification]);
 
   const safeStaffList   = safeArr(staff).filter(Boolean);
   const activeCount     = safeStaffList.filter(s => safeStr(s.status) === "active").length;
@@ -110,6 +170,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
 
   const openAdd = () => {
     setEditStaff(null);
+    setFormError("");
     setForm({ name: "", role: defaultRole, phone: "", email: "", status: "active", hourlyRate: "", shifts: [] });
     setShowModal(true);
   };
@@ -117,6 +178,7 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
   const openEdit = (person) => {
     if (!person) return;
     setEditStaff(safeStr(person.id) || null);
+    setFormError("");
     setForm({
       name:       safeStr(person.name).trim(),
       role:       safeStr(person.role).trim() || defaultRole,
@@ -130,35 +192,36 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
   };
 
   const saveStaff = () => {
+    setFormError("");
     const name = safeStr(form.name).trim();
-    if (!name) return alert("Name is required");
+    if (!name) { setFormError("Name is required"); return; }
 
     const role = safeStr(form.role).trim();
-    if (!role) return alert("Role is required");
+    if (!role) { setFormError("Role is required"); return; }
 
     const status = safeStr(form.status).trim();
-    if (!status) return alert("Status is required");
+    if (!status) { setFormError("Status is required"); return; }
 
     const phone = safeStr(form.phone).trim();
-    if (phone && !isValidPhone(phone)) return alert("Phone number must be 7–15 digits");
+    if (phone && !isValidPhone(phone)) { setFormError("Phone number must be 7–15 digits"); return; }
 
     const email = safeStr(form.email).trim().toLowerCase();
-    if (email && !isValidEmail(email)) return alert("Please enter a valid email address");
+    if (email && !isValidEmail(email)) { setFormError("Please enter a valid email address"); return; }
 
-    if (form.hourlyRate === "" || form.hourlyRate === null || form.hourlyRate === undefined) return alert("Hourly rate is required");
+    if (form.hourlyRate === "" || form.hourlyRate === null || form.hourlyRate === undefined) { setFormError("Hourly rate is required"); return; }
     const hourlyRate = Number(form.hourlyRate);
-    if (!Number.isFinite(hourlyRate) || hourlyRate < 0) return alert("Hourly rate must be a number 0 or greater");
+    if (!Number.isFinite(hourlyRate) || hourlyRate < 0) { setFormError("Hourly rate must be a number 0 or greater"); return; }
 
     // Block duplicate phone/email, except when editing the same staff member.
     const others = safeArr(staff).filter(s => s && safeStr(s.id) !== safeStr(editStaff));
     if (phone) {
       const phoneDigits = cleanPhone(phone);
       const dupPhone = others.find(s => cleanPhone(safeStr(s.phone)) === phoneDigits && phoneDigits.length >= 7);
-      if (dupPhone) return alert(`Phone ${phone} is already used by ${safeStr(dupPhone.name) || "another staff member"}`);
+      if (dupPhone) { setFormError(`Phone ${phone} is already used by ${safeStr(dupPhone.name) || "another staff member"}`); return; }
     }
     if (email) {
       const dupEmail = others.find(s => safeStr(s.email).trim().toLowerCase() === email);
-      if (dupEmail) return alert(`Email ${email} is already used by ${safeStr(dupEmail.name) || "another staff member"}`);
+      if (dupEmail) { setFormError(`Email ${email} is already used by ${safeStr(dupEmail.name) || "another staff member"}`); return; }
     }
 
     const now = new Date().toISOString();
@@ -177,11 +240,29 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
     if (editStaff) {
       // Preserve id, joinDate, createdAt, and any other fields the form doesn't touch.
       handleSetStaff(safeArr(staff).map(s => safeStr(s?.id) === safeStr(editStaff) ? { ...s, ...staffData } : s));
+
+      // Publish event for real-time Dashboard synchronization
+      moduleEventPublisher.publishStaffEvent('staff.updated', {
+        staffId: editStaff,
+        staffName: staffData.name,
+        role: staffData.role,
+        status: staffData.status,
+        staffId: getCurrentUserId()
+      });
     } else {
       handleSetStaff([
         ...safeArr(staff),
         { ...staffData, id: genId(), joinDate: now.split("T")[0], createdAt: now },
       ]);
+
+      // Publish event for real-time Dashboard synchronization
+      moduleEventPublisher.publishStaffEvent('staff.created', {
+        staffId: genId(),
+        staffName: staffData.name,
+        role: staffData.role,
+        status: staffData.status,
+        staffId: getCurrentUserId()
+      });
     }
     setShowModal(false);
   };
@@ -200,20 +281,78 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
 
   const updateStatus = (id, newStatus) => {
     if (!id) return;
-    handleSetStaff(safeArr(staff).map(s =>
-      safeStr(s?.id) === safeStr(id) ? { ...s, status: newStatus, updatedAt: new Date().toISOString() } : s
-    ));
+    const target = safeArr(staff).find(s => s && safeStr(s.id) === safeStr(id));
+    const currentStatus = target ? safeStr(target.status) : null;
+    setStatusDialog({
+      open: true,
+      staffId: id,
+      currentStatus,
+      newStatus,
+      onConfirm: () => {
+        setStatusDialog({ open: false, staffId: null, currentStatus: null, newStatus: null, onConfirm: null });
+        handleSetStaff(safeArr(staff).map(s =>
+          safeStr(s?.id) === safeStr(id) ? { ...s, status: newStatus, updatedAt: new Date().toISOString() } : s
+        ));
+
+        // Publish event for real-time Dashboard synchronization
+        moduleEventPublisher.publishStaffEvent('staff.status_changed', {
+          staffId: id,
+          previousStatus: currentStatus,
+          newStatus: newStatus,
+          staffId: getCurrentUserId()
+        });
+      }
+    });
   };
 
   const deleteStaff = (id) => {
     if (!id) return;
+    
+    // Check permission before allowing delete
+    const permissionCheck = StaffPermissions.canDelete();
+    if (!permissionCheck.allowed) {
+      // Log permission denial
+      const denialLog = createPermissionDeniedAuditLog({
+        userId: getCurrentUserId(),
+        action: 'STAFF_DELETE',
+        details: { staffId: id, requiredPermission: permissionCheck.requiredPermission }
+      });
+      if (setNotifications) {
+        setNotifications(prev => [denialLog, ...(prev || [])]);
+      }
+      
+      setPermissionDeniedDialog({
+        open: true,
+        action: 'delete staff member',
+        requiredPermission: permissionCheck.requiredPermission,
+        currentRole: permissionCheck.currentRole || '',
+      });
+      return;
+    }
+    
     const target = safeArr(staff).find(s => s && safeStr(s.id) === safeStr(id));
     const name   = target ? (safeStr(target.name).trim() || "this staff member") : "this staff member";
     const hasOrders = safeArr(orders).some(o => o && safeStr(o.assignedStaff) === safeStr(id));
-    const warning = hasOrders ? "\n\nWarning: this staff member has handled orders. Historical records will be preserved but unlinked." : "";
-    if (!window.confirm(`Delete "${name}"?${warning}`)) return;
-    handleSetStaff(safeArr(staff).filter(s => s && safeStr(s.id) !== safeStr(id)));
-    if (selectedStaff && safeStr(selectedStaff.id) === safeStr(id)) setSelectedStaff(null);
+    setDeleteDialog({
+      open: true,
+      name,
+      hasOrders,
+      onConfirm: () => {
+        setDeleteDialog({ open: false, name: null, hasOrders: false, onConfirm: null });
+        handleSetStaff(safeArr(staff).filter(s => s && safeStr(s.id) !== safeStr(id)));
+        if (selectedStaff && safeStr(selectedStaff.id) === safeStr(id)) setSelectedStaff(null);
+        
+        // Log staff deletion
+        const deleteLog = createSecurityAuditLog({
+          userId: getCurrentUserId(),
+          action: 'STAFF_DELETE',
+          details: { staffId: id, staffName: name, hadOrders: hasOrders }
+        });
+        if (setNotifications) {
+          setNotifications(prev => [deleteLog, ...(prev || [])]);
+        }
+      }
+    });
   };
 
   // Export currently-filtered staff as a dated CSV — safe against missing fields.
@@ -236,140 +375,218 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
 
   return (
     <div>
-      {/* Summary Strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 1, marginBottom: 18, border: `1px solid ${C.border2}`, borderRadius: 12, overflow: "hidden", background: C.border2 }}>
-        {[
-          { label: "Headcount",     val: safeArr(staff).length, color: C.text1, sub: "total staff" },
-          { label: "Active",        val: activeCount,           color: activeCount > 0 ? C.green : C.text3, sub: "on floor now" },
-          { label: "On Leave",      val: onLeaveCount,          color: onLeaveCount > 0 ? C.amber : C.text3, sub: onLeaveCount > 0 ? "away" : "all clear", alert: onLeaveCount > 0 },
-          { label: "Avg Rate",      val: `₹${avgHourlyRate}/hr`, color: C.amber2, sub: "active staff", mono: true },
-          { label: "Orders Today",  val: totalOrdersHandled,    color: C.blue,   sub: "handled" },
-          { label: "Efficiency",    val: avgEfficiency + "%",   color: avgEfficiency >= 80 ? C.green : avgEfficiency >= 60 ? C.amber : C.red, sub: avgEfficiency >= 80 ? "excellent" : avgEfficiency >= 60 ? "acceptable" : "needs review" },
-        ].map(m => (
-          <div key={m.label} style={{ background: C.bg2, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 3, position: "relative" }}>
-            {m.alert && <div style={{ position: "absolute", top: 10, right: 10, width: 6, height: 6, borderRadius: "50%", background: m.color, boxShadow: `0 0 6px ${m.color}` }} />}
-            <div style={{ fontSize: 10, color: C.text3, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 500 }}>{m.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, fontFamily: m.mono ? "monospace" : "inherit", color: m.color, lineHeight: 1 }}>{m.val}</div>
-            <div style={{ fontSize: 10, color: C.text3 }}>{m.sub}</div>
-          </div>
-        ))}
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: "var(--cafe-font-xl)", fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em", marginBottom: 4 }}>
+          Team Operations
+        </div>
+        <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>
+          Manage today's crew, attendance, shifts, and station coverage
+        </div>
+
+        {/* Operational Stat Chips */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {[
+            { label: "Scheduled Today", count: safeArr(staff).length, color: "var(--cafe-text-secondary)" },
+            { label: "Clocked In", count: activeCount, color: "var(--cafe-success)" },
+            { label: "On Leave", count: onLeaveCount, color: onLeaveCount > 0 ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)" },
+            { label: "Inactive Staff", count: safeArr(staff).filter(s => safeStr(s.status) === "inactive").length, color: "var(--cafe-text-tertiary)" },
+          ].map(chip => (
+            <div key={chip.label} style={{
+              background: "var(--cafe-bg-surface)",
+              border: `1px solid var(--cafe-border-light)`,
+              borderRadius: "var(--cafe-radius-md)",
+              padding: "8px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}>
+              <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                {chip.label}
+              </span>
+              <span style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: chip.color, fontFamily: "monospace" }}>
+                {chip.count}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", flex: 1 }}>
           <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: C.text3, pointerEvents: "none" }}>⌕</span>
-            <input style={{ ...input, paddingLeft: 26, width: 160, fontSize: 12 }} placeholder="Search name, role…" value={search} onChange={e => setSearch(e.target.value)} />
+            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "var(--cafe-text-tertiary)", pointerEvents: "none" }}>⌕</span>
+            <input 
+              style={{ ...input, paddingLeft: 32, width: isMobile ? "100%" : 200, fontSize: "var(--cafe-font-sm)" }} 
+              placeholder="Search name, phone, role…" 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+            />
           </div>
-          {/* Role filter — segmented */}
-          <div style={{ display: "flex", gap: 4, padding: "3px", background: C.bg3, borderRadius: 8, border: `1px solid ${C.border2}` }}>
-            {["All", ...SAFE_ROLES.slice(1)].map(role => (
-              <button key={role} onClick={() => setRoleFilter(role)} style={{ padding: "5px 10px", borderRadius: 6, border: "none", background: roleFilter === role ? C.bg1 : "transparent", color: roleFilter === role ? C.amber2 : C.text3, fontSize: 11, fontWeight: roleFilter === role ? 600 : 400, cursor: "pointer", transition: "all .15s", boxShadow: roleFilter === role ? `0 1px 3px rgba(0,0,0,.3), inset 0 0 0 1px ${C.border2}` : "none" }}>
-                {role === "All" ? "All roles" : role}
-              </button>
-            ))}
-          </div>
-          {/* Status filter — compact chips */}
-          <div style={{ display: "flex", gap: 4 }}>
-            {[
-              { val: "All",      label: "All" },
-              { val: "active",   label: "Active",   color: C.green },
-              { val: "on_leave", label: "Leave",    color: C.amber },
-              { val: "inactive", label: "Inactive", color: C.text3 },
-            ].map(s => (
-              <button key={s.val} onClick={() => setStatusFilter(s.val)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${statusFilter === s.val ? (s.color || C.amber) : C.border2}`, background: statusFilter === s.val ? C.bg3 : "transparent", color: statusFilter === s.val ? (s.color || C.amber2) : C.text3, fontSize: 11, fontWeight: statusFilter === s.val ? 600 : 400, cursor: "pointer" }}>
-                {s.label}
-              </button>
-            ))}
-          </div>
+          
+          {/* Role filter */}
+          <select style={{ ...input, fontSize: "var(--cafe-font-sm)", padding: "8px 12px" }} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+            <option value="All">All Roles</option>
+            {SAFE_ROLES.slice(1).map(role => <option key={role} value={role}>{role}</option>)}
+          </select>
+
+          {/* Status filter */}
+          <select style={{ ...input, fontSize: "var(--cafe-font-sm)", padding: "8px 12px" }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="All">All Status</option>
+            {SAFE_STATUSES.slice(1).map(status => <option key={status} value={status}>{safeStr(status).replace(/_/g, " ")}</option>)}
+          </select>
         </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <button style={btn("ghost")} onClick={exportStaff} title="Export staff as CSV">↓ CSV</button>
-          <div style={{ display: "flex", gap: 1, background: C.bg3, padding: 3, borderRadius: 7, border: `1px solid ${C.border2}` }}>
-            {["grid","list"].map(v => (
-              <button key={v} onClick={() => setViewMode(v)} style={{ padding: "5px 10px", borderRadius: 5, border: "none", background: viewMode === v ? C.bg1 : "transparent", color: viewMode === v ? C.amber2 : C.text3, fontSize: 11, cursor: "pointer", fontWeight: viewMode === v ? 600 : 400 }}>
-                {v === "grid" ? "⊞" : "≡"}
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <button style={btn("ghost")} onClick={exportStaff} title="Export staff as CSV">Export</button>
+          <div style={{ display: "flex", gap: 2, background: "var(--cafe-bg-surface)", padding: 2, borderRadius: "var(--cafe-radius-sm)", border: "1px solid var(--cafe-border-light)" }}>
+            {["cards","list"].map(v => (
+              <button key={v} onClick={() => setViewMode(v)} style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-xs)", border: "none", background: viewMode === v ? "var(--cafe-bg-card)" : "transparent", color: viewMode === v ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: viewMode === v ? 600 : 400 }}>
+                {v === "cards" ? "Cards" : "List"}
               </button>
             ))}
           </div>
-          <button style={btn("primary")} onClick={openAdd}>+ Add Staff</button>
+          <button style={btn("primary")} onClick={openAdd}>+ Add Team Member</button>
         </div>
       </div>
 
-      {/* Grid View */}
-      {viewMode === "grid" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 8 }} className="staff-grid">
+      {/* Cards View */}
+      {viewMode === "cards" && (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(280px,1fr))", gap: isMobile ? 8 : 12 }} className="staff-cards">
           {filtered.map(person => {
-            const statusColor = person.status === "active" ? C.green : person.status === "on_leave" ? C.amber : C.text3;
-            const effColor = person.efficiency >= 80 ? C.green : person.efficiency >= 60 ? C.amber2 : C.red;
+            const isActive = person.status === "active";
+            const isOnLeave = person.status === "on_leave";
+            const isInactive = person.status === "inactive";
+            const statusColor = isActive ? "var(--cafe-success)" : isOnLeave ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)";
+            const effColor = person.efficiency >= 80 ? "var(--cafe-success)" : person.efficiency >= 60 ? "var(--cafe-accent)" : "var(--cafe-danger)";
+            const statusLabel = safeStr(person.status).replace(/_/g, " ");
+            
             return (
-              <div key={person.id} style={{ ...card(), padding: 0, overflow: "hidden", border: `1px solid ${person.status === "on_leave" ? C.amberBorder : person.status === "inactive" ? C.border2 : C.border}`, background: C.bg2, display: "flex", flexDirection: "column" }}>
-                {/* Accent bar */}
-                <div style={{ height: 3, background: statusColor, opacity: person.status === "inactive" ? 0.2 : 0.7 }} />
+              <div 
+                key={person.id} 
+                onClick={() => { setSelectedStaff(person); setShowProfilePanel(true); }}
+                style={{ 
+                  ...card(), 
+                  padding: 0, 
+                  overflow: "hidden", 
+                  border: `1px solid ${isOnLeave ? "var(--cafe-warning-border)" : isInactive ? "var(--cafe-border-light)" : "var(--cafe-border-light)"}`, 
+                  background: "var(--cafe-bg-card)", 
+                  display: "flex", 
+                  flexDirection: "column",
+                  cursor: "pointer",
+                  transition: "transform 0.2s ease, box-shadow 0.2s ease"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "var(--cafe-shadow-md)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {/* Status bar */}
+                <div style={{ height: 3, background: statusColor, opacity: isActive ? 1 : 0.5 }} />
 
-                <div style={{ padding: "12px 14px 0", flex: 1 }}>
+                <div style={{ padding: 16, flex: 1 }}>
                   {/* Header */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 10, background: C.bg3, border: `1px solid ${C.border2}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: C.amber2, flexShrink: 0, letterSpacing: ".03em" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                    <div style={{ 
+                      width: 48, 
+                      height: 48, 
+                      borderRadius: "var(--cafe-radius-md)", 
+                      background: "var(--cafe-bg-surface)", 
+                      border: `1px solid var(--cafe-border-light)`, 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      fontSize: 16, 
+                      fontWeight: 700, 
+                      color: "var(--cafe-accent)", 
+                      flexShrink: 0, 
+                      letterSpacing: "0.03em" 
+                    }}>
                       {person.avatar}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{person.name}</div>
-                      <div style={{ fontSize: 10, color: C.text3, marginTop: 1, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{person.name}</div>
+                      <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
                         <span>{person.role}</span>
-                        <span style={{ opacity: .4 }}>·</span>
-                        <span style={{ color: statusColor, fontWeight: 500 }}>{safeStr(person.status).replace(/_/g, " ")}</span>
+                        <span style={{ opacity: 0.4 }}>·</span>
+                        <span style={{ color: statusColor, fontWeight: 500, textTransform: "capitalize" }}>{statusLabel}</span>
                       </div>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: C.amber2 }}>₹{person.hourlyRate}</div>
-                      <div style={{ fontSize: 9, color: C.text3 }}>per hr</div>
                     </div>
                   </div>
 
                   {/* Shifts */}
-                  <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap" }}>
-                    {safeArr(person.shifts).length > 0
-                      ? safeArr(person.shifts).map(shift => (
-                          <span key={shift} style={{ fontSize: 9, padding: "2px 7px", borderRadius: 4, background: C.bg3, border: `1px solid ${C.border2}`, color: C.blue, fontWeight: 500 }}>{safeStr(shift)}</span>
-                        ))
-                      : <span style={{ fontSize: 10, color: C.text3 }}>No shifts assigned</span>
-                    }
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>Shifts</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {safeArr(person.shifts).length > 0
+                        ? safeArr(person.shifts).map(shift => (
+                            <span key={shift} style={{ fontSize: "var(--cafe-font-xs)", padding: "4px 8px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-info)", fontWeight: 500 }}>{safeStr(shift)}</span>
+                          ))
+                        : <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>No shifts assigned</span>
+                      }
+                    </div>
                   </div>
 
-                  {/* Stats row */}
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: `1px solid ${C.border2}`, borderBottom: `1px solid ${C.border2}`, marginBottom: 8 }}>
+                  {/* Performance stats */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, padding: 10, background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-sm)", marginBottom: 12 }}>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.amber2, lineHeight: 1 }}>{person.ordersHandled}</div>
-                      <div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>orders</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)", lineHeight: 1 }}>{person.ordersHandled}</div>
+                      <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>Orders</div>
                     </div>
                     <div style={{ textAlign: "center" }}>
                       <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: effColor, lineHeight: 1 }}>{person.efficiency}%</div>
-                      <div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>efficiency</div>
+                      <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>Efficiency</div>
                     </div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: C.blue, lineHeight: 1 }}>{person.avgPrepTime || "—"}<span style={{ fontSize: 10, fontWeight: 400 }}>{person.avgPrepTime ? "m" : ""}</span></div>
-                      <div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>avg time</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-info)", lineHeight: 1 }}>{person.avgPrepTime || "—"}<span style={{ fontSize: 10, fontWeight: 400 }}>{person.avgPrepTime ? "m" : ""}</span></div>
+                      <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>Avg Time</div>
                     </div>
                   </div>
 
                   {/* Contact */}
                   {(person.phone || person.email) && (
-                    <div style={{ fontSize: 10, color: C.text3, marginBottom: 8, display: "flex", flexDirection: "column", gap: 2 }}>
-                      {person.phone && <span style={{ fontFamily: "monospace", color: C.text2 }}>{person.phone}</span>}
+                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", display: "flex", flexDirection: "column", gap: 2 }}>
+                      {person.phone && <span style={{ fontFamily: "monospace", color: "var(--cafe-text-secondary)" }}>{person.phone}</span>}
                       {person.email && <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{person.email}</span>}
                     </div>
                   )}
                 </div>
 
                 {/* Footer actions */}
-                <div style={{ display: "flex", borderTop: `1px solid ${C.border2}`, marginTop: "auto" }}>
-                  <button onClick={() => openEdit(person)} style={{ flex: 1, padding: "9px 0", border: "none", borderRight: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer" }}>Edit</button>
-                  {person.status !== "active"   && <button onClick={() => updateStatus(person.id, "active")}   style={{ padding: "9px 12px", border: "none", borderRight: `1px solid ${C.border2}`, background: "transparent", color: C.green,  fontSize: 10, cursor: "pointer" }}>Active</button>}
-                  {person.status !== "on_leave" && <button onClick={() => updateStatus(person.id, "on_leave")} style={{ padding: "9px 12px", border: "none", borderRight: `1px solid ${C.border2}`, background: "transparent", color: C.amber, fontSize: 10, cursor: "pointer" }}>Leave</button>}
-                  {person.status !== "inactive" && <button onClick={() => updateStatus(person.id, "inactive")} style={{ padding: "9px 12px", border: "none", borderRight: `1px solid ${C.border2}`, background: "transparent", color: C.text3, fontSize: 10, cursor: "pointer" }}>Off</button>}
-                  <button onClick={() => deleteStaff(person.id)} style={{ padding: "9px 12px", border: "none", background: "transparent", color: C.mutedRed, fontSize: 12, cursor: "pointer" }}>✕</button>
+                <div style={{ display: "flex", borderTop: "1px solid var(--cafe-border-light)", padding: 8 }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openEdit(person); }} 
+                    style={{ flex: 1, padding: "8px 0", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}
+                  >
+                    Edit
+                  </button>
+                  {isActive && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); updateStatus(person.id, "on_leave"); }} 
+                      style={{ flex: 1, padding: "8px 0", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-warning)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}
+                    >
+                      Leave
+                    </button>
+                  )}
+                  {!isActive && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); updateStatus(person.id, "active"); }} 
+                      style={{ flex: 1, padding: "8px 0", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-success)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}
+                    >
+                      Activate
+                    </button>
+                  )}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); deleteStaff(person.id); }} 
+                    style={{ padding: "8px 16px", border: "none", background: "transparent", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             );
@@ -379,45 +596,151 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
 
       {/* List View */}
       {viewMode === "list" && (
-        <div style={{ border: `1px solid ${C.border2}`, borderRadius: 10, overflow: "hidden" }}>
-          {/* Header */}
-          <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 90px 70px 60px 80px 80px", gap: 0, padding: "8px 14px", background: C.bg3, borderBottom: `1px solid ${C.border2}` }}>
-            {["", "Name / Role", "Shifts", "Status", "Orders", "Efficiency", "Rate"].map(h => (
-              <div key={h} style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 500 }}>{h}</div>
-            ))}
-          </div>
+        <div style={{ border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", overflow: "hidden" }}>
+          {!isMobile && (
+            <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 100px 80px 70px 80px 120px", gap: 0, padding: "12px 16px", background: "var(--cafe-bg-surface)", borderBottom: "1px solid var(--cafe-border-light)" }}>
+              {["", "Name / Role", "Shifts", "Status", "Orders", "Efficiency", "Actions"].map(h => (
+                <div key={h} style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{h}</div>
+              ))}
+            </div>
+          )}
           {filtered.map((person, i) => {
-            const statusColor = person.status === "active" ? C.green : person.status === "on_leave" ? C.amber : C.text3;
-            const effColor = person.efficiency >= 80 ? C.green : person.efficiency >= 60 ? C.amber2 : C.red;
+            const isActive = person.status === "active";
+            const isOnLeave = person.status === "on_leave";
+            const isInactive = person.status === "inactive";
+            const statusColor = isActive ? "var(--cafe-success)" : isOnLeave ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)";
+            const effColor = person.efficiency >= 80 ? "var(--cafe-success)" : person.efficiency >= 60 ? "var(--cafe-accent)" : "var(--cafe-danger)";
+            const statusLabel = safeStr(person.status).replace(/_/g, " ");
+            
+            if (isMobile) {
+              return (
+                <div 
+                  key={person.id} 
+                  onClick={() => { setSelectedStaff(person); setShowProfilePanel(true); }}
+                  style={{ 
+                    padding: "14px 16px", 
+                    borderBottom: i < filtered.length - 1 ? "1px solid var(--cafe-border-light)" : "none", 
+                    background: "var(--cafe-bg-card)",
+                    cursor: "pointer"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                    <div style={{ 
+                      width: 40, 
+                      height: 40, 
+                      borderRadius: "var(--cafe-radius-sm)", 
+                      background: "var(--cafe-bg-surface)", 
+                      border: "1px solid var(--cafe-border-light)", 
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center", 
+                      fontSize: 14, 
+                      fontWeight: 700, 
+                      color: "var(--cafe-accent)" 
+                    }}>
+                      {person.avatar}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-primary)" }}>{person.name}</div>
+                      <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)" }}>{person.role}</div>
+                    </div>
+                    <span style={{ 
+                      padding: "4px 8px", 
+                      borderRadius: "var(--cafe-radius-xs)", 
+                      background: isActive ? "var(--cafe-success-bg)" : isOnLeave ? "var(--cafe-warning-bg)" : "var(--cafe-bg-surface)",
+                      color: statusColor,
+                      fontSize: "var(--cafe-font-xs", 
+                      fontWeight: 600, 
+                      textTransform: "capitalize" 
+                    }}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)" }}>Orders</div>
+                      <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-accent)", fontFamily: "monospace" }}>{person.ordersHandled}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)" }}>Efficiency</div>
+                      <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: effColor, fontFamily: "monospace" }}>{person.efficiency}%</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)" }}>Avg Time</div>
+                      <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-info)", fontFamily: "monospace" }}>{person.avgPrepTime || "—"}{person.avgPrepTime ? "m" : ""}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
             return (
-              <div key={person.id} style={{ display: "grid", gridTemplateColumns: "40px 1fr 90px 70px 60px 80px 80px", gap: 0, padding: "10px 14px", borderBottom: i < filtered.length - 1 ? `1px solid ${C.border2}` : "none", background: C.bg2, alignItems: "center" }}>
+              <div 
+                key={person.id} 
+                onClick={() => { setSelectedStaff(person); setShowProfilePanel(true); }}
+                style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "48px 1fr 100px 80px 70px 80px 120px", 
+                  gap: 0, 
+                  padding: "14px 16px", 
+                  borderBottom: i < filtered.length - 1 ? "1px solid var(--cafe-border-light)" : "none", 
+                  background: "var(--cafe-bg-card)", 
+                  alignItems: "center",
+                  cursor: "pointer",
+                  ":hover": {
+                    background: "var(--cafe-bg-surface)"
+                  }
+                }}
+              >
                 {/* Avatar */}
-                <div style={{ width: 30, height: 30, borderRadius: 7, background: C.bg3, border: `1px solid ${C.border2}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: C.amber2 }}>
+                <div style={{ 
+                  width: 36, 
+                  height: 36, 
+                  borderRadius: "var(--cafe-radius-sm)", 
+                  background: "var(--cafe-bg-surface)", 
+                  border: "1px solid var(--cafe-border-light)", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  fontSize: 12, 
+                  fontWeight: 700, 
+                  color: "var(--cafe-accent)" 
+                }}>
                   {person.avatar}
                 </div>
                 {/* Name */}
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{person.name}</div>
-                  <div style={{ fontSize: 10, color: C.text3 }}>{person.role}{person.phone ? ` · ${person.phone}` : ""}</div>
+                  <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{person.name}</div>
+                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>{person.role}</div>
                 </div>
                 {/* Shifts */}
-                <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                   {safeArr(person.shifts).length > 0
-                    ? safeArr(person.shifts).map(shift => <span key={shift} style={{ fontSize: 8, padding: "1px 5px", borderRadius: 3, background: C.bg3, border: `1px solid ${C.border2}`, color: C.blue }}>{shift}</span>)
-                    : <span style={{ fontSize: 10, color: C.text3 }}>—</span>
+                    ? safeArr(person.shifts).slice(0, 2).map(shift => <span key={shift} style={{ fontSize: "var(--cafe-font-xs)", padding: "2px 6px", borderRadius: "var(--cafe-radius-xs)", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-info)" }}>{shift}</span>)
+                    : <span style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)" }}>—</span>
                   }
+                  {safeArr(person.shifts).length > 2 && <span style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)" }}>+{safeArr(person.shifts).length - 2}</span>}
                 </div>
                 {/* Status */}
-                <div style={{ fontSize: 11, fontWeight: 500, color: statusColor }}>{safeStr(person.status).replace(/_/g, " ")}</div>
+                <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 500, color: statusColor, textTransform: "capitalize" }}>{statusLabel}</div>
                 {/* Orders */}
-                <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 600, color: C.amber2 }}>{person.ordersHandled}</div>
+                <div style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-accent)" }}>{person.ordersHandled}</div>
                 {/* Efficiency */}
-                <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 600, color: effColor }}>{person.efficiency}%</div>
-                {/* Rate + actions */}
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontFamily: "monospace", fontSize: 11, color: C.text2 }}>₹{person.hourlyRate}</span>
-                  <button onClick={() => openEdit(person)} style={{ padding: "3px 7px", borderRadius: 5, border: `1px solid ${C.border2}`, background: "transparent", color: C.text3, fontSize: 10, cursor: "pointer" }}>✎</button>
-                  <button onClick={() => deleteStaff(person.id)} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", color: C.mutedRed, fontSize: 11, cursor: "pointer" }}>✕</button>
+                <div style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: effColor }}>{person.efficiency}%</div>
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openEdit(person); }} 
+                    style={{ padding: "4px 8px", borderRadius: "var(--cafe-radius-xs)", border: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-xs", cursor: "pointer" }}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); deleteStaff(person.id); }} 
+                    style={{ padding: "4px 8px", borderRadius: "var(--cafe-radius-xs)", border: "none", background: "transparent", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-xs", cursor: "pointer" }}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             );
@@ -425,84 +748,279 @@ export default function Staff({ staff: externalStaff, setStaff: externalSetStaff
         </div>
       )}
 
-      {filtered.length === 0 && (
-        <div style={{ textAlign: "center", padding: "48px 24px", color: C.text3 }}>
-          <div style={{ fontSize: 28, marginBottom: 10, opacity: .35 }}>◎</div>
-          <div style={{ fontSize: 13, color: C.text2, fontWeight: 500, marginBottom: 6 }}>
-            {search || roleFilter !== "All" || statusFilter !== "All" ? "No staff match these filters" : "No staff added yet"}
+      {/* Staff Profile Panel */}
+      {showProfilePanel && selectedStaff && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, animation: "fadeIn 0.2s ease" }} onClick={() => setShowProfilePanel(false)}>
+          <div 
+            style={{ 
+              background: "var(--cafe-bg-card)", 
+              border: "1px solid var(--cafe-border-light)", 
+              borderRadius: "var(--cafe-radius-lg)", 
+              width: "min(500px,95vw)", 
+              maxHeight: "90vh", 
+              overflowY: "auto", 
+              boxShadow: "var(--cafe-shadow-lg)",
+              display: "flex",
+              flexDirection: "column",
+              animation: "slideUp 0.3s ease"
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Profile Header */}
+            <div style={{ padding: 24, borderBottom: "1px solid var(--cafe-border-light)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ 
+                    width: 64, 
+                    height: 64, 
+                    borderRadius: "var(--cafe-radius-lg)", 
+                    background: "var(--cafe-bg-surface)", 
+                    border: "2px solid var(--cafe-accent-border)", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    fontSize: 24, 
+                    fontWeight: 700, 
+                    color: "var(--cafe-accent)" 
+                  }}>
+                    {selectedStaff.avatar}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-primary)" }}>{selectedStaff.name}</div>
+                    <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{selectedStaff.role}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <span style={{ 
+                        padding: "4px 10px", 
+                        borderRadius: "var(--cafe-radius-sm)", 
+                        background: selectedStaff.status === "active" ? "var(--cafe-success-bg)" : selectedStaff.status === "on_leave" ? "var(--cafe-warning-bg)" : "var(--cafe-bg-surface)",
+                        border: `1px solid ${selectedStaff.status === "active" ? "var(--cafe-success-border)" : selectedStaff.status === "on_leave" ? "var(--cafe-warning-border)" : "var(--cafe-border-light"}`,
+                        color: selectedStaff.status === "active" ? "var(--cafe-success)" : selectedStaff.status === "on_leave" ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)",
+                        fontSize: "var(--cafe-font-xs", 
+                        fontWeight: 600, 
+                        textTransform: "capitalize" 
+                      }}>
+                        {safeStr(selectedStaff.status).replace(/_/g, " ")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowProfilePanel(false)} 
+                  style={{ padding: "8px 12px", borderRadius: "var(--cafe-radius-sm)", border: "1px solid var(--cafe-border-light)", background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 16, lineHeight: 1 }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Profile Content */}
+            <div style={{ padding: 24, flex: 1 }}>
+              {/* Contact Section */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: "var(--cafe-font-sm", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contact</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {selectedStaff.phone && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", width: 80 }}>Phone</span>
+                      <span style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)" }}>{selectedStaff.phone}</span>
+                    </div>
+                  )}
+                  {selectedStaff.email && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", width: 80 }}>Email</span>
+                      <span style={{ fontSize: "var(--cafe-font-sm", color: "var(--cafe-text-secondary)" }}>{selectedStaff.email}</span>
+                    </div>
+                  )}
+                  {(!selectedStaff.phone && !selectedStaff.email) && (
+                    <span style={{ fontSize: "var(--cafe-font-sm", color: "var(--cafe-text-tertiary)" }}>No contact information</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Employment Section */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: "var(--cafe-font-sm", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Employment</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", width: 80 }}>Joined</span>
+                    <span style={{ fontSize: "var(--cafe-font-sm", color: "var(--cafe-text-secondary)" }}>{selectedStaff.joinDate}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", width: 80 }}>Rate</span>
+                    <span style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-sm", color: "var(--cafe-text-secondary)" }}>₹{selectedStaff.hourlyRate}/hr</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Shifts Section */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: "var(--cafe-font-sm", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Shifts</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {safeArr(selectedStaff.shifts).length > 0
+                    ? safeArr(selectedStaff.shifts).map(shift => (
+                        <span key={shift} style={{ fontSize: "var(--cafe-font-sm", padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-info)", fontWeight: 500 }}>{shift}</span>
+                      ))
+                    : <span style={{ fontSize: "var(--cafe-font-sm", color: "var(--cafe-text-tertiary)" }}>No shifts assigned</span>
+                  }
+                </div>
+              </div>
+
+              {/* Performance Section */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: "var(--cafe-font-sm", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Performance</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, padding: 16, background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)" }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)", lineHeight: 1 }}>{selectedStaff.ordersHandled}</div>
+                    <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", marginTop: 4 }}>Orders</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: selectedStaff.efficiency >= 80 ? "var(--cafe-success)" : selectedStaff.efficiency >= 60 ? "var(--cafe-accent)" : "var(--cafe-danger)", lineHeight: 1 }}>{selectedStaff.efficiency}%</div>
+                    <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", marginTop: 4 }}>Efficiency</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-info)", lineHeight: 1 }}>{selectedStaff.avgPrepTime || "—"}<span style={{ fontSize: 14, fontWeight: 400 }}>{selectedStaff.avgPrepTime ? "m" : ""}</span></div>
+                    <div style={{ fontSize: "var(--cafe-font-xs", color: "var(--cafe-text-tertiary)", marginTop: 4 }}>Avg Time</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Actions */}
+            <div style={{ padding: 16, borderTop: "1px solid var(--cafe-border-light)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => { setShowProfilePanel(false); openEdit(selectedStaff); }} 
+                style={{ padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}
+              >
+                Edit Profile
+              </button>
+              <button 
+                onClick={() => { setShowProfilePanel(false); deleteStaff(selectedStaff.id); }} 
+                style={{ padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}
+              >
+                Delete
+              </button>
+            </div>
           </div>
-          <div style={{ fontSize: 11, color: C.text3, marginBottom: 14 }}>
-            {search ? `No results for "${search}"` : statusFilter !== "All" ? `No ${statusFilter.replace(/_/g, " ")} staff` : "Add your first team member to get started"}
-          </div>
-          {(search || roleFilter !== "All" || statusFilter !== "All") && (
-            <button onClick={() => { setSearch(""); setRoleFilter("All"); setStatusFilter("All"); }} style={{ padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer" }}>Clear filters</button>
-          )}
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(2px)" }} onClick={() => setShowModal(false)}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 16, padding: 24, width: "min(420px,95vw)", maxHeight: "92dvh", overflowY: "auto", boxSizing: "border-box" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${C.border2}` }}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-lg)", padding: 24, width: "min(450px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--cafe-shadow-lg)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid var(--cafe-border-light)" }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.text1 }}>{editStaff ? "Edit Staff Member" : "Add Team Member"}</div>
-                {editStaff && <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>ID · {editStaff}</div>}
+                <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-primary)" }}>{editStaff ? "Edit Staff Member" : "Add Team Member"}</div>
+                {editStaff && <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>ID · {editStaff}</div>}
               </div>
-              <button style={{ padding: "4px 8px", border: `1px solid ${C.border2}`, borderRadius: 6, background: "transparent", color: C.text3, cursor: "pointer", fontSize: 14, lineHeight: 1 }} onClick={() => setShowModal(false)}>✕</button>
+              <button style={{ padding: "6px 10px", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 14, lineHeight: 1 }} onClick={() => setShowModal(false)}>✕</button>
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={label}>Name *</label>
-              <input style={input} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-              <div>
-                <label style={label}>Role *</label>
-                <select style={{ ...input }} value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
-                  {SAFE_ROLES.slice(1).map(role => <option key={role} value={role}>{role}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={label}>Status *</label>
-                <select style={{ ...input }} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                  {SAFE_STATUSES.slice(1).map(status => <option key={status} value={status}>{safeStr(status).replace(/_/g, " ")}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-              <div>
-                <label style={label}>Phone</label>
-                <input style={input} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="7–15 digits" />
-              </div>
-              <div>
-                <label style={label}>Hourly Rate (₹) *</label>
-                <input style={input} type="number" min="0" value={form.hourlyRate} onChange={e => setForm({ ...form, hourlyRate: e.target.value })} placeholder="0" />
-              </div>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={label}>Email</label>
-              <input style={input} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
-            </div>
+            
+            {/* Basic Information Section */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ ...label, marginBottom: 8, display: "block" }}>Shifts</label>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {SAFE_SHIFTS.map(shift => {
-                  const active = safeArr(form.shifts).includes(shift);
-                  return (
-                    <button key={shift} onClick={() => toggleShift(shift)} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${active ? C.amber : C.border2}`, background: active ? C.amberDim : "transparent", color: active ? C.amber2 : C.text3, fontSize: 11, fontWeight: active ? 600 : 400, cursor: "pointer", transition: "all .15s" }}>
-                      {shift}
-                    </button>
-                  );
-                })}
+              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Basic Information</div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...label, marginBottom: 6 }}>Full Name *</label>
+                <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ ...label, marginBottom: 6 }}>Role *</label>
+                  <select style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                    {SAFE_ROLES.slice(1).map(role => <option key={role} value={role}>{role}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ ...label, marginBottom: 6 }}>Status *</label>
+                  <select style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                    {SAFE_STATUSES.slice(1).map(status => <option key={status} value={status}>{safeStr(status).replace(/_/g, " ")}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 16, borderTop: `1px solid ${C.border2}` }}>
-              <button style={btn("ghost")} onClick={() => setShowModal(false)}>Cancel</button>
+
+            {/* Contact Information Section */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Contact Information</div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...label, marginBottom: 6 }}>Phone <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>(optional)</span></label>
+                <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="7–15 digits" />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...label, marginBottom: 6 }}>Email <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>(optional)</span></label>
+                <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />
+              </div>
+            </div>
+
+            {/* Employment Details Section */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Employment Details</div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...label, marginBottom: 6 }}>Hourly Rate (₹) *</label>
+                <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} type="number" min="0" value={form.hourlyRate} onChange={e => setForm({ ...form, hourlyRate: e.target.value })} placeholder="0" />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ ...label, marginBottom: 8, display: "block" }}>Shifts</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {SAFE_SHIFTS.map(shift => {
+                    const active = safeArr(form.shifts).includes(shift);
+                    return (
+                      <button key={shift} onClick={() => toggleShift(shift)} style={{ padding: "8px 14px", borderRadius: "var(--cafe-radius-md)", border: `1px solid ${active ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`, background: active ? "var(--cafe-accent-bg)" : "transparent", color: active ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", fontWeight: active ? 600 : 400, cursor: "pointer", transition: "all .15s" }}>
+                        {shift}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {formError && (
+              <div style={{ marginBottom: 16, padding: "10px 12px", borderRadius: "var(--cafe-radius-md)", background: "var(--cafe-danger-bg)", border: "1px solid var(--cafe-danger-border)", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)" }}>
+                {formError}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 16, borderTop: "1px solid var(--cafe-border-light)" }}>
+              <button style={{ ...btn("ghost"), padding: "10px 20px", borderRadius: "var(--cafe-radius-md)" }} onClick={() => setShowModal(false)}>Cancel</button>
               <button style={btn("primary")} onClick={saveStaff}>{editStaff ? "Save Changes" : "Add Member"}</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Dialogs */}
+      <DestructiveDialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, name: null, hasOrders: false, onConfirm: null })}
+        onConfirm={deleteDialog.onConfirm}
+        title="Delete Staff Member"
+        description="This action cannot be undone."
+        recordName={deleteDialog.name}
+        consequence={deleteDialog.hasOrders 
+          ? "This staff member has handled orders. Historical records will be preserved but unlinked."
+          : "This staff member will be permanently removed from the system."
+        }
+        confirmLabel="Delete Staff Member"
+      />
+
+      <WarningDialog
+        open={statusDialog.open}
+        onClose={() => setStatusDialog({ open: false, staffId: null, currentStatus: null, newStatus: null, onConfirm: null })}
+        onConfirm={statusDialog.onConfirm}
+        title="Change Staff Status"
+        description={`Change status from "${safeStr(statusDialog.currentStatus).replace(/_/g, " ")}" to "${safeStr(statusDialog.newStatus).replace(/_/g, " ")}"?`}
+        warning="This will affect the staff member's access and availability."
+        confirmLabel="Change Status"
+      />
+
+      <PermissionDeniedDialog
+        open={permissionDeniedDialog.open}
+        onClose={() => setPermissionDeniedDialog({ ...permissionDeniedDialog, open: false })}
+        action={permissionDeniedDialog.action}
+        requiredPermission={permissionDeniedDialog.requiredPermission}
+        currentRole={permissionDeniedDialog.currentRole}
+        contactMessage="Contact a manager or owner for access to manage staff."
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // Staff domain model with schema validation and helper functions
 
-import { generateId, createStaffId } from './ids.js';
+import { createStaffId } from './ids.js';
 import { now, toTimestamp } from './dates.js';
 
 /**
@@ -52,7 +52,7 @@ function _ts(raw) {
 }
 
 function _warn(msg) {
-  if (process.env.NODE_ENV !== 'production') console.warn('[staffModel]', msg);
+  console.warn('[staffModel]', msg);
 }
 
 const _ROLE_ALIAS = {
@@ -157,10 +157,8 @@ export function createStaff(input = {}) {
   const rawEfficiency = _clamp(_num(i.efficiency, 100), 0, 100);
   const rawHourlyRate = _clamp(_num(i.hourlyRate, 0), 0);
 
-  if (process.env.NODE_ENV !== 'production') {
-    if (rawRating !== _num(i.rating, 5)) _warn(`createStaff: rating out of range, clamped to ${rawRating}`);
-    if (rawEfficiency !== _num(i.efficiency, 100)) _warn(`createStaff: efficiency out of range, clamped to ${rawEfficiency}`);
-  }
+  if (rawRating !== _num(i.rating, 5)) _warn(`createStaff: rating out of range, clamped to ${rawRating}`);
+  if (rawEfficiency !== _num(i.efficiency, 100)) _warn(`createStaff: efficiency out of range, clamped to ${rawEfficiency}`);
 
   return {
     id: i.id || createStaffId(),

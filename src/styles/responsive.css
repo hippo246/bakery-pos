@@ -1,11 +1,37 @@
 /* BrewCRM — Responsive styles
-   Single breakpoint: 700px matches the JS isMobile threshold in Layout.jsx
+   Multiple breakpoints for better adaptability across all screen sizes
    Only targeting classNames that actually exist in JSX components.        */
 
-/* ── Mobile (≤700px) ──────────────────────────────────────── */
-@media (max-width: 700px) {
+/* ── Extra Small Mobile (≤480px) ───────────────────────────────── */
+@media (max-width: 480px) {
+  .grid-4,
+  .grid-6 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 
-  /* Grid helpers — collapse to fewer columns */
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-grid,
+  .menu-grid,
+  .inventory-grid,
+  .staff-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tables-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-menu-panel {
+    max-height: 50vh;
+  }
+}
+
+/* ── Small Mobile (481px – 600px) ─────────────────────────────── */
+@media (min-width: 481px) and (max-width: 600px) {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -16,62 +42,30 @@
     gap: 8px;
   }
 
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
-
-  /* Kitchen — single column so cards are full width and tappable */
-  .kitchen-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Menu — single column cards */
-  .menu-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Inventory — single column cards */
-  .inventory-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Staff — single column cards */
-  .staff-grid {
-    grid-template-columns: 1fr;
-  }
-
-  /* Tables — 2-col so table cards aren't enormous */
   .tables-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
 
-  /* POS layout — handled in Orders.jsx inline but belt-and-suspenders */
-  .pos-layout {
-    display: flex;
-    flex-direction: column;
-    height: auto;
+/* ── Mobile (601px – 700px) ─────────────────────────────────── */
+@media (min-width: 601px) and (max-width: 700px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
-  /* Category rail hidden on mobile — Orders.jsx uses a horizontal scroll strip instead */
-  .pos-categories {
-    display: none;
+  .grid-6 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
   }
 
-  .pos-menu-panel {
-    max-height: 55vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Prevent iOS from zooming into inputs */
-  input, select, textarea {
-    font-size: 16px !important;
+  .tables-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* ── Tablet (701px – 1024px) ──────────────────────────────── */
-@media (min-width: 701px) and (max-width: 1024px) {
-
+/* ── Tablet Portrait (701px – 900px) ────────────────────────── */
+@media (min-width: 701px) and (max-width: 900px) {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -82,6 +76,183 @@
 
   .kitchen-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .staff-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── Tablet Landscape (901px – 1024px) ───────────────────────── */
+@media (min-width: 901px) and (max-width: 1024px) {
+  .grid-4 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-6 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .kitchen-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .staff-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ── Small Desktop (1025px – 1280px) ───────────────────────── */
+@media (min-width: 1025px) and (max-width: 1280px) {
+  .grid-4 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid-6 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .kitchen-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .staff-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ── Large Desktop (1281px – 1600px) ───────────────────────── */
+@media (min-width: 1281px) and (max-width: 1600px) {
+  .grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .grid-6 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .kitchen-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .staff-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* ── Extra Large Desktop (≥1601px) ───────────────────────────── */
+@media (min-width: 1601px) {
+  .grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .grid-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .kitchen-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .inventory-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .staff-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .tables-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* ── Mobile Layout Helpers (≤700px) ───────────────────────────── */
+@media (max-width: 700px) {
+  /* Prevent iOS from zooming into inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Force stack two-column layouts into single column */
+  .mobile-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  /* POS specific mobile overrides */
+  .pos-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+  }
+
+  /* Category rail hidden on mobile — Orders.jsx uses a horizontal scroll strip instead */
+  .pos-categories {
+    display: none !important;
+  }
+
+  .pos-menu-panel {
+    max-height: none !important;
+    flex: none !important;
+    overflow-y: visible !important;
   }
 }
 
@@ -164,5 +335,59 @@
   .menu-grid > *,
   .tables-grid > * {
     border: 2px solid ButtonText;
+  }
+}
+
+/* ── Mobile Checkout Screen (≤700px) ─────────────────────────── */
+@media (max-width: 700px) {
+  .pos-checkout-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 100 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .pos-mobile-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+  }
+
+  .pos-checkout-scroll {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Tab bar */
+  .pos-mobile-tab-bar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 5 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  }
+}
+
+/* ── Mobile Cart Screen (≤700px) ─────────────────────────────── */
+@media (max-width: 700px) {
+  .pos-cart-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 100 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: var(--cafe-bg-1) !important;
+  }
+
+  .pos-cart-scroll {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 100px !important;
   }
 }

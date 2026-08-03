@@ -1,8 +1,8 @@
 // Order domain model with schema validation and helper functions
 
-import { generateId, createOrderId, createCustomerId, createKdsTicketId } from './ids.js';
+import { generateId, createOrderId } from './ids.js';
 import { now, toTimestamp } from './dates.js';
-import { calculateSubtotal, calculateOrderTotals, roundCurrency } from './money.js';
+import { calculateSubtotal, calculateOrderTotals } from './money.js';
 
 /**
  * Standard Order schema
@@ -53,7 +53,7 @@ export const ORDER_STATUS_FLOW = {
 };
 
 // Valid order sources
-export const ORDER_SOURCES = ['WALK_IN', 'SWIGGY', 'ZOMATO', 'DIRECT_DELIVERY'];
+export const ORDER_SOURCES = ['WALK_IN', 'SWIGGY', 'ZOMATO', 'DIRECT_DELIVERY', 'QR_ORDERING'];
 
 // Valid order statuses
 export const ORDER_STATUSES = ['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'];
@@ -67,10 +67,8 @@ export const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'SPLIT', 'ONLINE', 'COD']
 // Valid stations
 export const STATIONS = ['Bar', 'Kitchen', 'Packaging', 'Dessert'];
 
-const DEV = process.env.NODE_ENV !== 'production';
-
 function devWarn(msg, value) {
-  if (DEV) console.warn(`[orderModel] ${msg}`, value ?? '');
+  console.warn(`[orderModel] ${msg}`, value ?? '');
 }
 
 /**
@@ -170,6 +168,7 @@ export function createOrder(input = {}) {
     status,
     paymentStatus,
     paymentMethod,
+    paymentBreakdown: Array.isArray(safeInput.paymentBreakdown) ? safeInput.paymentBreakdown : [],
     notes: typeof safeInput.notes === 'string' ? safeInput.notes : '',
     createdAt: safeInput.createdAt || now(),
     updatedAt: safeInput.updatedAt || now(),
@@ -233,6 +232,7 @@ export function normalizeOrder(order) {
     status,
     paymentStatus,
     paymentMethod,
+    paymentBreakdown: Array.isArray(order.paymentBreakdown) ? order.paymentBreakdown : [],
     notes: typeof (order.notes ?? order.note) === 'string' ? (order.notes ?? order.note) : '',
     createdAt: safeNum(createdAt, now()),
     updatedAt: safeNum(updatedAt, now()),

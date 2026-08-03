@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import React from 'react';
+import { useState, useEffect, useRef, memo } from "react";
 import { C } from "../../styles/theme";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -55,7 +56,7 @@ function LiveClock() {
     return () => clearInterval(id);
   }, []);
 
-  const { hh, mm, ss, ampm, dayStr, monthStr, date, year, fullLabel } = ElapsedDisplay(now);
+  const { hh, mm, ss, ampm, dayStr, monthStr, date, fullLabel } = ElapsedDisplay(now);
 
   return (
     <div
@@ -73,4 +74,5 @@ function LiveClock() {
   );
 }
 
-export default LiveClock;
+// Memoize LiveClock to prevent unnecessary re-renders
+export default memo(LiveClock);

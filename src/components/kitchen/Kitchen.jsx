@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { C, card, input, btn, URGENCY_ORDER } from "../../styles/theme";
+import React from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { C, card, input, btn, URGENCY_ORDER, emptyState } from "../../styles/theme";
 import KDSCard from "./KDSCard";
 import { 
   createKdsTicketsFromOrder, 
@@ -21,6 +22,11 @@ import {
   KDS_STATIONS
 } from "../../domain/kdsModel.js";
 import { getMinutesElapsed, toTimestamp } from "../../domain/dates.js";
+import { triggerKitchenNotification } from "../../utils/notificationTriggers.js";
+import { saveNotifications } from "../../utils/notificationService.js";
+import printEngine, { DOCUMENT_TYPES } from "../../print/printEngine.js";
+import { getActiveShift } from "../../domain/shiftModel.js";
+import moduleEventPublisher from "../../dashboard/liveEngine/ModuleEventPublisher.js";
 
 // Prep time estimates for menu items (in minutes)
 const PREP_TIMES = {
@@ -40,10 +46,11 @@ const PREP_TIMES = {
   "Blueberry Muffin": 3,
 };
 
-function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
+function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notifications, setNotifications, shifts, setShifts }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
   useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
 
+  const [isFullScreen, setIsFullScreen] = useState(true);
   const [view, setView] = useState("cards");
   const [doneLog, setDoneLog] = useState([]);
   const [sortBy, setSortBy] = useState("time");
@@ -51,6 +58,75 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
   const [stationFilter, setStationFilter] = useState("All");
   const [holdReasonModal, setHoldReasonModal] = useState(null);
   const [moveStationModal, setMoveStationModal] = useState(null);
+  const [draggedTicket, setDraggedTicket] = useState(null);
+  const [dragOverStation, setDragOverStation] = useState(null);
+  const [stationOrder, setStationOrder] = useState(["Bar", "Kitchen", "Packaging", "Dessert"]);
+
+  // ── Usability additions: search, keyboard nav, toasts, sound ──────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [focusedCardId, setFocusedCardId] = useState(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try { return localStorage.getItem("kds_sound_enabled") !== "0"; } catch { return true; }
+  });
+  const searchInputRef = useRef(null);
+  const toastIdRef = useRef(0);
+  const holdReasonInputRef = useRef(null);
+
+  const dismissToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // { message, onUndo? } — auto-dismisses after 6s, can be dismissed/undone earlier
+  const addToast = useCallback((toast) => {
+    const id = ++toastIdRef.current;
+    setToasts(prev => [...prev.slice(-3), { id, ...toast }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 6000);
+  }, []);
+
+  const playChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1174, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+      osc.onended = () => ctx.close();
+    } catch {
+      // Ignore audio failures (autoplay restrictions, unsupported browser, etc.)
+    }
+  }, []);
+
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      try { localStorage.setItem("kds_sound_enabled", next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  // Notification helper
+  const addNotification = useCallback((notification) => {
+    if (!notification || !setNotifications) return;
+    setNotifications(prev => {
+      const updated = [notification, ...prev];
+      saveNotifications(updated);
+      return updated;
+    });
+  }, [setNotifications]);
 
   // Safe base list: never let a null/undefined/malformed kdsCards crash the screen
   const safeKdsCards = useMemo(() => {
@@ -91,6 +167,26 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
     }
   }, [safeKdsCards]);
 
+  // Alert staff (sound + toast) when a brand-new ticket lands
+  const knownTicketIdsRef = useRef(new Set());
+  const firstTicketSyncRef = useRef(true);
+  useEffect(() => {
+    const currentIds = new Set(safeKdsCards.filter(c => !c.completed).map(c => c.id));
+    if (firstTicketSyncRef.current) {
+      knownTicketIdsRef.current = currentIds;
+      firstTicketSyncRef.current = false;
+      return;
+    }
+    const arrivals = safeKdsCards.filter(c => !c.completed && !knownTicketIdsRef.current.has(c.id));
+    if (arrivals.length > 0) {
+      if (soundEnabled) playChime();
+      arrivals.forEach(t => {
+        addToast({ message: `🔔 New ticket ${t.orderId || t.id}${t.station ? ` · ${t.station}` : ""}` });
+      });
+    }
+    knownTicketIdsRef.current = currentIds;
+  }, [safeKdsCards, soundEnabled, playChime, addToast]);
+
   // Recalculate urgency for all tickets every minute
   useEffect(() => {
     const interval = setInterval(() => {
@@ -118,6 +214,21 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
     }, 60000); // Every minute
     return () => clearInterval(interval);
   }, [setKdsCards]);
+
+  // Check for unaccepted tickets and trigger notifications
+  useEffect(() => {
+    const interval = setInterval(() => {
+      safeKdsCards.forEach(ticket => {
+        if (!ticket || ticket.startedAt || ticket.completed || ticket.held) return;
+        const waitTime = getMinutesElapsed(ticket.createdAt);
+        if (waitTime >= 3) {
+          const notif = triggerKitchenNotification(ticket, 'TICKET_UNACCEPTED', { waitTime });
+          addNotification(notif);
+        }
+      });
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, [safeKdsCards, addNotification]);
 
   // Sync KDS cards with orders - create KDS cards for new orders
   const syncKDSWithOrders = useCallback(() => {
@@ -161,6 +272,12 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
               console.warn("[Kitchen] skipped duplicate KDS ticket(s) for order", order.id);
             }
             return toAdd.length > 0 ? [...prevSafe, ...toAdd] : prevSafe;
+          });
+          
+          // Trigger notification for new tickets
+          newTickets.forEach(ticket => {
+            const notif = triggerKitchenNotification(ticket, 'NEW_TICKET');
+            addNotification(notif);
           });
         }
         return;
@@ -208,6 +325,70 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
     syncKDSWithOrders();
   }, [syncKDSWithOrders]);
 
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e, ticket) => {
+    setDraggedTicket(ticket);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ticket.id);
+  }, []);
+
+  const handleDragOver = useCallback((e, station) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStation(station);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverStation(null);
+  }, []);
+
+  const handleDrop = useCallback((e, targetStation) => {
+    e.preventDefault();
+    setDragOverStation(null);
+
+    const ticket = draggedTicket;
+    setDraggedTicket(null);
+    if (!ticket || !targetStation) return;
+
+    // Mirror the same guards the Move Station modal enforces, so dragging
+    // a ticket can't silently move a completed ticket, target an invalid
+    // station, or create a duplicate ticket for the same order+station.
+    if (ticket.completed) return;
+    if (!KDS_STATIONS.includes(targetStation) || targetStation === "All") return;
+    if (ticket.station === targetStation) return;
+    const duplicate = (kdsCards || []).some(c => c && c.id !== ticket.id && c.orderId === ticket.orderId && c.station === targetStation && !c.completed);
+    if (duplicate) return;
+
+    try {
+      const updatedTicket = moveKdsTicketToStation(ticket, targetStation);
+      setKdsCards(prev => (Array.isArray(prev) ? prev : []).map(c => (c && c.id === ticket.id ? updatedTicket : c)));
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to move ticket via drag", error);
+    }
+  }, [draggedTicket, kdsCards, setKdsCards]);
+
+  const handleStationDragStart = useCallback((e, station) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', station);
+  }, []);
+
+  const handleStationDrop = useCallback((e, targetIndex) => {
+    e.preventDefault();
+    const draggedStation = e.dataTransfer.getData('text/plain');
+    
+    if (!draggedStation) return;
+    
+    const newOrder = [...stationOrder];
+    const fromIndex = newOrder.indexOf(draggedStation);
+    
+    if (fromIndex === -1 || fromIndex === targetIndex) return;
+    
+    newOrder.splice(fromIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedStation);
+    
+    setStationOrder(newOrder);
+  }, [stationOrder]);
+
   // Complete ticket and check if order should be marked as READY
   const completeCard = useCallback((id) => {
     const card = (kdsCards || []).find(c => c && c.id === id);
@@ -244,10 +425,51 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
             return { ...o, status: "READY" };
           });
         });
+
+        // Publish event for real-time Dashboard synchronization
+        moduleEventPublisher.publishOrderEvent('order.ready', {
+          orderId: card.orderId,
+          tableId: card.tableId,
+          station: card.station
+        });
+
+        moduleEventPublisher.publishKitchenEvent('kitchen.ready', {
+          orderId: card.orderId,
+          cardId: card.id,
+          station: card.station
+        });
       }
+
+      // Publish event for individual ticket completion
+      moduleEventPublisher.publishKitchenEvent('kitchen.completed', {
+        cardId: card.id,
+        orderId: card.orderId,
+        station: card.station,
+        duration: Math.round((completedAt - startedAt) / 1000)
+      });
+
       return next;
     });
-  }, [kdsCards, setOrders]);
+
+    // Update current shift with kitchen ticket completion
+    const currentShift = getActiveShift(shifts, 'REG-001');
+    if (currentShift && setShifts) {
+      try {
+        const updatedShift = { ...currentShift, kitchenTickets: (currentShift.kitchenTickets || 0) + 1 };
+        setShifts(prev => prev.map(s => s.id === currentShift.id ? updatedShift : s));
+      } catch (e) {
+        if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to update shift", e);
+      }
+    }
+
+    addToast({
+      message: `Ticket ${card.orderId || card.id} marked done`,
+      onUndo: () => {
+        setDoneLog(l => (Array.isArray(l) ? l : []).filter(d => d.id !== card.id));
+        setKdsCards(prev => [card, ...(Array.isArray(prev) ? prev : [])]);
+      },
+    });
+  }, [kdsCards, setOrders, shifts, setShifts, addToast]);
 
   const [holdError, setHoldError] = useState("");
 
@@ -259,6 +481,13 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
       // Release from hold: clear held and holdReason, never touch completed tickets
       if (card.completed) return;
       setKdsCards(prev => (Array.isArray(prev) ? prev : []).map(c => c.id === id ? releaseKdsTicket(c) : c));
+
+      // Publish event for real-time Dashboard synchronization
+      moduleEventPublisher.publishKitchenEvent('kitchen.released', {
+        cardId: card.id,
+        orderId: card.orderId,
+        station: card.station
+      });
     } else {
       const trimmed = (reason || "").trim();
       if (trimmed) {
@@ -267,6 +496,14 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
           return;
         }
         setKdsCards(prev => (Array.isArray(prev) ? prev : []).map(c => c.id === id ? holdKdsTicket(c, trimmed) : c));
+
+        // Publish event for real-time Dashboard synchronization
+        moduleEventPublisher.publishKitchenEvent('kitchen.held', {
+          cardId: card.id,
+          orderId: card.orderId,
+          station: card.station,
+          reason: trimmed
+        });
       } else {
         setHoldReasonModal(id);
       }
@@ -316,8 +553,49 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
   }, [kdsCards, setKdsCards]);
 
   const startTicket = useCallback((id) => {
+    const card = (kdsCards || []).find(c => c && c.id === id);
+    if (!card) return;
+    
     setKdsCards(prev => prev.map(c => c.id === id ? startKdsTicket(c) : c));
-  }, [setKdsCards]);
+    
+    // Publish event for real-time Dashboard synchronization
+    moduleEventPublisher.publishKitchenEvent('kitchen.started', {
+      cardId: card.id,
+      orderId: card.orderId,
+      station: card.station,
+      items: card.items
+    });
+    
+    // Print kitchen ticket when started
+    try {
+      const order = (orders || []).find(o => o.id === card.orderId);
+      if (order) {
+        printEngine.addToQueue({
+          type: DOCUMENT_TYPES.KITCHEN_TICKET,
+          data: {
+            order: {
+              orderNumber: order.id,
+              createdAt: order.createdAt,
+              table: order.tableId
+            },
+            items: card.items || [],
+            station: {
+              name: card.station
+            },
+            urgency: card.urgency || 'normal',
+            isReprint: false
+          },
+          template: {},
+          paperSize: '80mm',
+          printerId: 'kitchen'
+        }).catch(err => {
+          console.warn('Kitchen ticket print failed:', err);
+        });
+      }
+    } catch (printError) {
+      console.warn('Failed to queue kitchen ticket print:', printError);
+    }
+  }, [kdsCards, setKdsCards, orders]);
 
   const [moveError, setMoveError] = useState("");
 
@@ -390,7 +668,15 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
       }
       return next;
     });
-  }, [kdsCards, setOrders]);
+
+    addToast({
+      message: `Ticket ${card.orderId || card.id} bumped`,
+      onUndo: () => {
+        setDoneLog(l => (Array.isArray(l) ? l : []).filter(d => d.id !== card.id));
+        setKdsCards(prev => [card, ...(Array.isArray(prev) ? prev : [])]);
+      },
+    });
+  }, [kdsCards, setOrders, addToast]);
 
   const bumpAllNonUrgent = () => {
     const cardsSafe = Array.isArray(kdsCards) ? kdsCards : [];
@@ -406,6 +692,15 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
       return [...newEntries, ...lSafe].slice(0, 50);
     });
     setKdsCards(prev => (Array.isArray(prev) ? prev : []).filter(c => c.urgency === "urgent" || c.held || c.completed));
+
+    addToast({
+      message: `Bumped ${done.length} ticket${done.length === 1 ? "" : "s"}`,
+      onUndo: () => {
+        const ids = new Set(done.map(d => d.id));
+        setDoneLog(l => (Array.isArray(l) ? l : []).filter(d => !ids.has(d.id)));
+        setKdsCards(prev => [...done, ...(Array.isArray(prev) ? prev : [])]);
+      },
+    });
   };
 
   const recallLast = () => {
@@ -417,26 +712,39 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
   };
 
   const calculatePrepTime = (card) => {
+    const items = Array.isArray(card?.items) ? card.items : [];
     let totalTime = 0;
-    card.items.forEach(item => {
-      const prepTime = PREP_TIMES[item.name] || 5; // Default 5 mins if not found
-      totalTime += prepTime * item.qty;
+    items.forEach(item => {
+      const qty = Number.isFinite(Number(item?.qty)) && Number(item.qty) > 0 ? Number(item.qty) : 1;
+      const prepTime = PREP_TIMES[item?.name];
+      totalTime += (Number.isFinite(prepTime) ? prepTime : 5) * qty; // default 5 mins if unknown
     });
-    return totalTime;
+    return Number.isFinite(totalTime) ? totalTime : 0;
   };
 
   const getPrepTimeStatus = (card) => {
     const prepTime = calculatePrepTime(card);
-    const elapsedMinutes = Math.floor((Date.now() - card.startedAt) / 60000);
+    const startedAt = Number.isFinite(Number(card?.startedAt)) ? Number(card.startedAt) : null;
+    const elapsedMinutes = startedAt !== null ? Math.floor((Date.now() - startedAt) / 60000) : 0;
     const remaining = Math.max(0, prepTime - elapsedMinutes);
-    
+
+    if (startedAt !== null && elapsedMinutes > prepTime + 3) return { label: "Delayed", color: C.red };
     if (remaining === 0) return { label: "Ready", color: C.green };
     if (remaining <= 2) return { label: `${remaining}m left`, color: C.amber };
     return { label: `${remaining}m left`, color: C.text3 };
   };
 
   const visibleCards = Array.isArray(filteredTickets) ? filteredTickets : [];
-  const sorted = [...visibleCards].sort((a, b) => {
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const searchedCards = trimmedQuery
+    ? visibleCards.filter(c => {
+        const orderMatch = String(c.orderId || c.id || "").toLowerCase().includes(trimmedQuery);
+        const itemMatch = Array.isArray(c.items) && c.items.some(it => String(it?.name || "").toLowerCase().includes(trimmedQuery));
+        const noteMatch = String(c.note || "").toLowerCase().includes(trimmedQuery);
+        return orderMatch || itemMatch || noteMatch;
+      })
+    : visibleCards;
+  const sorted = [...searchedCards].sort((a, b) => {
     if (sortBy === "time") return (a.startedAt || 0) - (b.startedAt || 0);
     if (sortBy === "urgency") return (URGENCY_ORDER[a.urgency] ?? 0) - (URGENCY_ORDER[b.urgency] ?? 0);
     if (sortBy === "source") return String(a.source || "").localeCompare(String(b.source || ""));
@@ -445,6 +753,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
 
   const urgentCount = activeTickets.filter(c => c.urgency === "urgent").length;
   const heldCount = heldTickets.length;
+  const delayedCount = activeTickets.filter(c => !c.held && c.startedAt && getPrepTimeStatus(c).label === "Delayed").length;
   const avgDuration = doneLog.length
     ? Math.round(doneLog.reduce((s, d) => s + (d.duration || 0), 0) / doneLog.length)
     : null;
@@ -460,125 +769,536 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
     Dessert: safeKdsCards.filter(c => c.station === "Dessert" && !c.completed).length,
   };
 
+  // Surface urgent/delayed count in the browser tab so staff can see status from any tab
+  useEffect(() => {
+    const originalTitle = document.title;
+    const baseTitle = originalTitle.replace(/^\(\d+\)\s*/, "");
+    const pending = urgentCount + delayedCount;
+    document.title = pending > 0 ? `(${pending}) ${baseTitle}` : baseTitle;
+    return () => { document.title = baseTitle; };
+  }, [urgentCount, delayedCount]);
+
+  // Global keyboard shortcuts: navigate tickets and act on the focused one
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = (e.target?.tagName || "").toLowerCase();
+      const isTyping = tag === "input" || tag === "textarea" || tag === "select" || e.target?.isContentEditable;
+
+      if (e.key === "/" && !isTyping) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (e.key === "Escape") {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (isTyping) { e.target.blur(); return; }
+        setFocusedCardId(null);
+        return;
+      }
+      if (isTyping) return;
+      if (e.key === "?") {
+        e.preventDefault();
+        setShowShortcuts(v => !v);
+        return;
+      }
+
+      const list = sorted;
+      if (list.length === 0) return;
+
+      if (e.key === "ArrowDown" || e.key === "ArrowRight" || e.key === "j") {
+        e.preventDefault();
+        setFocusedCardId(prev => {
+          const idx = list.findIndex(c => c.id === prev);
+          const next = idx === -1 ? 0 : Math.min(idx + 1, list.length - 1);
+          return list[next]?.id ?? prev;
+        });
+        return;
+      }
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft" || e.key === "k") {
+        e.preventDefault();
+        setFocusedCardId(prev => {
+          const idx = list.findIndex(c => c.id === prev);
+          const next = idx === -1 ? 0 : Math.max(idx - 1, 0);
+          return list[next]?.id ?? prev;
+        });
+        return;
+      }
+
+      if (!focusedCardId) return;
+      const focusedCard = list.find(c => c.id === focusedCardId);
+      if (!focusedCard) return;
+
+      if (e.key === "Enter" || e.key === "d" || e.key === "D") {
+        e.preventDefault();
+        completeCard(focusedCard.id);
+      } else if (e.key === "h" || e.key === "H") {
+        e.preventDefault();
+        holdCard(focusedCard.id, focusedCard.held ? undefined : "");
+      } else if (e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        startTicket(focusedCard.id);
+      } else if (e.key === "b" || e.key === "B") {
+        e.preventDefault();
+        bumpTicket(focusedCard.id);
+      } else if (e.key === "1" || e.key === "2" || e.key === "3") {
+        e.preventDefault();
+        const urgency = e.key === "1" ? "ok" : e.key === "2" ? "soon" : "urgent";
+        changeUrgency(focusedCard.id, urgency);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sorted, focusedCardId, showShortcuts, completeCard, holdCard, startTicket, bumpTicket, changeUrgency]);
+
   return (
-    <div style={{ display: "flex", gap: 14, height: isMobile ? "auto" : "calc(100dvh - 160px)", minHeight: 400, flexDirection: isMobile && showDoneLog ? "column" : "row" }}>
+    <>
+    <style>{`
+      @keyframes kdsUrgentPulse {
+        0%, 100% {
+          box-shadow: 0 0 0 1px rgba(229,57,53,0.3), 0 4px 32px rgba(229,57,53,0.12), 0 2px 8px rgba(0,0,0,0.6);
+        }
+        50% {
+          box-shadow: 0 0 0 1px rgba(229,57,53,0.55), 0 4px 40px rgba(229,57,53,0.22), 0 0 16px rgba(229,57,53,0.1), 0 2px 8px rgba(0,0,0,0.5);
+        }
+      }
+      @keyframes kdsToastIn {
+        from { opacity: 0; transform: translateY(10px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes kdsCardIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes stationRailGlow {
+        0%, 100% { opacity: 0.7; }
+        50%       { opacity: 1; }
+      }
+      .kds-secondary-btn:hover:not(:disabled) {
+        filter: brightness(1.15);
+        transform: translateY(-1px);
+      }
+      .kds-secondary-btn:active:not(:disabled) {
+        transform: translateY(0) scale(0.97);
+      }
+      .kds-stat-card:hover {
+        border-color: rgba(212,146,42,0.2) !important;
+      }
+    `}</style>
+    <div style={isFullScreen ? { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: "var(--cafe-bg)", display: "flex", gap: "var(--cafe-space-lg)", padding: "16px", flexDirection: isMobile && showDoneLog ? "column" : "row" } : { display: "flex", gap: "var(--cafe-space-lg)", flex: 1, height: isMobile ? "auto" : "100%", minHeight: 400, flexDirection: isMobile && showDoneLog ? "column" : "row" }}>
       {/* Main KDS panel */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-        {/* ── Throughput bar ── */}
-        <div style={{ display: "flex", gap: 1, marginBottom: 12, background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 9, overflow: "hidden" }}>
-          {[
-            { val: safeKdsCards.length, lbl: "Active", color: C.amber2, active: safeKdsCards.length > 0 },
-            { val: urgentCount, lbl: "Urgent", color: C.red, active: urgentCount > 0 },
-            { val: heldCount, lbl: "Held", color: C.amber, active: heldCount > 0 },
-            { val: avgDuration ? `${Math.floor(avgDuration / 60)}m ${avgDuration % 60}s` : "—", lbl: "Avg", color: C.green, active: !!avgDuration },
-            { val: completedTodayCount, lbl: "Done", color: C.text2, active: completedTodayCount > 0 },
-          ].map((m, i, arr) => (
-            <div key={m.lbl} style={{ flex: 1, padding: "10px 12px", borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : "none" }}>
-              <div style={{ fontFamily: "monospace", fontSize: 18, fontWeight: 800, color: m.active ? m.color : C.text3, lineHeight: 1, letterSpacing: "-0.02em" }}>{m.val}</div>
-              <div style={{ fontSize: 9, color: C.text3, textTransform: "uppercase", letterSpacing: ".08em", marginTop: 3, fontWeight: 700 }}>{m.lbl}</div>
-            </div>
-          ))}
+        {/* ── Kitchen Flow Header ── */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 3 }}>
+            <span style={{ fontSize: 18, fontWeight: 900, color: "var(--cafe-text-primary)", letterSpacing: "-0.03em" }}>Kitchen Flow</span>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--cafe-text-tertiary)" }}>Live</span>
+            {urgentCount > 0 && (
+              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--cafe-danger)", background: "rgba(229,57,53,0.12)", padding: "2px 8px", borderRadius: 4, letterSpacing: "0.05em", animation: "stationRailGlow 1.4s ease-in-out infinite" }}>
+                {urgentCount} URGENT
+              </span>
+            )}
+            <div style={{ flex: 1 }} />
+            <button onClick={() => setIsFullScreen(!isFullScreen)} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid var(--cafe-border)", background: "var(--cafe-bg-hover)", color: "var(--cafe-text-secondary)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+              {isFullScreen ? "Exit Fullscreen" : "Fullscreen"}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginBottom: 12 }}>
+            Live tickets across bar, kitchen, and packaging
+          </div>
+
+          {/* ── Premium Stat Cards ── */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              {
+                label: "Waiting",
+                count: activeTickets.filter(c => !c.startedAt).length,
+                color: "var(--cafe-info)",
+                glow: "rgba(33,150,243,0.25)",
+                icon: "⏳",
+              },
+              {
+                label: "Preparing",
+                count: activeTickets.filter(c => c.startedAt && !c.completed).length,
+                color: "var(--cafe-warning)",
+                glow: "rgba(255,152,0,0.25)",
+                icon: "🔥",
+              },
+              {
+                label: "Ready",
+                count: activeTickets.filter(c => Array.isArray(c.items) && c.items.length > 0 && c.items.every(it => it && it.checked)).length,
+                color: "var(--cafe-success)",
+                glow: "rgba(76,175,80,0.25)",
+                icon: "✓",
+              },
+              {
+                label: "Urgent",
+                count: urgentCount,
+                color: urgentCount > 0 ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)",
+                glow: urgentCount > 0 ? "rgba(229,57,53,0.3)" : "transparent",
+                icon: "🚨",
+                highlight: urgentCount > 0,
+              },
+              {
+                label: "Delayed",
+                count: delayedCount,
+                color: delayedCount > 0 ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)",
+                glow: delayedCount > 0 ? "rgba(229,57,53,0.2)" : "transparent",
+                icon: "⚠️",
+              },
+              {
+                label: "On Hold",
+                count: heldCount,
+                color: heldCount > 0 ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)",
+                glow: heldCount > 0 ? "rgba(212,146,42,0.2)" : "transparent",
+                icon: "⏸",
+              },
+              {
+                label: "Done Today",
+                count: completedTodayCount,
+                color: "var(--cafe-success)",
+                glow: "rgba(76,175,80,0.15)",
+                icon: "🏁",
+              },
+              ...(avgDuration !== null ? [{
+                label: "Avg Time",
+                count: `${Math.floor(avgDuration / 60)}m${String(avgDuration % 60).padStart(2, "00")}s`,
+                color: "var(--cafe-text-secondary)",
+                glow: "transparent",
+                icon: "⏱",
+              }] : []),
+            ].map(chip => (
+              <div
+                key={chip.label}
+                className="kds-stat-card"
+                style={{
+                  background: chip.highlight
+                    ? "rgba(229,57,53,0.08)"
+                    : "rgba(28,24,20,0.85)",
+                  backdropFilter: "blur(8px)",
+                  border: chip.highlight
+                    ? "1px solid rgba(229,57,53,0.3)"
+                    : "1px solid var(--cafe-border-light)",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  transition: "border-color .2s, box-shadow .2s",
+                  boxShadow: chip.highlight
+                    ? `0 0 16px ${chip.glow}, 0 1px 4px rgba(0,0,0,0.5)`
+                    : "0 1px 4px rgba(0,0,0,0.4)",
+                  cursor: "default",
+                }}
+              >
+                <span style={{ fontSize: 14, lineHeight: 1 }}>{chip.icon}</span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  <span style={{ fontSize: 9, color: "var(--cafe-text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1 }}>
+                    {chip.label}
+                  </span>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: chip.color, fontFamily: "monospace", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+                    {chip.count}
+                  </span>
+                </div>
+                {/* Right accent line based on glow color */}
+                <div style={{ width: 2, height: 28, borderRadius: 99, background: chip.color, opacity: Number(chip.count) > 0 ? 0.5 : 0.1, marginLeft: "auto", flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Station Rail ── */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            display: "flex",
+            gap: 5,
+            overflowX: "auto",
+            paddingBottom: 3,
+            background: "var(--cafe-bg-surface)",
+            backdropFilter: "blur(8px)",
+            borderRadius: 10,
+            padding: "6px 8px",
+            border: "1px solid var(--cafe-border-light)",
+          }}>
+            {KDS_STATIONS.map(station => {
+              const active = stationFilter === station;
+              const count = stationCounts[station] || 0;
+              const stationColorMap = {
+                All:       { color: "var(--cafe-accent)",   glow: "rgba(212,146,42,0.3)",  bg: "rgba(212,146,42,0.15)" },
+                Bar:       { color: "var(--cafe-info)",     glow: "rgba(33,150,243,0.3)",  bg: "rgba(33,150,243,0.12)" },
+                Kitchen:   { color: "var(--cafe-purple)",   glow: "rgba(156,39,176,0.3)",  bg: "rgba(156,39,176,0.12)" },
+                Packaging: { color: "var(--cafe-success)",  glow: "rgba(76,175,80,0.3)",   bg: "rgba(76,175,80,0.12)" },
+                Dessert:   { color: "var(--cafe-warning)",  glow: "rgba(255,152,0,0.3)",   bg: "rgba(255,152,0,0.12)" },
+              };
+              const sc = stationColorMap[station] || { color: "var(--cafe-text-tertiary)", glow: "transparent", bg: "transparent" };
+              const isValidDropTarget = station !== "All";
+              const isDragOver = isValidDropTarget && dragOverStation === station;
+              return (
+                <button
+                  key={station}
+                  onClick={() => setStationFilter(station)}
+                  onDragOver={isValidDropTarget ? (e) => handleDragOver(e, station) : undefined}
+                  onDragLeave={isValidDropTarget ? handleDragLeave : undefined}
+                  onDrop={isValidDropTarget ? (e) => handleDrop(e, station) : undefined}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 7,
+                    border: isDragOver
+                      ? `1px dashed var(--cafe-accent)`
+                      : active
+                      ? `1px solid ${sc.color}40`
+                      : "1px solid transparent",
+                    background: isDragOver
+                      ? "rgba(212,146,42,0.1)"
+                      : active
+                      ? sc.bg
+                      : "transparent",
+                    color: active ? sc.color : "var(--cafe-text-tertiary)",
+                    fontSize: 11,
+                    fontWeight: active ? 700 : 500,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    whiteSpace: "nowrap",
+                    transition: "all .18s ease",
+                    letterSpacing: active ? "0.01em" : "0",
+                    boxShadow: active ? `0 0 12px ${sc.glow}` : "none",
+                    flexShrink: 0,
+                  }}
+                >
+                  {station}
+                  {count > 0 && (
+                    <span style={{
+                      background: active ? sc.color : "var(--cafe-bg-hover)",
+                      color: active ? "#0A0908" : "var(--cafe-text-tertiary)",
+                      fontSize: 9,
+                      fontFamily: "monospace",
+                      fontWeight: 900,
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      minWidth: 18,
+                      textAlign: "center",
+                      lineHeight: 1.4,
+                    }}>{count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── Toolbar ── */}
         <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: 12, flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", minWidth: "max-content" }}>
-          {/* View toggle */}
-          <div style={{ display: "flex", gap: 0, background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 7, overflow: "hidden" }}>
-            {[["cards","Cards"],["list","List"],["station","Station"]].map(([v, lbl]) => (
-              <button key={v} onClick={() => setView(v)} style={{ padding: "7px 13px", border: "none", borderRight: `1px solid ${C.border2}`, background: view === v ? C.amber2 : "transparent", color: view === v ? C.bg : C.text3, fontSize: 12, cursor: "pointer", fontWeight: view === v ? 700 : 400, minHeight: 34, transition: "all .15s", whiteSpace: "nowrap" }}>{lbl}</button>
-            ))}
-          </div>
-          {/* Sort */}
-          <select style={{ ...input, fontSize: 11, padding: "5px 8px", width: "auto", minHeight: 34, color: C.text2, borderRadius: 7 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="time">Oldest first</option>
-            <option value="urgency">By urgency</option>
-            <option value="source">By source</option>
-          </select>
-          {/* Station filter (hidden in station view) */}
-          {view !== "station" && KDS_STATIONS.map(s => {
-            const active = stationFilter === s;
-            const stationDotColors = { Bar: C.blue, Kitchen: C.purple, Packaging: C.green, Dessert: C.amber2 };
-            const dot = stationDotColors[s];
-            return (
-              <button key={s} onClick={() => setStationFilter(s)} style={{ padding: "6px 11px", borderRadius: 7, border: `1px solid ${active ? C.amber3 : C.border2}`, background: active ? C.amberDim : "transparent", color: active ? C.amber2 : C.text3, fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer", minHeight: 34, transition: "all .15s", display: "flex", alignItems: "center", gap: 5 }}>
-                {dot && s !== "All" && <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? C.amber2 : dot, flexShrink: 0 }} />}
-                {s}{s !== "All" && <span style={{ fontFamily: "monospace", fontSize: 10, opacity: 0.65 }}>{stationCounts[s] || 0}</span>}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "nowrap", minWidth: "max-content" }}>
+            {/* View toggle */}
+            <div style={{ display: "flex", gap: 0, background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 8, overflow: "hidden" }}>
+              {[["cards","Cards"],["list","List"],["station","Station"]].map(([v, lbl]) => (
+                <button key={v} onClick={() => setView(v)} style={{ padding: "8px 14px", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: view === v ? "rgba(212,146,42,0.15)" : "transparent", color: view === v ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)", fontSize: 11, cursor: "pointer", fontWeight: view === v ? 700 : 500, minHeight: 36, transition: "all .15s", whiteSpace: "nowrap", letterSpacing: view === v ? "0.01em" : "0" }}>{lbl}</button>
+              ))}
+            </div>
+            {/* Sort */}
+            <select
+              style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 7, padding: "7px 10px", color: "var(--cafe-text-secondary)", fontSize: 11, outline: "none", minHeight: 36, fontFamily: "inherit", cursor: "pointer" }}
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+            >
+              <option value="time">Oldest first</option>
+              <option value="urgency">By urgency</option>
+              <option value="source">By source</option>
+            </select>
+            {/* Search */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Escape") { setSearchQuery(""); e.currentTarget.blur(); } }}
+                placeholder="Search order # or item…  /"
+                aria-label="Search tickets"
+                style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 7, padding: "7px 28px 7px 10px", width: 200, minHeight: 36, color: "var(--cafe-text-secondary)", fontSize: 11, outline: "none", fontFamily: "inherit" }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} aria-label="Clear search"
+                  style={{ position: "absolute", right: 8, background: "transparent", border: "none", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 11, padding: 4 }}>✕</button>
+              )}
+            </div>
+            {/* Bulk actions */}
+            <div style={{ marginLeft: "auto", display: "flex", gap: 5 }}>
+              {safeKdsCards.filter(c => !c.held && c.urgency !== "urgent").length > 0 && (
+                <button onClick={bumpAllNonUrgent} style={{ padding: "7px 12px", borderRadius: 7, border: "1px solid rgba(76,175,80,0.3)", background: "rgba(76,175,80,0.08)", color: "var(--cafe-success)", fontSize: 11, cursor: "pointer", fontWeight: 700, minHeight: 36 }}>Bump Non-Urgent</button>
+              )}
+              {doneLog.length > 0 && (
+                <button onClick={recallLast} style={{ padding: "7px 12px", borderRadius: 7, border: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-tertiary)", fontSize: 11, cursor: "pointer", minHeight: 36 }}>↩ Recall</button>
+              )}
+              <button onClick={() => setShowDoneLog(v => !v)} style={{ padding: "7px 12px", borderRadius: 7, border: `1px solid ${showDoneLog ? "rgba(212,146,42,0.4)" : "var(--cafe-border-light)"}`, background: showDoneLog ? "rgba(212,146,42,0.1)" : "transparent", color: showDoneLog ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)", fontSize: 11, cursor: "pointer", minHeight: 36, display: "flex", alignItems: "center", gap: 7 }}>
+                Log
+                {doneLog.length > 0 && <span style={{ fontFamily: "monospace", fontSize: 9, background: showDoneLog ? "var(--cafe-accent)" : "var(--cafe-bg-hover)", padding: "2px 6px", borderRadius: 3, color: showDoneLog ? "#0A0908" : "var(--cafe-text-tertiary)", fontWeight: 900 }}>{doneLog.length}</span>}
               </button>
-            );
-          })}
-          {/* Bulk actions */}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 5 }}>
-            {safeKdsCards.filter(c => !c.held && c.urgency !== "urgent").length > 0 && (
-              <button onClick={bumpAllNonUrgent} style={{ padding: "6px 11px", borderRadius: 7, border: `1px solid ${C.greenBorder}`, background: C.greenBg, color: C.green, fontSize: 11, cursor: "pointer", fontWeight: 700, minHeight: 34 }}>Bump non-urgent</button>
-            )}
-            {doneLog.length > 0 && (
-              <button onClick={recallLast} style={{ padding: "6px 11px", borderRadius: 7, border: `1px solid ${C.border2}`, background: "transparent", color: C.text2, fontSize: 11, cursor: "pointer", minHeight: 34 }}>↩ Recall</button>
-            )}
-            <button onClick={() => setShowDoneLog(v => !v)} style={{ padding: "6px 11px", borderRadius: 7, border: `1px solid ${showDoneLog ? C.amber3 : C.border2}`, background: showDoneLog ? C.amberDim : "transparent", color: showDoneLog ? C.amber2 : C.text2, fontSize: 11, cursor: "pointer", minHeight: 34, display: "flex", alignItems: "center", gap: 5 }}>
-              Log {doneLog.length > 0 && <span style={{ fontFamily: "monospace", fontSize: 10, background: showDoneLog ? `${C.amber2}22` : C.bg3, padding: "1px 5px", borderRadius: 4 }}>{doneLog.length}</span>}
-            </button>
+              <button onClick={toggleSound} aria-label={soundEnabled ? "Mute" : "Unmute"}
+                style={{ padding: "7px 12px", borderRadius: 7, border: "1px solid var(--cafe-border-light)", background: "transparent", color: soundEnabled ? "var(--cafe-text-secondary)" : "var(--cafe-text-tertiary)", fontSize: 13, cursor: "pointer", minHeight: 36 }}>
+                {soundEnabled ? "🔔" : "🔕"}
+              </button>
+              <button onClick={() => setShowShortcuts(true)} aria-label="Keyboard shortcuts"
+                style={{ padding: "7px 12px", borderRadius: 7, border: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-tertiary)", fontSize: 11, fontWeight: 800, cursor: "pointer", minHeight: 36, letterSpacing: "0.02em" }}>?</button>
+            </div>
           </div>
         </div>
-        </div>
+
+        {focusedCardId && (
+          <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: -8, marginBottom: "var(--cafe-space-md)", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "var(--cafe-accent)" }}>●</span> Ticket focused — Enter/D done · H hold · S start · B bump · 1/2/3 urgency · Esc clear
+          </div>
+        )}
 
         {/* ── Empty state ── */}
         {safeKdsCards.length === 0 && (
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "60px 0" }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.greenBg, border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontSize: 16 }}>✓</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.green, letterSpacing: "-0.02em" }}>Kitchen clear</div>
-            <div style={{ fontSize: 12, color: C.text3 }}>No active tickets</div>
+          <div style={emptyState}>
+            <div style={{ fontSize: 40, marginBottom: "var(--cafe-space-md)", opacity: 0.3 }}>🎫</div>
+            <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 4 }}>
+              Kitchen is clear
+            </div>
+            <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)" }}>
+              No tickets on this rail
+            </div>
+          </div>
+        )}
+
+        {/* ── No search results ── */}
+        {safeKdsCards.length > 0 && sorted.length === 0 && trimmedQuery && (
+          <div style={emptyState}>
+            <div style={{ fontSize: 40, marginBottom: "var(--cafe-space-md)", opacity: 0.3 }}>🔍</div>
+            <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 4 }}>
+              No tickets match "{searchQuery.trim()}"
+            </div>
+            <button onClick={() => setSearchQuery("")} style={{ ...btn("ghost"), marginTop: "var(--cafe-space-sm)", padding: "8px 16px", fontSize: "var(--cafe-font-sm)" }}>Clear search</button>
           </div>
         )}
 
         {/* ── Cards view ── */}
-        {safeKdsCards.length > 0 && view === "cards" && (
+        {safeKdsCards.length > 0 && sorted.length > 0 && view === "cards" && (
           <div style={{ overflowY: "auto", flex: 1 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 12 }} className="kitchen-grid">
-              {sorted.map(card => (
-                <KDSCard key={card.id} card={card} onDone={completeCard} onHold={holdCard} onUrgencyChange={changeUrgency} onNoteEdit={editNote} onItemCheck={checkItem} compact={false} />
-              ))}
+              {sorted.map(card => {
+                const table = tables?.find(t => t.id === card.tableId);
+                return (
+                <KDSCard
+                  key={card.id}
+                  card={card}
+                  tableName={table?.number}
+                  onDone={completeCard}
+                  onHold={holdCard}
+                  onUrgencyChange={changeUrgency}
+                  onNoteEdit={editNote}
+                  onItemCheck={checkItem}
+                  onStart={startTicket}
+                  onMoveStation={(id) => setMoveStationModal(id)}
+                  onBump={bumpTicket}
+                  onDragStart={(e) => handleDragStart(e, card)}
+                  onFocusCard={setFocusedCardId}
+                  focused={focusedCardId === card.id}
+                  compact={false}
+                />
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* ── List view ── */}
-        {safeKdsCards.length > 0 && view === "list" && (
+        {safeKdsCards.length > 0 && sorted.length > 0 && view === "list" && (
           <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-            {sorted.map(card => (
-              <KDSCard key={card.id} card={card} onDone={completeCard} onHold={holdCard} onUrgencyChange={changeUrgency} onNoteEdit={editNote} onItemCheck={checkItem} compact={true} />
-            ))}
+            {sorted.map(card => {
+              const table = tables?.find(t => t.id === card.tableId);
+              return (
+              <KDSCard
+                key={card.id}
+                card={card}
+                tableName={table?.number}
+                onDone={completeCard}
+                onHold={holdCard}
+                onUrgencyChange={changeUrgency}
+                onNoteEdit={editNote}
+                onItemCheck={checkItem}
+                onStart={startTicket}
+                onMoveStation={(id) => setMoveStationModal(id)}
+                onBump={bumpTicket}
+                onDragStart={(e) => handleDragStart(e, card)}
+                onFocusCard={setFocusedCardId}
+                focused={focusedCardId === card.id}
+                compact={true}
+              />
+            )})}
           </div>
         )}
 
         {/* ── Station split view ── */}
         {safeKdsCards.length > 0 && view === "station" && (
-          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 14, overflowY: "auto", flex: 1 }}>
-            {["Bar", "Kitchen", "Packaging", "Dessert"].map(station => {
+          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "var(--cafe-space-md)", overflowY: "auto", flex: 1 }}>
+            {stationOrder.map((station, index) => {
               const stCards = sorted.filter(c => c.station === station);
               const stationColorMap = {
-                Bar: { color: C.blue },
-                Kitchen: { color: C.purple },
-                Packaging: { color: C.green },
-                Dessert: { color: C.amber2 },
+                Bar: { color: "var(--cafe-info)" },
+                Kitchen: { color: "var(--cafe-purple)" },
+                Packaging: { color: "var(--cafe-success)" },
+                Dessert: { color: "var(--cafe-warning)" },
               };
-              const colors = stationColorMap[station] || { color: C.text3 };
+              const colors = stationColorMap[station] || { color: "var(--cafe-text-tertiary)" };
               const urgentInStation = stCards.filter(c => c.urgency === "urgent").length;
+              const heldInStation = stCards.filter(c => c.held).length;
+              const delayedInStation = stCards.filter(c => !c.held && !c.completed && c.startedAt && getPrepTimeStatus(c).label === "Delayed").length;
+              const isDragOver = dragOverStation === station;
               return (
-                <div key={station} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: C.bg2, borderRadius: 7, border: `1px solid ${C.border}`, borderTop: `2px solid ${colors.color}` }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.color }}>{station}</span>
-                    <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: stCards.length > 0 ? C.text2 : C.text3 }}>{stCards.length}</span>
+                <div 
+                  key={station} 
+                  style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)", background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-lg)", padding: 6, height: "100%" }}
+                  onDragOver={(e) => handleDragOver(e, station)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, station)}
+                >
+                  <div 
+                    draggable
+                    onDragStart={(e) => handleStationDragStart(e, station)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={(e) => handleStationDrop(e, index)}
+                    style={{ 
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: "var(--cafe-space-sm)", 
+                      padding: "10px 14px", 
+                      background: isDragOver ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)", 
+                      borderRadius: "var(--cafe-radius-md)", 
+                      border: `1px solid ${isDragOver ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`, 
+                      borderTop: `2px solid ${colors.color}`,
+                      cursor: "move",
+                      userSelect: "none"
+                    }}
+                  >
+                    <span style={{ fontSize: "var(--cafe-font-xs)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.color }}>{station}</span>
+                    <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", fontWeight: 700, color: stCards.length > 0 ? "var(--cafe-text-secondary)" : "var(--cafe-text-tertiary)" }}>{stCards.length}</span>
                     {urgentInStation > 0 && (
-                      <span style={{ fontSize: 9, color: C.red, fontWeight: 800, background: `${C.red}18`, borderRadius: 4, padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{urgentInStation} URG</span>
+                      <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-danger)", fontWeight: 800, background: "var(--cafe-danger-bg)", borderRadius: "var(--cafe-radius-sm)", padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{urgentInStation} URG</span>
+                    )}
+                    {delayedInStation > 0 && (
+                      <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-danger)", fontWeight: 800, background: "var(--cafe-danger-bg)", borderRadius: "var(--cafe-radius-sm)", padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{delayedInStation} LATE</span>
+                    )}
+                    {heldInStation > 0 && (
+                      <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-accent)", fontWeight: 800, background: "var(--cafe-accent-bg)", borderRadius: "var(--cafe-radius-sm)", padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{heldInStation} HELD</span>
                     )}
                   </div>
-                  {stCards.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: C.text3, fontSize: 11, borderRadius: 7, border: `1px dashed ${C.border}` }}>No tickets</div>}
-                  {stCards.map(card => (
+                  {stCards.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", borderRadius: "var(--cafe-radius-md)", border: `1px dashed var(--cafe-border-light)` }}>No tickets</div>}
+                  {stCards.map(card => {
+                    const table = tables?.find(t => t.id === card.tableId);
+                    return (
                     <KDSCard 
                       key={card.id} 
                       card={card} 
+                      tableName={table?.number} 
                       onDone={completeCard} 
                       onHold={holdCard} 
                       onUrgencyChange={changeUrgency} 
@@ -587,9 +1307,13 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
                       onStart={startTicket}
                       onMoveStation={(id) => setMoveStationModal(id)}
                       onBump={bumpTicket}
+                      onDragStart={(e) => handleDragStart(e, card)}
+                      onFocusCard={setFocusedCardId}
+                      focused={focusedCardId === card.id}
                       compact={false} 
                     />
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
@@ -600,11 +1324,12 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
       {/* ── Hold Reason Modal ── */}
       {holdReasonModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => { setHoldReasonModal(null); setHoldError(""); }}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: 24, width: 380, maxWidth: "95%", boxShadow: "0 20px 60px rgba(0,0,0,.5)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: C.amber, marginBottom: 6 }}>Hold Ticket</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text1, marginBottom: 16, letterSpacing: "-0.02em" }}>Why is this on hold?</div>
+          <div style={{ background: "var(--cafe-bg-elevated)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-lg)", padding: "var(--cafe-space-xl)", width: 400, maxWidth: "95%", boxShadow: "var(--cafe-shadow-xl)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: "var(--cafe-font-xs)", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--cafe-accent)", marginBottom: 6 }}>Hold Ticket</div>
+            <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: "var(--cafe-text-primary)", marginBottom: "var(--cafe-space-lg)", letterSpacing: "-0.02em" }}>Why is this on hold?</div>
             <textarea
-              style={{ ...input, resize: "none", marginBottom: holdError ? 6 : 16, fontSize: 13 }}
+              ref={holdReasonInputRef}
+              style={{ ...input, resize: "none", marginBottom: holdError ? "var(--cafe-space-sm)" : "var(--cafe-space-lg)", fontSize: "var(--cafe-font-sm)" }}
               rows={3}
               maxLength={200}
               placeholder="e.g. waiting on oat milk, customer stepped out…"
@@ -617,13 +1342,12 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
                 }
               }}
             />
-            {holdError && <div style={{ color: C.red, fontSize: 11, marginBottom: 12 }}>{holdError}</div>}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => { setHoldReasonModal(null); setHoldError(""); }} style={{ ...btn("ghost"), padding: "9px 16px", fontSize: 13 }}>Cancel</button>
+            {holdError && <div style={{ color: "var(--cafe-danger)", fontSize: "var(--cafe-font-xs)", marginBottom: "var(--cafe-space-md)" }}>{holdError}</div>}
+            <div style={{ display: "flex", gap: "var(--cafe-space-sm)", justifyContent: "flex-end" }}>
+              <button onClick={() => { setHoldReasonModal(null); setHoldError(""); }} style={{ ...btn("ghost"), padding: "10px 16px", fontSize: "var(--cafe-font-sm)" }}>Cancel</button>
               <button onClick={() => {
-                const textarea = document.querySelector("textarea");
-                if (textarea) confirmHold(textarea.value);
-              }} style={{ ...btn("primary"), padding: "9px 20px", fontSize: 13, fontWeight: 700, background: C.amber, borderColor: C.amber3, color: C.bg }}>Hold</button>
+                if (holdReasonInputRef.current) confirmHold(holdReasonInputRef.current.value);
+              }} style={{ ...btn("primary"), padding: "10px 20px", fontSize: "var(--cafe-font-sm)", fontWeight: 700, background: "var(--cafe-accent)", borderColor: "var(--cafe-accent-dark)", color: "#1A1208" }}>Hold</button>
             </div>
           </div>
         </div>
@@ -632,60 +1356,108 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
       {/* ── Move Station Modal ── */}
       {moveStationModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => { setMoveStationModal(null); setMoveError(""); }}>
-          <div style={{ background: C.bg2, border: `1px solid ${C.border2}`, borderRadius: 12, padding: 24, width: 360, maxWidth: "95%", boxShadow: "0 20px 60px rgba(0,0,0,.5)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: C.text3, marginBottom: 6 }}>Move Ticket</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text1, marginBottom: 16, letterSpacing: "-0.02em" }}>Send to station</div>
-            {moveError && <div style={{ color: C.red, fontSize: 11, marginBottom: 12 }}>{moveError}</div>}
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <div style={{ background: "var(--cafe-bg-elevated)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-lg)", padding: "var(--cafe-space-xl)", width: 380, maxWidth: "95%", boxShadow: "var(--cafe-shadow-xl)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: "var(--cafe-font-xs)", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 6 }}>Move Ticket</div>
+            <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: "var(--cafe-text-primary)", marginBottom: "var(--cafe-space-lg)", letterSpacing: "-0.02em" }}>Send to station</div>
+            {moveError && <div style={{ color: "var(--cafe-danger)", fontSize: "var(--cafe-font-xs)", marginBottom: "var(--cafe-space-md)" }}>{moveError}</div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)" }}>
               {[
-                { name: "Bar", color: C.blue },
-                { name: "Kitchen", color: C.purple },
-                { name: "Packaging", color: C.green },
-                { name: "Dessert", color: C.amber2 },
+                { name: "Bar", color: "var(--cafe-info)" },
+                { name: "Kitchen", color: "var(--cafe-purple)" },
+                { name: "Packaging", color: "var(--cafe-success)" },
+                { name: "Dessert", color: "var(--cafe-warning)" },
               ].map(({ name, color }) => (
                 <button
                   key={name}
                   onClick={() => moveStation(moveStationModal, name)}
-                  style={{ padding: "12px 14px", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text1, fontSize: 13, fontWeight: 600, cursor: "pointer", textAlign: "left", transition: "background .15s", display: "flex", alignItems: "center", gap: 10 }}
-                  onMouseEnter={e => e.currentTarget.style.background = C.bg4}
-                  onMouseLeave={e => e.currentTarget.style.background = C.bg3}
+                  style={{ padding: "12px 16px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", fontWeight: 600, cursor: "pointer", textAlign: "left", transition: "background .15s", display: "flex", alignItems: "center", gap: 12 }}
+                  onMouseEnter={e => e.currentTarget.style.background = "var(--cafe-bg-hover)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "var(--cafe-bg-surface)"}
                 >
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
+                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
                   {name}
                 </button>
               ))}
             </div>
-            <button onClick={() => { setMoveStationModal(null); setMoveError(""); }} style={{ ...btn("ghost"), padding: "9px 16px", marginTop: 12, width: "100%", fontSize: 13 }}>Cancel</button>
+            <button onClick={() => { setMoveStationModal(null); setMoveError(""); }} style={{ ...btn("ghost"), padding: "10px 16px", marginTop: "var(--cafe-space-md)", width: "100%", fontSize: "var(--cafe-font-sm)" }}>Cancel</button>
           </div>
         </div>
       )}
 
       {/* ── Done log side panel ── */}
       {showDoneLog && (
-        <div style={{ width: isMobile ? "100%" : "min(240px, 85vw)", background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 12px", overflowY: "auto", flexShrink: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{
+          width: isMobile ? "100%" : "min(268px, 85vw)",
+          background: "var(--cafe-bg-elevated)",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
+          border: "1px solid var(--cafe-border-light)",
+          borderRadius: 12,
+          padding: 14,
+          overflowY: "auto",
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+        }}>
+          {/* Panel header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.09em", textTransform: "uppercase", color: C.text3, marginBottom: 2 }}>Completed</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: C.text1, letterSpacing: "-0.02em" }}>{doneLog.length} tickets</div>
+              <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 2 }}>Recently Bumped</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em" }}>
+                {doneLog.length} <span style={{ fontSize: 10, fontWeight: 500, color: "var(--cafe-text-tertiary)" }}>tickets</span>
+              </div>
             </div>
-            <button onClick={recallLast} disabled={!doneLog.length} style={{ fontSize: 11, padding: "5px 10px", borderRadius: 6, border: `1px solid ${C.border2}`, background: "transparent", color: doneLog.length ? C.text2 : C.text3, cursor: doneLog.length ? "pointer" : "default" }}>↩ Recall</button>
+            <button
+              onClick={recallLast}
+              disabled={!doneLog.length}
+              style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid var(--cafe-border)", background: "var(--cafe-bg-hover)", color: doneLog.length ? "var(--cafe-text-secondary)" : "var(--cafe-text-tertiary)", fontSize: 10, fontWeight: 700, cursor: doneLog.length ? "pointer" : "default", letterSpacing: "0.02em" }}
+            >
+              ↩ Recall
+            </button>
           </div>
-          {doneLog.length === 0 && <div style={{ fontSize: 12, color: C.text3, textAlign: "center", padding: "24px 0", borderRadius: 7, border: `1px dashed ${C.border}` }}>Nothing completed yet</div>}
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "var(--cafe-border-light)", margin: "2px 0" }} />
+
+          {doneLog.length === 0 && (
+            <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", textAlign: "center", padding: "20px 0", borderRadius: 8, border: "1px dashed var(--cafe-border-light)" }}>Nothing completed yet</div>
+          )}
           {doneLog.map((d, i) => {
             const mins = d.duration ? Math.floor(d.duration / 60) : 0;
             const secs = d.duration ? d.duration % 60 : 0;
-            const stationDotColors = { Bar: C.blue, Kitchen: C.purple, Packaging: C.green, Dessert: C.amber2 };
+            const stationColors = {
+              Bar: { color: "var(--cafe-info)",    bg: "rgba(33,150,243,0.12)" },
+              Kitchen: { color: "var(--cafe-purple)",  bg: "rgba(156,39,176,0.12)" },
+              Packaging: { color: "var(--cafe-success)", bg: "rgba(76,175,80,0.12)" },
+              Dessert: { color: "var(--cafe-warning)",  bg: "rgba(255,152,0,0.12)" },
+            };
+            const sc = stationColors[d.station] || { color: "var(--cafe-text-tertiary)", bg: "var(--cafe-bg-hover)" };
             return (
-              <div key={i} style={{ padding: "9px 10px", background: C.bg3, borderRadius: 7, borderLeft: `2px solid ${C.green}40` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 800, color: C.text2 }}>{d.id}</span>
-                  <span style={{ color: C.green, fontSize: 10, fontFamily: "monospace", fontWeight: 700 }}>{mins}m{String(secs).padStart(2,"0")}s</span>
+              <div
+                key={i}
+                style={{
+                  padding: "9px 11px",
+                  background: "var(--cafe-bg-hover)",
+                  borderRadius: 8,
+                  borderLeft: "2px solid rgba(76,175,80,0.4)",
+                  transition: "background .15s",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                  <span style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 900, color: "var(--cafe-text-secondary)", letterSpacing: "0.02em" }}>{d.id}</span>
+                  <span style={{ color: "var(--cafe-success)", fontSize: 10, fontFamily: "monospace", fontWeight: 800, background: "rgba(76,175,80,0.1)", padding: "1px 6px", borderRadius: 3 }}>
+                    {mins}m{String(secs).padStart(2, "0")}s
+                  </span>
                 </div>
-                <div style={{ color: C.text3, fontSize: 11, lineHeight: 1.5 }}>{d.items?.map(it => `${it.name} ×${it.qty}`).join(", ")}</div>
+                <div style={{ color: "var(--cafe-text-tertiary)", fontSize: 11, lineHeight: 1.5 }}>
+                  {d.items?.map(it => `${it.name} ×${it.qty}`).join(", ")}
+                </div>
                 {d.station && (
-                  <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: stationDotColors[d.station] || C.text3 }} />
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: stationDotColors[d.station] || C.text3 }}>{d.station}</span>
+                  <div style={{ marginTop: 5, display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: sc.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", color: sc.color }}>{d.station}</span>
                   </div>
                 )}
               </div>
@@ -693,7 +1465,78 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders }) {
           })}
         </div>
       )}
+
+      {/* ── Keyboard shortcuts help ── */}
+      {showShortcuts && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }} onClick={() => setShowShortcuts(false)}>
+          <div style={{ background: "var(--cafe-bg-elevated)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-lg)", padding: "var(--cafe-space-xl)", width: 420, maxWidth: "95%", boxShadow: "var(--cafe-shadow-xl)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: "var(--cafe-font-xs)", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--cafe-accent)", marginBottom: 6 }}>Speed things up</div>
+            <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: "var(--cafe-text-primary)", marginBottom: "var(--cafe-space-lg)", letterSpacing: "-0.02em" }}>Keyboard Shortcuts</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                ["↑ / ↓  or  j / k", "Move focus between tickets"],
+                ["Enter  or  D", "Mark focused ticket done"],
+                ["S", "Start focused ticket"],
+                ["H", "Hold / resume focused ticket"],
+                ["B", "Bump focused ticket"],
+                ["1 / 2 / 3", "Set urgency: OK / Soon / Urgent"],
+                ["/", "Jump to search"],
+                ["Esc", "Clear focus / close dialogs"],
+              ].map(([key, desc]) => (
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-xs)", fontWeight: 700, color: "var(--cafe-accent)", background: "var(--cafe-accent-bg)", padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", whiteSpace: "nowrap" }}>{key}</span>
+                  <span style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)", textAlign: "right" }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowShortcuts(false)} style={{ ...btn("ghost"), padding: "10px 16px", marginTop: "var(--cafe-space-lg)", width: "100%", fontSize: "var(--cafe-font-sm)" }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast stack ── */}
+      {toasts.length > 0 && (
+        <div style={{ position: "fixed", bottom: 22, right: 22, display: "flex", flexDirection: "column", gap: 7, zIndex: 300, maxWidth: 310 }}>
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              style={{
+                background: "var(--cafe-bg-elevated)",
+                backdropFilter: "blur(16px)",
+                WebkitBackdropFilter: "blur(16px)",
+                border: "1px solid var(--cafe-border)",
+                borderRadius: 10,
+                padding: "11px 14px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,146,42,0.08)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                animation: "kdsToastIn .22s cubic-bezier(.4,0,.2,1)",
+              }}
+            >
+              <span style={{ width: 3, height: 28, borderRadius: 99, background: "var(--cafe-accent)", flexShrink: 0, opacity: 0.7 }} />
+              <span style={{ fontSize: 12, color: "var(--cafe-text-primary)", flex: 1, lineHeight: 1.4 }}>{t.message}</span>
+              {t.onUndo && (
+                <button
+                  onClick={() => { t.onUndo(); dismissToast(t.id); }}
+                  style={{ fontSize: 10, fontWeight: 800, color: "var(--cafe-accent)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0, letterSpacing: "0.03em" }}
+                >
+                  Undo
+                </button>
+              )}
+              <button
+                onClick={() => dismissToast(t.id)}
+                aria-label="Dismiss"
+                style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", background: "transparent", border: "none", cursor: "pointer", flexShrink: 0, opacity: 0.6 }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
+    </>
   );
 }
 

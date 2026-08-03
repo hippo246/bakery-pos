@@ -6,9 +6,7 @@
 
 /** Dev-only warn */
 function _warn(msg) {
-  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
-    console.warn('[ids]', msg);
-  }
+  console.warn('[ids]', msg);
 }
 
 /**
@@ -130,14 +128,6 @@ export function createTableId(sequence = null) {
  */
 export function createStaffId(sequence = null) {
   return _prefixedId('STF', sequence);
-}
-
-/**
- * Generate a discount ID
- * @returns {string} Discount ID like "DSC-001"
- */
-export function createDiscountId(sequence = null) {
-  return _prefixedId('DSC', sequence);
 }
 
 /**

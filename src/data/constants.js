@@ -28,11 +28,11 @@ export const INIT_ORDERS = normalizeOrders(LEGACY_INIT_ORDERS);
 
 // Legacy customer data - will be normalized on import
 export const LEGACY_INIT_CUSTOMERS = [
-  { id: "c1", name: "Rohan Mehta", phone: "9876543210", email: "rohan@email.com", visits: 42, spend: 12400, tier: "GOLD", tags: ["Morning Regular", "High Spender"], fav: "Cappuccino", lastVisit: "2 days ago", notes: "Prefers oat milk. Table by window." },
-  { id: "c2", name: "Sneha Kulkarni", phone: "8765432109", email: "sneha@email.com", visits: 18, spend: 4800, tier: "SILVER", tags: ["Weekend Visitor"], fav: "Matcha Latte", lastVisit: "5 days ago", notes: "Allergic to nuts." },
-  { id: "c3", name: "Vikram Desai", phone: "7654321098", email: "", visits: 61, spend: 18900, tier: "PLATINUM", tags: ["High Spender", "Morning Regular", "Daily Customer"], fav: "Espresso", lastVisit: "Today", notes: "Loyal since Day 1. Always espresso, never sugar." },
-  { id: "c4", name: "Ayesha Khan", phone: "6543210987", email: "ayesha@email.com", visits: 8, spend: 2100, tier: "BRONZE", tags: ["New Customer"], fav: "Cold Brew", lastVisit: "12 days ago", notes: "" },
-  { id: "c5", name: "Karan Joshi", phone: "9512345678", email: "karan@email.com", visits: 23, spend: 6700, tier: "SILVER", tags: ["Afternoon Regular"], fav: "Flat White", lastVisit: "Yesterday", notes: "Usually orders for 2." },
+  { id: "c1", name: "Rohan Mehta", phone: "9876543210", email: "rohan@email.com", visits: 42, spend: 12400, tier: "GOLD", tags: ["Morning Regular", "High Spender"], fav: "Cappuccino", lastVisit: Date.now() - (2 * 24 * 60 * 60 * 1000), notes: "Prefers oat milk. Table by window." },
+  { id: "c2", name: "Sneha Kulkarni", phone: "8765432109", email: "sneha@email.com", visits: 18, spend: 4800, tier: "SILVER", tags: ["Weekend Visitor"], fav: "Matcha Latte", lastVisit: Date.now() - (5 * 24 * 60 * 60 * 1000), notes: "Allergic to nuts." },
+  { id: "c3", name: "Vikram Desai", phone: "7654321098", email: "", visits: 61, spend: 18900, tier: "PLATINUM", tags: ["High Spender", "Morning Regular", "Daily Customer"], fav: "Espresso", lastVisit: Date.now(), notes: "Loyal since Day 1. Always espresso, never sugar." },
+  { id: "c4", name: "Ayesha Khan", phone: "6543210987", email: "ayesha@email.com", visits: 8, spend: 2100, tier: "BRONZE", tags: ["New Customer"], fav: "Cold Brew", lastVisit: Date.now() - (12 * 24 * 60 * 60 * 1000), notes: "" },
+  { id: "c5", name: "Karan Joshi", phone: "9512345678", email: "karan@email.com", visits: 23, spend: 6700, tier: "SILVER", tags: ["Afternoon Regular"], fav: "Flat White", lastVisit: Date.now() - (1 * 24 * 60 * 60 * 1000), notes: "Usually orders for 2." },
 ];
 
 // Normalized customers using new domain model
@@ -59,6 +59,185 @@ export const INIT_KDS = normalizeKdsCards(LEGACY_INIT_KDS);
 
 export const MENU_CATS = ["ALL", "Coffee", "Special", "Food"];
 
+// Modifier categories and options for menu items
+export const MODIFIER_CATEGORIES = {
+  MILK: {
+    id: "milk",
+    name: "Milk",
+    icon: "🥛",
+    options: [
+      { id: "regular", name: "Regular", price: 0 },
+      { id: "oat", name: "Oat Milk", price: 20 },
+      { id: "almond", name: "Almond Milk", price: 20 },
+      { id: "soy", name: "Soy Milk", price: 15 },
+      { id: "coconut", name: "Coconut Milk", price: 25 },
+    ]
+  },
+  SIZE: {
+    id: "size",
+    name: "Size",
+    icon: "📏",
+    options: [
+      { id: "small", name: "Small", price: -10 },
+      { id: "regular", name: "Regular", price: 0 },
+      { id: "large", name: "Large", price: 20 },
+    ]
+  },
+  EXTRAS: {
+    id: "extras",
+    name: "Extras",
+    icon: "➕",
+    options: [
+      { id: "extra_shot", name: "Extra Shot", price: 30 },
+      { id: "whipped_cream", name: "Whipped Cream", price: 15 },
+      { id: "chocolate_sauce", name: "Chocolate Sauce", price: 20 },
+      { id: "caramel", name: "Caramel Drizzle", price: 15 },
+      { id: "vanilla_syrup", name: "Vanilla Syrup", price: 10 },
+    ]
+  },
+  TEMPERATURE: {
+    id: "temperature",
+    name: "Temperature",
+    icon: "🌡️",
+    options: [
+      { id: "hot", name: "Hot", price: 0 },
+      { id: "iced", name: "Iced", price: 10 },
+    ]
+  },
+  SPICE: {
+    id: "spice",
+    name: "Spice Level",
+    icon: "🌶️",
+    options: [
+      { id: "mild", name: "Mild", price: 0 },
+      { id: "medium", name: "Medium", price: 0 },
+      { id: "spicy", name: "Spicy", price: 0 },
+      { id: "extra_spicy", name: "Extra Spicy", price: 5 },
+    ]
+  }
+};
+
+// Map modifier categories to menu item categories
+export const MENU_MODIFIER_MAP = {
+  "Coffee": ["MILK", "SIZE", "EXTRAS", "TEMPERATURE"],
+  "Special": ["MILK", "SIZE", "EXTRAS", "TEMPERATURE"],
+  "Food": ["SPICE", "EXTRAS"],
+};
+
+// Quick order templates for common combinations
+export const QUICK_ORDER_TEMPLATES = [
+  {
+    id: "morning_combo",
+    name: "Morning Combo",
+    description: "Coffee + Pastry",
+    items: [
+      { menuItemId: "m2", qty: 1 }, // Cappuccino
+      { menuItemId: "m5", qty: 1 }, // Croissant
+    ],
+    icon: "☕",
+    discount: 10, // 10% off
+  },
+  {
+    id: "breakfast_special",
+    name: "Breakfast Special",
+    description: "Coffee + Avocado Toast",
+    items: [
+      { menuItemId: "m1", qty: 1 }, // Espresso
+      { menuItemId: "m6", qty: 1 }, // Avocado Toast
+    ],
+    icon: "🍳",
+    discount: 15,
+  },
+  {
+    id: "afternoon_treat",
+    name: "Afternoon Treat",
+    description: "Special + Muffin",
+    items: [
+      { menuItemId: "m4", qty: 1 }, // Matcha Latte
+      { menuItemId: "m10", qty: 1 }, // Blueberry Muffin
+    ],
+    icon: "🧁",
+    discount: 5,
+  },
+  {
+    id: "coffee_lover",
+    name: "Coffee Lover",
+    description: "3 Coffees",
+    items: [
+      { menuItemId: "m1", qty: 2 }, // 2 Espresso
+      { menuItemId: "m2", qty: 1 }, // 1 Cappuccino
+    ],
+    icon: "☕",
+    discount: 20,
+  },
+];
+
+// Pre-saved order notes templates for quick insertion
+export const ORDER_NOTES_TEMPLATES = [
+  { id: "no_onions", text: "No onions", shortcut: "Ctrl+1" },
+  { id: "extra_spicy", text: "Extra spicy", shortcut: "Ctrl+2" },
+  { id: "no_ice", text: "No ice", shortcut: "Ctrl+3" },
+  { id: "dairy_free", text: "Dairy-free milk", shortcut: "Ctrl+4" },
+  { id: "gluten_free", text: "Gluten-free", shortcut: "Ctrl+5" },
+  { id: "allergy_nuts", text: "Nut allergy - no nuts", shortcut: "Ctrl+6" },
+  { id: "well_done", text: "Well done", shortcut: "Ctrl+7" },
+  { id: "medium", text: "Medium", shortcut: "Ctrl+8" },
+  { id: "rare", text: "Rare", shortcut: "Ctrl+9" },
+  { id: "no_salt", text: "No salt", shortcut: "Ctrl+0" },
+  { id: "extra_sauce", text: "Extra sauce", shortcut: "Ctrl+Q" },
+  { id: "on_side", text: "Sauce on side", shortcut: "Ctrl+W" },
+];
+
+// Allergen information for menu items
+export const ALLERGENS = {
+  DAIRY: { id: "dairy", name: "Dairy", icon: "🥛", severity: "high" },
+  NUTS: { id: "nuts", name: "Nuts", icon: "🥜", severity: "high" },
+  GLUTEN: { id: "gluten", name: "Gluten", icon: "🌾", severity: "high" },
+  EGGS: { id: "eggs", name: "Eggs", icon: "🥚", severity: "medium" },
+  SOY: { id: "soy", name: "Soy", icon: "🫘", severity: "medium" },
+  SHELLFISH: { id: "shellfish", name: "Shellfish", icon: "🦐", severity: "high" },
+  FISH: { id: "fish", name: "Fish", icon: "🐟", severity: "high" },
+  PEANUTS: { id: "peanuts", name: "Peanuts", icon: "🥜", severity: "high" },
+};
+
+// Menu item allergen mapping (example - would be populated from actual menu data)
+export const MENU_ITEM_ALLERGENS = {
+  "m1": ["dairy"], // Espresso - milk
+  "m2": ["dairy"], // Cappuccino - milk
+  "m3": ["dairy"], // Latte - milk
+  "m4": ["dairy"], // Matcha Latte - milk
+  "m5": ["gluten", "dairy", "eggs"], // Croissant - gluten, dairy, eggs
+  "m6": ["gluten", "eggs"], // Avocado Toast - gluten (bread), eggs
+  "m7": ["gluten", "dairy"], // Sandwich - gluten, dairy
+  "m8": ["gluten", "dairy"], // Burger - gluten (bun), dairy (cheese)
+  "m9": ["gluten", "dairy", "eggs"], // Cake - gluten, dairy, eggs
+  "m10": ["gluten", "dairy", "eggs", "nuts"], // Muffin - gluten, dairy, eggs, nuts
+};
+
+// Refund/Void reasons for order cancellation
+export const REFUND_VOID_REASONS = [
+  { id: "customer_request", label: "Customer Request", type: "refund" },
+  { id: "wrong_order", label: "Wrong Order", type: "void" },
+  { id: "food_quality", label: "Food Quality Issue", type: "refund" },
+  { id: "long_wait", label: "Long Wait Time", type: "refund" },
+  { id: "duplicate_order", label: "Duplicate Order", type: "void" },
+  { id: "payment_error", label: "Payment Error", type: "refund" },
+  { id: "staff_mistake", label: "Staff Mistake", type: "void" },
+  { id: "other", label: "Other (specify)", type: "both" },
+];
+
+// Price override reasons
+export const PRICE_OVERRIDE_REASONS = [
+  { id: "customer_discount", label: "Customer Discount" },
+  { id: "price_match", label: "Price Match" },
+  { id: "loyalty_reward", label: "Loyalty Reward" },
+  { id: "bulk_order", label: "Bulk Order" },
+  { id: "promotion", label: "Promotion" },
+  { id: "staff_discount", label: "Staff Discount" },
+  { id: "compensation", label: "Customer Compensation" },
+  { id: "other", label: "Other (specify)" },
+];
+
 export const PEAK_SOP = [
   { id: "p1", threshold: 3, stat: "NEW", label: "Queue Backup", msg: "3+ new orders pending — call in backup or notify kitchen.", level: "warn" },
   { id: "p2", threshold: 2, stat: "READY", label: "Pick-up Delay", msg: "2+ orders sitting Ready — alert front-of-house for pickup.", level: "alert" },
@@ -83,10 +262,11 @@ export const STATUS_COLORS = {
 };
 
 export const SRC_COLORS = {
-  WALK_IN: { bg: "#0d2218", color: "#4CAF72" },
-  SWIGGY: { bg: "#281408", color: "#FF6B35" },
-  ZOMATO: { bg: "#280808", color: "#E8344E" },
-  DIRECT_DELIVERY: { bg: "#0d1528", color: "#5B9BD5" },
+  WALK_IN:          { bg: "#0d2218", color: "#4CAF72" },
+  SWIGGY:           { bg: "#281408", color: "#FF6B35" },
+  ZOMATO:           { bg: "#280808", color: "#E8344E" },
+  DIRECT_DELIVERY:  { bg: "#0d1528", color: "#5B9BD5" },
+  QR_ORDERING:      { bg: "#1a0d2e", color: "#a78bfa" },
 };
 
 export const ANALYTICS_DATA = {

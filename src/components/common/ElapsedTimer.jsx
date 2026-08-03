@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef } from "react";
 import { C, pill } from "../../styles/theme";
 
@@ -15,8 +16,7 @@ function getSafeElapsedSeconds(startedAt) {
   }
 
   if (!Number.isFinite(ts) || ts <= 0) {
-    if (process.env.NODE_ENV !== "production" && startedAt != null) {
-      // eslint-disable-next-line no-console
+    if (startedAt != null) {
       console.warn("ElapsedTimer: invalid startedAt value", startedAt);
     }
     return 0;
@@ -42,19 +42,27 @@ function formatElapsed(totalSeconds) {
 function ElapsedTimer({ startedAt, urgency }) {
   const [elapsed, setElapsed] = useState(() => getSafeElapsedSeconds(startedAt));
   const elapsedRef = useRef(elapsed);
-  elapsedRef.current = elapsed;
+  const startedAtRef = useRef(startedAt);
+
+  // Update startedAt ref when prop changes
+  useEffect(() => {
+    startedAtRef.current = startedAt;
+  }, [startedAt]);
 
   useEffect(() => {
-    // Recompute immediately when startedAt changes.
-    setElapsed(getSafeElapsedSeconds(startedAt));
+    // Update ref when elapsed changes
+    elapsedRef.current = elapsed;
+  }, [elapsed]);
+
+  useEffect(() => {
     const id = setInterval(() => {
-      const next = getSafeElapsedSeconds(startedAt);
+      const next = getSafeElapsedSeconds(startedAtRef.current);
       if (next !== elapsedRef.current) {
         setElapsed(next);
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [startedAt]);
+  }, []);
 
   const safeUrgency = urgency === "urgent" || urgency === "soon" ? urgency : "ok";
   const color = safeUrgency === "urgent" ? C.red : safeUrgency === "soon" ? C.amber : C.green;

@@ -3,9 +3,7 @@
 // ── Internal safe helpers ────────────────────────────────────────────────────
 
 function devWarn(...args) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('[money]', ...args);
-  }
+  console.warn('[money]', ...args);
 }
 
 function toSafeNumber(value, fallback = 0) {
@@ -107,6 +105,7 @@ export function calculateOrderTotals(subtotal, discountAmount = 0, taxRate = 0.1
   const taxAmount = calculateTax(taxableAmount, taxRate);
   // Split evenly for CGST + SGST (standard for intra-state GST)
   const halfTax = roundCurrency(taxAmount / 2);
+  // Use difference calculation to avoid rounding errors
   const total = roundCurrency(Math.max(0, taxableAmount + taxAmount));
 
   return {
@@ -115,7 +114,7 @@ export function calculateOrderTotals(subtotal, discountAmount = 0, taxRate = 0.1
     taxableAmount,
     taxAmount,
     cgst: halfTax,
-    sgst: halfTax,
+    sgst: roundCurrency(taxAmount - halfTax),  // Remaining goes to SGST
     total
   };
 }

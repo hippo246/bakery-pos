@@ -1,8 +1,7 @@
 // KDS (Kitchen Display System) domain model with schema validation and helper functions
 
-import { generateId, createKdsTicketId } from './ids.js';
+import { createKdsTicketId } from './ids.js';
 import { now, toTimestamp, getMinutesElapsed } from './dates.js';
-import { STATIONS } from './orderModel.js';
 
 /**
  * Standard KDS Ticket schema
@@ -19,6 +18,24 @@ import { STATIONS } from './orderModel.js';
  * @property {string} holdReason - Reason for hold
  * @property {boolean} completed - Whether ticket is completed
  * @property {number} completedAt - Completion timestamp
+ * @property {string} tableId - Table ID for dine-in orders
+ * @property {number} guestCount - Number of guests at table
+ * @property {number} tableSeatedAt - Timestamp when table was seated
+ * @property {string} assignedWaiter - ID of assigned waiter
+ * @property {string} assignedWaiterName - Name of assigned waiter
+ * @property {string} dietaryFlags - Dietary flags (vegan, gluten-free, etc.)
+ * @property {string[]} allergenWarnings - Allergen warnings for cross-contamination
+ * @property {boolean} isVip - Whether this is a VIP order
+ * @property {string} wasteReason - Reason for waste logging
+ * @property {number} wasteCost - Cost of wasted items
+ * @property {string} equipmentId - Assigned equipment ID
+ * @property {string} equipmentName - Assigned equipment name
+ * @property {number} temperatureLog - Temperature reading for HACCP
+ * @property {number} dangerZoneTime - Time spent in danger zone (minutes)
+ * @property {string[]} haccpChecklist - HACCP compliance checklist items
+ * @property {string[]} kitchenMessages - Kitchen chat messages
+ * @property {boolean} audioMuted - Whether audio alerts are muted
+ * @property {string} customAlertSound - Custom alert sound file path
  */
 
 /**
@@ -68,9 +85,7 @@ function isValidUrgency(urgency) {
 }
 
 function devWarn(...args) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('[kdsModel]', ...args);
-  }
+  console.warn('[kdsModel]', ...args);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -143,7 +158,25 @@ export function createKdsTicketFromOrder(order, station) {
     held: false,
     holdReason: '',
     completed: false,
-    completedAt: null
+    completedAt: null,
+    tableId: toSafeString(order.tableId) || null,
+    guestCount: Number.isFinite(Number(order.guestCount)) ? Number(order.guestCount) : null,
+    tableSeatedAt: toSafeTimestamp(order.tableSeatedAt || order.createdAt),
+    assignedWaiter: toSafeString(order.assignedWaiter) || null,
+    assignedWaiterName: toSafeString(order.assignedWaiterName) || null,
+    dietaryFlags: Array.isArray(order.dietaryFlags) ? order.dietaryFlags.join(', ') : toSafeString(order.dietaryFlags) || null,
+    allergenWarnings: Array.isArray(order.allergenWarnings) ? order.allergenWarnings : [],
+    isVip: Boolean(order.isVip),
+    wasteReason: null,
+    wasteCost: null,
+    equipmentId: toSafeString(order.equipmentId) || null,
+    equipmentName: toSafeString(order.equipmentName) || null,
+    temperatureLog: Number.isFinite(Number(order.temperatureLog)) ? Number(order.temperatureLog) : null,
+    dangerZoneTime: Number.isFinite(Number(order.dangerZoneTime)) ? Number(order.dangerZoneTime) : null,
+    haccpChecklist: Array.isArray(order.haccpChecklist) ? order.haccpChecklist : [],
+    kitchenMessages: Array.isArray(order.kitchenMessages) ? order.kitchenMessages : [],
+    audioMuted: Boolean(order.audioMuted),
+    customAlertSound: toSafeString(order.customAlertSound) || null
   };
 }
 
@@ -221,7 +254,25 @@ export function normalizeKdsTicket(ticket) {
     held: Boolean(ticket.held),
     holdReason: toSafeString(ticket.holdReason, 200),
     completed: Boolean(ticket.completed),
-    completedAt
+    completedAt,
+    tableId: toSafeString(ticket.tableId) || null,
+    guestCount: Number.isFinite(Number(ticket.guestCount)) ? Number(ticket.guestCount) : null,
+    tableSeatedAt: toSafeTimestamp(ticket.tableSeatedAt || ticket.startedAt || startedAt),
+    assignedWaiter: toSafeString(ticket.assignedWaiter) || null,
+    assignedWaiterName: toSafeString(ticket.assignedWaiterName) || null,
+    dietaryFlags: Array.isArray(ticket.dietaryFlags) ? ticket.dietaryFlags.join(', ') : toSafeString(ticket.dietaryFlags) || null,
+    allergenWarnings: Array.isArray(ticket.allergenWarnings) ? ticket.allergenWarnings : [],
+    isVip: Boolean(ticket.isVip),
+    wasteReason: toSafeString(ticket.wasteReason) || null,
+    wasteCost: Number.isFinite(Number(ticket.wasteCost)) ? Number(ticket.wasteCost) : null,
+    equipmentId: toSafeString(ticket.equipmentId) || null,
+    equipmentName: toSafeString(ticket.equipmentName) || null,
+    temperatureLog: Number.isFinite(Number(ticket.temperatureLog)) ? Number(ticket.temperatureLog) : null,
+    dangerZoneTime: Number.isFinite(Number(ticket.dangerZoneTime)) ? Number(ticket.dangerZoneTime) : null,
+    haccpChecklist: Array.isArray(ticket.haccpChecklist) ? ticket.haccpChecklist : [],
+    kitchenMessages: Array.isArray(ticket.kitchenMessages) ? ticket.kitchenMessages : [],
+    audioMuted: Boolean(ticket.audioMuted),
+    customAlertSound: toSafeString(ticket.customAlertSound) || null
   };
 }
 

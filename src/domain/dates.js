@@ -3,9 +3,7 @@
 // ── Internal safe helpers ────────────────────────────────────────────────────
 
 function devWarn(...args) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('[dates]', ...args);
-  }
+  console.warn('[dates]', ...args);
 }
 
 function isValidTimestamp(value) {

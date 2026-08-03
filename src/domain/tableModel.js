@@ -1,7 +1,7 @@
 // Table domain model with lifecycle helpers
 
 import { generateId, createTableId } from './ids.js';
-import { now, toTimestamp } from './dates.js';
+import { now } from './dates.js';
 
 /**
  * Standard Table schema
@@ -22,13 +22,22 @@ export const TABLE_STATUSES = ['available', 'occupied', 'cleaning', 'reserved'];
 // ── Internal safe helpers ────────────────────────────────────────────────────
 
 function devWarn(...args) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn('[tableModel]', ...args);
-  }
+  console.warn('[tableModel]', ...args);
 }
 
 function toSafeString(val) {
   return typeof val === 'string' ? val.trim() : '';
+}
+
+// Like toSafeString, but for id/number fields specifically: these commonly arrive as
+// numbers (e.g. seed data with `id: 1`), and toSafeString would blank those out entirely,
+// forcing a fresh random id to be generated on every normalize call — which breaks id
+// stability across anything that writes/reads tables outside this normalizer (e.g. the
+// guest ordering page, which never runs tables through normalizeTable at all).
+function toSafeIdentifier(val) {
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'number' && Number.isFinite(val)) return String(val);
+  return '';
 }
 
 function toSafeCapacity(val) {
@@ -76,8 +85,8 @@ function toSafeHistory(raw) {
 export function createTable(input = {}) {
   const safe = (input && typeof input === 'object') ? input : {};
   return {
-    id: toSafeString(safe.id) || createTableId(),
-    number: toSafeString(safe.number || safe.tableNumber) || '1',
+    id: toSafeIdentifier(safe.id) || createTableId(),
+    number: toSafeIdentifier(safe.number ?? safe.tableNumber) || '1',
     capacity: toSafeCapacity(safe.capacity),
     status: toSafeStatus(safe.status),
     currentOrderId: toSafeString(safe.currentOrderId || safe.orderId) || null,
@@ -121,8 +130,8 @@ export function normalizeTable(table) {
     ) || null;
 
   return {
-    id: toSafeString(table.id) || createTableId(),
-    number: toSafeString(table.number || table.tableNumber) || '1',
+    id: toSafeIdentifier(table.id) || createTableId(),
+    number: toSafeIdentifier(table.number ?? table.tableNumber) || '1',
     capacity: toSafeCapacity(table.capacity),
     status: toSafeStatus(table.status),
     currentOrderId,
@@ -185,7 +194,7 @@ export function markTableOccupied(table, orderId) {
 export function markTableCleaning(table) {
   if (!table || typeof table !== 'object') return table;
   const ts = now();
-  // eslint-disable-next-line no-unused-vars
+   
   const { currentOrder: _drop, ...rest } = table;
   return {
     ...rest,
@@ -205,7 +214,7 @@ export function markTableCleaning(table) {
 export function markTableAvailable(table) {
   if (!table || typeof table !== 'object') return table;
   // Drop optional keys entirely rather than leaving them as undefined
-  // eslint-disable-next-line no-unused-vars
+   
   const { currentOrder: _a, reservedFor: _b, reservedTime: _c, reservation: _d, ...rest } = table;
   return {
     ...rest,

@@ -10,6 +10,9 @@ html {
      (Ctrl+F / Cmd+F) and assistive technology scroll on several browsers.
      Let body and #root own the scroll containment instead. */
   overscroll-behavior: none;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -18,15 +21,17 @@ body {
   height: 100%;
   min-height: 100dvh; /* guards against vh collapse on mobile */
   width: 100%;
-  font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  background: var(--c-bg);
-  color: var(--c-text);
+  font-family: 'Sora', 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--cafe-bg);
+  color: var(--cafe-text-primary);
   /* Body must NOT scroll — Layout owns all scroll internally */
   overflow: hidden;
   overscroll-behavior: none;
   /* Improve font rendering */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Better text rendering on Windows */
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -36,4 +41,126 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* ── CafeOS Typography System ───────────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--cafe-text-primary);
+}
+
+h1 {
+  font-size: var(--cafe-font-3xl);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: var(--cafe-font-2xl);
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: var(--cafe-font-xl);
+  line-height: 1.4;
+}
+
+h4 {
+  font-size: var(--cafe-font-lg);
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+  font-size: var(--cafe-font-base);
+  line-height: 1.6;
+  color: var(--cafe-text-secondary);
+}
+
+/* ── Focus States ───────────────────────────────────────────────── */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--cafe-border-focus);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar Styling ───────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cafe-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cafe-border-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cafe-border);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cafe-border-light) var(--cafe-bg);
+}
+
+/* ── Header Action Buttons ─────────────────────────────────────── */
+.header-action-btn {
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.header-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  filter: brightness(1.05);
+}
+
+.header-action-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Tables Interactivity ───────────────────────────────────────── */
+.table-card-interactive {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease !important;
+}
+
+.table-card-interactive:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+  border-color: var(--cafe-accent-border) !important;
+}
+
+.table-card-interactive .table-circle {
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.table-card-interactive:hover .table-circle {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px var(--cafe-accent-border) !important;
+}
+
+.table-action-btn {
+  transition: all 0.2s ease !important;
+  border-radius: 50% !important;
+}
+
+.table-action-btn:hover {
+  background: var(--cafe-bg-surface) !important;
+  transform: scale(1.1);
+  color: var(--cafe-text-primary) !important;
 }
