@@ -2,7 +2,7 @@
 // Continuous security monitoring and alerting
 
 import { SecurityInterface } from './SecurityInterface.js';
-import { SecurityStatus, _SecurityLevel } from './SecurityTypes.js';
+import { SecurityStatus, SecurityLevel } from './SecurityTypes.js';
 
 export class SecurityMonitor extends SecurityInterface {
   constructor(config = {}) {

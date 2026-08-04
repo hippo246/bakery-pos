@@ -2,7 +2,7 @@
 // Real health checks for cloud storage providers
 
 import { HealthCheckProvider } from '../HealthCheckProvider.js';
-import { _HealthState, ComponentCategory } from '../HealthTypes.js';
+import { HealthState, ComponentCategory } from '../HealthTypes.js';
 import storageEngine from '../../cloud/StorageEngine.js';
 
 /**
@@ -208,7 +208,7 @@ export class CloudProviderHealthCheck extends HealthCheckProvider {
         limit: total,
         percentage
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         success: true,
         usage: 0,

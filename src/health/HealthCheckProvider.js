@@ -1,7 +1,7 @@
 // Health Check Provider Base Class
 // Abstract base class for all health check providers
 
-import { HealthCheckResult, _HealthCheckConfig, HealthState } from './HealthTypes.js';
+import { HealthCheckResult, HealthState } from './HealthTypes.js';
 
 /**
  * Base class for all health check providers

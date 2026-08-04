@@ -80,7 +80,7 @@ export class ImportExportHealthCheck extends HealthCheckProvider {
   async checkValidation() {
     try {
       // Check if validation is configured
-      const config = localStorage.getItem('cafeos_import_export_config');
+      const _config = localStorage.getItem('cafeos_import_export_config');
       const operational = true; // Assume operational if no errors
       
       return {

@@ -1,7 +1,7 @@
 // Health Registry
 // Central registry for all health check providers and components
 
-import { _ComponentCategory, HealthCheckConfig } from './HealthTypes.js';
+import { ComponentCategory, HealthCheckConfig } from './HealthTypes.js';
 
 /**
  * Health Registry - Manages registration of all health check providers

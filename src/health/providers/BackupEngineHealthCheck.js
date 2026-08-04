@@ -2,7 +2,7 @@
 // Real health checks for the Backup Engine
 
 import { HealthCheckProvider } from '../HealthCheckProvider.js';
-import { _HealthState, ComponentCategory } from '../HealthTypes.js';
+import { HealthState, ComponentCategory } from '../HealthTypes.js';
 
 /**
  * Health check provider for Backup Engine

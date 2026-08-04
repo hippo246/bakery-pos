@@ -2,7 +2,7 @@
 // Real health checks for Printers
 
 import { HealthCheckProvider } from '../HealthCheckProvider.js';
-import { HealthState, ComponentCategory } from '../HealthTypes.js';
+import { HealthState, ComponentCategory, HealthCheckResult } from '../HealthTypes.js';
 
 /**
  * Health check provider for Printers

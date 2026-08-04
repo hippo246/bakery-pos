@@ -310,15 +310,93 @@ export class CredentialVault extends SecurityInterface {
    * @returns {Promise<string>} Encryption key
    */
   async getOrCreateEncryptionKey() {
-    let key = localStorage.getItem('cafeos_vault_key');
+    // Demo mode: use session-only in-memory key (never persisted)
+    if (isDemoMode()) {
+      if (!this.encryptionKey) {
+        const keyData = crypto.getRandomValues(new Uint8Array(32));
+        this.encryptionKey = btoa(String.fromCharCode(...keyData));
+      }
+      return this.encryptionKey;
+    }
+
+    // Production mode: use user password-derived key or stored key
+    const keyStorageKey = 'cafeos_vault_key_production';
+    
+    if (this.userPassword) {
+      // Derive key from user password using PBKDF2
+      return await this.deriveKeyFromPassword(this.userPassword);
+    }
+    
+    // Fallback to stored key (less secure, but maintains compatibility)
+    let key = localStorage.getItem(keyStorageKey);
     
     if (!key) {
       const keyData = crypto.getRandomValues(new Uint8Array(32));
       key = btoa(String.fromCharCode(...keyData));
-      localStorage.setItem('cafeos_vault_key', key);
+      localStorage.setItem(keyStorageKey, key);
     }
     
     return key;
+  }
+
+  /**
+   * Derive encryption key from user password using PBKDF2
+   * @param {string} password - User password
+   * @returns {Promise<string>} Derived encryption key
+   */
+  async deriveKeyFromPassword(password) {
+    const encoder = new TextEncoder();
+    const passwordData = encoder.encode(password);
+    
+    // Generate a random salt
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    
+    // Derive key using PBKDF2
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      passwordData,
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+    
+    const derivedKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 100000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
+    
+    // Export the derived key
+    const exportedKey = await crypto.subtle.exportKey('raw', derivedKey);
+    const keyArray = new Uint8Array(exportedKey);
+    
+    // Store salt with key for later derivation
+    const saltBase64 = btoa(String.fromCharCode(...salt));
+    const keyBase64 = btoa(String.fromCharCode(...keyArray));
+    const combined = `${saltBase64}:${keyBase64}`;
+    
+    return combined;
+  }
+
+  /**
+   * Clear all demo credentials (called when switching to production)
+   */
+  clearDemoCredentials() {
+    try {
+      localStorage.removeItem('cafeos_credential_vault_demo');
+      localStorage.removeItem('cafeos_vault_key_demo');
+      this.credentials.clear();
+      console.log('[CredentialVault] Demo credentials cleared');
+    } catch (error) {
+      console.error('[CredentialVault] Failed to clear demo credentials:', error);
+    }
   }
 
   /**

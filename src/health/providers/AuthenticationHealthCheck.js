@@ -2,7 +2,7 @@
 // Real health checks for authentication
 
 import { HealthCheckProvider } from '../HealthCheckProvider.js';
-import { _HealthState, ComponentCategory } from '../HealthTypes.js';
+import { HealthState, ComponentCategory } from '../HealthTypes.js';
 import { isAuthenticated, getCurrentUserId, getCurrentRoleType } from '../../utils/authService.js';
 
 /**

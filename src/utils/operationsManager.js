@@ -6,7 +6,7 @@ import {
   createRecurringTaskTemplate,
   createDailyChecklist,
   createTaskCompletion,
-  _normalizeTask,
+  normalizeTask,
   updateTaskStatus,
   addTaskEvidence,
   calculateChecklistProgress,
@@ -15,8 +15,8 @@ import {
   TASK_STATUS,
   TASK_PRIORITY,
   generateTasksFromTemplate,
-  _sortTasksByPriority,
-  _sortTasksByDueTime,
+  sortTasksByPriority,
+  sortTasksByDueTime,
   getOverdueTasks,
   getCriticalTasks
 } from "../domain/operationsModel.js";

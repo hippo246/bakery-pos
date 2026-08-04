@@ -185,7 +185,7 @@ export class SecretVaultHealthCheck extends HealthCheckProvider {
       // This is a simplified check - in production you'd query the actual credential store
       // For now, we'll just verify the mechanism works
       return 0; // We don't expose actual count for security
-    } catch (error) {
+    } catch (_error) {
       return 0;
     }
   }

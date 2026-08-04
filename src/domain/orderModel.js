@@ -41,7 +41,26 @@ import { calculateSubtotal, calculateOrderTotals } from './money.js';
  * @property {string} notes - Item notes
  */
 
-// Order status flow
+// Extended order lifecycle states
+export const ORDER_LIFECYCLE_STATES = {
+  DRAFT: 'DRAFT',
+  HELD: 'HELD',
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  PREPARING: 'PREPARING',
+  READY: 'READY',
+  SERVING: 'SERVING',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+  VOIDED: 'VOIDED',
+  ARCHIVED: 'ARCHIVED'
+};
+
+// Valid lifecycle states
+export const LIFECYCLE_STATUSES = Object.values(ORDER_LIFECYCLE_STATES);
+
+// Order status flow (legacy - for backward compatibility)
 export const ORDER_STATUS_FLOW = {
   NEW: 'ACCEPTED',
   ACCEPTED: 'PREPARING',
@@ -52,10 +71,26 @@ export const ORDER_STATUS_FLOW = {
   CANCELLED: null
 };
 
+// Lifecycle state transitions - defines valid state changes
+export const LIFECYCLE_TRANSITIONS = {
+  DRAFT: ['HELD', 'PENDING', 'CANCELLED'],
+  HELD: ['DRAFT', 'PENDING', 'CANCELLED'],
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PREPARING', 'CANCELLED'],
+  PREPARING: ['READY', 'CANCELLED'],
+  READY: ['SERVING', 'COMPLETED'],
+  SERVING: ['COMPLETED'],
+  COMPLETED: ['REFUNDED', 'ARCHIVED'],
+  CANCELLED: ['ARCHIVED'],
+  REFUNDED: ['ARCHIVED'],
+  VOIDED: ['ARCHIVED'],
+  ARCHIVED: [] // Terminal state
+};
+
 // Valid order sources
 export const ORDER_SOURCES = ['WALK_IN', 'SWIGGY', 'ZOMATO', 'DIRECT_DELIVERY', 'QR_ORDERING'];
 
-// Valid order statuses
+// Valid order statuses (legacy - for backward compatibility)
 export const ORDER_STATUSES = ['NEW', 'ACCEPTED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY', 'COMPLETED', 'CANCELLED'];
 
 // Valid payment statuses
@@ -305,7 +340,66 @@ export function getOrderAmount(order) {
 }
 
 /**
- * Update order status
+ * Validate lifecycle state transition
+ * @param {string} currentState - Current lifecycle state
+ * @param {string} nextState - Desired next state
+ * @returns {boolean} Whether transition is valid
+ */
+export function isValidLifecycleTransition(currentState, nextState) {
+  if (!currentState || !nextState) return false;
+  if (!LIFECYCLE_STATUSES.includes(currentState) || !LIFECYCLE_STATUSES.includes(nextState)) {
+    return false;
+  }
+  const validTransitions = LIFECYCLE_TRANSITIONS[currentState] || [];
+  return validTransitions.includes(nextState);
+}
+
+/**
+ * Transition order lifecycle state
+ * @param {Order} order - Order object
+ * @param {string} nextState - Next lifecycle state
+ * @param {string} reason - Reason for transition (optional)
+ * @returns {Order} Updated order with new state
+ * @throws {Error} If transition is invalid
+ */
+export function transitionOrderState(order, nextState, reason = null) {
+  if (!order || typeof order !== 'object') {
+    throw new Error('transitionOrderState: invalid order');
+  }
+
+  const currentState = order.lifecycleState || order.status || 'DRAFT';
+  
+  if (!isValidLifecycleTransition(currentState, nextState)) {
+    throw new Error(
+      `Invalid state transition: ${currentState} → ${nextState}. ` +
+      `Valid transitions from ${currentState}: ${LIFECYCLE_TRANSITIONS[currentState]?.join(', ') || 'none'}`
+    );
+  }
+
+  const updatedOrder = {
+    ...order,
+    lifecycleState: nextState,
+    status: nextState, // Update legacy status for compatibility
+    updatedAt: now(),
+    stateTransition: {
+      from: currentState,
+      to: nextState,
+      at: now(),
+      reason: reason || null,
+      by: order.staffId || null
+    }
+  };
+
+  // Set completion timestamp if transitioning to COMPLETED
+  if (nextState === 'COMPLETED' && !order.completedAt) {
+    updatedOrder.completedAt = now();
+  }
+
+  return updatedOrder;
+}
+
+/**
+ * Update order status (legacy - for backward compatibility)
  * @param {Order} order - Order object
  * @param {string} nextStatus - New status
  * @returns {Order} Updated order object
@@ -352,6 +446,135 @@ export function getNextOrderStatus(order) {
  */
 export function isTerminalOrderStatus(status) {
   return status === 'COMPLETED' || status === 'CANCELLED';
+}
+
+/**
+ * Check if lifecycle state is terminal
+ * @param {string} state - Lifecycle state
+ * @returns {boolean}
+ */
+export function isTerminalLifecycleState(state) {
+  return state === 'ARCHIVED' || state === 'COMPLETED' || state === 'CANCELLED' || state === 'REFUNDED' || state === 'VOIDED';
+}
+
+/**
+ * Get possible next states for current lifecycle state
+ * @param {string} currentState - Current lifecycle state
+ * @returns {string[]} Array of possible next states
+ */
+export function getNextLifecycleStates(currentState) {
+  return LIFECYCLE_TRANSITIONS[currentState] || [];
+}
+
+/**
+ * Check if order can be edited
+ * @param {Order} order - Order object
+ * @returns {boolean} Whether order can be edited
+ */
+export function canEditOrder(order) {
+  if (!order || typeof order !== 'object') return false;
+  const state = order.lifecycleState || order.status;
+  return ['DRAFT', 'HELD', 'PENDING'].includes(state);
+}
+
+/**
+ * Check if order can be cancelled
+ * @param {Order} order - Order object
+ * @returns {boolean} Whether order can be cancelled
+ */
+export function canCancelOrder(order) {
+  if (!order || typeof order !== 'object') return false;
+  const state = order.lifecycleState || order.status;
+  return ['DRAFT', 'HELD', 'PENDING', 'CONFIRMED', 'PREPARING'].includes(state);
+}
+
+/**
+ * Check if order can be refunded
+ * @param {Order} order - Order object
+ * @returns {boolean} Whether order can be refunded
+ */
+export function canRefundOrder(order) {
+  if (!order || typeof order !== 'object') return false;
+  const state = order.lifecycleState || order.status;
+  return state === 'COMPLETED' && order.paymentStatus === 'PAID';
+}
+
+/**
+ * Check if order can be voided
+ * @param {Order} order - Order object
+ * @returns {boolean} Whether order can be voided
+ */
+export function canVoidOrder(order) {
+  if (!order || typeof order !== 'object') return false;
+  const state = order.lifecycleState || order.status;
+  return ['DRAFT', 'HELD', 'PENDING', 'CONFIRMED'].includes(state);
+}
+
+/**
+ * Hold an order (transition to HELD state)
+ * @param {Order} order - Order object
+ * @param {string} reason - Reason for holding
+ * @returns {Order} Updated order
+ */
+export function holdOrder(order, reason = null) {
+  return transitionOrderState(order, 'HELD', reason || 'Order held by staff');
+}
+
+/**
+ * Resume a held order
+ * @param {Order} order - Order object
+ * @returns {Order} Updated order
+ */
+export function resumeOrder(order) {
+  return transitionOrderState(order, 'PENDING', 'Order resumed');
+}
+
+/**
+ * Cancel an order
+ * @param {Order} order - Order object
+ * @param {string} reason - Reason for cancellation
+ * @returns {Order} Updated order
+ */
+export function cancelOrder(order, reason = null) {
+  const updated = transitionOrderState(order, 'CANCELLED', reason || 'Order cancelled');
+  updated.cancelledAt = now();
+  return updated;
+}
+
+/**
+ * Void an order
+ * @param {Order} order - Order object
+ * @param {string} reason - Reason for voiding
+ * @returns {Order} Updated order
+ */
+export function voidOrder(order, reason = null) {
+  const updated = transitionOrderState(order, 'VOIDED', reason || 'Order voided');
+  updated.voidedAt = now();
+  return updated;
+}
+
+/**
+ * Refund an order
+ * @param {Order} order - Order object
+ * @param {string} reason - Reason for refund
+ * @returns {Order} Updated order
+ */
+export function refundOrder(order, reason = null) {
+  const updated = transitionOrderState(order, 'REFUNDED', reason || 'Order refunded');
+  updated.refundedAt = now();
+  updated.paymentStatus = 'REFUNDED';
+  return updated;
+}
+
+/**
+ * Archive an order
+ * @param {Order} order - Order object
+ * @returns {Order} Updated order
+ */
+export function archiveOrder(order) {
+  const updated = transitionOrderState(order, 'ARCHIVED', 'Order archived');
+  updated.archivedAt = now();
+  return updated;
 }
 
 /**

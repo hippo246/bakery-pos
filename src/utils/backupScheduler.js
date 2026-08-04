@@ -6,7 +6,7 @@ import { getCurrentUserId } from "./authService.js";
 import { 
   uploadToCloudStorage, 
   getActiveCloudProvider,
-  _CLOUD_PROVIDERS 
+  CLOUD_PROVIDERS 
 } from "./cloudStorage.js";
 
 const BACKUP_STORAGE_KEY = 'cafeos_backup_schedule';

@@ -2,7 +2,7 @@
 // Data integrity verification with checksums and hash validation
 
 import { SecurityInterface } from './SecurityInterface.js';
-import { IntegrityStatus, SecurityStatus, _SecurityLevel } from './SecurityTypes.js';
+import { IntegrityStatus, SecurityStatus, SecurityLevel } from './SecurityTypes.js';
 
 export class IntegrityVerifier extends SecurityInterface {
   constructor(config = {}) {
