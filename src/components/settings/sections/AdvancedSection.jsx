@@ -162,6 +162,23 @@ export default function AdvancedSection({ isMobile }) {
         debugMode: false,
         verboseLogging: false,
         enableDiagnostics: true
+      },
+      healthCheck: {
+        enabled: true,
+        interval: 60,
+        cacheTTL: 30,
+        sensitivity: 'normal'
+      },
+      diagnostics: {
+        enabled: true,
+        predictionSensitivity: 'normal',
+        incidentRetentionDays: 90,
+        diagnosticsRetentionDays: 30,
+        recommendationBehavior: 'suggest',
+        enablePredictions: true,
+        enableRootCauseAnalysis: true,
+        enablePerformanceTracking: true,
+        enableTrendAnalysis: true
       }
     });
     showMessage('success', 'Configuration reset to defaults');
