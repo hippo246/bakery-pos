@@ -255,7 +255,9 @@ class NotificationManager {
       });
 
       browserNotification.onclick = () => {
-        window.focus();
+        if (typeof window !== 'undefined') {
+          window.focus();
+        }
         browserNotification.close();
       };
 

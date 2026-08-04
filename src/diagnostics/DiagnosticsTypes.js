@@ -421,15 +421,18 @@ export class DiagnosticsConfig {
     enableRootCauseAnalysis = true,
     enablePerformanceTracking = true,
     enableTrendAnalysis = true
-  }) {
-    this.predictionSensitivity = predictionSensitivity;
-    this.incidentRetentionDays = incidentRetentionDays;
-    this.monitoringThresholds = monitoringThresholds;
-    this.recommendationBehavior = recommendationBehavior;
-    this.diagnosticsRetentionDays = diagnosticsRetentionDays;
-    this.enablePredictions = enablePredictions;
-    this.enableRootCauseAnalysis = enableRootCauseAnalysis;
-    this.enablePerformanceTracking = enablePerformanceTracking;
-    this.enableTrendAnalysis = enableTrendAnalysis;
+  } = {}) {
+    // Handle case where constructor is called with no arguments or undefined
+    const config = arguments[0] || {};
+    
+    this.predictionSensitivity = config.predictionSensitivity || 'normal';
+    this.incidentRetentionDays = config.incidentRetentionDays || 90;
+    this.monitoringThresholds = config.monitoringThresholds || {};
+    this.recommendationBehavior = config.recommendationBehavior || 'suggest';
+    this.diagnosticsRetentionDays = config.diagnosticsRetentionDays || 30;
+    this.enablePredictions = config.enablePredictions !== undefined ? config.enablePredictions : true;
+    this.enableRootCauseAnalysis = config.enableRootCauseAnalysis !== undefined ? config.enableRootCauseAnalysis : true;
+    this.enablePerformanceTracking = config.enablePerformanceTracking !== undefined ? config.enablePerformanceTracking : true;
+    this.enableTrendAnalysis = config.enableTrendAnalysis !== undefined ? config.enableTrendAnalysis : true;
   }
 }

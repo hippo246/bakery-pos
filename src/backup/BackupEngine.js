@@ -331,7 +331,7 @@ export class BackupEngine extends BackupInterface {
       }
 
       // Use CompressionStream API if available
-      if (window.CompressionStream) {
+      if (typeof window !== 'undefined' && window.CompressionStream) {
         const stream = blob.stream();
         const compressedStream = stream.pipeThrough(new CompressionStream(algorithm));
         const compressedBlob = await new Response(compressedStream).blob();

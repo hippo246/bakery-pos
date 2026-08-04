@@ -62,7 +62,7 @@ import { normalizeTable }    from "../domain/tableModel";
 // demo mode: state seeded from in-file demo constants, never persisted.
 // local mode: state seeded from/persisted to localStorage.
 // future modes (Firebase/Rust API) can sit behind this same state boundary.
-const DATA_MODE = (import.meta.env.VITE_BREWCRM_MODE === "local") ? "local" : "demo";
+const DATA_MODE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_BREWCRM_MODE === "local") ? "local" : "demo";
 const isLocalMode = DATA_MODE === "local";
 
 const LOCAL_PREFIX = "brewcrm_local_";
@@ -76,22 +76,22 @@ function safeParse(json, fallback) {
   }
 }
 
-function loadLocalCollection(key, fallback) {
+function loadCollection(key, fallback) {
   try {
     const raw = localStorage.getItem(LOCAL_PREFIX + key);
     if (raw === null) return fallback;
     const parsed = safeParse(raw, undefined);
     if (parsed === undefined) {
-      if (import.meta.env.DEV) console.warn(`[BrewCRM] Corrupted localStorage JSON for "${key}", resetting to fallback`);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn(`[BrewCRM] Corrupted localStorage JSON for "${key}", resetting to fallback`);
       return fallback;
     }
     if (Array.isArray(fallback) && !Array.isArray(parsed)) {
-      if (import.meta.env.DEV) console.warn(`[BrewCRM] Non-array localStorage data for "${key}", resetting to fallback`);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn(`[BrewCRM] Non-array localStorage data for "${key}", resetting to fallback`);
       return fallback;
     }
     return parsed;
   } catch (err) {
-    if (import.meta.env.DEV) console.warn(`[BrewCRM] Failed to load localStorage collection "${key}"`, err);
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn(`[BrewCRM] Failed to load localStorage collection "${key}"`, err);
     return fallback;
   }
 }
@@ -100,13 +100,13 @@ function saveLocalCollection(key, value) {
   try {
     if (value === undefined) return;
     if (!Array.isArray(value)) {
-      if (import.meta.env.DEV) console.warn(`[BrewCRM] Skipped saving non-array collection "${key}"`);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn(`[BrewCRM] Skipped saving non-array collection "${key}"`);
       return;
     }
     localStorage.setItem(LOCAL_PREFIX + key, JSON.stringify(value));
   } catch (err) {
     // QuotaExceededError must surface even in production — silent data loss is unacceptable.
-    if (import.meta.env.DEV) console.warn(`[BrewCRM] Failed to save localStorage collection "${key}"`, err);
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn(`[BrewCRM] Failed to save localStorage collection "${key}"`, err);
     // Fire a custom event so any mounted UI layer can show a persistent warning banner.
     try {
       window.dispatchEvent(new CustomEvent("brewcrm:storage-error", {
@@ -133,7 +133,7 @@ const normalizeArray = (items, normalizer, collectionName) => {
       try {
         return normalizer ? normalizer(item) : item;
       } catch (err) {
-        if (import.meta.env.DEV) console.warn(`[BrewCRM] Invalid ${collectionName} record skipped`, err, item);
+        if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn(`[BrewCRM] Invalid ${collectionName} record skipped`, err, item);
         return null;
       }
     })
@@ -170,7 +170,7 @@ export default function BrewCRM() {
       initialOrders = initialOrders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED');
       if (isLocalMode) {
         try { localStorage.setItem("cafeos_orders", JSON.stringify(initialOrders)); } catch {
-          if (import.meta.env.DEV) console.warn('[BrewCRM] Failed to persist orders after rollover');
+          if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn('[BrewCRM] Failed to persist orders after rollover');
         }
       }
       DailyArchive.markTodayAsActive();
@@ -706,7 +706,7 @@ export default function BrewCRM() {
   };
 
   useEffect(() => {
-    if (import.meta.env.DEV) {
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
       window.__BREWCRM_DEBUG__ = {
         dataMode: DATA_MODE,
         getStorageSnapshot,

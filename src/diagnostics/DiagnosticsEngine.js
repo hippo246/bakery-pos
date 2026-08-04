@@ -63,10 +63,14 @@ class DiagnosticsEngine {
       const saved = localStorage.getItem('cafeos_diagnostics_config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        this.config = new DiagnosticsConfig(parsed);
+        // Ensure parsed is an object, if not use empty object
+        const configData = typeof parsed === 'object' && parsed !== null ? parsed : {};
+        this.config = new DiagnosticsConfig(configData);
       }
     } catch (error) {
       console.error('[DiagnosticsEngine] Failed to load configuration:', error);
+      // Reset to default config on error
+      this.config = new DiagnosticsConfig();
     }
   }
 

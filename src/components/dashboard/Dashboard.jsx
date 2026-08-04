@@ -735,7 +735,7 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
   const saveLayout = (l) => {
     setLayout(l);
     try { localStorage.setItem('cafeos_dashboard_layout_v2', JSON.stringify(l)); } catch {
-      if (import.meta.env.DEV) console.warn('[Dashboard] Failed to persist layout to storage');
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn('[Dashboard] Failed to persist layout to storage');
     }
   };
 

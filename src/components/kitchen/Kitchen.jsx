@@ -133,7 +133,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
     if (!Array.isArray(kdsCards)) return [];
     return kdsCards.filter(c => {
       const ok = c && typeof c === "object" && c.orderId;
-      if (!ok && process.env.NODE_ENV !== "production") {
+      if (!ok && typeof import.meta !== "undefined" && import.meta.env?.DEV) {
         console.warn("[Kitchen] skipped malformed ticket", c);
       }
       return ok;
@@ -237,7 +237,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
     orders.forEach(order => {
       // Guard against malformed orders crashing the screen
       if (!order || typeof order !== "object" || !order.id || !order.status) {
-        if (process.env.NODE_ENV !== "production") {
+        if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
           console.warn("[Kitchen] skipped malformed order", order);
         }
         return;
@@ -248,7 +248,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
       // Only create KDS cards for valid active orders that don't already have tickets
       if ((order.status === "ACCEPTED" || order.status === "PREPARING") && existingForOrder.length === 0) {
         if (!Array.isArray(order.items) || order.items.length === 0) {
-          if (process.env.NODE_ENV !== "production") {
+          if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
             console.warn("[Kitchen] order missing items, skipping KDS ticket creation", order.id);
           }
           return;
@@ -257,7 +257,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
         try {
           newTickets = createKdsTicketsFromOrder(order) || [];
         } catch (error) {
-          if (process.env.NODE_ENV !== "production") {
+          if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
             console.warn("[Kitchen] failed to create KDS tickets for order", order.id, error);
           }
           return;
@@ -268,7 +268,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
             // De-dupe by orderId + station so the same ticket is never created twice
             const existingKeys = new Set(prevSafe.filter(c => c).map(c => `${c.orderId}::${c.station}`));
             const toAdd = newTickets.filter(t => t && !existingKeys.has(`${t.orderId}::${t.station}`));
-            if (toAdd.length < newTickets.length && process.env.NODE_ENV !== "production") {
+            if (toAdd.length < newTickets.length && typeof import.meta !== "undefined" && import.meta.env?.DEV) {
               console.warn("[Kitchen] skipped duplicate KDS ticket(s) for order", order.id);
             }
             return toAdd.length > 0 ? [...prevSafe, ...toAdd] : prevSafe;
@@ -290,7 +290,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
             try {
               return cancelOrderTickets(order.id, Array.isArray(prev) ? prev : []);
             } catch (error) {
-              if (process.env.NODE_ENV !== "production") {
+              if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
                 console.warn("[Kitchen] failed to cancel tickets for order", order.id, error);
               }
               return prev;
@@ -309,7 +309,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
             try {
               return cancelOrderTickets(order.id, prevSafe);
             } catch (error) {
-              if (process.env.NODE_ENV !== "production") {
+              if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
                 console.warn("[Kitchen] failed to clean up tickets for order", order.id, error);
               }
               return prevSafe;
@@ -363,7 +363,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
       const updatedTicket = moveKdsTicketToStation(ticket, targetStation);
       setKdsCards(prev => (Array.isArray(prev) ? prev : []).map(c => (c && c.id === ticket.id ? updatedTicket : c)));
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to move ticket via drag", error);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[Kitchen] failed to move ticket via drag", error);
     }
   }, [draggedTicket, kdsCards, setKdsCards]);
 
@@ -398,7 +398,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
     try {
       completedTicket = completeKdsTicket(card);
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to complete ticket", id, error);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[Kitchen] failed to complete ticket", id, error);
       return;
     }
     const completedAt = Date.now();
@@ -458,7 +458,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
         const updatedShift = { ...currentShift, kitchenTickets: (currentShift.kitchenTickets || 0) + 1 };
         setShifts(prev => prev.map(s => s.id === currentShift.id ? updatedShift : s));
       } catch (e) {
-        if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to update shift", e);
+        if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[Kitchen] failed to update shift", e);
       }
     }
 
@@ -538,7 +538,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
     const card = (kdsCards || []).find(c => c && c.id === cardId);
     if (!card || card.completed) return;
     if (!Array.isArray(card.items) || !Number.isInteger(itemIdx) || itemIdx < 0 || itemIdx >= card.items.length) {
-      if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] invalid item index", cardId, itemIdx);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[Kitchen] invalid item index", cardId, itemIdx);
       return;
     }
 
@@ -546,7 +546,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
     try {
       updatedTicket = toggleKdsItemCheck(card, itemIdx, !card.items[itemIdx].checked);
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to toggle item check", error);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[Kitchen] failed to toggle item check", error);
       return;
     }
     setKdsCards(prev => (Array.isArray(prev) ? prev : []).map(c => c.id === cardId ? updatedTicket : c));
@@ -640,7 +640,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
     try {
       bumpedTicket = bumpKdsTicket(card);
     } catch (error) {
-      if (process.env.NODE_ENV !== "production") console.warn("[Kitchen] failed to bump ticket", id, error);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[Kitchen] failed to bump ticket", id, error);
       return;
     }
     const completedAt = Date.now();

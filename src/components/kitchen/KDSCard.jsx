@@ -151,10 +151,10 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
       const audio = new Audio(safeCustomAlertSound || '/sounds/alert.mp3');
       audio.volume = 0.5;
       audio.play().catch(err => {
-        if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] Audio play failed:", err);
+        if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] Audio play failed:", err);
       });
     } catch (err) {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] Audio creation failed:", err);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] Audio creation failed:", err);
     }
   }, [isAudioMuted, safeCustomAlertSound]);
 
@@ -183,7 +183,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const [moveStationDialog, setMoveStationDialog] = useState({ open: false, onConfirm: null });
 
   if (!card || typeof card !== "object") {
-    if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] received malformed card", card);
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] received malformed card", card);
     return (
       <div style={{ background: "var(--cafe-bg-surface)", border: "1px dashed var(--cafe-border)", borderRadius: 12, padding: 14, color: "var(--cafe-text-tertiary)", fontSize: 12 }}>
         Ticket unavailable
@@ -270,11 +270,11 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleItemCheck = (idx) => {
     if (isCompleted) return;
     if (!Number.isInteger(idx) || idx < 0 || idx >= items.length) {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] invalid item index", idx);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] invalid item index", idx);
       return;
     }
     if (typeof onItemCheck !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onItemCheck missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onItemCheck missing");
       return;
     }
     onItemCheck(card.id, idx);
@@ -283,11 +283,11 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleUrgencyChange = (nextUrgency) => {
     if (isCompleted) return;
     if (!VALID_URGENCIES.includes(nextUrgency)) {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] invalid urgency", nextUrgency);
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] invalid urgency", nextUrgency);
       return;
     }
     if (typeof onUrgencyChange !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onUrgencyChange missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onUrgencyChange missing");
       return;
     }
     onUrgencyChange(card.id, nextUrgency);
@@ -295,7 +295,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
 
   const handleHoldToggle = (reason) => {
     if (typeof onHold !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onHold missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onHold missing");
       return;
     }
     onHold(card.id, reason);
@@ -313,7 +313,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleNoteSave = () => {
     const trimmed = (noteVal ?? "").trim().slice(0, 500);
     if (typeof onNoteEdit === "function") onNoteEdit(card.id, trimmed);
-    else if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onNoteEdit missing");
+    else if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onNoteEdit missing");
     setEditingNote(false);
   };
 
@@ -322,7 +322,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleDone = () => {
     if (isCompleted) return;
     if (typeof onDone !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onDone missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onDone missing");
       return;
     }
     if (items.length > 0 && !checkedAll) {
@@ -335,7 +335,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleStart = () => {
     if (isCompleted || safeStartedAt !== null) return;
     if (typeof onStart !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onStart missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onStart missing");
       return;
     }
     onStart(card.id);
@@ -344,7 +344,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleMoveStation = () => {
     if (isCompleted || isHeld) return;
     if (typeof onMoveStation !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onMoveStation missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onMoveStation missing");
       return;
     }
     setMoveStationDialog({ open: true, onConfirm: () => { setMoveStationDialog({ open: false, onConfirm: null }); onMoveStation(card.id); } });
@@ -353,7 +353,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
   const handleBump = () => {
     if (isCompleted || isHeld) return;
     if (typeof onBump !== "function") {
-      if (process.env.NODE_ENV !== "production") console.warn("[KDSCard] onBump missing");
+      if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn("[KDSCard] onBump missing");
       return;
     }
     onBump(card.id);

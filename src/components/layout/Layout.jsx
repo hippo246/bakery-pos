@@ -206,7 +206,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
     }
   }, [safeSetTab]);
 
-  if (typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production") {
+  if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
     if (tab && !validTab) console.warn("[Layout] Unknown tab: \"" + tab + "\". Expected: " + NAV.map(n => n.id).join(", "));
     if (!setTab) console.warn("[Layout] setTab prop missing — nav clicks will be no-ops.");
   }

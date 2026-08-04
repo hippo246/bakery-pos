@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------------
 
 function _warn(msg: string): void {
-  if (typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production") {
+  if (typeof import.meta !== "undefined" && import.meta.env?.DEV) {
     console.warn("[security]", msg);
   }
 }

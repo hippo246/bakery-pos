@@ -56,7 +56,7 @@ const saveQueue = () => {
   try {
     localStorage.setItem("cafeos_print_queue", JSON.stringify(printQueue));
   } catch {
-    if (import.meta.env.DEV) console.warn('[PrintEngine] Failed to save print queue to storage');
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn('[PrintEngine] Failed to save print queue to storage');
   }
 };
 
@@ -64,7 +64,7 @@ const saveHistory = () => {
   try {
     localStorage.setItem("cafeos_print_history", JSON.stringify(printHistory));
   } catch {
-    if (import.meta.env.DEV) console.warn('[PrintEngine] Failed to save print history to storage');
+    if (typeof import.meta !== "undefined" && import.meta.env?.DEV) console.warn('[PrintEngine] Failed to save print history to storage');
   }
 };
 

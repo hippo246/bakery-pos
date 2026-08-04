@@ -11,8 +11,10 @@ if (typeof document !== "undefined" && !document.getElementById("brew-theme")) {
   document.head.appendChild(el);
 
   try {
-    const saved = localStorage.getItem("brew-theme");
-    if (saved === "light") document.documentElement.classList.add("light");
+    if (typeof localStorage !== "undefined") {
+      const saved = localStorage.getItem("brew-theme");
+      if (saved === "light") document.documentElement.classList.add("light");
+    }
   } catch { /* storage blocked — default theme applies */ }
 
   try {
@@ -25,7 +27,7 @@ if (typeof document !== "undefined" && !document.getElementById("brew-theme")) {
 
 export default function App() {
   // Detect /guest/<code> path — render customer-facing ordering page
-  const isGuestPage = window.location.pathname.startsWith('/guest/');
+  const isGuestPage = typeof window !== "undefined" && window.location.pathname.startsWith('/guest/');
   if (isGuestPage) return <GuestOrder />;
   return <BrewCRM />;
 }

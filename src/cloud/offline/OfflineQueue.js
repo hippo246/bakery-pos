@@ -28,6 +28,8 @@ class OfflineQueue {
    * Setup online status listener
    */
   setupOnlineStatusListener() {
+    if (typeof window === 'undefined') return;
+
     window.addEventListener('online', () => {
       this.isOnline = true;
       this.processQueue();
