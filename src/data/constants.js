@@ -1,16 +1,46 @@
 import { normalizeOrders, normalizeCustomers, normalizeKdsCards } from '../domain/normalize.js';
 
 export const MENU_ITEMS = [
-  { id: "m1", name: "Espresso", price: 80, cat: "Coffee", desc: "Double shot, intense & smooth", emoji: "☕", popular: true, eightySixed: false },
-  { id: "m2", name: "Cappuccino", price: 120, cat: "Coffee", desc: "Espresso with steamed milk foam", emoji: "☕", popular: true, eightySixed: false },
-  { id: "m3", name: "Cold Brew", price: 150, cat: "Coffee", desc: "12-hour steeped, chilled", emoji: "🧋", popular: false, eightySixed: false },
-  { id: "m4", name: "Matcha Latte", price: 160, cat: "Special", desc: "Ceremonial grade, oat milk", emoji: "🍵", popular: true, eightySixed: false },
-  { id: "m5", name: "Croissant", price: 90, cat: "Food", desc: "Butter-layered, baked fresh", emoji: "🥐", popular: false, eightySixed: false },
-  { id: "m6", name: "Avocado Toast", price: 180, cat: "Food", desc: "Smashed avo, chilli flakes, EVOO", emoji: "🥑", popular: true, eightySixed: false },
-  { id: "m7", name: "Banana Bread", price: 100, cat: "Food", desc: "Moist, walnut-studded", emoji: "🍞", popular: false, eightySixed: false },
-  { id: "m8", name: "Flat White", price: 130, cat: "Coffee", desc: "Velvety microfoam, smooth", emoji: "☕", popular: false, eightySixed: false },
-  { id: "m9", name: "Lemonade", price: 110, cat: "Special", desc: "Fresh-squeezed, mint, sea salt", emoji: "🍋", popular: false, eightySixed: false },
-  { id: "m10", name: "Blueberry Muffin", price: 95, cat: "Food", desc: "Jumbo, streusel-topped", emoji: "🫐", popular: false, eightySixed: false },
+  { id: "m1", code: "ESP", name: "Espresso", price: 80, cat: "Coffee", desc: "Double shot, intense & smooth", emoji: "☕", popular: true, eightySixed: false, active: true },
+  { id: "m2", code: "CAP", name: "Cappuccino", price: 120, cat: "Coffee", desc: "Espresso with steamed milk foam", emoji: "☕", popular: true, eightySixed: false, active: true },
+  { id: "m3", code: "CBR", name: "Cold Brew", price: 150, cat: "Coffee", desc: "12-hour steeped, chilled", emoji: "🧋", popular: false, eightySixed: false, active: true },
+  { id: "m4", code: "MLT", name: "Matcha Latte", price: 160, cat: "Special", desc: "Ceremonial grade, oat milk", emoji: "🍵", popular: true, eightySixed: false, active: true },
+  { id: "m5", code: "CRS", name: "Croissant", price: 90, cat: "Food", desc: "Butter-layered, baked fresh", emoji: "🥐", popular: false, eightySixed: false, active: true },
+  { id: "m6", code: "ATO", name: "Avocado Toast", price: 180, cat: "Food", desc: "Smashed avo, chilli flakes, EVOO", emoji: "🥑", popular: true, eightySixed: false, active: true },
+  { id: "m7", code: "BBD", name: "Banana Bread", price: 100, cat: "Food", desc: "Moist, walnut-studded", emoji: "🍞", popular: false, eightySixed: false, active: true },
+  { id: "m8", code: "FWH", name: "Flat White", price: 130, cat: "Coffee", desc: "Velvety microfoam, smooth", emoji: "☕", popular: false, eightySixed: false, active: true },
+  { id: "m9", code: "LEM", name: "Lemonade", price: 110, cat: "Special", desc: "Fresh-squeezed, mint, sea salt", emoji: "🍋", popular: false, eightySixed: false, active: true },
+  { id: "m10", code: "BLM", name: "Blueberry Muffin", price: 95, cat: "Food", desc: "Jumbo, streusel-topped", emoji: "🫐", popular: false, eightySixed: false, active: true },
+];
+
+// Navigation menu items for the app
+export const NAV_MENU_ITEMS = [
+  { id: "dashboard", label: "Dashboard", icon: "📊" },
+  { id: "orders", label: "Orders", icon: "📝" },
+  { id: "kitchen", label: "Kitchen", icon: "👨‍🍳" },
+  { id: "crm", label: "CRM", icon: "👥" },
+  { id: "analytics", label: "Analytics", icon: "📈" },
+  { id: "menu", label: "Menu", icon: "🍽️" },
+  { id: "inventory", label: "Inventory", icon: "📦" },
+  { id: "staff", label: "Staff", icon: "👤" },
+  { id: "tables", label: "Tables", icon: "🪑" },
+  { id: "classicpos", label: "Classic POS", icon: "🖥️" },
+  { id: "settings", label: "Settings", icon: "⚙️" },
+  { id: "delivery", label: "Delivery", icon: "🚚" },
+  { id: "expenses", label: "Expenses", icon: "💰" },
+  { id: "qr", label: "QR Ordering", icon: "📱" },
+  { id: "production", label: "Production", icon: "🏭" },
+  { id: "tracking", label: "Tracking", icon: "🗺️" },
+  { id: "purchasing", label: "Purchasing", icon: "🛒" },
+  { id: "documents", label: "Documents", icon: "📄" },
+  { id: "backup", label: "Backup", icon: "💾" },
+  { id: "operations", label: "Operations", icon: "⚡" },
+  { id: "workflows", label: "Workflows", icon: "🔄" },
+  { id: "notifications", label: "Notifications", icon: "🔔" },
+  { id: "intelligence", label: "Intelligence", icon: "🧠" },
+  { id: "health", label: "Health", icon: "🏥" },
+  { id: "security", label: "Security", icon: "🔒" },
+  { id: "activity", label: "Activity", icon: "📋" },
 ];
 
 // Legacy order data - will be normalized on import
@@ -48,16 +78,16 @@ export const INIT_HIST = {
 
 // Legacy KDS data - will be normalized on import
 export const LEGACY_INIT_KDS = [
-  { id: "ORD-001", source: "WALK_IN", station: "Bar", items: [{ name: "Cappuccino", qty: 2, mod: "Oat milk" }, { name: "Croissant", qty: 1, mod: "" }], note: "Window table", startedAt: Date.now() - 8 * 60 * 1000, urgency: "soon" },
-  { id: "ORD-002", source: "SWIGGY", station: "Bar", items: [{ name: "Cold Brew", qty: 1, mod: "" }, { name: "Banana Bread", qty: 2, mod: "Warmed please" }], note: "", startedAt: Date.now() - 2 * 60 * 1000, urgency: "urgent" },
-  { id: "ORD-003", source: "ZOMATO", station: "Kitchen", items: [{ name: "Matcha Latte", qty: 1, mod: "Less sugar" }, { name: "Avocado Toast", qty: 1, mod: "Extra chili" }], note: "", startedAt: Date.now() - 5 * 60 * 1000, urgency: "urgent" },
-  { id: "ORD-006", source: "SWIGGY", station: "Bar", items: [{ name: "Cappuccino", qty: 3, mod: "" }, { name: "Banana Bread", qty: 1, mod: "" }], note: "3 separate cups", startedAt: Date.now() - 12 * 60 * 1000, urgency: "ok" },
+  { id: "KDS-001", orderId: "ORD-001", source: "WALK_IN", station: "Bar", status: "PREPARING", items: [{ name: "Cappuccino", qty: 2, mod: "Oat milk" }, { name: "Croissant", qty: 1, mod: "" }], note: "Window table", startedAt: Date.now() - 8 * 60 * 1000, urgency: "soon", tableNumber: 2, createdAt: Date.now() - 8 * 60 * 1000 },
+  { id: "KDS-002", orderId: "ORD-002", source: "SWIGGY", station: "Bar", status: "NEW", items: [{ name: "Cold Brew", qty: 1, mod: "" }, { name: "Banana Bread", qty: 2, mod: "Warmed please" }], note: "", startedAt: Date.now() - 2 * 60 * 1000, urgency: "urgent", tableNumber: null, createdAt: Date.now() - 2 * 60 * 1000 },
+  { id: "KDS-003", orderId: "ORD-003", source: "ZOMATO", station: "Kitchen", status: "ACCEPTED", items: [{ name: "Matcha Latte", qty: 1, mod: "Less sugar" }, { name: "Avocado Toast", qty: 1, mod: "Extra chili" }], note: "", startedAt: Date.now() - 5 * 60 * 1000, urgency: "urgent", tableNumber: null, createdAt: Date.now() - 5 * 60 * 1000 },
+  { id: "KDS-004", orderId: "ORD-006", source: "SWIGGY", station: "Bar", status: "READY", items: [{ name: "Cappuccino", qty: 3, mod: "" }, { name: "Banana Bread", qty: 1, mod: "" }], note: "3 separate cups", startedAt: Date.now() - 12 * 60 * 1000, urgency: "ok", tableNumber: null, createdAt: Date.now() - 12 * 60 * 1000 },
 ];
 
 // Normalized KDS cards using new domain model
 export const INIT_KDS = normalizeKdsCards(LEGACY_INIT_KDS);
 
-export const MENU_CATS = ["ALL", "Coffee", "Special", "Food"];
+export const MENU_CATS = ["ALL", "Coffee", "Special", "Food", "Popular", "Available only"];
 
 // Modifier categories and options for menu items
 export const MODIFIER_CATEGORIES = {

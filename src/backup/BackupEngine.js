@@ -563,3 +563,18 @@ export class BackupEngine extends BackupInterface {
     return `backup_${timestamp}_${random}`;
   }
 }
+
+// Singleton instance
+let backupEngineInstance = null;
+
+/**
+ * Get the singleton backup engine instance
+ */
+export function getBackupEngine(config = {}) {
+  if (!backupEngineInstance) {
+    backupEngineInstance = new BackupEngine(config);
+  }
+  return backupEngineInstance;
+}
+
+export default BackupEngine;

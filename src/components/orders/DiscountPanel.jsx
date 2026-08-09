@@ -66,6 +66,8 @@ const DiscountPanel = ({
                 fontSize: 11, fontWeight: active ? 800 : 500,
                 cursor: 'pointer', transition: 'all .12s',
               }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = C.amber3; e.currentTarget.style.color = C.amber2; } }}
+              onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.text2; } }}
             >
               {discountMode === 'percent' ? `${val}%` : `₹${val}`}
             </button>
@@ -80,7 +82,10 @@ const DiscountPanel = ({
               border: `1px solid ${C.border}`,
               background: C.bg3, color: C.text3,
               fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              transition: 'background .12s, color .12s',
             }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.bg4 || C.border; e.currentTarget.style.color = C.text2; }}
+            onMouseLeave={e => { e.currentTarget.style.background = C.bg3; e.currentTarget.style.color = C.text3; }}
           >
             ✕
           </button>

@@ -1,5 +1,4 @@
-import React from 'react';
-import { C, btn, card } from "../../styles/theme";
+import { btn, card } from "../../styles/theme";
 
 /**
  * PermissionDeniedDialog - Shows when a user attempts an action without required permission

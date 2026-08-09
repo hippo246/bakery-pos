@@ -12,24 +12,29 @@ export const APP_MODES = {
 };
 
 export const SETUP_STEPS = [
-  { id: 'welcome', name: 'Welcome', required: true },
-  { id: 'business', name: 'Business Details', required: true },
-  { id: 'branch', name: 'Branch Details', required: true },
-  { id: 'storage', name: 'Storage Backend', required: true },
-  { id: 'owner', name: 'Owner/Admin Access', required: true },
-  { id: 'staff', name: 'Staff & Roles', required: false },
-  { id: 'tables', name: 'Service Areas & Tables', required: false },
-  { id: 'kitchen', name: 'Kitchen Stations', required: false },
-  { id: 'menu', name: 'Menu Basics', required: false },
-  { id: 'payments', name: 'Payment Methods', required: true },
-  { id: 'channels', name: 'Order Sources', required: false },
-  { id: 'receipts', name: 'Receipts & Printers', required: true },
-  { id: 'qr', name: 'QR Ordering', required: false },
-  { id: 'stock', name: 'Stock Basics', required: false },
-  { id: 'import', name: 'Data Import', required: false },
-  { id: 'security', name: 'Security Review', required: true },
-  { id: 'backup', name: 'Backup', required: true },
-  { id: 'checklist', name: 'Launch Checklist', required: true }
+  { id: 'welcome', name: 'Welcome', required: true, icon: '🚀' },
+  { id: 'business', name: 'Business Details', required: true, icon: '🏢' },
+  { id: 'branch', name: 'Branch Details', required: true, icon: '📍' },
+  { id: 'theme', name: 'Theme Selection', required: true, icon: '🎨' },
+  { id: 'storage', name: 'Storage Backend', required: true, icon: '💾' },
+  { id: 'owner', name: 'Owner/Admin Access', required: true, icon: '👤' },
+  { id: 'staff', name: 'Staff & Roles', required: false, icon: '👥' },
+  { id: 'tables', name: 'Service Areas & Tables', required: false, icon: '🪑' },
+  { id: 'kitchen', name: 'Kitchen Stations', required: false, icon: '👨‍🍳' },
+  { id: 'menu', name: 'Menu Basics', required: false, icon: '📋' },
+  { id: 'payments', name: 'Payment Methods', required: true, icon: '💳' },
+  { id: 'payment-gateway', name: 'Payment Gateway', required: false, icon: '🔗' },
+  { id: 'delivery', name: 'Delivery Integration', required: false, icon: '🛵' },
+  { id: 'channels', name: 'Order Sources', required: false, icon: '📱' },
+  { id: 'receipts', name: 'Receipts & Printers', required: true, icon: '🖨️' },
+  { id: 'qr', name: 'QR Ordering', required: false, icon: '📷' },
+  { id: 'stock', name: 'Stock Basics', required: false, icon: '📦' },
+  { id: 'workflows', name: 'Workflows & Automation', required: false, icon: '⚙️' },
+  { id: 'import', name: 'Data Import', required: false, icon: '📥' },
+  { id: 'security', name: 'Security Review', required: true, icon: '🔒' },
+  { id: 'self-healing', name: 'Self-Healing Config', required: false, icon: '🛡️' },
+  { id: 'backup', name: 'Backup', required: true, icon: '💿' },
+  { id: 'checklist', name: 'Launch Checklist', required: true, icon: '✅' }
 ];
 
 /**

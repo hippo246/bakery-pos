@@ -55,7 +55,7 @@ function BackupHealth() {
           <div style={{ fontSize: '14px', color: 'var(--cafe-text-secondary)', marginBottom: '16px' }}>
             Your data is at risk. Create a backup immediately to protect against data loss.
           </div>
-          <button style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '600', background: '#e74c3c', color: 'white', border: 'none', borderRadius: 'var(--cafe-radius-md)', cursor: 'pointer' }}>
+          <button style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '600', background: '#e74c3c', color: 'var(--cafe-text-primary)', border: 'none', borderRadius: 'var(--cafe-radius-md)', cursor: 'pointer' }}>
             Create Backup Now
           </button>
         </div>

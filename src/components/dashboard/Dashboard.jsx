@@ -20,7 +20,8 @@ const timeSince = (iso) => {
 };
 
 // ── Animated Number ───────────────────────────────────────────────────────────
-const AnimatedNumber = ({ value, format = (v) => v, duration = 900 }) => {
+// PERFORMANCE: Memoized to prevent unnecessary re-renders during dashboard updates
+const AnimatedNumber = memo(({ value, format = (v) => v, duration = 900 }) => {
   const [disp, setDisp] = useState(value);
   useEffect(() => {
     let start = null, raf, from = disp;
@@ -36,7 +37,7 @@ const AnimatedNumber = ({ value, format = (v) => v, duration = 900 }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   return <span>{format(disp)}</span>;
-};
+});
 
 // ── STATUS COLORS (TableEngine-compatible) ────────────────────────────────────
 const TABLE_STATUS_COLOR = {
@@ -64,7 +65,7 @@ const getTableColor = (status = '') => {
 // WIDGET 1 — KPI Cards
 // ══════════════════════════════════════════════════════════════════════════════
 const WidgetKPIs = ({ metrics, onNavigate }) => (
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, padding: 20, height: '100%', boxSizing: 'border-box' }}>
+  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18, padding: 24, height: '100%', boxSizing: 'border-box' }}>
     {[
       { label: "Today's Revenue", value: metrics.totalRevenue, isCurrency: true, icon: "💰", color: "#22c55e", nav: "analytics" },
       { label: "Active Orders",   value: metrics.activeOrders,    isCurrency: false, icon: "🔥", color: "#f59e0b", nav: "orders" },
@@ -72,18 +73,18 @@ const WidgetKPIs = ({ metrics, onNavigate }) => (
       { label: "Avg Order Value", value: metrics.avgOrder,          isCurrency: true,  icon: "📈", color: "#8b5cf6", nav: "analytics" }
     ].map((kpi, idx) => (
       <div key={idx} onClick={() => onNavigate?.(kpi.nav)}
-        style={{ padding: 20, background: 'var(--cafe-bg-surface)', border: '1px solid var(--cafe-border-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.2s' }}
-        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none'; }}
+        style={{ padding: 22, background: 'var(--cafe-bg-hover)', border: '1px solid var(--cafe-border-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', cursor: 'pointer', transition: 'all 0.25s' }}
+        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px rgba(0,0,0,0.12)'; e.currentTarget.style.borderColor=kpi.color; }}
+        onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='none'; e.currentTarget.style.borderColor='var(--cafe-border-light)'; }}
       >
         <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--cafe-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{kpi.label}</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--cafe-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--cafe-text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{kpi.label}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--cafe-text-primary)', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
             <AnimatedNumber value={kpi.value} format={v => kpi.isCurrency ? formatMoney(v) : Math.round(v)} />
           </div>
         </div>
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: `${kpi.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{kpi.icon}</div>
-        <div style={{ position: 'absolute', bottom: 0, left: 0, height: 3, width: '100%', background: `linear-gradient(to right, ${kpi.color}, ${kpi.color}44)` }} />
+        <div style={{ width: 48, height: 48, borderRadius: 13, background: `${kpi.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{kpi.icon}</div>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, height: 4, width: '100%', background: `linear-gradient(to right, ${kpi.color}, ${kpi.color}55)` }} />
       </div>
     ))}
   </div>
@@ -119,15 +120,15 @@ const WidgetRevenueChart = ({ orders }) => {
   const totalRev = data.reduce((a, b) => a + b, 0);
 
   return (
-    <div style={{ padding: '20px 20px 0', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+    <div style={{ padding: '24px 24px 0', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>Sales Trend</div>
-          <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>Hourly (8 AM – 10 PM)</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>Sales Trend</div>
+          <div style={{ fontSize: 13, color: 'var(--cafe-text-tertiary)', marginTop: 3 }}>Hourly (8 AM – 10 PM)</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--cafe-text-primary)' }}>{formatMoney(totalRev)}</div>
-          <div style={{ fontSize: 11, color: 'var(--cafe-success)', fontWeight: 600 }}>Today's total</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.02em' }}>{formatMoney(totalRev)}</div>
+          <div style={{ fontSize: 12, color: 'var(--cafe-success)', fontWeight: 700 }}>Today's total</div>
         </div>
       </div>
       <div style={{ flex: 1, position: 'relative', minHeight: 160 }}>
@@ -155,9 +156,9 @@ const WidgetRevenueChart = ({ orders }) => {
           ))}
         </svg>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0 12px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 14px', overflow: 'hidden' }}>
         {labels.map((l, i) => (
-          <div key={i} style={{ fontSize: 9, color: hoverIdx === i ? 'var(--cafe-accent)' : 'var(--cafe-text-tertiary)', fontWeight: hoverIdx === i ? 800 : 500, minWidth: 0, textAlign: 'center', flex: 1 }}>{l}</div>
+          <div key={i} style={{ fontSize: 10, color: hoverIdx === i ? 'var(--cafe-accent)' : 'var(--cafe-text-tertiary)', fontWeight: hoverIdx === i ? 800 : 600, minWidth: 0, textAlign: 'center', flex: 1 }}>{l}</div>
         ))}
       </div>
     </div>
@@ -166,8 +167,9 @@ const WidgetRevenueChart = ({ orders }) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGET 3 — Live Floor Map (uses tables PROP directly, no tableEngine)
+// PERFORMANCE: Memoized to prevent unnecessary re-renders during table updates
 // ══════════════════════════════════════════════════════════════════════════════
-const WidgetMiniFloor = ({ tables, onNavigate }) => {
+const WidgetMiniFloor = memo(({ tables, onNavigate }) => {
   const [hoveredTable, setHoveredTable] = useState(null);
   const [sections, setSections] = useState([]);
   const [floor, setFloor] = useState(null);
@@ -184,7 +186,7 @@ const WidgetMiniFloor = ({ tables, onNavigate }) => {
     }
   }, []);
 
-  const safeTables = safeArray(tables).filter(t => t.position && t.dimensions);
+  const safeTables = useMemo(() => safeArray(tables).filter(t => t.position && t.dimensions), [tables]);
 
   // Figure out canvas bounds from actual table positions OR floor dimensions
   const bounds = useMemo(() => {
@@ -209,24 +211,24 @@ const WidgetMiniFloor = ({ tables, onNavigate }) => {
   const scale = Math.min(CANVAS_W / (bounds.width || 1), CANVAS_H / (bounds.height || 1)) * 0.92;
 
   return (
-    <div style={{ padding: '20px 20px 16px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>Live Floor Map</div>
-        <button onClick={() => onNavigate?.('tables')} style={{ fontSize: 11, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+    <div style={{ padding: '24px 24px 18px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>Live Floor Map</div>
+        <button onClick={() => onNavigate?.('tables')} style={{ fontSize: 12, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           Open Floor →
         </button>
       </div>
 
       {safeTables.length === 0 ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--cafe-text-tertiary)' }}>
-          <div style={{ fontSize: 32 }}>🗺️</div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>No tables configured</div>
-          <button onClick={() => onNavigate?.('tables')} style={{ padding: '6px 14px', borderRadius: 8, background: 'var(--cafe-accent)', color: 'white', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>Go to Floor Plan</button>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'var(--cafe-text-tertiary)' }}>
+          <div style={{ fontSize: 36 }}>🗺️</div>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>No tables configured</div>
+          <button onClick={() => onNavigate?.('tables')} style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--cafe-accent)', color: 'var(--cafe-text-primary)', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Go to Floor Plan</button>
         </div>
       ) : (
         <>
           {/* Canvas */}
-          <div style={{ flex: 1, position: 'relative', background: 'var(--cafe-bg-surface)', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--cafe-border-light)' }}>
+          <div style={{ flex: 1, position: 'relative', background: 'var(--cafe-bg-hover)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--cafe-border-light)' }}>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ position: 'relative', width: bounds.width * scale, height: bounds.height * scale, flexShrink: 0 }}>
                 {/* Sections */}
@@ -286,14 +288,14 @@ const WidgetMiniFloor = ({ tables, onNavigate }) => {
             )}
           </div>
           {/* Legend */}
-          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, marginTop: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { label: `${counts.available} Free`, color: '#22c55e' },
               { label: `${counts.occupied} Occupied`, color: '#ef4444' },
               { label: `${counts.attention} Needs Attn`, color: '#ec4899' },
             ].map(({ label, color }) => (
-              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--cafe-text-secondary)' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block' }} />
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--cafe-text-secondary)' }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: color, display: 'inline-block' }} />
                 {label}
               </span>
             ))}
@@ -302,10 +304,11 @@ const WidgetMiniFloor = ({ tables, onNavigate }) => {
       )}
     </div>
   );
-};
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGET 4 — Kitchen KDS Live Tickets
+// PERFORMANCE: Memoized to prevent unnecessary re-renders during KDS updates
 // ══════════════════════════════════════════════════════════════════════════════
 const KDS_STATUS_META = {
   NEW:        { label: 'New',        color: '#3b82f6', bg: '#eff6ff', icon: '🆕' },
@@ -316,7 +319,7 @@ const KDS_STATUS_META = {
   CANCELLED:  { label: 'Cancelled',  color: '#ef4444', bg: '#fef2f2', icon: '❌' },
 };
 
-const WidgetKitchen = ({ kdsCards, onNavigate }) => {
+const WidgetKitchen = memo(({ kdsCards, onNavigate }) => {
   const [filter, setFilter] = useState('active');
 
   const cards = useMemo(() => {
@@ -339,22 +342,22 @@ const WidgetKitchen = ({ kdsCards, onNavigate }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '16px 20px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>Kitchen KDS</div>
-        <button onClick={() => onNavigate?.('kitchen')} style={{ fontSize: 11, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Open Kitchen →</button>
+      <div style={{ padding: '18px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>Kitchen KDS</div>
+        <button onClick={() => onNavigate?.('kitchen')} style={{ fontSize: 12, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Open Kitchen →</button>
       </div>
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--cafe-border-light)' }}>
+      <div style={{ display: 'flex', gap: 10, padding: '14px 24px', borderBottom: '1px solid var(--cafe-border-light)' }}>
         {[
           { id: 'active', label: `Active (${counts.active})`, color: '#f59e0b' },
           { id: 'ready',  label: `Ready (${counts.ready})`, color: '#22c55e' },
           { id: 'all',    label: `All (${counts.all})`, color: '#94a3b8' },
         ].map(tab => (
           <button key={tab.id} onClick={() => setFilter(tab.id)} style={{
-            padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none',
+            padding: '6px 14px', borderRadius: 22, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
             background: filter === tab.id ? tab.color : 'var(--cafe-bg-surface)',
             color: filter === tab.id ? 'white' : 'var(--cafe-text-secondary)',
-            transition: 'all 0.15s'
+            transition: 'all 0.2s'
           }}>
             {tab.label}
           </button>
@@ -363,43 +366,43 @@ const WidgetKitchen = ({ kdsCards, onNavigate }) => {
       {/* Ticket list */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {cards.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--cafe-text-tertiary)' }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>🍽️</div>
-            <div>No tickets in this view.</div>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--cafe-text-tertiary)' }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>🍽️</div>
+            <div style={{ fontSize: 14 }}>No tickets in this view.</div>
           </div>
         ) : cards.slice(0, 8).map((card, i) => {
           const meta = KDS_STATUS_META[card.status] || KDS_STATUS_META.NEW;
           const waitMins = card._waitMins ?? 0;
           const isUrgent = waitMins > 20 && card.status !== 'READY';
           return (
-            <div key={card.id || i} style={{ padding: '12px 20px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', alignItems: 'center', gap: 12, background: isUrgent ? '#fef2f2' : 'transparent', transition: 'background 0.2s' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{meta.icon}</div>
+            <div key={card.id || i} style={{ padding: '14px 24px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', alignItems: 'center', gap: 14, background: isUrgent ? '#fef2f2' : 'transparent', transition: 'background 0.25s' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 11, background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{meta.icon}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--cafe-text-primary)' }}>Ticket #{card.id}</span>
-                  {card.tableNumber && <span style={{ fontSize: 11, color: 'var(--cafe-text-secondary)', background: 'var(--cafe-bg-surface)', borderRadius: 4, padding: '1px 5px' }}>T{card.tableNumber}</span>}
-                  {isUrgent && <span style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 4, padding: '1px 6px' }}>URGENT</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--cafe-text-primary)' }}>Ticket #{card.id}</span>
+                  {card.tableNumber && <span style={{ fontSize: 12, color: 'var(--cafe-text-secondary)', background: 'var(--cafe-bg-surface)', borderRadius: 5, padding: '2px 6px' }}>T{card.tableNumber}</span>}
+                  {isUrgent && <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 5, padding: '2px 8px' }}>URGENT</span>}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 13, color: 'var(--cafe-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {safeArray(card.items || card.orderItems).slice(0,3).map(it => it.name || it.menuItem?.name || it.itemName).filter(Boolean).join(', ') || 'Items loading…'}
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: isUrgent ? '#ef4444' : 'var(--cafe-text-tertiary)' }}>{waitMins}m</div>
-                <div style={{ marginTop: 3, padding: '2px 7px', borderRadius: 10, background: meta.bg, color: meta.color, fontSize: 10, fontWeight: 700 }}>{meta.label}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: isUrgent ? '#ef4444' : 'var(--cafe-text-tertiary)' }}>{waitMins}m</div>
+                <div style={{ marginTop: 4, padding: '3px 8px', borderRadius: 11, background: meta.bg, color: meta.color, fontSize: 11, fontWeight: 700 }}>{meta.label}</div>
               </div>
             </div>
           );
         })}
         {cards.length > 8 && (
-          <div onClick={() => onNavigate?.('kitchen')} style={{ padding: '12px 20px', textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--cafe-accent)', cursor: 'pointer' }}>
+          <div onClick={() => onNavigate?.('kitchen')} style={{ padding: '14px 24px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--cafe-accent)', cursor: 'pointer' }}>
             +{cards.length - 8} more tickets — View All →
           </div>
         )}
       </div>
     </div>
   );
-};
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGET 5 — Activity Feed
@@ -408,35 +411,35 @@ const WidgetActivity = ({ recentOrders, onNavigate }) => {
   const [expandedId, setExpandedId] = useState(null);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>Live Orders</span>
-        <button onClick={() => onNavigate?.('orders')} style={{ fontSize: 11, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>View All →</button>
+      <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>Live Orders</span>
+        <button onClick={() => onNavigate?.('orders')} style={{ fontSize: 12, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>View All →</button>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {recentOrders.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--cafe-text-tertiary)' }}>No recent orders.</div>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--cafe-text-tertiary)' }}>No recent orders.</div>
         ) : recentOrders.map((order, i) => {
           const statusColor = ['COMPLETED','READY'].includes(order.status) ? '#22c55e' : order.status === 'CANCELLED' ? '#ef4444' : '#f59e0b';
           const isExpanded = expandedId === order.id;
           return (
-            <div key={order.id || i} onClick={() => setExpandedId(isExpanded ? null : order.id)} style={{ padding: '13px 20px', borderBottom: '1px solid var(--cafe-border-light)', cursor: 'pointer', borderLeft: '3px solid transparent', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background='var(--cafe-bg-surface)'; e.currentTarget.style.borderLeftColor=statusColor; }}
+            <div key={order.id || i} onClick={() => setExpandedId(isExpanded ? null : order.id)} style={{ padding: '14px 24px', borderBottom: '1px solid var(--cafe-border-light)', cursor: 'pointer', borderLeft: '4px solid transparent', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.background='var(--cafe-bg-hover)'; e.currentTarget.style.borderLeftColor=statusColor; }}
               onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.borderLeftColor='transparent'; }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--cafe-text-primary)' }}>#{order.id}</span>
-                  <span style={{ padding: '1px 7px', borderRadius: 10, background: statusColor + '18', color: statusColor, fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>{order.status}</span>
-                  {order.tableNumber && <span style={{ fontSize: 11, color: 'var(--cafe-text-secondary)' }}>T{order.tableNumber}</span>}
-                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>{formatMoney(getOrderAmount(order))}</span>
-                  <span style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)' }}>{timeSince(order.createdAt)}</span>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--cafe-text-primary)' }}>#{order.id}</span>
+                  <span style={{ padding: '2px 8px', borderRadius: 11, background: statusColor + '18', color: statusColor, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' }}>{order.status}</span>
+                  {order.tableNumber && <span style={{ fontSize: 12, color: 'var(--cafe-text-secondary)' }}>T{order.tableNumber}</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>{formatMoney(getOrderAmount(order))}</span>
+                  <span style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)' }}>{timeSince(order.createdAt)}</span>
                 </div>
               </div>
               {isExpanded && (
-                <div style={{ marginTop: 10, padding: '10px', background: 'var(--cafe-bg-card)', borderRadius: 8, fontSize: 12 }}>
-                  <div style={{ color: 'var(--cafe-text-secondary)', marginBottom: 6 }}>
+                <div style={{ marginTop: 12, padding: '12px', background: 'var(--cafe-bg-hover)', borderRadius: 10, fontSize: 13 }}>
+                  <div style={{ color: 'var(--cafe-text-secondary)', marginBottom: 8 }}>
                     <b>Customer:</b> {getOrderCustomerName(order) || 'Guest'} &nbsp;|&nbsp;
                     <b>Type:</b> {order.type || order.orderType || 'dine-in'}
                   </div>
@@ -473,20 +476,20 @@ const WidgetTopSellers = ({ orders }) => {
 
   const max = topItems.length > 0 ? topItems[0].qty : 1;
   return (
-    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)', marginBottom: 18 }}>Top Sellers</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1 }}>
+    <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em', marginBottom: 20 }}>Top Sellers</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
         {topItems.map((item, i) => (
           <div key={i}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--cafe-text-primary)', marginBottom: 5 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', background: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'white', fontWeight: 800, flexShrink: 0 }}>{i+1}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 600, color: 'var(--cafe-text-primary)', marginBottom: 6 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 20, height: 20, borderRadius: '50%', background: item.color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--cafe-text-primary)', fontWeight: 800, flexShrink: 0 }}>{i+1}</span>
                 {item.name}
               </span>
               <span style={{ color: 'var(--cafe-text-secondary)' }}>{item.qty}</span>
             </div>
-            <div style={{ width: '100%', height: 5, background: 'var(--cafe-border-light)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ width: `${(item.qty / max) * 100}%`, height: '100%', background: item.color, borderRadius: 3, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} />
+            <div style={{ width: '100%', height: 6, background: 'var(--cafe-border-light)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ width: `${(item.qty / max) * 100}%`, height: '100%', background: item.color, borderRadius: 4, transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)' }} />
             </div>
           </div>
         ))}
@@ -502,30 +505,30 @@ const WidgetStaff = ({ staff, onNavigate: _onNavigate }) => {
   const staffList = safeArray(staff);
   const active = staffList.filter(s => s.clockedIn || (s.status || '').toUpperCase() === 'ACTIVE');
   return (
-    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>Shift Status</div>
-        <div style={{ fontSize: 12, color: 'var(--cafe-accent)', fontWeight: 700 }}>
+    <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>Shift Status</div>
+        <div style={{ fontSize: 13, color: 'var(--cafe-accent)', fontWeight: 700 }}>
           <AnimatedNumber value={active.length} /> / {staffList.length} On Shift
         </div>
       </div>
       {active.length === 0 ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--cafe-text-tertiary)' }}>
-          <div style={{ fontSize: 28 }}>👥</div>
-          <div style={{ fontSize: 13 }}>No staff currently on shift.</div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--cafe-text-tertiary)' }}>
+          <div style={{ fontSize: 32 }}>👥</div>
+          <div style={{ fontSize: 14 }}>No staff currently on shift.</div>
         </div>
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {active.map((s, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--cafe-bg-surface)', borderRadius: 10, border: '1px solid var(--cafe-border-light)' }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: `hsl(${(i * 67) % 360}, 70%, 60%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: 'var(--cafe-bg-hover)', borderRadius: 12, border: '1px solid var(--cafe-border-light)' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: `hsl(${(i * 67) % 360}, 70%, 60%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'var(--cafe-text-primary)', flexShrink: 0 }}>
                 {(s.name || 'S')[0].toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cafe-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name || 'Staff Member'}</div>
-                <div style={{ fontSize: 11, color: 'var(--cafe-text-secondary)' }}>{s.role || 'Staff'}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name || 'Staff Member'}</div>
+                <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)' }}>{s.role || 'Staff'}</div>
               </div>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e88' }} />
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 8px #22c55e88' }} />
             </div>
           ))}
         </div>
@@ -551,36 +554,36 @@ const WidgetWaitlist = ({ waitlist, onNavigate: _onNavigate }) => {
   }, [waitlist]);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>Live Waitlist</span>
-        <span style={{ fontSize: 12, color: active.length > 0 ? '#f59e0b' : 'var(--cafe-text-tertiary)', fontWeight: 700 }}>
+      <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>Live Waitlist</span>
+        <span style={{ fontSize: 13, color: active.length > 0 ? '#f59e0b' : 'var(--cafe-text-tertiary)', fontWeight: 700 }}>
           {active.length} Waiting
         </span>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {active.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--cafe-text-tertiary)' }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
-            <div>Waitlist is empty!</div>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--cafe-text-tertiary)' }}>
+            <div style={{ fontSize: 32, marginBottom: 10 }}>📋</div>
+            <div style={{ fontSize: 14 }}>Waitlist is empty!</div>
           </div>
         ) : active.map((w, i) => {
           const waitedMins = w._waitedMins ?? 0;
           const isLong = waitedMins >= 30;
           return (
-            <div key={i} style={{ padding: '13px 20px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLong ? '#fef3c7' : 'transparent' }}>
+            <div key={i} style={{ padding: '14px 24px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isLong ? '#fef3c7' : 'transparent' }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
                   {w.name}
-                  <span style={{ fontSize: 11, color: 'var(--cafe-text-secondary)', fontWeight: 600, marginLeft: 6 }}>({w.partySize} guests)</span>
+                  <span style={{ fontSize: 12, color: 'var(--cafe-text-secondary)', fontWeight: 600, marginLeft: 8 }}>({w.partySize} guests)</span>
                 </div>
-                {w.notes && <div style={{ fontSize: 11, color: '#d97706', marginTop: 2 }}>📝 {w.notes}</div>}
-                {w.phone && <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)' }}>{w.phone}</div>}
+                {w.notes && <div style={{ fontSize: 12, color: '#d97706', marginTop: 3 }}>📝 {w.notes}</div>}
+                {w.phone && <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)' }}>{w.phone}</div>}
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: isLong ? '#ef4444' : '#f59e0b', padding: '3px 8px', borderRadius: 6, background: isLong ? '#fee2e2' : '#fef3c7' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: isLong ? '#ef4444' : '#f59e0b', padding: '4px 10px', borderRadius: 8, background: isLong ? '#fee2e2' : '#fef3c7' }}>
                   {waitedMins}m
                 </div>
-                {isLong && <div style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', marginTop: 2 }}>OVERDUE</div>}
+                {isLong && <div style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', marginTop: 3 }}>OVERDUE</div>}
               </div>
             </div>
           );
@@ -610,32 +613,32 @@ const WidgetInventory = ({ inventory, onNavigate }) => {
   }, [inventory]);
 
   return (
-    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>⚠️ Stock Alerts</div>
-        <button onClick={() => onNavigate?.('inventory')} style={{ fontSize: 11, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>
+    <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.01em' }}>⚠️ Stock Alerts</div>
+        <button onClick={() => onNavigate?.('inventory')} style={{ fontSize: 12, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>
           Manage →
         </button>
       </div>
       {lowStock.length === 0 ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--cafe-text-tertiary)' }}>
-          <div style={{ fontSize: 28 }}>✅</div>
-          <div style={{ fontSize: 13 }}>All stock levels are healthy!</div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: 'var(--cafe-text-tertiary)' }}>
+          <div style={{ fontSize: 32 }}>✅</div>
+          <div style={{ fontSize: 14 }}>All stock levels are healthy!</div>
         </div>
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {lowStock.map((item, i) => {
             const qty = safeNumber(item.quantity ?? item.currentStock ?? item.stock ?? item.qty ?? item.amount);
             const minQty = safeNumber(item.minQuantity ?? item.reorderPoint ?? item.threshold ?? item.minStock ?? 5);
             const pct = minQty > 0 ? Math.min(1, qty / (minQty * 2)) : 0;
             return (
-              <div key={i} style={{ padding: '10px 12px', background: 'var(--cafe-bg-surface)', border: '1px solid #fde68a', borderRadius: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>{item.name || item.itemName}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: qty === 0 ? '#ef4444' : '#f59e0b' }}>{qty} {item.unit || ''}</span>
+              <div key={i} style={{ padding: '12px 14px', background: 'var(--cafe-bg-hover)', border: '1px solid #fde68a', borderRadius: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>{item.name || item.itemName}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: qty === 0 ? '#ef4444' : '#f59e0b' }}>{qty} {item.unit || ''}</span>
                 </div>
-                <div style={{ width: '100%', height: 4, background: '#e5e7eb', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ width: `${pct * 100}%`, height: '100%', background: qty === 0 ? '#ef4444' : '#f59e0b', borderRadius: 2 }} />
+                <div style={{ width: '100%', height: 5, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct * 100}%`, height: '100%', background: qty === 0 ? '#ef4444' : '#f59e0b', borderRadius: 3 }} />
                 </div>
               </div>
             );
@@ -785,41 +788,41 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 24 }}>
       <style>{`
-        .dash-widget { background: var(--cafe-bg-card); border: 1px solid var(--cafe-border-light); border-radius: 16px; overflow: hidden; position: relative; transition: transform 0.2s, box-shadow 0.2s; }
-        .dash-widget:not(.edit-active):hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+        .dash-widget { background: var(--cafe-bg-card); border: 1px solid var(--cafe-border-light); border-radius: 16px; overflow: hidden; position: relative; transition: transform 0.25s, box-shadow 0.25s; }
+        .dash-widget:not(.edit-active):hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.1); }
         .dash-widget.edit-active { border: 2px dashed var(--cafe-accent); animation: dashWiggle 1.8s infinite ease-in-out; cursor: grab; }
         .dash-widget.edit-active:active { cursor: grabbing; }
         @keyframes dashWiggle { 0%,100% { transform:rotate(0deg); } 25% { transform:rotate(-0.5deg); } 75% { transform:rotate(0.5deg); } }
-        .edit-overlay-btn { padding: 5px 11px; border-radius: 6px; border: none; cursor: pointer; font-size: 11px; font-weight: 700; }
+        .edit-overlay-btn { padding: 6px 12px; border-radius: 7px; border: none; cursor: pointer; font-size: 12px; font-weight: 700; }
         .add-widget-row:hover { background: var(--cafe-bg-hover); }
       `}</style>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 18 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.02em' }}>{greeting()}</h1>
-          <div style={{ fontSize: 13, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: 'var(--cafe-text-primary)', letterSpacing: '-0.03em' }}>{greeting()}</h1>
+          <div style={{ fontSize: 14, color: 'var(--cafe-text-tertiary)', marginTop: 3 }}>
             {isEditMode ? 'Drag widgets to rearrange · Hover to resize or remove.' : 'Your operational command center — live data.'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 12 }}>
           {isEditMode ? (
             <>
-              <button onClick={() => setShowAddWidget(true)} style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--cafe-bg-surface)', color: 'var(--cafe-accent)', border: '1.5px solid var(--cafe-accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>+ Add Widget</button>
-              <button onClick={() => { saveLayout(DEFAULT_LAYOUT); }} style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--cafe-bg-surface)', color: 'var(--cafe-text-secondary)', border: '1px solid var(--cafe-border)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Reset</button>
-              <button onClick={() => setIsEditMode(false)} style={{ padding: '9px 18px', borderRadius: 10, background: '#22c55e', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Done ✓</button>
+              <button onClick={() => setShowAddWidget(true)} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-bg-hover)', color: 'var(--cafe-accent)', border: '1.5px solid var(--cafe-accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>+ Add Widget</button>
+              <button onClick={() => { saveLayout(DEFAULT_LAYOUT); }} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-bg-hover)', color: 'var(--cafe-text-secondary)', border: '1px solid var(--cafe-border)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Reset</button>
+              <button onClick={() => setIsEditMode(false)} style={{ padding: '10px 20px', borderRadius: 12, background: '#22c55e', color: 'var(--cafe-text-primary)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Done ✓</button>
             </>
           ) : (
             <>
-              <button onClick={() => setIsEditMode(true)} style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--cafe-bg-surface)', color: 'var(--cafe-text-primary)', border: '1px solid var(--cafe-border)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Edit Layout</button>
-              <button onClick={() => onNavigate?.('orders')} style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--cafe-accent)', color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>+ New Order</button>
+              <button onClick={() => setIsEditMode(true)} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-bg-hover)', color: 'var(--cafe-text-primary)', border: '1px solid var(--cafe-border)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Edit Layout</button>
+              <button onClick={() => onNavigate?.('orders')} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-accent)', color: 'var(--cafe-text-primary)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>+ New Order</button>
             </>
           )}
         </div>
       </div>
 
       {/* Widget Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 20, gridAutoRows: 'minmax(280px, auto)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 24, gridAutoRows: 'minmax(300px, auto)' }}>
         {layout.map((item, index) => {
           const reg = WIDGET_REGISTRY[item.type];
           if (!reg) return null;
@@ -860,23 +863,23 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
       {/* Add Widget Modal */}
       {showAddWidget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAddWidget(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--cafe-bg-card)', width: 440, maxHeight: '80vh', borderRadius: 18, overflow: 'hidden', boxShadow: '0 32px 64px rgba(0,0,0,0.25)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: 17, fontWeight: 700 }}>Widget Library</div>
-              <button onClick={() => setShowAddWidget(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--cafe-text-secondary)', lineHeight: 1 }}>×</button>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--cafe-bg-card)', width: 460, maxHeight: '80vh', borderRadius: 20, overflow: 'hidden', boxShadow: '0 32px 64px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>Widget Library</div>
+              <button onClick={() => setShowAddWidget(false)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--cafe-text-secondary)', lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ padding: 16, overflowY: 'auto' }}>
+            <div style={{ padding: 18, overflowY: 'auto' }}>
               {availableWidgets.length === 0 ? (
-                <div style={{ textAlign: 'center', color: 'var(--cafe-text-tertiary)', padding: 32 }}>All widgets are on your dashboard!</div>
+                <div style={{ textAlign: 'center', color: 'var(--cafe-text-tertiary)', padding: 36 }}>All widgets are on your dashboard!</div>
               ) : (
                 availableWidgets.map(([type, reg]) => (
                   <div key={type} className="add-widget-row" onClick={() => addWidget(type)}
-                    style={{ padding: '14px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, transition: 'background 0.15s' }}>
+                    style={{ padding: '16px 18px', borderRadius: 12, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, transition: 'background 0.2s' }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--cafe-text-primary)' }}>{reg.title}</div>
-                      <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>Default: {reg.defaultColSpan} column{reg.defaultColSpan > 1 ? 's' : ''}</div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--cafe-text-primary)' }}>{reg.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)', marginTop: 3 }}>Default: {reg.defaultColSpan} column{reg.defaultColSpan > 1 ? 's' : ''}</div>
                     </div>
-                    <span style={{ fontSize: 22, color: 'var(--cafe-accent)', fontWeight: 700 }}>+</span>
+                    <span style={{ fontSize: 24, color: 'var(--cafe-accent)', fontWeight: 700 }}>+</span>
                   </div>
                 ))
               )}

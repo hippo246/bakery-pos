@@ -45,6 +45,7 @@ function InteractiveFloorPlan({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   // Pending drag: only becomes a real drag after 5px movement threshold
   const pendingDrag = useRef(null); // { table, startX, startY, offsetX, offsetY }
+  const dragGroupRef = useRef(null); // { anchorId, origin: [{...table, position}], lastDelta } — for multi-select group drag
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -73,6 +74,15 @@ function InteractiveFloorPlan({
   const [searchResults, setSearchResults] = useState([]);
   // Right-click context menu
   const [contextMenu, setContextMenu] = useState(null); // { x, y, table }
+  // Brief on-canvas confirmation shown after picking "Drag Table" from the
+  // right-click menu, so the intent to move (vs. select/view) is explicit
+  // rather than guessed from click timing. Self-dismisses after a couple seconds.
+  const [dragHint, setDragHint] = useState(null); // { tableId }
+  useEffect(() => {
+    if (!dragHint) return;
+    const t = setTimeout(() => setDragHint(null), 2200);
+    return () => clearTimeout(t);
+  }, [dragHint]);
   // Layout editor
   const [showFloorEditor, setShowFloorEditor] = useState(false);
   const [layoutUpdateTrigger, setLayoutUpdateTrigger] = useState(0);
@@ -132,8 +142,14 @@ function InteractiveFloorPlan({
   // If no floor tables, show all tables (for backward compatibility)
   const displayTables = floorTables.length > 0 ? floorTables : tables;
 
-  // Filter tables based on view mode
-  const visibleTables = useCallback(() => {
+  // Filter tables based on view mode.
+  // PERF: this used to be a useCallback returning a function that re-filtered
+  // displayTables on every single invocation — and it was called 10+ times per
+  // render (search, counts, canvas, minimap, table list...), so the same array
+  // was rebuilt from scratch over and over on every render. Computing it once
+  // per render with useMemo and reusing the result everywhere is equivalent
+  // behavior with a fraction of the work.
+  const visibleTablesList = useMemo(() => {
     const tablesToFilter = displayTables;
     if (viewMode === 'waiter' && currentWaiterId) {
       return tablesToFilter.filter(t => t.assignedWaiter === currentWaiterId && !t.disabled);
@@ -149,7 +165,7 @@ function InteractiveFloorPlan({
       const newKitchenStatus = new Map();
       const newWaiterStatus = new Map();
 
-      const tablesToUpdate = visibleTables();
+      const tablesToUpdate = visibleTablesList;
       
       // Batch updates for performance
       tablesToUpdate.forEach(table => {
@@ -210,7 +226,7 @@ function InteractiveFloorPlan({
     const interval = setInterval(updateLiveData, 3000); // Reduced to 3 seconds for faster updates
 
     return () => clearInterval(interval);
-  }, [tables, orders, visibleTables]);
+  }, [tables, orders, visibleTablesList]);
 
   // Search functionality
   useEffect(() => {
@@ -220,7 +236,7 @@ function InteractiveFloorPlan({
     }
 
     const query = searchQuery.toLowerCase();
-    const results = visibleTables().filter(table => {
+    const results = visibleTablesList.filter(table => {
       const tableNumber = String(table.number).toLowerCase().includes(query);
       const reservedFor = table.reservedFor?.toLowerCase().includes(query);
       const assignedWaiter = table.assignedWaiter?.toLowerCase().includes(query);
@@ -231,7 +247,7 @@ function InteractiveFloorPlan({
     });
 
     setSearchResults(results);
-  }, [searchQuery, visibleTables]);
+  }, [searchQuery, visibleTablesList]);
 
   // Calculate order progress percentage
   const calculateOrderProgress = (status) => {
@@ -335,8 +351,15 @@ function InteractiveFloorPlan({
     };
   }, [orders]);
 
-  // Handle table selection
-  const handleTableClick = (e, table) => {
+  // Handle table selection.
+  // `notify` controls whether this click also tells the parent to open its
+  // table-info panel (Tables.jsx's onTableClick). It defaults to true for
+  // "real" clicks (list panel, search jump), but every canvas click is fired
+  // through this with notify:false first — a plain click on the canvas is
+  // almost always the start of a drag attempt, not a request to see info, so
+  // it should only select/highlight the table. Info is now opened explicitly:
+  // double-click to edit, or the right-click menu's "Show Table Info".
+  const handleTableClick = (e, table, { notify = true } = {}) => {
     e.stopPropagation();
     
     // Handle drop if dragging an item
@@ -378,7 +401,7 @@ function InteractiveFloorPlan({
       setSelectedTables(new Set([table.id]));
     }
     
-    if (onTableClick) {
+    if (onTableClick && notify) {
       onTableClick(table);
     }
   };
@@ -416,6 +439,26 @@ function InteractiveFloorPlan({
     if (onTableClick) onTableClick(table);
   };
 
+  // Jump to a search result: selects it and centers the viewport on it
+  // (without changing zoom), so search actually takes you somewhere instead
+  // of just reporting a count.
+  const jumpToSearchResult = (table) => {
+    const canvas = canvasRef.current;
+    if (canvas && table.position) {
+      const rect = canvas.getBoundingClientRect();
+      const centerX = (table.position.x || 0) + (table.dimensions?.width || 80) / 2;
+      const centerY = (table.position.y || 0) + (table.dimensions?.height || 80) / 2;
+      setPan({
+        x: rect.width / 2 - centerX * scale,
+        y: rect.height / 2 - centerY * scale,
+      });
+    }
+    setSelectedTable(table);
+    setSelectedTables(new Set([table.id]));
+    setSearchQuery('');
+    if (onTableClick) onTableClick(table);
+  };
+
   // Handle table double-click
   const handleTableDoubleClick = (e, table) => {
     e.stopPropagation();
@@ -429,6 +472,7 @@ function InteractiveFloorPlan({
     if (viewMode !== 'manager') return;
     e.stopPropagation();
     e.preventDefault();
+    if (dragHint?.tableId === table.id) setDragHint(null);
     const rect = e.currentTarget.getBoundingClientRect();
     pendingDrag.current = {
       table,
@@ -438,6 +482,18 @@ function InteractiveFloorPlan({
       // Without this, tables jump on first mousedown at zoom != 1.
       offsetX: (e.clientX - rect.left) / scale,
       offsetY: (e.clientY - rect.top) / scale,
+    };
+    // Group drag: if the grabbed table is part of a multi-selection, snapshot
+    // every selected table's starting position so the whole group can be moved
+    // together, keeping their relative layout intact. Single-selection drags
+    // fall through with a one-member "group" so the same code path handles both.
+    const groupMembers = (selectedTables.has(table.id) && selectedTables.size > 1)
+      ? displayTables.filter(t => selectedTables.has(t.id))
+      : [table];
+    dragGroupRef.current = {
+      anchorId: table.id,
+      origin: groupMembers.map(t => ({ ...t, position: { ...(t.position || { x: 0, y: 0 }) } })),
+      lastDelta: null,
     };
   };
 
@@ -624,7 +680,7 @@ function InteractiveFloorPlan({
     // Calculate alignment guides
     const guides = calculateAlignmentGuides(
       { ...selectedTable, position: { x, y } },
-      visibleTables()
+      visibleTablesList
     );
     setAlignmentGuides(guides);
 
@@ -648,14 +704,36 @@ function InteractiveFloorPlan({
       position: { x, y }
     });
     setSelectedTable({ ...selectedTable, position: { x, y } });
-  }, [isDragging, selectedTable, dragOffset, pan, scale, snapToGrid, gridSize, calculateAlignmentGuides, visibleTables]);
+
+    // Move the rest of a multi-selected group by the same delta the anchor
+    // moved, so the group keeps its relative layout. Other members aren't
+    // individually snapped — only the anchor is — which keeps the group rigid
+    // instead of each table snapping independently and drifting apart.
+    const group = dragGroupRef.current;
+    if (group && group.origin.length > 1) {
+      const anchorOrigin = group.origin.find(t => t.id === group.anchorId);
+      const dx = x - (anchorOrigin?.position?.x || 0);
+      const dy = y - (anchorOrigin?.position?.y || 0);
+      group.origin.forEach(t => {
+        if (t.id === group.anchorId) return;
+        tableEngine.upsertTable({
+          ...t,
+          position: { x: (t.position?.x || 0) + dx, y: (t.position?.y || 0) + dy }
+        });
+      });
+      dragGroupRef.current = { ...group, lastDelta: { dx, dy } };
+    }
+  }, [isDragging, selectedTable, dragOffset, pan, scale, snapToGrid, gridSize, calculateAlignmentGuides, visibleTablesList]);
 
   // Handle drag end — also clears pending drag
   const handleDragEnd = useCallback((e) => {
     if (pendingDrag.current && !isDragging) {
-      // Never crossed threshold — treat as click since preventDefault in mousedown swallowed native click
-      handleTableClick(e, pendingDrag.current.table);
+      // Never crossed threshold — treat as click since preventDefault in mousedown swallowed native click.
+      // notify:false — a click that was reaching for a drag shouldn't pop the info panel open;
+      // it just selects/highlights the table. Use the right-click menu to explicitly view info.
+      handleTableClick(e, pendingDrag.current.table, { notify: false });
       pendingDrag.current = null;
+      dragGroupRef.current = null;
       return;
     }
     pendingDrag.current = null;
@@ -665,6 +743,16 @@ function InteractiveFloorPlan({
     if (selectedTable && onTableUpdate) {
       onTableUpdate({ ...selectedTable });
     }
+    // Persist the rest of a moved group too, using the same delta applied during drag.
+    const group = dragGroupRef.current;
+    if (group && group.origin.length > 1 && group.lastDelta && onTableUpdate) {
+      const { dx, dy } = group.lastDelta;
+      group.origin.forEach(t => {
+        if (t.id === group.anchorId) return;
+        onTableUpdate({ ...t, position: { x: (t.position?.x || 0) + dx, y: (t.position?.y || 0) + dy } });
+      });
+    }
+    dragGroupRef.current = null;
   }, [isDragging, handleTableClick, selectedTable, onTableUpdate]);
 
   // Handle external drag start (reservations, waiters)
@@ -699,7 +787,7 @@ function InteractiveFloorPlan({
   const handleAddTable = () => {
     if (!selectedFloor) return;
 
-    const currentTables = visibleTables();
+    const currentTables = visibleTablesList;
     const nextNumber = currentTables.reduce(
       (max, t) => Math.max(max, Number(t.number) || 0), 0
     ) + 1;
@@ -729,6 +817,68 @@ function InteractiveFloorPlan({
 
     setSelectedTable(createdTable);
     setSelectedTables(new Set([createdTable.id]));
+  };
+
+  // Remove the selected table(s) from the floor. Soft-delete via `disabled`
+  // rather than actually destroying the record — this matches the convention
+  // visibleTablesList already relies on (`!t.disabled`) and preserves table
+  // history/metrics instead of losing them. There was previously no way to
+  // remove a table from the plan at all once added.
+  const handleDeleteSelectedTables = (explicitIds = null) => {
+    const idsToDelete = explicitIds || (selectedTables.size > 0
+      ? Array.from(selectedTables)
+      : (selectedTable ? [selectedTable.id] : []));
+    if (idsToDelete.length === 0) return;
+    if (!window.confirm(`Remove ${idsToDelete.length > 1 ? `${idsToDelete.length} tables` : 'this table'} from the floor?`)) return;
+
+    idsToDelete.forEach(id => {
+      const t = displayTables.find(dt => dt.id === id);
+      if (!t) return;
+      const updated = tableEngine.upsertTable({ ...t, disabled: true });
+      if (onTableUpdate) onTableUpdate(updated);
+    });
+
+    setSelectedTable(null);
+    setSelectedTables(new Set());
+    setContextMenu(null);
+  };
+
+  // Clone the selected table(s) a short offset away — same cascade spirit as
+  // handleAddTable — and select the new copies. Live order/guest/waiter state
+  // is intentionally not copied, since a duplicate is a fresh table.
+  const handleDuplicateSelectedTables = (explicitIds = null) => {
+    const idsToDuplicate = explicitIds || (selectedTables.size > 0
+      ? Array.from(selectedTables)
+      : (selectedTable ? [selectedTable.id] : []));
+    if (idsToDuplicate.length === 0) return;
+
+    let nextNumber = visibleTablesList.reduce((max, t) => Math.max(max, Number(t.number) || 0), 0);
+    const clones = [];
+
+    idsToDuplicate.forEach(id => {
+      const src = displayTables.find(dt => dt.id === id);
+      if (!src) return;
+      nextNumber += 1;
+      const clone = tableEngine.upsertTable({
+        ...src,
+        id: `table-${Date.now()}-${Math.floor(Math.random() * 10000)}-${clones.length}`,
+        number: nextNumber,
+        status: TABLE_STATES.AVAILABLE,
+        currentOrderId: null,
+        currentOrder: null,
+        currentGuests: 0,
+        assignedWaiter: null,
+        alerts: [],
+        position: { x: (src.position?.x || 0) + 24, y: (src.position?.y || 0) + 24 }
+      });
+      clones.push(clone);
+    });
+
+    if (clones.length > 0) {
+      setSelectedTables(new Set(clones.map(c => c.id)));
+      setSelectedTable(clones[clones.length - 1]);
+    }
+    setContextMenu(null);
   };
 
   // Toggle merge mode
@@ -781,10 +931,42 @@ function InteractiveFloorPlan({
     setIsPanning(false);
   }, []);
 
-  // Handle zoom
+  // Handle zoom (button-driven — zooms toward the canvas center)
   const handleZoom = (delta) => {
-    setScale(prev => Math.max(0.25, Math.min(3, prev + delta)));
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      setScale(prev => Math.max(0.25, Math.min(3, prev + delta)));
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    zoomAtPoint(rect.width / 2, rect.height / 2, delta);
   };
+
+  // Shared zoom-around-a-point math, used by both the toolbar +/- buttons
+  // (anchored at canvas center) and scroll-wheel zoom (anchored at the
+  // cursor). Adjusts pan alongside scale so the point under anchorX/anchorY
+  // stays visually fixed instead of the view jumping toward the top-left
+  // corner on every zoom step.
+  const zoomAtPoint = useCallback((anchorX, anchorY, delta) => {
+    setScale(prevScale => {
+      const newScale = Math.max(0.25, Math.min(3, prevScale + delta));
+      setPan(prevPan => ({
+        x: anchorX - ((anchorX - prevPan.x) / prevScale) * newScale,
+        y: anchorY - ((anchorY - prevPan.y) / prevScale) * newScale,
+      }));
+      return newScale;
+    });
+  }, []);
+
+  // Ctrl/Cmd + scroll wheel zooms in/out centered on the cursor. Plain scroll
+  // is left alone (no scrollable overflow on the canvas, so nothing to lose).
+  const handleCanvasWheel = useCallback((e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const delta = e.deltaY < 0 ? 0.12 : -0.12;
+    zoomAtPoint(e.clientX - rect.left, e.clientY - rect.top, delta);
+  }, [zoomAtPoint]);
 
   // Reset view
   const resetView = () => {
@@ -823,26 +1005,50 @@ function InteractiveFloorPlan({
     setIsRotating(false);
     setIsPanning(false);
     setAlignmentGuides({ vertical: [], horizontal: [] });
+    pendingDrag.current = null;
+    dragGroupRef.current = null;
   }, []);
 
-  // Escape key: release any in-progress grab (drag/resize/rotate/pan) that got
-  // stuck — e.g. if the mouse left the window/browser before mouseup fired, so
-  // handleDragEnd/handleResizeEnd/etc. never ran and the table kept following
-  // the cursor. Also clears an external drag-item and exits merge mode.
+  // Keyboard shortcuts for the canvas:
+  // - Escape: release any in-progress grab (drag/resize/rotate/pan) that got
+  //   stuck — e.g. if the mouse left the window/browser before mouseup fired,
+  //   so handleDragEnd/handleResizeEnd/etc. never ran and the table kept
+  //   following the cursor. Also clears an external drag-item and exits merge mode.
+  // - Delete/Backspace: remove the selected table(s) from the floor.
+  // - Ctrl/Cmd+D: duplicate the selected table(s).
+  // All of these are skipped while typing in a field (e.g. the search box).
   useEffect(() => {
-    const handleEscapeKey = (e) => {
-      if (e.key !== 'Escape') return;
-      releaseAnyActiveGrab();
-      setDraggedItem(null);
-      if (mergeMode) {
-        setMergeMode(false);
-        setMergeCandidates(new Set());
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        releaseAnyActiveGrab();
+        setDraggedItem(null);
+        if (mergeMode) {
+          setMergeMode(false);
+          setMergeCandidates(new Set());
+        }
+        return;
+      }
+
+      const tag = (e.target?.tagName || '').toLowerCase();
+      const inField = tag === 'input' || tag === 'select' || tag === 'textarea';
+      if (inField || viewMode !== 'manager') return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedTable || selectedTables.size > 0)) {
+        e.preventDefault();
+        handleDeleteSelectedTables();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && (selectedTable || selectedTables.size > 0)) {
+        e.preventDefault();
+        handleDuplicateSelectedTables();
       }
     };
 
-    window.addEventListener('keydown', handleEscapeKey);
-    return () => window.removeEventListener('keydown', handleEscapeKey);
-  }, [mergeMode, releaseAnyActiveGrab]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mergeMode, releaseAnyActiveGrab, selectedTable, selectedTables, viewMode]);
 
   // Left-click safety net: a mousedown can only fire once the previous mouse
   // button press has genuinely ended (browsers won't fire a second mousedown
@@ -1006,6 +1212,43 @@ function InteractiveFloorPlan({
             </button>
           )}
 
+          {viewMode === 'manager' && !mergeMode && (selectedTable || selectedTables.size > 0) && (
+            <>
+              <button
+                onClick={() => handleDuplicateSelectedTables()}
+                title="Duplicate selected (Ctrl/Cmd+D)"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--cafe-radius-sm)',
+                  border: '1px solid var(--cafe-border-light)',
+                  background: 'var(--cafe-bg-card)',
+                  color: 'var(--cafe-text-secondary)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                ⧉ Duplicate{selectedTables.size > 1 ? ` (${selectedTables.size})` : ''}
+              </button>
+              <button
+                onClick={() => handleDeleteSelectedTables()}
+                title="Remove selected (Delete)"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: 'var(--cafe-radius-sm)',
+                  border: '1px solid var(--cafe-danger-border, #ef4444)',
+                  background: 'var(--cafe-danger-bg, rgba(239,68,68,0.08))',
+                  color: 'var(--cafe-danger, #ef4444)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                🗑️ Remove{selectedTables.size > 1 ? ` (${selectedTables.size})` : ''}
+              </button>
+            </>
+          )}
+
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -1058,13 +1301,41 @@ function InteractiveFloorPlan({
                 background: 'var(--cafe-bg-card)',
                 border: '1px solid var(--cafe-border-light)',
                 borderRadius: 'var(--cafe-radius-sm)',
-                padding: '8px 12px',
                 fontSize: 12,
                 color: 'var(--cafe-text-secondary)',
-                whiteSpace: 'nowrap',
-                zIndex: 100
+                zIndex: 100,
+                minWidth: 220,
+                maxHeight: 240,
+                overflowY: 'auto',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
               }}>
-                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--cafe-border-light)', fontSize: 11, color: 'var(--cafe-text-tertiary)', fontWeight: 700 }}>
+                  {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} — click to jump
+                </div>
+                {searchResults.slice(0, 20).map(table => (
+                  <div
+                    key={table.id}
+                    onClick={() => jumpToSearchResult(table)}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      whiteSpace: 'nowrap'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--cafe-bg-surface)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span style={{ fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
+                      {STATE_ICONS[table.status] ? `${STATE_ICONS[table.status]} ` : ''}Table {table.number}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)' }}>
+                      {table.assignedWaiter || table.reservedFor || table.status}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1077,13 +1348,14 @@ function InteractiveFloorPlan({
             fontSize: 13,
             color: 'var(--cafe-text-secondary)'
           }}>
-            {visibleTables().length} tables
+            {visibleTablesList.length} tables
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button 
             onClick={() => handleZoom(-0.1)}
+            title="Zoom out"
             style={{
               padding: '6px 12px',
               borderRadius: 'var(--cafe-radius-sm)',
@@ -1098,6 +1370,7 @@ function InteractiveFloorPlan({
           </button>
           <button 
             onClick={() => handleZoom(0.1)}
+            title="Zoom in (or Ctrl/Cmd + scroll on the canvas)"
             style={{
               padding: '6px 12px',
               borderRadius: 'var(--cafe-radius-sm)',
@@ -1112,6 +1385,7 @@ function InteractiveFloorPlan({
           </button>
           <button 
             onClick={resetView}
+            title="Reset zoom and pan"
             style={{
               padding: '6px 12px',
               borderRadius: 'var(--cafe-radius-sm)',
@@ -1126,6 +1400,7 @@ function InteractiveFloorPlan({
           </button>
           <button 
             onClick={fitToScreen}
+            title="Fit the whole floor to the screen"
             style={{
               padding: '6px 12px',
               borderRadius: 'var(--cafe-radius-sm)',
@@ -1257,12 +1532,13 @@ function InteractiveFloorPlan({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleExternalDrop}
+        onWheel={handleCanvasWheel}
         style={{ 
           flex: 1,
           position: 'relative',
           overflow: 'hidden',
           cursor: isPanning ? 'grabbing' : draggedItem ? 'copy' : mergeMode ? 'crosshair' : 'grab',
-          background: '#f5f5f5'
+          background: 'var(--cafe-bg-surface, #f5f5f5)'
         }}
       >
         <div 
@@ -1285,8 +1561,8 @@ function InteractiveFloorPlan({
               width: '100%',
               height: '100%',
               backgroundImage: `
-                linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+                linear-gradient(to right, var(--cafe-border-light, rgba(0,0,0,0.05)) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--cafe-border-light, rgba(0,0,0,0.05)) 1px, transparent 1px)
               `,
               backgroundSize: `${gridSize}px ${gridSize}px`,
               pointerEvents: 'none',
@@ -1333,44 +1609,61 @@ function InteractiveFloorPlan({
           )}
 
           {/* Render Sections */}
-          {sections.map(section => (
-            <div
-              key={section.id}
-              style={{
-                position: 'absolute',
-                left: section.position?.x || 0,
-                top: section.position?.y || 0,
-                width: section.dimensions?.width || 400,
-                height: section.dimensions?.height || 300,
-                background: section.color || '#e8f5e9',
-                border: '2px dashed rgba(0,0,0,0.1)',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 14,
-                fontWeight: 600,
-                color: 'rgba(0,0,0,0.5)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
-            >
-              {section.name}
-            </div>
-          ))}
+          {sections.map(section => {
+            const stats = getSectionStats(section.id);
+            return (
+              <div
+                key={section.id}
+                style={{
+                  position: 'absolute',
+                  left: section.position?.x || 0,
+                  top: section.position?.y || 0,
+                  width: section.dimensions?.width || 400,
+                  height: section.dimensions?.height || 300,
+                  background: section.color || '#e8f5e9',
+                  border: '2px dashed rgba(0,0,0,0.1)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: 'rgba(0,0,0,0.5)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                <span>{section.name}</span>
+                {stats.total > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'none', letterSpacing: 'normal', color: 'rgba(0,0,0,0.4)' }}>
+                    {stats.occupied}/{stats.total} occupied · {stats.occupancy}%
+                    {stats.revenue > 0 ? ` · ₹${stats.revenue.toFixed(0)}` : ''}
+                  </span>
+                )}
+              </div>
+            );
+          })}
 
           {/* Render Tables */}
-          {visibleTables().map(table => (
+          {visibleTablesList.map(table => (
             <div
               key={table.id}
               data-table-interactive="true"
-              onClick={(e) => handleTableClick(e, table)}
+              onClick={(e) => handleTableClick(e, table, { notify: false })}
               onDoubleClick={(e) => handleTableDoubleClick(e, table)}
               onMouseDown={(e) => handleDragStart(e, table)}
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setContextMenu({ x: e.clientX, y: e.clientY, table });
+                // Clamp so the menu (roughly 200x260) can't render off-screen
+                // when right-clicking a table near the right/bottom edge.
+                const menuWidth = 200;
+                const menuHeightEstimate = 260;
+                const x = Math.min(e.clientX, window.innerWidth - menuWidth - 8);
+                const y = Math.min(e.clientY, window.innerHeight - menuHeightEstimate - 8);
+                setContextMenu({ x: Math.max(8, x), y: Math.max(8, y), table });
               }}
               style={{
                 position: 'absolute',
@@ -1379,7 +1672,8 @@ function InteractiveFloorPlan({
                 width: table.dimensions?.width || 80,
                 height: table.dimensions?.height || 80,
                 background: getTableColor(table),
-                border: selectedTable?.id === table.id ? '3px solid var(--cafe-accent)' : 
+                border: dragHint?.tableId === table.id ? '3px dashed var(--cafe-text-primary, #1f2937)' :
+                        selectedTable?.id === table.id ? '3px solid var(--cafe-accent)' : 
                         mergeCandidates.has(table.id) ? '3px solid var(--cafe-success)' :
                         '2px solid rgba(0,0,0,0.2)',
                 borderRadius: table.shape === 'circle' ? '50%' : table.shape === 'oval' ? '50%' : 8,
@@ -1569,6 +1863,17 @@ function InteractiveFloorPlan({
                     ↻
                   </div>
                 </>
+              )}
+              {/* Drag-armed hint — appears after picking "Drag Table" from the right-click menu */}
+              {dragHint?.tableId === table.id && (
+                <div style={{
+                  position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%) translateY(-8px)',
+                  background: 'var(--cafe-text-primary, #1f2937)', color: 'white', fontSize: 11, fontWeight: 700,
+                  padding: '5px 10px', borderRadius: 8, whiteSpace: 'nowrap', pointerEvents: 'none',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.25)', zIndex: 20, animation: 'kdsCardIn 0.15s ease'
+                }}>
+                  🖐️ Click &amp; drag to move
+                </div>
               )}
               {/* Table Number with State Icon */}
               <div style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1883,7 +2188,8 @@ function InteractiveFloorPlan({
 
           {/* Actions */}
           {[
-            { icon: '👁️', label: 'View Details', color: 'var(--cafe-text-secondary)', action: () => { onTableClick?.(contextMenu.table); setContextMenu(null); } },
+            { icon: '🖐️', label: 'Drag Table', color: 'var(--cafe-text-primary)', action: () => { setDragHint({ tableId: contextMenu.table.id }); setSelectedTable(contextMenu.table); setSelectedTables(new Set([contextMenu.table.id])); setContextMenu(null); } },
+            { icon: '👁️', label: 'Show Table Info', color: 'var(--cafe-text-secondary)', action: () => { onTableClick?.(contextMenu.table); setContextMenu(null); } },
             ...(contextMenu.table.status === 'available' ? [
               { icon: '🪑', label: 'Seat Guest', color: 'var(--cafe-success)', action: () => { onTableClick?.(contextMenu.table); setContextMenu(null); } },
               { icon: '📅', label: 'Reserve', color: 'var(--cafe-info)', action: () => { onTableClick?.(contextMenu.table); setContextMenu(null); } },
@@ -1898,6 +2204,16 @@ function InteractiveFloorPlan({
             ] : []),
             { icon: '✏️', label: 'Edit Table', color: 'var(--cafe-text-secondary)', action: () => { if (onTableDoubleClick) onTableDoubleClick(contextMenu.table); setContextMenu(null); } },
             { icon: '⇄', label: 'Merge With...', color: 'var(--cafe-purple)', action: () => { toggleMergeMode(); setMergeCandidates(new Set([contextMenu.table.id])); setContextMenu(null); } },
+            { icon: '⧉', label: selectedTables.has(contextMenu.table.id) && selectedTables.size > 1 ? `Duplicate ${selectedTables.size} Tables` : 'Duplicate Table', color: 'var(--cafe-accent)', action: () => {
+                const ids = selectedTables.has(contextMenu.table.id) && selectedTables.size > 1
+                  ? Array.from(selectedTables) : [contextMenu.table.id];
+                handleDuplicateSelectedTables(ids);
+              } },
+            { icon: '🗑️', label: selectedTables.has(contextMenu.table.id) && selectedTables.size > 1 ? `Remove ${selectedTables.size} Tables` : 'Remove Table', color: 'var(--cafe-danger, #ef4444)', action: () => {
+                const ids = selectedTables.has(contextMenu.table.id) && selectedTables.size > 1
+                  ? Array.from(selectedTables) : [contextMenu.table.id];
+                handleDeleteSelectedTables(ids);
+              } },
           ].map((item, i) => (
             <button
               key={i}
@@ -1947,7 +2263,7 @@ function InteractiveFloorPlan({
             alignItems: 'center'
           }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
-              Tables ({visibleTables().length})
+              Tables ({visibleTablesList.length})
             </div>
             <button
               onClick={() => setShowTableList(false)}
@@ -1965,12 +2281,12 @@ function InteractiveFloorPlan({
           </div>
 
           <div style={{ overflowY: 'auto', flex: 1 }}>
-            {visibleTables().length === 0 && (
+            {visibleTablesList.length === 0 && (
               <div style={{ padding: 16, fontSize: 12, color: 'var(--cafe-text-tertiary)' }}>
                 No tables on this floor yet.
               </div>
             )}
-            {visibleTables()
+            {visibleTablesList
               .slice()
               .sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0))
               .map(table => (
@@ -2063,7 +2379,7 @@ function InteractiveFloorPlan({
             position: 'relative',
             width: '100%',
             height: '100%',
-            background: '#f5f5f5'
+            background: 'var(--cafe-bg-surface, #f5f5f5)'
           }}>
             {/* Mini map floor */}
             {sections.map(section => (
@@ -2081,7 +2397,7 @@ function InteractiveFloorPlan({
                 }}
               />
             ))}
-            {visibleTables().map(table => (
+            {visibleTablesList.map(table => (
               <div
                 key={table.id}
                 style={{

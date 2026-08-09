@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from "react";
+import AlertDialog from "../common/AlertDialog.jsx";
 import { 
   getActiveShift, 
   getShiftHistory, 
@@ -21,6 +22,7 @@ export default function ShiftOperations({ tables, orders, staff, isMobile = fals
   const [showOpeningWizard, setShowOpeningWizard] = useState(false);
   const [showClosingWizard, setShowClosingWizard] = useState(false);
   const [showReport, setShowReport] = useState(null);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
 
   useEffect(() => {
     loadData();
@@ -41,7 +43,7 @@ export default function ShiftOperations({ tables, orders, staff, isMobile = fals
       if (validation.canClose) {
         setShowClosingWizard(true);
       } else {
-        alert(`Cannot close shift:\n${validation.issues.join('\n')}`);
+        setAlertDialog({ isOpen: true, title: 'Cannot Close Shift', message: validation.issues.join('\n'), type: 'error' });
       }
     }
   };
@@ -746,6 +748,14 @@ export default function ShiftOperations({ tables, orders, staff, isMobile = fals
           </div>
         </div>
       )}
+
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

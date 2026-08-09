@@ -1,6 +1,6 @@
 // KDS (Kitchen Display System) domain model with schema validation and helper functions
 
-import { createKdsTicketId } from './ids.js';
+import { createKdsTicketId, generateId } from './ids.js';
 import { now, toTimestamp, getMinutesElapsed } from './dates.js';
 
 /**
@@ -180,33 +180,6 @@ export function createKdsTicketFromOrder(order, station) {
   };
 }
 
-/**
- * Create multiple KDS tickets from order (split by station)
- * @param {object} order - Order object
- * @returns {KdsTicket[]} Array of KDS tickets
- */
-export function createKdsTicketsFromOrder(order) {
-  if (!order || typeof order !== 'object') {
-    devWarn('createKdsTicketsFromOrder: missing/malformed order', order);
-    return [];
-  }
-  if (!Array.isArray(order.items)) return [];
-
-  const seenStations = new Set();
-  const tickets = [];
-
-  order.items.forEach(item => {
-    if (!item || typeof item !== 'object') return;
-    const station = item.station;
-    if (!isValidStation(station) || station === 'All') return;
-    if (seenStations.has(station)) return;
-    seenStations.add(station);
-    const ticket = createKdsTicketFromOrder(order, station);
-    if (ticket) tickets.push(ticket);
-  });
-
-  return tickets;
-}
 
 /**
  * Normalize a KDS ticket to ensure it matches the schema
@@ -569,4 +542,55 @@ export function getActiveTickets(tickets) {
 export function getHeldTickets(tickets) {
   if (!Array.isArray(tickets)) return [];
   return tickets.filter(t => t && typeof t === 'object' && t.held && !t.completed);
+}
+
+/**
+ * Create KDS tickets from an order
+ * @param {Order} order - Order object
+ * @returns {KdsTicket[]} Array of KDS tickets
+ */
+export function createKdsTicketsFromOrder(order) {
+  if (!order || !Array.isArray(order.items)) return [];
+  
+  const nowTs = now();
+  const tickets = [];
+  
+  // Group items by station
+  const itemsByStation = {};
+  order.items.forEach(item => {
+    if (!item) return;
+    const station = item.station || 'Kitchen';
+    if (!itemsByStation[station]) itemsByStation[station] = [];
+    itemsByStation[station].push(item);
+  });
+  
+  // Create one ticket per station
+  Object.entries(itemsByStation).forEach(([station, items]) => {
+    const ticket = {
+      id: createKdsTicketId(),
+      orderId: order.id,
+      source: order.source || 'WALK_IN',
+      station: station,
+      items: items.map(item => ({
+        id: item.id || generateId(),
+        menuItemId: item.menuItemId,
+        name: item.name || item.menuItem?.name || item.itemName,
+        qty: Number(item.qty) || 1,
+        modifiers: item.modifiers || [],
+        notes: item.notes || ''
+      })),
+      note: order.notes || '',
+      startedAt: nowTs,
+      urgency: 'ok',
+      held: false,
+      completed: false,
+      tableId: order.tableId || null,
+      tableNumber: order.tableNumber || null,
+      guestCount: order.pax || null,
+      createdAt: nowTs
+    };
+    tickets.push(ticket);
+  });
+  
+  return tickets;
 }

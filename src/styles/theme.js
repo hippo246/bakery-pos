@@ -110,66 +110,66 @@ export const C = {
  */
 export const THEME_CSS = `
   :root {
-    /* ── CafeOS Design Tokens ──────────────────────────────────────── */
+    /* ── CafeOS Design Tokens — Minimalist Modern ───────────────────── */
     
-    /* Backgrounds — midnight obsidian depth */
-    --cafe-bg:              #09090b;
-    --cafe-bg-elevated:     #121214;
-    --cafe-bg-surface:      #18181b;
-    --cafe-bg-card:         #27272a;
-    --cafe-bg-hover:        #3f3f46;
-    --cafe-bg-primary:      #09090b;
-    --cafe-bg-secondary:    #18181b;
+    /* Backgrounds — clean, subtle depth */
+    --cafe-bg:              #0a0a0a;
+    --cafe-bg-elevated:     #111111;
+    --cafe-bg-surface:      #141414;
+    --cafe-bg-card:         #1a1a1a;
+    --cafe-bg-hover:        #222222;
+    --cafe-bg-primary:      #0a0a0a;
+    --cafe-bg-secondary:    #141414;
     
-    /* Accent — vibrant electric amber for striking contrast */
+    /* Accent — refined amber */
     --cafe-accent:          #f59e0b;
     --cafe-accent-light:    #fbbf24;
     --cafe-accent-dark:     #d97706;
-    --cafe-accent-dim:      rgba(245,158,11,0.15);
-    --cafe-accent-bg:       rgba(245,158,11,0.1);
-    --cafe-accent-border:   rgba(245,158,11,0.4);
+    --cafe-accent-dim:      rgba(245,158,11,0.08);
+    --cafe-accent-bg:       rgba(245,158,11,0.06);
+    --cafe-accent-border:   rgba(245,158,11,0.2);
     
-    /* Text hierarchy — ultra crisp whites and cool grays */
-    --cafe-text-primary:    #fafafa;
-    --cafe-text-secondary:  #a1a1aa;
-    --cafe-text-tertiary:   #71717a;
-    --cafe-text-muted:      #52525b;
+    /* Text hierarchy — refined grays */
+    --cafe-text-primary:    #f5f5f5;
+    --cafe-text-secondary:  #a3a3a3;
+    --cafe-text-tertiary:   #6b6b6b;
+    --cafe-text-muted:      #4a4a4a;
     
-    /* Semantic colors — vivid and punchy */
-    --cafe-success:         #10b981;
-    --cafe-success-bg:      rgba(16,185,129,0.1);
-    --cafe-success-border:  rgba(16,185,129,0.3);
+    /* Semantic colors — muted, professional */
+    --cafe-success:         #22c55e;
+    --cafe-success-bg:      rgba(34,197,94,0.08);
+    --cafe-success-border:  rgba(34,197,94,0.15);
     
     --cafe-danger:          #ef4444;
-    --cafe-danger-bg:       rgba(239,68,68,0.1);
-    --cafe-danger-border:   rgba(239,68,68,0.3);
+    --cafe-danger-bg:       rgba(239,68,68,0.08);
+    --cafe-danger-border:   rgba(239,68,68,0.15);
     
     --cafe-warning:         #f97316;
-    --cafe-warning-bg:      rgba(249,115,22,0.1);
-    --cafe-warning-border:  rgba(249,115,22,0.3);
+    --cafe-warning-bg:      rgba(249,115,22,0.08);
+    --cafe-warning-border:  rgba(249,115,22,0.15);
     
     --cafe-info:            #3b82f6;
-    --cafe-info-bg:         rgba(59,130,246,0.1);
-    --cafe-info-border:     rgba(59,130,246,0.3);
+    --cafe-info-bg:         rgba(59,130,246,0.08);
+    --cafe-info-border:     rgba(59,130,246,0.15);
     
-    /* Borders — delicate glass-like definition */
-    --cafe-border:          #3f3f46;
-    --cafe-border-light:    #27272a;
+    /* Borders — subtle, minimal */
+    --cafe-border:          #262626;
+    --cafe-border-light:    #1f1f1f;
     --cafe-border-focus:    var(--cafe-accent);
     
-    /* Shadows — deep and dimensional */
-    --cafe-shadow-sm:       0 1px 3px rgba(0,0,0,0.4);
-    --cafe-shadow-md:       0 4px 12px rgba(0,0,0,0.5);
-    --cafe-shadow-lg:       0 8px 32px rgba(0,0,0,0.6);
-    --cafe-shadow-glow:     0 0 20px rgba(245,158,11,0.25);
+    /* Shadows — soft, refined */
+    --cafe-shadow-sm:       0 1px 2px rgba(0,0,0,0.3);
+    --cafe-shadow-md:       0 2px 8px rgba(0,0,0,0.4);
+    --cafe-shadow-lg:       0 4px 16px rgba(0,0,0,0.5);
+    --cafe-shadow-glow:     0 0 12px rgba(245,158,11,0.15);
     
-    /* Radius — warm, not overly rounded */
-    --cafe-radius-sm:       6px;
-    --cafe-radius-md:       8px;
-    --cafe-radius-lg:       12px;
-    --cafe-radius-xl:       16px;
+    /* Radius — consistent, modern */
+    --cafe-radius-sm:       4px;
+    --cafe-radius-md:       6px;
+    --cafe-radius-lg:       8px;
+    --cafe-radius-xl:       12px;
     
-    /* Spacing scale */
+    /* Spacing scale — refined */
     --cafe-space-xs:        4px;
     --cafe-space-sm:        8px;
     --cafe-space-md:        12px;
@@ -178,20 +178,20 @@ export const THEME_CSS = `
     --cafe-space-2xl:       24px;
     --cafe-space-3xl:       32px;
     
-    /* Typography scale */
-    --cafe-font-xs:         11px;
-    --cafe-font-sm:         12px;
+    /* Typography scale — clean */
+    --cafe-font-xs:         12px;
+    --cafe-font-sm:         13px;
     --cafe-font-base:       14px;
-    --cafe-font-lg:         16px;
-    --cafe-font-xl:         18px;
-    --cafe-font-2xl:        24px;
-    --cafe-font-3xl:        32px;
+    --cafe-font-lg:         15px;
+    --cafe-font-xl:         17px;
+    --cafe-font-2xl:        22px;
+    --cafe-font-3xl:        28px;
     
     /* Status colors for operations */
     --cafe-status-new:      #3b82f6;
     --cafe-status-prep:     #f97316;
-    --cafe-status-ready:    #10b981;
-    --cafe-status-completed:#71717a;
+    --cafe-status-ready:    #22c55e;
+    --cafe-status-completed:#6b6b6b;
     --cafe-status-cancelled:#ef4444;
     
     /* Legacy compatibility — map to new system */

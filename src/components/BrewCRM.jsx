@@ -19,20 +19,25 @@ import { isFeatureEnabled } from "../utils/featureConfig.js";
 import SystemControlCenter from "./settings/SystemControlCenter";
 import DailyArchive from "../utils/DailyArchive.js";
 import { useSecurity } from "../hooks/useSecurity.js";
+import { getSelfHealingEngine } from "../operations/SelfHealingEngine.js";
+import { getPaymentGatewayFactory } from "../payment/PaymentGatewayFactory.js";
+import { getDeliveryPlatformFactory } from "../delivery/DeliveryPlatformFactory.js";
+import { useTerminal } from "../terminal/TerminalContext.jsx";
+import TerminalSelector from "./terminal/TerminalSelector.jsx";
 
 // Lazy-loaded components
 const WelcomeScreen = lazy(() => import("./setup/WelcomeScreen"));
 const SetupWizard = lazy(() => import("./setup/SetupWizard"));
-const Dashboard = lazy(() => import("./dashboard/Dashboard"));
-const Orders = lazy(() => import("./orders/Orders"));
-const Kitchen = lazy(() => import("./kitchen/Kitchen"));
+const Dashboard = lazy(() => import("./dashboard/ThemedDashboard"));
+const Orders = lazy(() => import("./orders/ThemedOrders"));
+const Kitchen = lazy(() => import("./kitchen/ThemedKitchen"));
 const CRM = lazy(() => import("./crm/CRM"));
-const AnalyticsReports = lazy(() => import("./analytics/AnalyticsReports"));
-const Menu = lazy(() => import("./menu/Menu"));
-const Inventory = lazy(() => import("./inventory/Inventory"));
-const Staff = lazy(() => import("./staff/Staff"));
-const Tables = lazy(() => import("./tables/Tables"));
-const Settings = lazy(() => import("./settings/Settings"));
+const AnalyticsReports = lazy(() => import("./analytics/ThemedReports"));
+const Menu = lazy(() => import("./menu/ThemedMenu"));
+const Inventory = lazy(() => import("./inventory/ThemedInventory"));
+const Staff = lazy(() => import("./staff/ThemedStaff"));
+const Tables = lazy(() => import("./tables/ThemedTables"));
+const Settings = lazy(() => import("./settings/ThemedSettings"));
 const Delivery = lazy(() => import("./delivery/Delivery"));
 const Expenses = lazy(() => import("./expenses/Expenses"));
 const QROrdering = lazy(() => import("./qr/QROrdering"));
@@ -141,6 +146,9 @@ const normalizeArray = (items, normalizer, collectionName) => {
 };
 
 export default function BrewCRM() {
+  const { currentTerminal, isConnected } = useTerminal();
+  const [showTerminalSelector, setShowTerminalSelector] = useState(false);
+  
   const [tab, setTab] = useState(() => {
     try {
       const saved = localStorage.getItem("brewcrm_tab");
@@ -158,6 +166,13 @@ export default function BrewCRM() {
     return !localStorage.getItem('cafeos_visited');
   });
   const appMode = getAppMode();
+
+  // Show terminal selector if no terminal is set and not in setup/demo mode
+  useEffect(() => {
+    if (!currentTerminal && !showWelcome && !showSetupWizard && appMode === APP_MODES.PRODUCTION) {
+      setShowTerminalSelector(true);
+    }
+  }, [currentTerminal, showWelcome, showSetupWizard, appMode]);
   
   const [orders, setOrders] = useState(() => {
     let initialOrders = isLocalMode
@@ -328,8 +343,14 @@ export default function BrewCRM() {
 
   // ── QR order polling ──────────────────────────────────────────────────────
   // The guest page always writes to localStorage (even in demo mode).
-  // Poll every 2s and inject new orders/kdsCards/tables into React state.
+  // Poll every 2s and inject new orders/kdsCards/tables/guestSessions/waiterCalls into React state.
+  // PERFORMANCE: Debounce rapid localStorage reads, use requestIdleCallback for non-critical updates
   const lastKnownOrderCount = useRef(0);
+  const lastKnownSessionCount = useRef(0);
+  const lastKnownWaiterCallCount = useRef(0);
+  const isPolling = useRef(false);
+  const pollTimeoutRef = useRef(null);
+  
   useEffect(() => {
     // Table status can flip (occupied/cleared) independently of whether the orders array
     // grew this tick, so it gets its own always-run sync instead of living inside the
@@ -344,19 +365,69 @@ export default function BrewCRM() {
         if (!tablesRaw) return;
         const tablesStored = JSON.parse(tablesRaw);
         if (!Array.isArray(tablesStored) || tablesStored.length === 0) return;
+        // PERFORMANCE: Use Map for O(1) lookups instead of nested find()
+        const storedMap = new Map(tablesStored.map(s => [s.id, s]));
+        const numberMap = new Map(tablesStored.map(s => [String(s.number), s]));
         setTables(prev => prev.map(t => {
-          const updated = tablesStored.find(s => s.id === t.id) || tablesStored.find(s => String(s.number) === String(t.number));
+          const updated = storedMap.get(t.id) || numberMap.get(String(t.number));
           return updated ? { ...t, status: updated.status, currentOrderId: updated.currentOrderId } : t;
         }));
       } catch { /* ignore parse/storage errors */ }
     };
 
+    const syncGuestSessions = () => {
+      try {
+        const sessionsRaw = localStorage.getItem(LOCAL_PREFIX + "guestSessions");
+        if (!sessionsRaw) return;
+        const sessionsStored = JSON.parse(sessionsRaw);
+        if (!Array.isArray(sessionsStored)) return;
+        // PERFORMANCE: Use Set for O(1) membership checks
+        setGuestSessions(prev => {
+          const existingIds = new Set(prev.map(s => s.id));
+          const fresh = sessionsStored.filter(s => !existingIds.has(s.id));
+          if (fresh.length === 0) return prev;
+          return [...fresh, ...prev];
+        });
+      } catch { /* ignore parse/storage errors */ }
+    };
+
+    const syncWaiterCalls = () => {
+      try {
+        const callsRaw = localStorage.getItem(LOCAL_PREFIX + "waiterCalls");
+        if (!callsRaw) return;
+        const callsStored = JSON.parse(callsRaw);
+        if (!Array.isArray(callsStored)) return;
+        setWaiterCalls(prev => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const fresh = callsStored.filter(c => !existingIds.has(c.id));
+          if (fresh.length === 0) return prev;
+          return [...fresh, ...prev];
+        });
+      } catch { /* ignore parse/storage errors */ }
+    };
+
     const poll = () => {
+      // PERFORMANCE: Prevent overlapping polls
+      if (isPolling.current) return;
+      isPolling.current = true;
+      
       try {
         const raw = localStorage.getItem(LOCAL_PREFIX + "orders");
-        if (!raw) { syncTables(); return; }
+        if (!raw) { 
+          syncTables(); 
+          syncGuestSessions(); 
+          syncWaiterCalls(); 
+          isPolling.current = false;
+          return; 
+        }
         const stored = JSON.parse(raw);
-        if (!Array.isArray(stored)) { syncTables(); return; }
+        if (!Array.isArray(stored)) { 
+          syncTables(); 
+          syncGuestSessions(); 
+          syncWaiterCalls(); 
+          isPolling.current = false;
+          return; 
+        }
         // Only act on orders/kdsCards when there are MORE orders than we last saw
         if (stored.length > lastKnownOrderCount.current) {
           lastKnownOrderCount.current = stored.length;
@@ -393,40 +464,92 @@ export default function BrewCRM() {
 
         // Always check table status, independent of whether the orders count moved this tick.
         syncTables();
+        // Always sync guest sessions and waiter calls for real-time updates
+        syncGuestSessions();
+        syncWaiterCalls();
       } catch { /* ignore parse/storage errors */ }
+      finally {
+        isPolling.current = false;
+      }
+    };
+
+    // PERFORMANCE: Use requestIdleCallback for non-critical polling when browser is idle
+    const schedulePoll = () => {
+      pollTimeoutRef.current = requestIdleCallback(() => {
+        poll();
+        schedulePoll();
+      }, { timeout: 2000 });
     };
 
     poll(); // run immediately on mount
-    const intervalId = setInterval(poll, 2000);
-    return () => clearInterval(intervalId);
+    schedulePoll(); // start idle polling
+    
+    return () => {
+      if (pollTimeoutRef.current) cancelIdleCallback(pollTimeoutRef.current);
+      isPolling.current = false;
+    };
    
   }, []);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("customers", customers); }, [customers]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("kdsCards", kdsCards); }, [kdsCards]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("menuItems", menuItems); }, [menuItems]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("tables", tables); }, [tables]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("staff", staff); }, [staff]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("deliveryOrders", deliveryOrders); }, [deliveryOrders]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("inventory", inventory); }, [inventory]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("expenses", expenses); }, [expenses]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("qrCodes", qrCodes); }, [qrCodes]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("productionBatches", productionBatches); }, [productionBatches]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("drivers", drivers); }, [drivers]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("routes", routes); }, [routes]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("guestSessions", guestSessions); }, [guestSessions]);
-  useEffect(() => saveLocalCollection("waiterCalls", waiterCalls), [waiterCalls]);
-  useEffect(() => saveLocalCollection("suppliers", suppliers), [suppliers]);
-  useEffect(() => saveLocalCollection("purchaseOrders", purchaseOrders), [purchaseOrders]);
-  useEffect(() => saveLocalCollection("waitlist", waitlist), [waitlist]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("documents", documents); }, [documents]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("workflows", workflows); }, [workflows]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("workflowExecutions", workflowExecutions); }, [workflowExecutions]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("workflowTemplates", workflowTemplates); }, [workflowTemplates]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("workflowVersions", workflowVersions); }, [workflowVersions]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("incidents", incidents); }, [incidents]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("approvals", approvals); }, [approvals]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("timelineEvents", timelineEvents); }, [timelineEvents]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("automationRules", automationRules); }, [automationRules]);
+
+  // ── Initialize Core Systems ─────────────────────────────────────────────
+  useEffect(() => {
+    // Initialize Self-Healing Engine (auto-starts in constructor)
+    const selfHealingEngine = getSelfHealingEngine();
+    
+    // Initialize Payment Gateway Factory (Razorpay)
+    const paymentFactory = getPaymentGatewayFactory();
+    
+    // Initialize Delivery Platform Factory (Zomato/Swiggy)
+    const deliveryFactory = getDeliveryPlatformFactory();
+    
+    console.log('[BrewCRM] Core systems initialized');
+    
+    return () => {
+      // Cleanup if needed
+    };
+  }, []);
+
+  // PERFORMANCE: Debounce localStorage saves to prevent rapid writes during high-frequency updates
+  const saveTimeoutRef = useRef({});
+  const debouncedSave = useCallback((key, value) => {
+    if (!isLocalMode) return;
+    const timeoutKey = key;
+    if (saveTimeoutRef.current[timeoutKey]) {
+      clearTimeout(saveTimeoutRef.current[timeoutKey]);
+    }
+    saveTimeoutRef.current[timeoutKey] = setTimeout(() => {
+      saveLocalCollection(key, value);
+      delete saveTimeoutRef.current[timeoutKey];
+    }, 500); // 500ms debounce
+  }, [isLocalMode]);
+
+  useEffect(() => { debouncedSave("orders", orders); }, [orders, debouncedSave]);
+  useEffect(() => { debouncedSave("customers", customers); }, [customers, debouncedSave]);
+  useEffect(() => { debouncedSave("kdsCards", kdsCards); }, [kdsCards, debouncedSave]);
+  useEffect(() => { debouncedSave("menuItems", menuItems); }, [menuItems, debouncedSave]);
+  useEffect(() => { debouncedSave("tables", tables); }, [tables, debouncedSave]);
+  useEffect(() => { debouncedSave("staff", staff); }, [staff, debouncedSave]);
+  useEffect(() => { debouncedSave("deliveryOrders", deliveryOrders); }, [deliveryOrders, debouncedSave]);
+  useEffect(() => { debouncedSave("inventory", inventory); }, [inventory, debouncedSave]);
+  useEffect(() => { debouncedSave("expenses", expenses); }, [expenses, debouncedSave]);
+  useEffect(() => { debouncedSave("qrCodes", qrCodes); }, [qrCodes, debouncedSave]);
+  useEffect(() => { debouncedSave("productionBatches", productionBatches); }, [productionBatches, debouncedSave]);
+  useEffect(() => { debouncedSave("drivers", drivers); }, [drivers, debouncedSave]);
+  useEffect(() => { debouncedSave("routes", routes); }, [routes, debouncedSave]);
+  useEffect(() => { debouncedSave("guestSessions", guestSessions); }, [guestSessions, debouncedSave]);
+  useEffect(() => { debouncedSave("waiterCalls", waiterCalls); }, [waiterCalls, debouncedSave]);
+  useEffect(() => { debouncedSave("suppliers", suppliers); }, [suppliers, debouncedSave]);
+  useEffect(() => { debouncedSave("purchaseOrders", purchaseOrders); }, [purchaseOrders, debouncedSave]);
+  useEffect(() => { debouncedSave("waitlist", waitlist); }, [waitlist, debouncedSave]);
+  useEffect(() => { debouncedSave("documents", documents); }, [documents, debouncedSave]);
+  useEffect(() => { debouncedSave("workflows", workflows); }, [workflows, debouncedSave]);
+  useEffect(() => { debouncedSave("workflowExecutions", workflowExecutions); }, [workflowExecutions, debouncedSave]);
+  useEffect(() => { debouncedSave("workflowTemplates", workflowTemplates); }, [workflowTemplates, debouncedSave]);
+  useEffect(() => { debouncedSave("workflowVersions", workflowVersions); }, [workflowVersions, debouncedSave]);
+  useEffect(() => { debouncedSave("incidents", incidents); }, [incidents, debouncedSave]);
+  useEffect(() => { debouncedSave("approvals", approvals); }, [approvals, debouncedSave]);
+  useEffect(() => { debouncedSave("timelineEvents", timelineEvents); }, [timelineEvents, debouncedSave]);
+  useEffect(() => { debouncedSave("automationRules", automationRules); }, [automationRules, debouncedSave]);
 
   const toggleTheme = useCallback(() => {
     applyTheme();
@@ -737,30 +860,42 @@ export default function BrewCRM() {
         </Suspense>
       </ErrorBoundary>
       
+      {/* Terminal Selector Modal */}
+      {showTerminalSelector && (
+        <TerminalSelector
+          onClose={() => setShowTerminalSelector(false)}
+          onTerminalSelected={(terminal) => {
+            console.log('Terminal selected:', terminal);
+            setShowTerminalSelector(false);
+          }}
+        />
+      )}
+      
       {!showWelcome && !showSetupWizard && (
-          <Layout 
-          tab={tab} 
-          setTab={setTab} 
-          newOrderCount={newOrderCount} 
-          urgentKds={urgentKds} 
-          theme={theme} 
-          toggleTheme={toggleTheme}
+          <Layout
+          tab={tab}
+          setTab={setTab}
+          newOrderCount={newOrderCount}
+          urgentKds={urgentKds}
           appMode={appMode}
           role={role}
           setRole={setRole}
           canSeeTab={canSeeTab}
+          currentTerminal={currentTerminal}
+          isConnected={isConnected}
+          onShowTerminalSelector={() => setShowTerminalSelector(true)}
         >
           <ErrorBoundary>
             <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>Loading...</div>}>
               {canSeeTab("dashboard") && tab === "dashboard" && isFeatureEnabled('dashboard') && <Dashboard orders={orders} customers={customers} inventory={inventory} kdsCards={kdsCards} tables={tables} staff={staff} waitlist={waitlist} onNavigate={setTab} />}
               {canSeeTab("orders") && tab === "orders" && isFeatureEnabled('orders') && <Orders orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} tables={tables} setTables={setTables} staff={staff} discounts={[]} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} documents={documents} setDocuments={setDocuments} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} currentShift={null} />}
-              {canSeeTab("kitchen") && tab === "kitchen" && isFeatureEnabled('kitchen') && <Kitchen kdsCards={kdsCards} setKdsCards={setKdsCards} orders={orders} setOrders={setOrders} tables={tables} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} />}
+              {canSeeTab("kitchen") && tab === "kitchen" && isFeatureEnabled('kitchen') && <Kitchen kdsCards={kdsCards} setKdsCards={setKdsCards} orders={orders} setOrders={setOrders} tables={tables} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} staff={staff} />}
               {canSeeTab("crm") && tab === "crm" && isFeatureEnabled('crm') && <CRM customers={customers} setCustomers={setCustomers} orders={orders} kdsCards={kdsCards} tables={tables} documents={documents} setDocuments={setDocuments} notifications={notifications} setNotifications={setNotifications} />}
               {canSeeTab("analytics") && tab === "analytics" && isFeatureEnabled('analytics') && <AnalyticsReports orders={orders} customers={customers} staff={staff} inventory={inventory} tables={tables} deliveryOrders={deliveryOrders} drivers={drivers} suppliers={suppliers} purchaseOrders={purchaseOrders} productionBatches={productionBatches} documents={documents} />}
               {canSeeTab("menu") && tab === "menu" && isFeatureEnabled('menu') && <Menu menuItems={menuItems} setMenuItems={setMenuItems} />}
               {canSeeTab("inventory") && tab === "inventory" && isFeatureEnabled('inventory') && <Inventory inventory={inventory} setInventory={setInventory} />}
               {canSeeTab("staff") && tab === "staff" && isFeatureEnabled('staff') && <Staff staff={staff} setStaff={setStaff} orders={orders} tables={tables} notifications={notifications} setNotifications={setNotifications} />}
-              {canSeeTab("tables") && tab === "tables" && isFeatureEnabled('tables') && <Tables tables={tables} setTables={setTables} orders={orders} kdsCards={kdsCards} staff={staff} waitlist={waitlist} setWaitlist={setWaitlist} />}
+              {canSeeTab("tables") && tab === "tables" && isFeatureEnabled('tables') && <Tables tables={tables} setTables={setTables} orders={orders} kdsCards={kdsCards} setKdsCards={setKdsCards} staff={staff} waitlist={waitlist} setWaitlist={setWaitlist} onNavigate={setTab} menuItems={menuItems} />}
               {canSeeTab("delivery") && tab === "delivery" && isFeatureEnabled('delivery') && <Delivery deliveryOrders={deliveryOrders} setDeliveryOrders={setDeliveryOrders} orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} tables={tables} documents={documents} setDocuments={setDocuments} staff={staff} notifications={notifications} setNotifications={setNotifications} />}
               {canSeeTab("qr") && tab === "qr" && isFeatureEnabled('qrOrdering') && <QROrdering qrCodes={qrCodes} setQRCodes={setQRCodes} tables={tables} orders={orders} guestSessions={guestSessions} setGuestSessions={setGuestSessions} waiterCalls={waiterCalls} setWaiterCalls={setWaiterCalls} />}
               {canSeeTab("production") && tab === "production" && isFeatureEnabled('production') && <Production productionBatches={productionBatches} setProductionBatches={setProductionBatches} menuItems={menuItems} />}

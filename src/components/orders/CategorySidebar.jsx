@@ -1,6 +1,7 @@
 // eslint-disable-next-line no-unused-vars
 import React from 'react';
 import { C } from '../../styles/theme';
+import { useThemeColors, useThemeSpacing, useThemeTypography, useThemeBorderRadius } from '../../theme';
 import { MENU_CATS } from '../../data/constants.js';
 
 // Icons per category — extend as menu grows
@@ -22,6 +23,11 @@ const CategorySidebar = ({
   onToggleAvailable,
   menuItems = [],   // passed so we can show live counts per category
 }) => {
+  const colors = useThemeColors();
+  const spacing = useThemeSpacing();
+  const typography = useThemeTypography();
+  const borderRadius = useThemeBorderRadius();
+
   // Count items per category (respecting availability filter)
   const countFor = (cat) => {
     if (!menuItems.length) return null;
@@ -38,22 +44,22 @@ const CategorySidebar = ({
 
   return (
     <div style={{
-      background: 'var(--cafe-bg-elevated)',
-      border: `1px solid var(--cafe-border)`,
-      borderRadius: 'var(--cafe-radius-lg)',
+      background: colors.backgroundHover,
+      border: `1px solid ${colors.borderLight}`,
+      borderRadius: borderRadius.lg,
       overflowY: 'auto',
       display: 'flex',
       flexDirection: 'column',
     }}>
       {/* Header */}
-      <div style={{ padding: '14px 14px 10px', borderBottom: `1px solid var(--cafe-border-light)` }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{ padding: `${spacing.lg} ${spacing.lg} ${spacing.md}`, borderBottom: `1px solid ${colors.borderLight}` }}>
+        <div style={{ fontSize: typography.sizes.xs, fontWeight: typography.weights.extrabold, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Menu
         </div>
       </div>
 
       {/* Category buttons */}
-      <div style={{ padding: '10px 10px 0', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+      <div style={{ padding: `${spacing.md} ${spacing.md} 0`, display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
         {allCats.map(cat => {
           const active = categoryFilter === cat;
           const count = countFor(cat);
@@ -65,33 +71,34 @@ const CategorySidebar = ({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
-                padding: '10px 10px',
-                borderRadius: 9,
-                border: `1px solid ${active ? C.amber3 : 'transparent'}`,
-                background: active ? C.amberDim : 'transparent',
-                color: active ? C.amber2 : C.text2,
-                fontSize: 12,
-                fontWeight: active ? 800 : 500,
+                gap: 10,
+                padding: `${spacing.md} ${spacing.md}`,
+                borderRadius: borderRadius.md,
+                border: `1px solid ${active ? colors.primary : 'transparent'}`,
+                background: active ? colors.primaryBg : 'transparent',
+                color: active ? colors.primary : colors.textSecondary,
+                fontSize: typography.sizes.sm,
+                fontWeight: active ? typography.weights.extrabold : typography.weights.semibold,
                 cursor: 'pointer',
-                transition: 'all .12s',
+                transition: 'background .15s, border-color .15s, box-shadow .15s, transform .1s',
+                boxShadow: active ? `0 2px 10px ${colors.primary}33` : 'none',
                 textAlign: 'left',
                 width: '100%',
               }}
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.background = C.bg3; } }}
+              onMouseEnter={e => { if (!active) { e.currentTarget.style.background = colors.backgroundSurface; } }}
               onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; } }}
             >
-              <span style={{ fontSize: 15, flexShrink: 0 }}>{icon}</span>
+              <span style={{ fontSize: '16px', flexShrink: 0 }}>{icon}</span>
               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {cat === 'ALL' ? 'All' : cat}
               </span>
               {count !== null && count > 0 && (
                 <span style={{
-                  fontSize: 10, fontFamily: 'monospace', fontWeight: 700,
-                  background: active ? C.amber3 : C.bg4,
-                  color: active ? '#1a0e00' : C.text3,
-                  padding: '1px 6px', borderRadius: 10, flexShrink: 0,
-                  minWidth: 20, textAlign: 'center',
+                  fontSize: typography.sizes.xs, fontFamily: typography.fontFamilyMono, fontWeight: typography.weights.extrabold,
+                  background: active ? colors.primary : colors.backgroundCard,
+                  color: active ? '#1A1208' : colors.textTertiary,
+                  padding: '3px 8px', borderRadius: '12px', flexShrink: 0,
+                  minWidth: 24, textAlign: 'center',
                 }}>
                   {count}
                 </span>
@@ -102,16 +109,22 @@ const CategorySidebar = ({
       </div>
 
       {/* In-stock toggle */}
-      <div style={{ padding: '12px 14px 14px', borderTop: `1px solid var(--cafe-border-light)`, marginTop: 8 }}>
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          cursor: 'pointer', fontSize: 12, color: C.text2, fontWeight: 500,
-        }}>
+      <div style={{ padding: `${spacing.md} ${spacing.lg} ${spacing.lg}`, borderTop: `1px solid ${colors.borderLight}`, marginTop: 10 }}>
+        <label
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            cursor: 'pointer', fontSize: typography.sizes.sm, color: colors.textSecondary, fontWeight: typography.weights.semibold,
+            padding: '6px 8px', margin: '-6px -8px', borderRadius: borderRadius.sm,
+            transition: 'background .15s, color .15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = colors.backgroundSurface; e.currentTarget.style.color = colors.textPrimary; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = colors.textSecondary; }}
+        >
           <input
             type="checkbox"
             checked={showAvailableOnly}
             onChange={e => onToggleAvailable(e.target.checked)}
-            style={{ accentColor: C.amber, cursor: 'pointer', width: 14, height: 14 }}
+            style={{ accentColor: colors.primary, cursor: 'pointer', width: 16, height: 16 }}
           />
           In stock only
         </label>

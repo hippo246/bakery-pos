@@ -35,11 +35,13 @@ const CustomerPanel = ({
       <label style={label}>Customer Phone (optional)</label>
       <div style={{ display: "flex", gap: "var(--cafe-space-sm)" }}>
         <input
-          style={{ ...input, flex: 1 }}
+          style={{ ...input, flex: 1, transition: "border-color .15s, box-shadow .15s" }}
           value={customerPhone}
           onChange={(e) => onCustomerPhoneChange(e.target.value)}
           placeholder="For receipt & loyalty tracking"
           aria-label="Customer phone number"
+          onFocus={e => { e.currentTarget.style.borderColor = "var(--cafe-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--cafe-accent-dim)"; }}
+          onBlur={e => { e.currentTarget.style.borderColor = ""; e.currentTarget.style.boxShadow = "none"; }}
         />
         {customerPhone.trim() && (
           <button
@@ -48,9 +50,12 @@ const CustomerPanel = ({
               ...btn("ghost"),
               padding: "8px 12px",
               fontSize: "var(--cafe-font-xs)",
+              transition: "background .15s, transform .1s",
             }}
             title="View order history"
             aria-label="View order history"
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = ""; }}
           >
             📜
           </button>
@@ -221,7 +226,12 @@ const CustomerPanel = ({
                   padding: "4px 8px",
                   fontSize: "var(--cafe-font-xs)",
                   width: "100%",
+                  transition: "filter .15s, transform .1s",
                 }}
+                onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+                onMouseLeave={e => { e.currentTarget.style.filter = ""; }}
+                onMouseDown={e => { e.currentTarget.style.transform = "scale(0.98)"; }}
+                onMouseUp={e => { e.currentTarget.style.transform = ""; }}
               >
                 🔄 Repeat Order
               </button>

@@ -147,20 +147,20 @@ export default function StorageProvidersSection({ isMobile }) {
       {message.text && (
         <div style={{
           padding: '12px 16px',
-          borderRadius: 8,
+          borderRadius: 12,
           background: message.type === 'error' ? 'var(--cafe-danger-bg)' : 'var(--cafe-success-bg)',
-          border: `1px solid ${message.type === 'error' ? 'var(--cafe-danger-border)' : 'var(--cafe-success-border)'}`,
+          border: `1px solid ${message.type === 'error' ? 'var(--cafe-danger)' : 'var(--cafe-success)'}`,
           color: message.type === 'error' ? 'var(--cafe-danger)' : 'var(--cafe-success)',
           fontSize: 13,
-          fontWeight: 500
+          fontWeight: 600
         }}>
           {message.text}
         </div>
       )}
 
       {/* Active Provider Status */}
-      <div style={{ ...card, padding: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+      <div style={{ background: 'var(--cafe-bg-card)', border: '1px solid var(--cafe-border-light)', borderRadius: 16, padding: 24 }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--cafe-text-secondary)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Active Provider
         </h3>
         
@@ -168,8 +168,8 @@ export default function StorageProvidersSection({ isMobile }) {
           <div style={{
             padding: 16,
             background: 'var(--cafe-success-bg)',
-            border: '1px solid var(--cafe-success-border)',
-            borderRadius: 8,
+            border: '1px solid var(--cafe-success)',
+            borderRadius: 12,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between'
@@ -179,10 +179,10 @@ export default function StorageProvidersSection({ isMobile }) {
                 {providers.find(p => p.id === activeProviderId)?.info?.icon || '☁️'}
               </span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--cafe-success)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-success)' }}>
                   {providers.find(p => p.id === activeProviderId)?.info?.name || 'Unknown Provider'}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)' }}>
+                <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)', fontWeight: 500 }}>
                   Active and configured
                 </div>
               </div>
@@ -190,7 +190,9 @@ export default function StorageProvidersSection({ isMobile }) {
             <button
               onClick={handleDeactivateProvider}
               disabled={isLoading}
-              style={{ ...btn('ghost'), fontSize: 12, padding: '8px 12px', background: 'var(--cafe-danger-bg)', border: '1px solid var(--cafe-danger-border)', color: 'var(--cafe-danger)' }}
+              style={{ padding: '8px 16px', background: 'var(--cafe-danger-bg)', border: '1px solid var(--cafe-danger)', borderRadius: 12, fontSize: 12, fontWeight: 600, color: 'var(--cafe-danger)', cursor: isLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
+              onMouseOver={e => { if (!isLoading) { e.currentTarget.style.background = 'var(--cafe-danger)'; e.currentTarget.style.color = '#fff'; } }}
+              onMouseOut={e => { if (!isLoading) { e.currentTarget.style.background = 'var(--cafe-danger-bg)'; e.currentTarget.style.color = 'var(--cafe-danger)'; } }}
             >
               Deactivate
             </button>
@@ -199,9 +201,10 @@ export default function StorageProvidersSection({ isMobile }) {
           <div style={{
             padding: 16,
             background: 'var(--cafe-warning-bg)',
-            border: '1px solid var(--cafe-warning-border)',
-            borderRadius: 8,
+            border: '1px solid var(--cafe-warning)',
+            borderRadius: 12,
             fontSize: 13,
+            fontWeight: 500,
             color: 'var(--cafe-warning)'
           }}>
             No cloud provider is currently active. Configure a provider below to enable cloud storage.
@@ -210,8 +213,8 @@ export default function StorageProvidersSection({ isMobile }) {
       </div>
 
       {/* Available Providers */}
-      <div style={{ ...card, padding: 24 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+      <div style={{ background: 'var(--cafe-bg-card)', border: '1px solid var(--cafe-border-light)', borderRadius: 16, padding: 24 }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--cafe-text-secondary)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Available Providers
         </h3>
         
@@ -226,29 +229,32 @@ export default function StorageProvidersSection({ isMobile }) {
               <div
                 key={provider.id}
                 style={{
-                  ...card,
                   padding: 16,
-                  border: isActive ? '2px solid var(--cafe-accent)' : '1px solid var(--cafe-border)',
+                  border: isActive ? '2px solid var(--cafe-accent)' : '1px solid var(--cafe-border-light)',
                   background: isActive ? 'var(--cafe-accent-bg)' : 'var(--cafe-bg-surface)',
-                  cursor: 'pointer',
-                  opacity: !provider.builtin ? 0.5 : 1
+                  borderRadius: 12,
+                  cursor: provider.builtin ? 'pointer' : 'default',
+                  opacity: !provider.builtin ? 0.5 : 1,
+                  transition: 'all 0.2s'
                 }}
                 onClick={() => provider.builtin && handleSelectProvider(provider.id)}
+                onMouseOver={e => { if (provider.builtin && !isActive) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+                onMouseOut={e => { if (provider.builtin && !isActive) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 24 }}>{provider.icon}</span>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: isActive ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)' }}>
                         {provider.name}
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)' }}>
+                      <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)', fontWeight: 500 }}>
                         {provider.description}
                       </div>
                     </div>
                   </div>
                   {!provider.builtin && (
-                    <span style={{ fontSize: 11, color: 'var(--cafe-warning)', background: 'var(--cafe-warning-bg)', padding: '2px 6px', borderRadius: 4 }}>
+                    <span style={{ fontSize: 11, color: 'var(--cafe-warning)', background: 'var(--cafe-warning-bg)', padding: '4px 8px', borderRadius: 8, fontWeight: 600 }}>
                       Coming Soon
                     </span>
                   )}
@@ -257,17 +263,17 @@ export default function StorageProvidersSection({ isMobile }) {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {isConnected ? (
-                      <span style={{ fontSize: 11, color: 'var(--cafe-success)', background: 'var(--cafe-success-bg)', padding: '2px 8px', borderRadius: 4 }}>
+                      <span style={{ fontSize: 11, color: 'var(--cafe-success)', background: 'var(--cafe-success-bg)', padding: '4px 8px', borderRadius: 8, fontWeight: 600 }}>
                         Connected
                       </span>
                     ) : (
-                      <span style={{ fontSize: 11, color: 'var(--cafe-text-secondary)', background: 'var(--cafe-bg)', padding: '2px 8px', borderRadius: 4 }}>
+                      <span style={{ fontSize: 11, color: 'var(--cafe-text-secondary)', background: 'var(--cafe-bg-surface)', padding: '4px 8px', borderRadius: 8, fontWeight: 500 }}>
                         Not Configured
                       </span>
                     )}
                     
                     {health && (
-                      <span style={{ fontSize: 11, color: health.healthy ? 'var(--cafe-success)' : 'var(--cafe-danger)', background: health.healthy ? 'var(--cafe-success-bg)' : 'var(--cafe-danger-bg)', padding: '2px 8px', borderRadius: 4 }}>
+                      <span style={{ fontSize: 11, color: health.healthy ? 'var(--cafe-success)' : 'var(--cafe-danger)', background: health.healthy ? 'var(--cafe-success-bg)' : 'var(--cafe-danger-bg)', padding: '4px 8px', borderRadius: 8, fontWeight: 600 }}>
                         {health.healthy ? `Healthy (${health.latency}ms)` : 'Unhealthy'}
                       </span>
                     )}
@@ -277,7 +283,9 @@ export default function StorageProvidersSection({ isMobile }) {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleSetActiveProvider(provider.id); }}
                       disabled={isLoading}
-                      style={{ ...btn('ghost'), fontSize: 11, padding: '6px 12px' }}
+                      style={{ padding: '6px 12px', background: 'var(--cafe-accent-bg)', border: '1px solid var(--cafe-accent)', borderRadius: 12, fontSize: 11, fontWeight: 600, color: 'var(--cafe-accent)', cursor: isLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
+                      onMouseOver={e => { if (!isLoading) { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; } }}
+                      onMouseOut={e => { if (!isLoading) { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; } }}
                     >
                       Activate
                     </button>
@@ -287,7 +295,9 @@ export default function StorageProvidersSection({ isMobile }) {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleTestConnection(provider.id); }}
                       disabled={isLoading}
-                      style={{ ...btn('ghost'), fontSize: 11, padding: '6px 12px' }}
+                      style={{ padding: '6px 12px', background: 'var(--cafe-bg-surface)', border: '1px solid var(--cafe-border-light)', borderRadius: 12, fontSize: 11, fontWeight: 600, color: 'var(--cafe-text-secondary)', cursor: isLoading ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}
+                      onMouseOver={e => { if (!isLoading) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; e.currentTarget.style.color = 'var(--cafe-accent)'; } }}
+                      onMouseOut={e => { if (!isLoading) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; e.currentTarget.style.color = 'var(--cafe-text-secondary)'; } }}
                     >
                       Test
                     </button>
@@ -301,28 +311,30 @@ export default function StorageProvidersSection({ isMobile }) {
 
       {/* Configuration Panel */}
       {selectedProvider && (
-        <div style={{ ...card, padding: 24 }}>
+        <div style={{ background: 'var(--cafe-bg-card)', border: '1px solid var(--cafe-border-light)', borderRadius: 16, padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
               Configure {PROVIDERS.find(p => p.id === selectedProvider)?.name}
             </h3>
             <button
               onClick={() => setSelectedProvider(null)}
-              style={{ ...btn('ghost'), fontSize: 12 }}
+              style={{ padding: '8px 16px', background: 'var(--cafe-bg-surface)', border: '1px solid var(--cafe-border-light)', borderRadius: 12, fontSize: 12, fontWeight: 600, color: 'var(--cafe-text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; e.currentTarget.style.color = 'var(--cafe-text-secondary)'; }}
             >
               Close
             </button>
           </div>
           
-          <p style={{ fontSize: 13, color: 'var(--cafe-text-secondary)', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--cafe-text-secondary)', marginBottom: 16, fontWeight: 500 }}>
             Configure your cloud storage provider credentials. All credentials are encrypted and stored securely.
           </p>
           
-          <div style={{ padding: 16, background: 'var(--cafe-bg)', borderRadius: 8, marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)', marginBottom: 8 }}>
+          <div style={{ padding: 16, background: 'var(--cafe-bg-surface)', borderRadius: 12, marginBottom: 16, border: '1px solid var(--cafe-border-light)' }}>
+            <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)', marginBottom: 8, fontWeight: 600 }}>
               Current Status
             </div>
-            <div style={{ fontSize: 14, color: 'var(--cafe-text-primary)' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: providers.find(p => p.id === selectedProvider)?.instance?.connected ? 'var(--cafe-success)' : 'var(--cafe-text-secondary)' }}>
               {providers.find(p => p.id === selectedProvider)?.instance?.connected ? 'Configured and Connected' : 'Not Configured'}
             </div>
           </div>
@@ -331,7 +343,9 @@ export default function StorageProvidersSection({ isMobile }) {
             <button
               onClick={() => setShowConfigDialog(true)}
               disabled={isLoading}
-              style={{ ...btn('primary'), fontSize: 13, padding: '10px 20px', flex: 1 }}
+              style={{ padding: '12px 24px', background: 'var(--cafe-accent-bg)', border: '1px solid var(--cafe-accent)', borderRadius: 12, fontSize: 13, fontWeight: 700, color: 'var(--cafe-accent)', cursor: isLoading ? 'not-allowed' : 'pointer', flex: 1, transition: 'all 0.2s' }}
+              onMouseOver={e => { if (!isLoading) { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)'; } }}
+              onMouseOut={e => { if (!isLoading) { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; } }}
             >
               {isLoading ? 'Loading...' : 'Configure Credentials'}
             </button>

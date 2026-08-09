@@ -70,9 +70,12 @@ function ReceiptModal({
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, backdropFilter: "blur(3px)" }}
       onClick={onClose}
     >
+      <style>{`
+        @keyframes receiptScaleIn { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      `}</style>
       <div
         className="modal-panel"
-        style={{ background: "var(--cafe-bg-elevated)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-lg)", width: "min(420px,95vw)", maxHeight: "92vh", overflowY: "auto", boxShadow: "var(--cafe-shadow-xl)", display: "flex", flexDirection: "column" }}
+        style={{ background: "var(--cafe-bg-elevated)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-lg)", width: "min(420px,95vw)", maxHeight: "92vh", overflowY: "auto", boxShadow: "var(--cafe-shadow-xl)", display: "flex", flexDirection: "column", animation: "receiptScaleIn 0.18s ease" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Modal chrome header */}
@@ -89,7 +92,13 @@ function ReceiptModal({
               color: o.paymentStatus === "PAID" ? "var(--cafe-success)" : o.paymentStatus === "COD" ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)",
               border: `1px solid ${o.paymentStatus === "PAID" ? "var(--cafe-success-border)" : o.paymentStatus === "COD" ? "var(--cafe-warning-border)" : "var(--cafe-border-light)"}`,
             }}>{o.paymentStatus || "UNPAID"}</span>
-            <button onClick={onClose} style={{ background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border-light)`, borderRadius: "var(--cafe-radius-sm)", color: "var(--cafe-text-tertiary)", fontSize: 16, cursor: "pointer", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <button
+              onClick={onClose}
+              aria-label="Close receipt"
+              style={{ background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border-light)`, borderRadius: "var(--cafe-radius-sm)", color: "var(--cafe-text-tertiary)", fontSize: 16, cursor: "pointer", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s, color .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.color = "var(--cafe-text-primary)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-surface)"; e.currentTarget.style.color = "var(--cafe-text-tertiary)"; }}
+            >×</button>
           </div>
         </div>
 
@@ -251,8 +260,11 @@ function ReceiptModal({
                   ...btn(receiptOptions.type === type ? "primary" : "ghost"),
                   fontSize: "var(--cafe-font-xs)",
                   padding: "6px 8px",
-                  textTransform: "capitalize"
+                  textTransform: "capitalize",
+                  transition: "background .15s, filter .15s",
                 }}
+                onMouseEnter={e => { if (receiptOptions.type === type) { e.currentTarget.style.filter = "brightness(1.08)"; } else { e.currentTarget.style.background = "var(--cafe-bg-hover)"; } }}
+                onMouseLeave={e => { e.currentTarget.style.filter = ""; e.currentTarget.style.background = ""; }}
               >
                 {type === "print" ? "🖨 Print" : type === "email" ? "📧 Email" : type === "sms" ? "📱 SMS" : "🚫 None"}
               </button>
@@ -294,39 +306,49 @@ function ReceiptModal({
         {/* Action buttons */}
         <div style={{ display: "flex", gap: 8, padding: "14px 20px", borderTop: `1px solid var(--cafe-border-light)`, flexShrink: 0 }}>
           <button 
-            style={{ ...btn("ghost"), flex: 1 }} 
+            style={{ ...btn("ghost"), flex: 1, transition: "background .15s" }} 
             onClick={onClose}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = ""; }}
           >
             Close
           </button>
           {receiptOptions.type === "print" && (
             <button 
-              style={{ ...btn("primary"), flex: 1, fontWeight: 700 }} 
+              style={{ ...btn("primary"), flex: 1, fontWeight: 700, transition: "filter .15s" }} 
               onClick={printReceipt}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = ""; }}
             >
               🖨 Print
             </button>
           )}
           {receiptOptions.type === "email" && (
             <button 
-              style={{ ...btn("primary"), flex: 1, fontWeight: 700 }} 
+              style={{ ...btn("primary"), flex: 1, fontWeight: 700, transition: "filter .15s" }} 
               onClick={() => sendReceiptEmail(o, receiptOptions.email)}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = ""; }}
             >
               📧 Send Email
             </button>
           )}
           {receiptOptions.type === "sms" && (
             <button 
-              style={{ ...btn("primary"), flex: 1, fontWeight: 700 }} 
+              style={{ ...btn("primary"), flex: 1, fontWeight: 700, transition: "filter .15s" }} 
               onClick={() => sendReceiptSMS(o, receiptOptions.phone)}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = ""; }}
             >
               📱 Send SMS
             </button>
           )}
           {receiptOptions.type === "none" && (
             <button 
-              style={{ ...btn("ghost"), flex: 1, fontWeight: 700 }} 
+              style={{ ...btn("ghost"), flex: 1, fontWeight: 700, transition: "background .15s" }} 
               onClick={onClose}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = ""; }}
             >
               ✓ Done
             </button>

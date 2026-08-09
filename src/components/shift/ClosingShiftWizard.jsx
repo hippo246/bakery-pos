@@ -1,10 +1,12 @@
 import React from 'react';
 import { useState } from "react";
+import AlertDialog from "../common/AlertDialog.jsx";
 import { closeShift, canCloseShift } from "../../utils/shiftManagement.js";
 
 // ── Closing Shift Wizard Component ───────────────────────────────────────
 export default function ClosingShiftWizard({ shift, onComplete, onCancel, isMobile = false }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [closingData, setClosingData] = useState({
     outstandingTables: 0,
     pendingPayments: 0,
@@ -40,7 +42,7 @@ export default function ClosingShiftWizard({ shift, onComplete, onCancel, isMobi
   const handleSubmit = () => {
     const validation = canCloseShift(shift.id);
     if (!validation.canClose) {
-      alert(`Cannot close shift:\n${validation.issues.join('\n')}`);
+      setAlertDialog({ isOpen: true, title: 'Cannot Close Shift', message: validation.issues.join('\n'), type: 'error' });
       return;
     }
 

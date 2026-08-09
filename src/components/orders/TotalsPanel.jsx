@@ -22,13 +22,14 @@ const TotalsPanel = ({
     <div>
       {/* Line items */}
       <div style={{
-        background: C.bg3,
-        borderRadius: 10,
-        padding: '12px 14px',
-        marginBottom: 12,
+        background: 'var(--cafe-bg-surface)',
+        borderRadius: 12,
+        padding: '16px 18px',
+        marginBottom: 14,
         display: 'flex',
         flexDirection: 'column',
-        gap: 7,
+        gap: 10,
+        border: '1px solid var(--cafe-border-light)',
       }}>
         <Row label="Subtotal"      value={formatCurrency(cartSubtotal)} />
         <Row label="CGST (9%)"     value={formatCurrency(cartCgst)}     muted />
@@ -43,13 +44,13 @@ const TotalsPanel = ({
         {/* Packaging charge — inline quick-select if handler provided */}
         {onPackagingChargeChange ? (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-              <span style={{ fontSize: 11, color: C.text3, fontWeight: 500 }}>Packaging</span>
-              <span style={{ fontSize: 11, fontFamily: 'monospace', color: C.text2, fontWeight: 600 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)', fontWeight: 600 }}>Packaging</span>
+              <span style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--cafe-text-secondary)', fontWeight: 700 }}>
                 {cartPackaging > 0 ? formatCurrency(cartPackaging) : '—'}
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
               {QUICK_PACKAGING.map(v => {
                 const active = Number(packagingCharge) === v;
                 return (
@@ -57,20 +58,22 @@ const TotalsPanel = ({
                     key={v}
                     onClick={() => onPackagingChargeChange(v === 0 ? '' : String(v))}
                     style={{
-                      flex: 1, padding: '5px 0', borderRadius: 7,
-                      border: `1px solid ${active ? C.amber3 : C.border}`,
-                      background: active ? C.amberDim : C.bg4,
-                      color: active ? C.amber2 : C.text3,
-                      fontSize: 10, fontWeight: active ? 800 : 500,
-                      cursor: 'pointer', transition: 'all .1s',
+                      flex: 1, padding: '8px 0', borderRadius: 10,
+                      border: `1px solid ${active ? 'var(--cafe-accent)' : 'var(--cafe-border-light)'}`,
+                      background: active ? 'var(--cafe-accent-bg)' : 'var(--cafe-bg-card)',
+                      color: active ? 'var(--cafe-accent)' : 'var(--cafe-text-tertiary)',
+                      fontSize: 11, fontWeight: active ? 800 : 600,
+                      cursor: 'pointer', transition: 'all .2s',
                     }}
+                    onMouseOver={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+                    onMouseOut={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-card)'; } }}
                   >
                     {v === 0 ? 'None' : `₹${v}`}
                   </button>
                 );
               })}
               <input
-                style={{ ...input, width: 52, padding: '4px 6px', fontSize: 11, textAlign: 'center' }}
+                style={{ width: 60, padding: '8px 10px', borderRadius: 10, border: '1px solid var(--cafe-border-light)', background: 'var(--cafe-bg-surface)', color: 'var(--cafe-text-primary)', fontSize: 12, textAlign: 'center', outline: 'none', transition: 'all 0.2s' }}
                 type="number"
                 min="0"
                 step="1"
@@ -78,6 +81,7 @@ const TotalsPanel = ({
                 value={packagingCharge}
                 onChange={e => onPackagingChargeChange(e.target.value)}
                 placeholder="..."
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
               />
             </div>
           </div>
@@ -93,15 +97,16 @@ const TotalsPanel = ({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '14px 16px',
-        borderRadius: 12,
-        background: C.amberDim,
-        border: `1px solid ${C.amber3}`,
+        padding: '18px 20px',
+        borderRadius: 14,
+        background: 'var(--cafe-accent-bg)',
+        border: '1px solid var(--cafe-accent)',
+        boxShadow: '0 4px 16px rgba(99,102,241,0.2)',
       }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: C.text2 }}>Total</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--cafe-text-secondary)' }}>Total</span>
         <span style={{
-          fontSize: 26, fontWeight: 900, fontFamily: 'monospace',
-          color: C.amber2, letterSpacing: '-0.03em',
+          fontSize: 28, fontWeight: 900, fontFamily: 'monospace',
+          color: 'var(--cafe-accent)', letterSpacing: '-0.03em',
         }}>
           {formatCurrency(cartTotal)}
         </span>
@@ -113,8 +118,8 @@ const TotalsPanel = ({
 function Row({ label, value, muted = false, color }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: 11, color: muted ? C.text3 : C.text2, fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 11, fontFamily: 'monospace', color: color || (muted ? C.text3 : C.text2), fontWeight: 600 }}>{value}</span>
+      <span style={{ fontSize: 12, color: muted ? 'var(--cafe-text-tertiary)' : 'var(--cafe-text-secondary)', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 12, fontFamily: 'monospace', color: color || (muted ? 'var(--cafe-text-tertiary)' : 'var(--cafe-text-secondary)'), fontWeight: 700 }}>{value}</span>
     </div>
   );
 }

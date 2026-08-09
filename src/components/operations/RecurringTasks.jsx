@@ -1,11 +1,13 @@
 import React from 'react';
 import { useState, useEffect, useCallback } from "react";
+import AlertDialog from '../common/AlertDialog.jsx';
 import { getTaskTemplates, createRecurringTemplate, generateDailyTasks } from "../../utils/operationsManager.js";
 import { RECURRENCE_PATTERNS, DAYS_OF_WEEK, TASK_CATEGORIES } from "../../domain/operationsModel.js";
 
 function RecurringTasks() {
   const [templates, setTemplates] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
 
   useEffect(() => {
@@ -24,7 +26,7 @@ function RecurringTasks() {
 
   const handleGenerateTasks = () => {
     generateDailyTasks();
-    alert('Tasks generated for today');
+    setAlertDialog({ isOpen: true, title: 'Tasks Generated', message: 'Tasks generated for today', type: 'success' });
   };
 
   const handleToggleActive = (templateId) => {
@@ -62,6 +64,14 @@ function RecurringTasks() {
           </div>
         )}
       </div>
+
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

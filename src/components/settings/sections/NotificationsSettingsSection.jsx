@@ -134,40 +134,21 @@ export default function NotificationsSettingsSection({ settings, onUpdate, isMob
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{
-        padding: isMobile ? "20px" : "32px",
-        borderBottom: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)"
-      }}>
-        <h2 style={{
-          fontSize: isMobile ? 20 : 24,
-          fontWeight: 700,
-          color: "var(--cafe-text-primary)",
-          margin: "0 0 8px"
-        }}>
-          Notifications
-        </h2>
-        <p style={{
-          fontSize: isMobile ? 13 : 14,
-          color: "var(--cafe-text-secondary)",
-          margin: 0
-        }}>
-          Configure operational notification preferences
-        </p>
+      <div style={{ padding: isMobile ? "20px" : "28px", borderBottom: "1px solid var(--cafe-border-light)", background: "var(--cafe-bg-surface)" }}>
+        <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: "var(--cafe-text-primary)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>Notifications</h2>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", margin: 0, fontWeight: 500 }}>Configure operational notification preferences</p>
       </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "28px" }}>
         {/* Notification Categories */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           {notificationCategories.map((category) => (
             <div
               key={category.id}
               style={{
                 background: "var(--cafe-bg-card)",
-                border: "1px solid var(--cafe-border)",
-                borderRadius: 12,
-                padding: 20,
+                border: "1px solid var(--cafe-border-light)",
+                borderRadius: 16,
+                padding: 24,
                 marginBottom: 16
               }}
             >
@@ -175,7 +156,7 @@ export default function NotificationsSettingsSection({ settings, onUpdate, isMob
                 <div style={{
                   width: 40,
                   height: 40,
-                  borderRadius: 10,
+                  borderRadius: 12,
                   background: "var(--cafe-accent-bg)",
                   display: "flex",
                   alignItems: "center",
@@ -185,7 +166,7 @@ export default function NotificationsSettingsSection({ settings, onUpdate, isMob
                   {category.icon}
                 </div>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>
                     {category.name}
                   </div>
                   <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
@@ -194,23 +175,22 @@ export default function NotificationsSettingsSection({ settings, onUpdate, isMob
                 </div>
               </div>
               
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {category.settings.map((setting) => (
                   <label
                     key={setting.id}
-                    style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
-                  >
+                    style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                     <input
                       type="checkbox"
                       checked={formData[setting.id] || false}
                       onChange={(e) => handleChange(setting.id, e.target.checked)}
-                      style={{ margin: 0 }}
+                      style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                     />
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                         {setting.label}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                      <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                         {setting.description}
                       </div>
                     </div>
@@ -224,68 +204,68 @@ export default function NotificationsSettingsSection({ settings, onUpdate, isMob
         {/* General Settings */}
         <div>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             General Settings
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.soundEnabled}
                   onChange={(e) => handleChange('soundEnabled', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Sound Enabled
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Play sounds for notifications
                   </div>
                 </div>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.desktopNotifications}
                   onChange={(e) => handleChange('desktopNotifications', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Desktop Notifications
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Show browser desktop notifications
                   </div>
                 </div>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.emailNotifications}
                   onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Email Notifications
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Send critical alerts via email
                   </div>
                 </div>
@@ -297,37 +277,31 @@ export default function NotificationsSettingsSection({ settings, onUpdate, isMob
 
       {/* Footer */}
       <div style={{
-        padding: isMobile ? "20px" : "32px",
+        padding: isMobile ? "20px" : "28px",
         borderTop: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)",
+        background: "var(--cafe-bg-surface)",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center"
       }}>
-        <div style={{ fontSize: 13, color: "var(--cafe-text-secondary)" }}>
-          <strong>{enabledCount}</strong> notifications enabled
+        <div style={{ fontSize: 13, color: "var(--cafe-text-secondary)", fontWeight: 500 }}>
+          <strong style={{ fontWeight: 700 }}>{enabledCount}</strong> notifications enabled
         </div>
         <button
           onClick={handleSave}
           style={{
             padding: "12px 32px",
-            background: "var(--cafe-accent)",
-            border: "none",
-            borderRadius: 8,
+            background: "var(--cafe-accent-bg)",
+            border: "1px solid var(--cafe-accent)",
+            borderRadius: 12,
             fontSize: 14,
-            fontWeight: 600,
-            color: "#fff",
+            fontWeight: 700,
+            color: "var(--cafe-accent)",
             cursor: "pointer",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s"
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
+          onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)'; }}
+          onMouseOut={e => { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
         >
           Save Changes
         </button>

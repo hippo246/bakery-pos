@@ -2,6 +2,7 @@
  * PaymentPanel.jsx
  * Multi-method split payment panel for the POS.
  * Supports CASH / UPI / CARD in any combination.
+ * Integrates with payment gateway for online payments (UPI, CARD).
  *
  * FIX: In single-payment mode the panel previously never reported isComplete=true
  * because the amount field was hidden and allocatedTotal stayed 0. Now in non-split
@@ -11,7 +12,9 @@
  */
 import { useState, useEffect, useCallback, startTransition } from 'react';
 import { C, btn, input } from '../../styles/theme';
+import { useThemeColors, useThemeSpacing, useThemeTypography, useThemeBorderRadius } from '../../theme';
 import { formatCurrency } from '../../domain/money.js';
+import PaymentModal from '../payment/PaymentModal.jsx';
 
 const METHOD_META = {
   CASH: { icon: '💵', label: 'Cash',  color: '#22c55e' },
@@ -51,6 +54,8 @@ function newRow(method = 'CASH', amount = '') {
  *   cartLength          — number
  *   resetKey            — any; changing this value resets internal state (used
  *                         by Orders.jsx after a successful order to clear payment)
+ *   orderId            — string, order ID for payment gateway
+ *   customerInfo       — object, customer information for payment
  */
 export default function PaymentPanel({
   cartTotal,
@@ -58,11 +63,20 @@ export default function PaymentPanel({
   isPlacingOrder: _isPlacingOrder,
   cartLength,
   resetKey,
+  orderId,
+  customerInfo,
 }) {
+  const colors = useThemeColors();
+  const spacing = useThemeSpacing();
+  const typography = useThemeTypography();
+  const borderRadius = useThemeBorderRadius();
+
   const [rows, setRows] = useState([newRow('CASH', '')]);
   const [isSplitMode, setIsSplitMode] = useState(false);
   const [isLocallyPlacing, setIsLocallyPlacing] = useState(false);  // FIX: Track loading state
   const isPlacing = _isPlacingOrder || isLocallyPlacing;  // FIX: Combine with local state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentModalRowId, setPaymentModalRowId] = useState(null);
 
   // Reset when parent signals a new order (clearCart increments resetKey)
   useEffect(() => {
@@ -70,8 +84,48 @@ export default function PaymentPanel({
       setRows([newRow('CASH', '')]);
       setIsSplitMode(false);
       setIsLocallyPlacing(false);  // FIX: Reset loading state
+      setShowPaymentModal(false);
+      setPaymentModalRowId(null);
     });
   }, [resetKey]);
+
+  const updateRow = useCallback((id, patch) => {
+    setRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+  }, []);
+
+  // Handle payment modal success
+  const handlePaymentSuccess = useCallback((detail) => {
+    console.log('[PaymentPanel] Payment successful:', detail);
+    
+    if (paymentModalRowId) {
+      // Update the row with payment completion
+      updateRow(paymentModalRowId, { 
+        amount: String(cartTotal),
+        cashTendered: String(cartTotal)
+      });
+    }
+    
+    setShowPaymentModal(false);
+    setPaymentModalRowId(null);
+  }, [paymentModalRowId, cartTotal, updateRow]);
+
+  // Handle payment modal failure
+  const handlePaymentFailure = useCallback((detail) => {
+    console.error('[PaymentPanel] Payment failed:', detail);
+    setShowPaymentModal(false);
+    setPaymentModalRowId(null);
+  }, []);
+
+  // Handle method change - trigger payment modal for online methods
+  const handleMethodChange = useCallback((rowId, method) => {
+    updateRow(rowId, { method, cashTendered: '' });
+    
+    // For online payment methods (UPI, CARD), show payment modal
+    if ((method === 'UPI' || method === 'CARD') && !isSplitMode) {
+      setPaymentModalRowId(rowId);
+      setShowPaymentModal(true);
+    }
+  }, [updateRow, isSplitMode]);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const allocatedTotal = rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
@@ -109,9 +163,7 @@ export default function PaymentPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, isSplitMode, isComplete, cartTotal, cartLength]);
 
-  const updateRow = useCallback((id, patch) => {
-    setRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
-  }, []);
+
 
   const addRow = useCallback(() => {
     setRows(prev => {
@@ -146,18 +198,18 @@ export default function PaymentPanel({
   if (cartLength === 0) return null;
 
   return (
-    <div style={{ marginBottom: 8, position: 'relative' }}>
+    <div style={{ marginBottom: 12, position: 'relative' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.text3 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: colors.textTertiary }}>
           Payment Method
         </span>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', color: C.text3 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: colors.textSecondary, fontWeight: 600 }}>
           <input
             type="checkbox"
             checked={isSplitMode}
             onChange={e => toggleSplitMode(e.target.checked)}
-            style={{ accentColor: C.amber, cursor: 'pointer' }}
+            style={{ accentColor: colors.primary, cursor: 'pointer', width: 16, height: 16 }}
           />
           Split
         </label>
@@ -171,13 +223,17 @@ export default function PaymentPanel({
           cartTotal={cartTotal}
           isSplitMode={isSplitMode}
           showRemove={isSplitMode && rows.length > 1}
-          onMethodChange={method => updateRow(row.id, { method, cashTendered: '' })}
+          onMethodChange={method => handleMethodChange(row.id, method)}
           onAmountChange={amount => updateRow(row.id, { amount })}
           onCashTenderedChange={cashTendered => updateRow(row.id, { cashTendered })}
           onFillRemaining={() => handleFillRemaining(row.id)}
           onRemove={() => removeRow(row.id)}
           remaining={remaining}
-          isPlacing={isPlacing}  // FIX: Pass loading state
+          isPlacing={isPlacing}
+          colors={colors}
+          spacing={spacing}
+          typography={typography}
+          borderRadius={borderRadius}
         />
       ))}
 
@@ -185,7 +241,9 @@ export default function PaymentPanel({
       {isSplitMode && rows.length < 3 && (
         <button
           onClick={addRow}
-          style={{ ...btn('ghost'), width: '100%', marginTop: 8, fontSize: 12, borderStyle: 'dashed' }}
+          style={{ width: '100%', marginTop: 10, padding: '12px 16px', borderRadius: 10, border: `1px dashed ${colors.borderLight}`, background: colors.backgroundSurface, color: colors.textSecondary, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseOver={e => e.currentTarget.style.borderColor = colors.primary}
+          onMouseOut={e => e.currentTarget.style.borderColor = colors.borderLight}
         >
           + Add payment method
         </button>
@@ -194,7 +252,7 @@ export default function PaymentPanel({
       {/* Split running total */}
       {isSplitMode && (
         <div style={{
-          marginTop: 10, padding: '10px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+          marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700,
           background: isComplete ? '#052e16' : '#1c0a00',
           border: `1px solid ${isComplete ? '#16a34a' : '#92400e'}`,
           color: isComplete ? '#4ade80' : '#fbbf24',
@@ -209,25 +267,42 @@ export default function PaymentPanel({
       {isPlacing && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.3)', borderRadius: 8,
+          background: 'rgba(0,0,0,0.4)', borderRadius: 12,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 10, pointerEvents: 'none'
         }}>
-          <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>Processing order...</span>
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Processing order...</span>
         </div>
       )}
 
       {/* Change due */}
       {totalCashChange > 0 && (
         <div style={{
-          marginTop: 8, padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+          marginTop: 12, padding: '12px 16px', borderRadius: 10, fontSize: 14, fontWeight: 700,
           background: '#052e16', border: '1px solid #16a34a',
           color: '#4ade80', display: 'flex', justifyContent: 'space-between',
         }}>
           <span>💰 Change Due</span>
-          <span style={{ fontFamily: 'monospace', fontSize: 15 }}>{formatCurrency(totalCashChange)}</span>
+          <span style={{ fontFamily: 'monospace', fontSize: 16 }}>{formatCurrency(totalCashChange)}</span>
         </div>
       )}
+
+      {/* Payment Modal for online payments */}
+      <PaymentModal
+        visible={showPaymentModal}
+        onClose={() => {
+          setShowPaymentModal(false);
+          setPaymentModalRowId(null);
+        }}
+        orderDetails={{
+          orderId: orderId || `order_${Date.now()}`,
+          amount: cartTotal,
+          currency: 'INR'
+        }}
+        customerInfo={customerInfo || {}}
+        onSuccess={handlePaymentSuccess}
+        onFailure={handlePaymentFailure}
+      />
     </div>
   );
 }
@@ -237,6 +312,7 @@ function PaymentRow({
   showRemove, onMethodChange, onAmountChange, onCashTenderedChange,
   onFillRemaining, onRemove, remaining,
   isPlacing,  // FIX: Loading state prop
+  colors, spacing, typography, borderRadius,  // Theme props
 }) {
   const amount = isSplitMode ? (parseFloat(row.amount) || 0) : cartTotal;
   const cashTendered = parseFloat(row.cashTendered) || 0;
@@ -246,18 +322,18 @@ function PaymentRow({
 
   return (
     <div style={{
-      marginBottom: isSplitMode ? 12 : 6,
-      padding: isSplitMode ? '12px 14px' : '4px 0',
-      background: isSplitMode ? C.bg3 : 'transparent',
-      borderRadius: isSplitMode ? 10 : 0,
-      border: isSplitMode ? `1px solid ${C.border}` : 'none',
+      marginBottom: isSplitMode ? 14 : 8,
+      padding: isSplitMode ? '14px 16px' : '6px 0',
+      background: isSplitMode ? colors.backgroundSurface : 'transparent',
+      borderRadius: isSplitMode ? 12 : 0,
+      border: isSplitMode ? `1px solid ${colors.borderLight}` : 'none',
     }}>
       {/* Method selector */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: row.method === 'CASH' ? 10 : 0, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: row.method === 'CASH' ? 12 : 0, alignItems: 'center' }}>
         {isSplitMode && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: C.text3, minWidth: 18 }}>{idx + 1}.</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: colors.textTertiary, minWidth: 20 }}>{idx + 1}.</span>
         )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, flex: 1 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, flex: 1 }}>
           {METHODS.map(m => {
             const active = row.method === m;
             const meta = METHOD_META[m];
@@ -265,51 +341,60 @@ function PaymentRow({
               <button
                 key={m}
                 className="pos-payment-method-btn"
-                onClick={() => !isPlacing && onMethodChange(m)}  // FIX: Disable during placement
-                disabled={isPlacing}  // FIX: Disable button
+                onClick={() => onMethodChange(m)}
+                disabled={isPlacing}
                 style={{
-                  padding: '11px 0',
-                  borderRadius: 10,
-                  border: `2px solid ${active ? meta.color : C.border}`,
-                  background: active ? meta.color + '22' : C.bg4,
-                  color: isPlacing ? C.text3 : (active ? meta.color : C.text3),
-                  fontSize: 12, fontWeight: active ? 800 : 500,
+                  padding: '14px 0',
+                  borderRadius: 12,
+                  border: `2px solid ${active ? meta.color : colors.borderLight}`,
+                  background: active ? meta.color + '22' : colors.backgroundCard,
+                  color: isPlacing ? colors.textTertiary : (active ? meta.color : colors.textSecondary),
+                  fontSize: 13, fontWeight: active ? 800 : 600,
                   cursor: isPlacing ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  transition: 'all .15s',
-                  boxShadow: active ? `0 0 0 1px ${meta.color}44` : 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  transition: 'all .2s',
+                  boxShadow: active ? `0 4px 16px ${meta.color}40` : 'none',
                 }}
+                onMouseOver={e => { if (!active && !isPlacing) { e.currentTarget.style.borderColor = meta.color; e.currentTarget.style.background = colors.backgroundHover; } }}
+                onMouseOut={e => { if (!active && !isPlacing) { e.currentTarget.style.borderColor = colors.borderLight; e.currentTarget.style.background = colors.backgroundCard; } }}
               >
-                <span className="pos-payment-icon" style={{ fontSize: 15 }}>{meta.icon}</span>
+                <span className="pos-payment-icon" style={{ fontSize: 18 }}>{meta.icon}</span>
                 <span>{meta.label}</span>
               </button>
             );
           })}
         </div>
         {showRemove && (
-          <button onClick={onRemove} style={{ padding: '8px 10px', background: 'transparent', border: 'none', color: C.red, cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+          <button
+            onClick={onRemove}
+            aria-label="Remove payment row"
+            style={{ padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: colors.danger, cursor: 'pointer', fontSize: 18, lineHeight: 1, transition: 'background .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = colors.dangerBg; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >✕</button>
         )}
       </div>
 
       {/* Amount input — split mode only */}
       {isSplitMode && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: row.method === 'CASH' ? 8 : 0 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: row.method === 'CASH' ? 10 : 0 }}>
           <input
-            style={{ ...input, flex: 1 }}
+            style={{ flex: 1, padding: '12px 14px', borderRadius: 10, border: `1px solid ${colors.borderLight}`, background: colors.backgroundSurface, color: colors.textPrimary, fontSize: 14, outline: 'none', transition: 'all 0.2s' }}
             type="number"
             min="0"
             step="1"
             inputMode="decimal"
             value={row.amount}
-            onChange={e => !isPlacing && onAmountChange(e.target.value)}  // FIX: Disable during placement
+            onChange={e => onAmountChange(e.target.value)}
             placeholder={`Amount (${METHOD_META[row.method].label})`}
-            disabled={isPlacing}  // FIX: Disable input
+            disabled={isPlacing}
+            onFocus={e => e.currentTarget.style.borderColor = colors.primary}
           />
           {remaining > 0.5 && (
             <button
-              onClick={() => !isPlacing && onFillRemaining()}  // FIX: Disable during placement
-              disabled={isPlacing}  // FIX: Disable button
-              style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${C.amber3}`, background: isPlacing ? C.bg4 : C.amberDim, color: isPlacing ? C.text3 : C.amber2, fontSize: 12, fontWeight: 700, cursor: isPlacing ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+              onClick={() => onFillRemaining()}
+              disabled={isPlacing}
+              style={{ padding: '12px 16px', borderRadius: 10, border: `1px solid ${colors.primary}`, background: isPlacing ? colors.backgroundCard : colors.primaryBg, color: isPlacing ? colors.textTertiary : colors.primary, fontSize: 13, fontWeight: 700, cursor: isPlacing ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
             >
               +₹{Math.round(remaining)}
             </button>
@@ -320,11 +405,11 @@ function PaymentRow({
       {/* Cash received section */}
       {row.method === 'CASH' && (
         <div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: C.text3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
             Cash Received
           </div>
           {/* Quick denomination buttons */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
             {quickCash.map(v => {
               const isExact = v === amount;
               const isSelected = row.cashTendered === String(v);
@@ -333,16 +418,18 @@ function PaymentRow({
                   key={v}
                   onClick={() => onCashTenderedChange(String(v))}
                   style={{
-                    flex: 1, minWidth: 44,
-                    padding: '7px 4px',
-                    borderRadius: 8,
-                    border: `1px solid ${isSelected ? '#16a34a' : isExact ? C.amber3 : C.border}`,
-                    background: isSelected ? '#052e16' : isExact ? C.amberDim : C.bg3,
-                    color: isSelected ? '#4ade80' : isExact ? C.amber2 : C.text2,
-                    fontSize: 11, fontWeight: isSelected || isExact ? 800 : 500,
+                    flex: 1, minWidth: 48,
+                    padding: '10px 6px',
+                    borderRadius: 10,
+                    border: `1px solid ${isSelected ? '#16a34a' : isExact ? colors.primary : colors.borderLight}`,
+                    background: isSelected ? '#052e16' : isExact ? colors.primaryBg : colors.backgroundCard,
+                    color: isSelected ? '#4ade80' : isExact ? colors.primary : colors.textSecondary,
+                    fontSize: 12, fontWeight: isSelected || isExact ? 800 : 600,
                     cursor: 'pointer',
-                    transition: 'all .12s',
+                    transition: 'all .2s',
                   }}
+                  onMouseOver={e => { if (!isSelected && !isExact) { e.currentTarget.style.borderColor = colors.primary; e.currentTarget.style.background = colors.backgroundHover; } }}
+                  onMouseOut={e => { if (!isSelected && !isExact) { e.currentTarget.style.borderColor = colors.borderLight; e.currentTarget.style.background = colors.backgroundCard; } }}
                 >
                   {isExact ? 'Exact' : `₹${v}`}
                 </button>
@@ -350,27 +437,28 @@ function PaymentRow({
             })}
           </div>
           <input
-            style={{ ...input, width: '100%' }}
+            style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: `1px solid ${colors.borderLight}`, background: colors.backgroundSurface, color: colors.textPrimary, fontSize: 14, outline: 'none', transition: 'all 0.2s' }}
             type="number"
             min="0"
             step="1"
             inputMode="decimal"
             value={row.cashTendered}
-            onChange={e => !isPlacing && onCashTenderedChange(e.target.value)}  // FIX: Disable during placement
+            onChange={e => !isPlacing && onCashTenderedChange(e.target.value)}
             placeholder={`Cash received (need ₹${Math.round(amount)})`}
-            disabled={isPlacing}  // FIX: Disable input
+            disabled={isPlacing}
+            onFocus={e => e.currentTarget.style.borderColor = colors.primary}
           />
           {cashChange !== null && (
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginTop: 8, padding: '9px 12px', borderRadius: 8,
+              marginTop: 10, padding: '12px 16px', borderRadius: 10,
               background: isCashShort ? '#1c0a0a' : '#052e16',
               border: `1px solid ${isCashShort ? '#ef4444' : '#16a34a'}`,
             }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: isCashShort ? '#f87171' : '#4ade80' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: isCashShort ? '#f87171' : '#4ade80' }}>
                 {isCashShort ? '⚠ Short by' : '💰 Change Due'}
               </span>
-              <span style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 800, color: isCashShort ? '#f87171' : '#4ade80' }}>
+              <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 800, color: isCashShort ? '#f87171' : '#4ade80' }}>
                 {formatCurrency(Math.abs(cashChange))}
               </span>
             </div>

@@ -152,6 +152,33 @@ export function normalizeTable(table) {
       ? { cleaningStartedAt: toSafeNullableTimestamp(table.cleaningStartedAt) }
       : {}),
     ...(table.history !== undefined ? { history: toSafeHistory(table.history) } : {}),
+    // floor plan fields – preserve for visual rendering
+    ...(table.shape !== undefined ? { shape: toSafeString(table.shape) } : {}),
+    ...(table.rotation !== undefined ? { rotation: Number(table.rotation) || 0 } : {}),
+    ...(table.layer !== undefined ? { layer: Number(table.layer) || 0 } : {}),
+    ...(table.visible !== undefined ? { visible: Boolean(table.visible) } : {}),
+    ...(table.position !== undefined && typeof table.position === 'object'
+      ? { position: { x: Number(table.position.x) || 0, y: Number(table.position.y) || 0 } }
+      : {}),
+    ...(table.dimensions !== undefined && typeof table.dimensions === 'object'
+      ? { dimensions: { width: Number(table.dimensions.width) || 80, height: Number(table.dimensions.height) || 60 } }
+      : {}),
+    // waiter assignment object (full object, not just id)
+    ...(table.waiter !== undefined && typeof table.waiter === 'object'
+      ? { waiter: table.waiter }
+      : {}),
+    // reservation fields
+    ...(table.reservedDate !== undefined ? { reservedDate: toSafeString(table.reservedDate) } : {}),
+    ...(table.reservedPhone !== undefined ? { reservedPhone: toSafeString(table.reservedPhone) } : {}),
+    ...(table.reservedPartySize !== undefined ? { reservedPartySize: Number(table.reservedPartySize) || null } : {}),
+    ...(table.reservedNotes !== undefined ? { reservedNotes: toSafeString(table.reservedNotes) } : {}),
+    // group/merge fields
+    ...(table.groupId !== undefined ? { groupId: toSafeString(table.groupId) } : {}),
+    ...(table.groupMembers !== undefined && Array.isArray(table.groupMembers)
+      ? { groupMembers: table.groupMembers }
+      : {}),
+    ...(table.groupHost !== undefined ? { groupHost: toSafeString(table.groupHost) } : {}),
+    ...(table.mergedCapacity !== undefined ? { mergedCapacity: Number(table.mergedCapacity) || null } : {}),
     createdAt: toSafeNullableTimestamp(table.createdAt) ?? now(),
     updatedAt: toSafeNullableTimestamp(table.updatedAt) ?? now()
   };

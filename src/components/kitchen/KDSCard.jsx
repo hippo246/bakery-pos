@@ -65,20 +65,20 @@ const RECIPES = {
 
 const VALID_URGENCIES = ["ok", "soon", "urgent"];
 
-// Hoisted color maps
+// Hoisted color maps - using theme CSS variables for consistency
 const URGENCY_BORDER = {
-  urgent: "rgba(229,57,53,0.5)",
-  soon: "rgba(255,152,0,0.4)",
-  ok: "rgba(42,38,34,0.9)"
+  urgent: "var(--cafe-danger-border)",
+  soon: "var(--cafe-warning-border)",
+  ok: "var(--cafe-border)"
 };
 const URGENCY_GLOW = {
-  urgent: "0 0 0 1px rgba(229,57,53,0.3), 0 4px 32px rgba(229,57,53,0.15), 0 2px 8px rgba(0,0,0,0.6)",
-  soon: "0 0 0 1px rgba(255,152,0,0.25), 0 4px 24px rgba(255,152,0,0.1), 0 2px 8px rgba(0,0,0,0.5)",
+  urgent: "0 0 0 1px var(--cafe-danger-bg), 0 4px 32px var(--cafe-danger-bg), 0 2px 8px rgba(0,0,0,0.6)",
+  soon: "0 0 0 1px var(--cafe-warning-bg), 0 4px 24px var(--cafe-warning-bg), 0 2px 8px rgba(0,0,0,0.5)",
   ok: "0 1px 3px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.3)"
 };
 const URGENCY_ACCENT_LINE = {
-  urgent: "linear-gradient(90deg, #E53935 0%, #FF5252 100%)",
-  soon: "linear-gradient(90deg, #FF9800 0%, #FFB74D 100%)",
+  urgent: "linear-gradient(90deg, var(--cafe-danger) 0%, var(--cafe-danger) 100%)",
+  soon: "linear-gradient(90deg, var(--cafe-warning) 0%, var(--cafe-warning) 100%)",
   ok: "transparent"
 };
 const URGENCY_TEXT_COLOR = {
@@ -87,10 +87,10 @@ const URGENCY_TEXT_COLOR = {
   ok: "var(--cafe-text-tertiary)"
 };
 const STATION_COLOR_MAP = {
-  Bar:       { color: "var(--cafe-info)",    bg: "rgba(33,150,243,0.12)",  border: "rgba(33,150,243,0.25)" },
-  Kitchen:   { color: "var(--cafe-purple)",  bg: "rgba(156,39,176,0.12)", border: "rgba(156,39,176,0.25)" },
-  Packaging: { color: "var(--cafe-success)", bg: "rgba(76,175,80,0.12)",  border: "rgba(76,175,80,0.25)" },
-  Dessert:   { color: "var(--cafe-warning)", bg: "rgba(255,152,0,0.12)",  border: "rgba(255,152,0,0.25)" },
+  Bar:       { color: "var(--cafe-info)",    bg: "var(--cafe-blue-bg)",   border: "var(--cafe-blue-border)" },
+  Kitchen:   { color: "var(--cafe-purple)",  bg: "var(--cafe-purple-bg)", border: "var(--cafe-purple-border)" },
+  Packaging: { color: "var(--cafe-success)", bg: "var(--cafe-green-bg)",   border: "var(--cafe-green-border)" },
+  Dessert:   { color: "var(--cafe-warning)", bg: "var(--cafe-amber-bg)",   border: "var(--cafe-amber-border)" },
 };
 
 // Inline CSS keyframes string injected once via style tag in Kitchen.jsx
@@ -359,6 +359,18 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
     onBump(card.id);
   };
 
+  // Compact view collapses Done/Bump into one button whose label switches to
+  // "BUMP" once every item is checked — make sure the click actually bumps
+  // (removes + logs the ticket) in that state instead of silently just
+  // marking it done, which left completed tickets stuck on screen.
+  const handleCompactDoneOrBump = () => {
+    if (checkedAll && typeof onBump === "function") {
+      handleBump();
+    } else {
+      handleDone();
+    }
+  };
+
   const handleBulkCheckAll = () => {
     if (isCompleted || typeof onItemCheck !== "function") return;
     items.forEach((it, idx) => { if (!it.checked) onItemCheck(card.id, idx); });
@@ -415,10 +427,18 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
           cursor: typeof onDragStart === 'function' ? 'move' : 'default',
           backdropFilter: "blur(8px)",
           minHeight: 52,
+          // Without its own stacking context, this card's blur/shadow can bleed
+          // into the next stacked card in tightly-packed list/station views,
+          // making borders appear to cut across the neighboring card's buttons.
+          position: "relative",
+          isolation: "isolate",
         }}
       >
         {/* Order ID */}
-        <span style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em", width: 60, flexShrink: 0 }}>
+        <span
+          title={String(safeOrderId)}
+          style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em", maxWidth: 108, flexShrink: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+        >
           {safeOrderId}
         </span>
 
@@ -478,22 +498,56 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
         {/* Action buttons (Full width row) */}
         <div style={{ flexBasis: "100%", display: "flex", gap: 6, marginTop: 4, paddingTop: 10, borderTop: "1px solid var(--cafe-border-light)", flexWrap: "wrap" }}>
           {onStart && (
-            <button onClick={(e) => { e.stopPropagation(); handleStart(); }} disabled={isCompleted || safeStartedAt !== null} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 6, border: "1px solid var(--cafe-border)", background: safeStartedAt !== null ? "rgba(76,175,80,0.1)" : "var(--cafe-bg-hover)", color: safeStartedAt !== null ? "rgba(76,175,80,0.5)" : "var(--cafe-success)", fontSize: 10, fontWeight: 700, cursor: isCompleted || safeStartedAt !== null ? "default" : "pointer" }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleStart(); }}
+              disabled={isCompleted || safeStartedAt !== null}
+              style={compactBtn({
+                color: safeStartedAt !== null ? "rgba(76,175,80,0.5)" : "var(--cafe-success)",
+                bg: safeStartedAt !== null ? "rgba(76,175,80,0.1)" : "rgba(76,175,80,0.08)",
+                border: safeStartedAt !== null ? "rgba(76,175,80,0.25)" : "rgba(76,175,80,0.3)",
+                disabled: isCompleted || safeStartedAt !== null,
+              })}
+            >
               ▶ {safeStartedAt !== null ? "STARTED" : "START"}
             </button>
           )}
-          
-          <button onClick={(e) => { e.stopPropagation(); handleHoldToggle(); }} disabled={isCompleted} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 6, border: "1px solid var(--cafe-border)", background: isHeld ? "rgba(212,146,42,0.15)" : "var(--cafe-bg-hover)", color: isHeld ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", fontSize: 10, fontWeight: 700, cursor: isCompleted ? "default" : "pointer" }}>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); handleHoldToggle(); }}
+            disabled={isCompleted}
+            style={compactBtn({
+              color: isHeld ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+              bg: isHeld ? "rgba(212,146,42,0.15)" : "var(--cafe-bg-hover)",
+              border: isHeld ? "rgba(212,146,42,0.4)" : "var(--cafe-border)",
+              disabled: isCompleted,
+            })}
+          >
             {isHeld ? "▶ RESUME" : "⏸ HOLD"}
           </button>
 
           {onMoveStation && (
-            <button onClick={(e) => { e.stopPropagation(); onMoveStation(card.id); }} disabled={isCompleted} style={{ flex: 1, minWidth: 60, padding: "8px 4px", borderRadius: 6, border: "1px solid var(--cafe-border)", background: "var(--cafe-bg-hover)", color: "var(--cafe-info)", fontSize: 10, fontWeight: 700, cursor: isCompleted ? "default" : "pointer" }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onMoveStation(card.id); }}
+              disabled={isCompleted}
+              style={compactBtn({ color: "var(--cafe-info)", bg: "rgba(33,150,243,0.08)", border: "rgba(33,150,243,0.3)", disabled: isCompleted })}
+            >
               → MOVE
             </button>
           )}
 
-          <button onClick={(e) => { e.stopPropagation(); handleDone(); }} disabled={isCompleted} style={{ flex: 2, minWidth: 80, padding: "8px 4px", borderRadius: 6, border: checkedAll ? "1px solid rgba(76,175,80,0.4)" : "1px solid var(--cafe-border)", background: checkedAll ? "linear-gradient(135deg, rgba(76,175,80,0.35), rgba(56,142,60,0.25))" : "var(--cafe-bg-hover)", color: checkedAll ? "var(--cafe-success)" : "var(--cafe-text-primary)", fontSize: 11, fontWeight: 800, cursor: isCompleted ? "default" : "pointer" }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleCompactDoneOrBump(); }}
+            disabled={isCompleted}
+            style={compactBtn({
+              color: checkedAll ? "var(--cafe-success)" : "var(--cafe-text-primary)",
+              bg: checkedAll ? "linear-gradient(135deg, rgba(76,175,80,0.35), rgba(56,142,60,0.25))" : "var(--cafe-bg-hover)",
+              border: checkedAll ? "rgba(76,175,80,0.4)" : "var(--cafe-border)",
+              weight: 800,
+              size: 11,
+              flex: 2,
+              disabled: isCompleted,
+            })}
+          >
             {checkedAll ? "✓ BUMP" : "DONE"}
           </button>
         </div>
@@ -767,12 +821,18 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
           {/* Bulk actions */}
           {items.length > 1 && !isCompleted && (
             <div style={{ display: "flex", gap: 5, marginBottom: 4 }}>
-              <button onClick={handleBulkCheckAll} disabled={isCompleted}
-                style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid rgba(76,175,80,0.3)", background: "rgba(76,175,80,0.08)", color: "var(--cafe-success)", fontSize: 10, fontWeight: 700, cursor: isCompleted ? "default" : "pointer" }}>
+              <button
+                onClick={handleBulkCheckAll}
+                disabled={isCompleted}
+                style={chipBtn({ color: "var(--cafe-success)", bg: "rgba(76,175,80,0.08)", border: "rgba(76,175,80,0.3)", disabled: isCompleted })}
+              >
                 ✓ All
               </button>
-              <button onClick={handleBulkUncheckAll} disabled={isCompleted}
-                style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid var(--cafe-border-light)", background: "var(--cafe-bg-hover)", color: "var(--cafe-text-tertiary)", fontSize: 10, fontWeight: 700, cursor: isCompleted ? "default" : "pointer" }}>
+              <button
+                onClick={handleBulkUncheckAll}
+                disabled={isCompleted}
+                style={chipBtn({ color: "var(--cafe-text-tertiary)", disabled: isCompleted })}
+              >
                 ✗ All
               </button>
             </div>
@@ -900,8 +960,18 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
                 placeholder="Hold reason…"
                 onKeyDown={e => { if (e.key === "Enter") handleHold(); if (e.key === "Escape") { setShowHoldInput(false); setHoldReason(""); setHoldError(""); } }}
               />
-              <button style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid var(--cafe-border)", background: "transparent", color: "var(--cafe-text-tertiary)", fontSize: 11, cursor: "pointer" }} onClick={() => { setShowHoldInput(false); setHoldReason(""); setHoldError(""); }}>✕</button>
-              <button style={{ width: 28, height: 28, borderRadius: 5, border: "1px solid rgba(76,175,80,0.3)", background: "rgba(76,175,80,0.1)", color: "var(--cafe-success)", fontSize: 11, cursor: "pointer" }} onClick={handleHold}>✓</button>
+              <button
+                onClick={() => { setShowHoldInput(false); setHoldReason(""); setHoldError(""); }}
+                style={iconBtn({ color: "var(--cafe-text-tertiary)" })}
+              >
+                ✕
+              </button>
+              <button
+                onClick={handleHold}
+                style={iconBtn({ color: "var(--cafe-success)", bg: "rgba(76,175,80,0.1)", border: "rgba(76,175,80,0.3)" })}
+              >
+                ✓
+              </button>
             </div>
             {holdError && <div style={{ fontSize: 10, color: "var(--cafe-danger)", marginTop: 4 }}>{holdError}</div>}
           </div>
@@ -939,7 +1009,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
           </button>
 
           {/* ── Urgency selector: three distinct labeled buttons ── */}
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {[
               { key: "ok",     label: "OK",        color: "var(--cafe-text-secondary)",  activeBg: "var(--cafe-bg-hover)", activeBorder: "var(--cafe-border)" },
               { key: "soon",   label: "⚡ Soon",   color: "var(--cafe-warning)",    activeBg: "rgba(255,152,0,0.15)",  activeBorder: "rgba(255,152,0,0.4)"   },
@@ -954,6 +1024,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
                   title={`Set urgency: ${u.key}`}
                   style={{
                     flex: 1,
+                    minWidth: 62,
                     padding: "7px 4px",
                     borderRadius: 6,
                     border: isActive ? `1px solid ${u.activeBorder}` : "1px solid var(--cafe-border-light)",
@@ -966,6 +1037,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
                     opacity: isCompleted ? 0.3 : 1,
                     letterSpacing: "0.01em",
                     textAlign: "center",
+                    whiteSpace: "nowrap",
                     boxShadow: isActive && u.key !== "ok" ? `0 0 8px ${u.activeBg}` : "none",
                   }}
                 >
@@ -976,7 +1048,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
           </div>
 
           {/* ── Secondary controls: labeled icon+text buttons ── */}
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {/* Start */}
             {onStart && (
               <button
@@ -1060,7 +1132,7 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
           </div>
 
           {/* ── Utility row: audio + chat ── */}
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             <button
               onClick={toggleAudioMute}
               aria-label={isAudioMuted ? "Unmute audio alerts" : "Mute audio alerts"}
@@ -1147,7 +1219,12 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
               <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--cafe-text-tertiary)", marginBottom: 6 }}>Method</div>
               <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)", lineHeight: 1.6 }}>{showRecipe.instructions}</div>
             </div>
-            <button onClick={() => setShowRecipe(null)} style={{ width: "100%", padding: "10px 0", background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border)", borderRadius: 7, color: "var(--cafe-text-secondary)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Close</button>
+            <button
+              onClick={() => setShowRecipe(null)}
+              style={{ width: "100%", padding: "10px 0", background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border)", borderRadius: 7, color: "var(--cafe-text-secondary)", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
@@ -1161,7 +1238,12 @@ function KDSCard({ card, tableName, onDone, onHold, onUrgencyChange, onNoteEdit,
                 <div style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--cafe-text-tertiary)", marginBottom: 2 }}>Ticket {card.id}</div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em" }}>Kitchen Chat</div>
               </div>
-              <button onClick={() => setShowChat(false)} style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid var(--cafe-border)", background: "transparent", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 16 }}>×</button>
+              <button
+                onClick={() => setShowChat(false)}
+                style={iconBtn({ color: "var(--cafe-text-tertiary)", size: 32, fontSize: 16 })}
+              >
+                ×
+              </button>
             </div>
 
             <div style={{ marginBottom: 12, maxHeight: 250, overflow: "auto", background: "var(--cafe-bg-hover)", borderRadius: 8, padding: 10, border: "1px solid var(--cafe-border-light)" }}>
@@ -1217,10 +1299,65 @@ function secondaryBtnStyle({ color, borderColor, bg, disabled = false }) {
   };
 }
 
+// Helper for the compact-view action row buttons (Start / Hold / Move / Done)
+function compactBtn({ color, bg, border, weight = 700, size = 10, flex = 1, disabled = false }) {
+  return {
+    flex: `0 1 ${flex === 2 ? 170 : 108}px`,
+    minWidth: flex === 2 ? 120 : 84,
+    minHeight: 34,
+    padding: "9px 10px",
+    borderRadius: 8,
+    border: `1px solid ${border || "var(--cafe-border)"}`,
+    background: bg || "var(--cafe-bg-hover)",
+    color,
+    fontSize: size,
+    fontWeight: weight,
+    cursor: disabled ? "default" : "pointer",
+    opacity: disabled ? 0.55 : 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    whiteSpace: "nowrap",
+  };
+}
+
+// Helper for small icon-only utility buttons (modal close, hold input confirm/cancel, etc.)
+function iconBtn({ color, bg, border, size = 28, fontSize = 11, radius }) {
+  return {
+    width: size,
+    height: size,
+    borderRadius: radius ?? (size >= 32 ? 6 : 5),
+    border: `1px solid ${border || "var(--cafe-border)"}`,
+    background: bg || "transparent",
+    color,
+    fontSize,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  };
+}
+
+// Helper for small pill-style chip buttons (bulk check/uncheck all)
+function chipBtn({ color, bg, border, disabled = false }) {
+  return {
+    padding: "3px 8px",
+    borderRadius: 4,
+    border: `1px solid ${border || "var(--cafe-border-light)"}`,
+    background: bg || "var(--cafe-bg-hover)",
+    color,
+    fontSize: 10,
+    fontWeight: 700,
+    cursor: disabled ? "default" : "pointer",
+  };
+}
+
 // Helper for labeled icon+text action buttons (full card view)
 function actionBtn({ color, activeBg, border, disabled = false }) {
   return {
     flex: 1,
+    minWidth: 74,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

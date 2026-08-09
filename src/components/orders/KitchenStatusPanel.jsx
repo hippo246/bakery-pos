@@ -29,14 +29,21 @@ function KitchenStatusPanel({ kdsCards = [], onClose }) {
       padding: "var(--cafe-space-md)",
       zIndex: 100,
       boxShadow: "var(--cafe-shadow-lg)",
+      animation: "kitchenStatusSlideIn 0.2s ease",
     }}>
+      <style>{`
+        @keyframes kitchenStatusSlideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--cafe-space-sm)" }}>
         <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 700, color: "var(--cafe-text-primary)" }}>
           🍳 Kitchen Status
         </div>
         <button
           onClick={onClose}
-          style={{ background: "transparent", border: "none", color: "var(--cafe-text-tertiary)", fontSize: 18, cursor: "pointer" }}
+          aria-label="Close kitchen status"
+          style={{ background: "transparent", border: "none", borderRadius: "var(--cafe-radius-sm)", color: "var(--cafe-text-tertiary)", fontSize: 18, cursor: "pointer", width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s, color .15s" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.color = "var(--cafe-text-primary)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--cafe-text-tertiary)"; }}
         >
           ×
         </button>

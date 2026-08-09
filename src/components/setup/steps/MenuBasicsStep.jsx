@@ -191,14 +191,14 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
     <div style={{
       background: "var(--cafe-bg-surface)",
       border: "1px solid var(--cafe-border-light)",
-      borderRadius: 16,
-      padding: 24,
-      marginBottom: 20
+      borderRadius: isMobile ? 12 : 16,
+      padding: isMobile ? 16 : 24,
+      marginBottom: isMobile ? 16 : 20
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 24 }}>{icon}</span>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 20, flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12 }}>
+          <span style={{ fontSize: isMobile ? 20 : 24 }}>{icon}</span>
+          <h3 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
             {title}
           </h3>
         </div>
@@ -208,11 +208,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
             aria-label={`${showHelp[title] ? 'Hide' : 'Show'} help for ${title}`}
             aria-expanded={!!showHelp[title]}
             style={{
-              padding: "6px 10px",
+              padding: isMobile ? "4px 8px" : "6px 10px",
               background: "var(--cafe-accent-bg)",
               border: "1px solid var(--cafe-accent)",
-              borderRadius: 6,
-              fontSize: 12,
+              borderRadius: isMobile ? 4 : 6,
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 600,
               color: "var(--cafe-accent)",
               cursor: "pointer"
@@ -224,12 +224,12 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
       </div>
       {showHelp[title] && helpText && (
         <div style={{
-          padding: 12,
+          padding: isMobile ? 10 : 12,
           background: "var(--cafe-info-bg)",
           border: "1px solid var(--cafe-info-border)",
-          borderRadius: 8,
-          marginBottom: 16,
-          fontSize: 13,
+          borderRadius: isMobile ? 6 : 8,
+          marginBottom: isMobile ? 12 : 16,
+          fontSize: isMobile ? 12 : 13,
           color: "var(--cafe-info)"
         }}>
           {helpText}
@@ -242,27 +242,27 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
   const renderStatTile = (label, value, accentColor) => (
     <div style={{
       flex: "1 1 120px",
-      padding: "12px 16px",
+      padding: isMobile ? "10px 14px" : "12px 16px",
       background: "var(--cafe-bg)",
       border: "1px solid var(--cafe-border)",
-      borderRadius: 10
+      borderRadius: isMobile ? 8 : 10
     }}>
-      <div style={{ fontSize: 20, fontWeight: 700, color: accentColor || "var(--cafe-text-primary)", lineHeight: 1.2 }}>
+      <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: accentColor || "var(--cafe-text-primary)", lineHeight: 1.2 }}>
         {value}
       </div>
-      <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>
+      <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>
         {label}
       </div>
     </div>
   );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: isMobile ? "100%" : 900, margin: "0 auto" }}>
+      <div style={{ marginBottom: isMobile ? 24 : 32 }}>
+        <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
           Menu Setup
         </h3>
-        <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)" }}>
           Add menu items, set prices, and organize by categories.
         </p>
       </div>
@@ -271,14 +271,14 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
       <div style={{
         background: "var(--cafe-bg-surface)",
         border: "1px solid var(--cafe-border-light)",
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 24
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? 16 : 24,
+        marginBottom: isMobile ? 20 : 24
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 24 }}>📋</span>
-            <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 20, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12 }}>
+            <span style={{ fontSize: isMobile ? 20 : 24 }}>📋</span>
+            <h4 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
               Menu Items ({menuItems.length})
             </h4>
           </div>
@@ -290,11 +290,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
               setShowAddForm(true);
             }}
             style={{
-              padding: "10px 20px",
+              padding: isMobile ? "8px 16px" : "10px 20px",
               background: "var(--cafe-accent)",
               border: "none",
-              borderRadius: 8,
-              fontSize: 14,
+              borderRadius: isMobile ? 6 : 8,
+              fontSize: isMobile ? 13 : 14,
               fontWeight: 600,
               color: "#fff",
               cursor: "pointer"
@@ -305,7 +305,7 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
         </div>
 
         {menuItems.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 8 : 10, marginBottom: isMobile ? 16 : 20 }}>
             {renderStatTile('Menu items', menuStats.total)}
             {renderStatTile('Available', menuStats.available, '#10b981')}
             {menuStats.unavailable > 0 && renderStatTile('Unavailable', menuStats.unavailable, '#f59e0b')}
@@ -315,7 +315,7 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
         )}
 
         {menuItems.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 12 : 16 }}>
             {CATEGORIES.filter(cat => itemsByCategory[cat.id]).map(cat => {
               const isActive = categoryFilter === cat.id;
               return (
@@ -326,10 +326,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                   aria-pressed={isActive}
                   title={isActive ? `Clear ${cat.name} filter` : `Filter to ${cat.name}`}
                   style={{
-                    padding: "6px 12px",
+                    padding: isMobile ? "4px 10px" : "6px 12px",
                     background: isActive ? "var(--cafe-accent)" : "var(--cafe-accent-bg)",
                     borderRadius: 20,
-                    fontSize: 12,
+                    fontSize: isMobile ? 11 : 12,
                     fontWeight: 600,
                     color: isActive ? "#fff" : "var(--cafe-accent)",
                     border: "1px solid var(--cafe-accent)",
@@ -344,7 +344,7 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
         )}
 
         {menuItems.length > 0 && (
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: isMobile ? 8 : 10, marginBottom: isMobile ? 12 : 16, flexWrap: "wrap" }}>
             <div style={{ position: "relative", flex: "1 1 200px" }}>
               <input
                 type="text"
@@ -354,10 +354,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 placeholder="Search menu items..."
                 style={{
                   width: "100%",
-                  padding: "10px 32px 10px 14px",
-                  fontSize: 13,
+                  padding: isMobile ? "8px 28px 8px 12px" : "10px 32px 10px 14px",
+                  fontSize: isMobile ? 12 : 13,
                   border: "1px solid var(--cafe-border)",
-                  borderRadius: 8,
+                  borderRadius: isMobile ? 6 : 8,
                   background: "var(--cafe-bg)",
                   color: "var(--cafe-text-primary)",
                   outline: "none",
@@ -371,15 +371,15 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                   aria-label="Clear search"
                   style={{
                     position: "absolute",
-                    right: 8,
+                    right: isMobile ? 6 : 8,
                     top: "50%",
                     transform: "translateY(-50%)",
                     background: "none",
                     border: "none",
-                    fontSize: 14,
+                    fontSize: isMobile ? 12 : 14,
                     color: "var(--cafe-text-tertiary)",
                     cursor: "pointer",
-                    padding: 4,
+                    padding: isMobile ? 2 : 4,
                     lineHeight: 1
                   }}
                 >
@@ -391,10 +391,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               style={{
-                padding: "10px 14px",
-                fontSize: 13,
+                padding: isMobile ? "8px 12px" : "10px 14px",
+                fontSize: isMobile ? 12 : 13,
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 8,
+                borderRadius: isMobile ? 6 : 8,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
                 outline: "none"
@@ -410,79 +410,79 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
 
         {menuItems.length === 0 ? (
           <div style={{
-            padding: "40px 24px",
+            padding: isMobile ? "32px 16px" : "40px 24px",
             textAlign: "center",
             color: "var(--cafe-text-tertiary)",
             background: "var(--cafe-bg)",
-            borderRadius: 12,
+            borderRadius: isMobile ? 10 : 12,
             border: "1px dashed var(--cafe-border)"
           }}>
-            <span style={{ fontSize: 48, display: "block", marginBottom: 16 }}>📋</span>
-            <p style={{ fontSize: 14, margin: 0 }}>
+            <span style={{ fontSize: isMobile ? 40 : 48, display: "block", marginBottom: isMobile ? 12 : 16 }}>📋</span>
+            <p style={{ fontSize: isMobile ? 13 : 14, margin: 0 }}>
               No menu items yet. Click "Add Item" to get started.
             </p>
           </div>
         ) : filteredItems.length === 0 ? (
           <div style={{
-            padding: "40px 24px",
+            padding: isMobile ? "32px 16px" : "40px 24px",
             textAlign: "center",
             color: "var(--cafe-text-tertiary)",
             background: "var(--cafe-bg)",
-            borderRadius: 12,
+            borderRadius: isMobile ? 10 : 12,
             border: "1px dashed var(--cafe-border)"
           }}>
-            <span style={{ fontSize: 32, display: "block", marginBottom: 12 }}>🔍</span>
-            <p style={{ fontSize: 14, margin: 0 }}>
+            <span style={{ fontSize: isMobile ? 28 : 32, display: "block", marginBottom: isMobile ? 10 : 12 }}>🔍</span>
+            <p style={{ fontSize: isMobile ? 13 : 14, margin: 0 }}>
               No items match "{searchQuery}"{categoryFilter !== 'all' ? ` in ${CATEGORIES.find(c => c.id === categoryFilter)?.name}` : ''}.
             </p>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: isMobile ? 10 : 12 }}>
             {filteredItems.map(item => {
               const category = CATEGORIES.find(c => c.id === item.category);
               return (
                 <div
                   key={item.id}
                   style={{
-                    padding: "16px",
+                    padding: isMobile ? "12px" : "16px",
                     background: "var(--cafe-bg)",
                     border: "1px solid var(--cafe-border)",
-                    borderRadius: 10,
+                    borderRadius: isMobile ? 8 : 10,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    gap: 16,
+                    gap: isMobile ? 12 : 16,
                     opacity: item.available === false ? 0.6 : 1,
                     transition: "opacity 0.15s ease"
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
                     <div style={{
-                      width: 48,
-                      height: 48,
+                      width: isMobile ? 40 : 48,
+                      height: isMobile ? 40 : 48,
                       flexShrink: 0,
-                      borderRadius: 10,
+                      borderRadius: isMobile ? 8 : 10,
                       background: "var(--cafe-accent-bg)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 24
+                      fontSize: isMobile ? 20 : 24
                     }}>
                       {category?.icon || '🍽️'}
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 8, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                           {item.name}
                         </span>
                         {item.available === false && (
                           <span style={{
-                            fontSize: 10,
+                            fontSize: isMobile ? 9 : 10,
                             fontWeight: 700,
                             letterSpacing: 0.3,
                             textTransform: "uppercase",
-                            padding: "2px 6px",
-                            borderRadius: 4,
+                            padding: isMobile ? "1px 4px" : "2px 6px",
+                            borderRadius: isMobile ? 3 : 4,
                             background: "#f59e0b20",
                             color: "#f59e0b"
                           }}>
@@ -490,15 +490,15 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: 13, color: "var(--cafe-text-secondary)" }}>
+                      <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-secondary)" }}>
                         {category?.name || item.category}
                         {item.modifiers?.length > 0 && ` • ${item.modifiers.length} modifier${item.modifiers.length > 1 ? 's' : ''}`}
                       </div>
                       {item.description && (
                         <div style={{
-                          fontSize: 12,
+                          fontSize: isMobile ? 11 : 12,
                           color: "var(--cafe-text-tertiary)",
-                          marginTop: 4,
+                          marginTop: isMobile ? 2 : 4,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap"
@@ -508,8 +508,8 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                       )}
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 18, flexShrink: 0 }}>
-                    <div style={{ fontSize: 17, fontWeight: 700, color: "var(--cafe-accent)", whiteSpace: "nowrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 12 : 18, flexShrink: 0 }}>
+                    <div style={{ fontSize: isMobile ? 15 : 17, fontWeight: 700, color: "var(--cafe-accent)", whiteSpace: "nowrap" }}>
                       ₹{Number(item.price || 0).toFixed(2)}
                     </div>
                     <button
@@ -520,8 +520,8 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                       title={item.available !== false ? 'Available — click to mark unavailable' : 'Unavailable — click to mark available'}
                       style={{
                         position: "relative",
-                        width: 40,
-                        height: 22,
+                        width: isMobile ? 36 : 40,
+                        height: isMobile ? 20 : 22,
                         borderRadius: 999,
                         border: "none",
                         background: item.available !== false ? "#10b981" : "var(--cafe-border)",
@@ -532,10 +532,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                     >
                       <span style={{
                         position: "absolute",
-                        top: 2,
-                        left: item.available !== false ? 20 : 2,
-                        width: 18,
-                        height: 18,
+                        top: isMobile ? 1 : 2,
+                        left: item.available !== false ? (isMobile ? 18 : 20) : (isMobile ? 1 : 2),
+                        width: isMobile ? 16 : 18,
+                        height: isMobile ? 16 : 18,
                         borderRadius: "50%",
                         background: "#fff",
                         transition: "left 0.15s ease",
@@ -546,11 +546,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                       onClick={() => handleEditItem(item)}
                       aria-label={`Edit ${item.name}`}
                       style={{
-                        padding: "8px 12px",
+                        padding: isMobile ? "6px 10px" : "8px 12px",
                         background: "var(--cafe-info-bg)",
                         border: "1px solid var(--cafe-info-border)",
-                        borderRadius: 6,
-                        fontSize: 12,
+                        borderRadius: isMobile ? 4 : 6,
+                        fontSize: isMobile ? 11 : 12,
                         color: "var(--cafe-info)",
                         cursor: "pointer"
                       }}
@@ -561,11 +561,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                       onClick={() => handleDeleteItem(item.id)}
                       aria-label={`Delete ${item.name}`}
                       style={{
-                        padding: "8px 12px",
+                        padding: isMobile ? "6px 10px" : "8px 12px",
                         background: "var(--cafe-danger-bg)",
                         border: "1px solid var(--cafe-danger-border)",
-                        borderRadius: 6,
-                        fontSize: 12,
+                        borderRadius: isMobile ? 4 : 6,
+                        fontSize: isMobile ? 11 : 12,
                         color: "var(--cafe-danger)",
                         cursor: "pointer"
                       }}
@@ -594,19 +594,19 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
           style={{
             background: "var(--cafe-bg-surface)",
             border: "1px solid var(--cafe-border-light)",
-            borderRadius: 16,
-            padding: 24,
-            marginBottom: 24
+            borderRadius: isMobile ? 12 : 16,
+            padding: isMobile ? 16 : 24,
+            marginBottom: isMobile ? 20 : 24
           }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <span style={{ fontSize: 24 }}>{editingItem ? '✏️' : '➕'}</span>
-            <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 16 : 20 }}>
+            <span style={{ fontSize: isMobile ? 20 : 24 }}>{editingItem ? '✏️' : '➕'}</span>
+            <h4 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
               {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
             </h4>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Item Name <span style={{ color: "var(--cafe-danger)" }}>*</span>
             </label>
             <input
@@ -616,10 +616,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
               placeholder="e.g., Cappuccino"
               style={{
                 width: "100%",
-                padding: "14px 16px",
-                fontSize: 15,
+                padding: isMobile ? "12px 14px" : "14px 16px",
+                fontSize: isMobile ? 14 : 15,
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 10,
+                borderRadius: isMobile ? 8 : 10,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
                 outline: "none"
@@ -627,9 +627,9 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
             <div>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+              <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
                 Category
               </label>
               <select
@@ -637,10 +637,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                 style={{
                   width: "100%",
-                  padding: "14px 16px",
-                  fontSize: 15,
+                  padding: isMobile ? "12px 14px" : "14px 16px",
+                  fontSize: isMobile ? 14 : 15,
                   border: "1px solid var(--cafe-border)",
-                  borderRadius: 10,
+                  borderRadius: isMobile ? 8 : 10,
                   background: "var(--cafe-bg)",
                   color: "var(--cafe-text-primary)",
                   outline: "none"
@@ -652,7 +652,7 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+              <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
                 Price (₹) <span style={{ color: "var(--cafe-danger)" }}>*</span>
               </label>
               <input
@@ -665,10 +665,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 step="0.01"
                 style={{
                   width: "100%",
-                  padding: "14px 16px",
-                  fontSize: 15,
+                  padding: isMobile ? "12px 14px" : "14px 16px",
+                  fontSize: isMobile ? 14 : 15,
                   border: "1px solid var(--cafe-border)",
-                  borderRadius: 10,
+                  borderRadius: isMobile ? 8 : 10,
                   background: "var(--cafe-bg)",
                   color: "var(--cafe-text-primary)",
                   outline: "none"
@@ -677,8 +677,8 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Description
             </label>
             <textarea
@@ -688,10 +688,10 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
               rows={3}
               style={{
                 width: "100%",
-                padding: "14px 16px",
-                fontSize: 15,
+                padding: isMobile ? "12px 14px" : "14px 16px",
+                fontSize: isMobile ? 14 : 15,
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 10,
+                borderRadius: isMobile ? 8 : 10,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
                 outline: "none",
@@ -700,16 +700,16 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
             />
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 4, display: "block" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 4 : 8, display: "block" }}>
               Modifiers
             </label>
-            <p style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", margin: "0 0 10px" }}>
+            <p style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)", margin: "0 0 " + (isMobile ? "8px" : "10px") }}>
               Optional add-ons with their own price, like Extra Shot or Oat Milk.
             </p>
 
             {formData.modifiers.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 10 : 12 }}>
                 {formData.modifiers.map(mod => (
                   <div
                     key={mod.id}
@@ -717,11 +717,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
-                      padding: "6px 6px 6px 12px",
+                      padding: isMobile ? "4px 4px 4px 10px" : "6px 6px 6px 12px",
                       background: "var(--cafe-bg)",
                       border: "1px solid var(--cafe-border)",
                       borderRadius: 999,
-                      fontSize: 13
+                      fontSize: isMobile ? 12 : 13
                     }}
                   >
                     <span style={{ color: "var(--cafe-text-primary)" }}>
@@ -733,15 +733,15 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                       aria-label={`Remove ${mod.name} modifier`}
                       title={`Remove ${mod.name}`}
                       style={{
-                        width: 20,
-                        height: 20,
+                        width: isMobile ? 18 : 20,
+                        height: isMobile ? 18 : 20,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         background: "var(--cafe-danger-bg)",
                         border: "1px solid var(--cafe-danger-border)",
                         borderRadius: "50%",
-                        fontSize: 12,
+                        fontSize: isMobile ? 11 : 12,
                         lineHeight: 1,
                         color: "var(--cafe-danger)",
                         cursor: "pointer",
@@ -755,7 +755,7 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: isMobile ? 6 : 8 }}>
               <input
                 type="text"
                 value={modifierDraft.name}
@@ -764,8 +764,8 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 placeholder="Modifier name (e.g. Extra Shot)"
                 style={{
                   flex: 1,
-                  padding: "10px 12px",
-                  fontSize: 13,
+                  padding: isMobile ? "8px 10px" : "10px 12px",
+                  fontSize: isMobile ? 12 : 13,
                   border: "1px solid var(--cafe-border)",
                   borderRadius: 8,
                   background: "var(--cafe-bg)",
@@ -785,11 +785,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 min="0"
                 step="0.01"
                 style={{
-                  width: 90,
-                  padding: "10px 12px",
-                  fontSize: 13,
+                  width: isMobile ? 80 : 90,
+                  padding: isMobile ? "8px 10px" : "10px 12px",
+                  fontSize: isMobile ? 12 : 13,
                   border: "1px solid var(--cafe-border)",
-                  borderRadius: 8,
+                  borderRadius: isMobile ? 6 : 8,
                   background: "var(--cafe-bg)",
                   color: "var(--cafe-text-primary)",
                   outline: "none"
@@ -800,11 +800,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 onClick={handleAddModifier}
                 disabled={!modifierDraft.name.trim()}
                 style={{
-                  padding: "10px 16px",
+                  padding: isMobile ? "8px 14px" : "10px 16px",
                   background: modifierDraft.name.trim() ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
                   border: "1px solid var(--cafe-accent)",
-                  borderRadius: 8,
-                  fontSize: 13,
+                  borderRadius: isMobile ? 6 : 8,
+                  fontSize: isMobile ? 12 : 13,
                   fontWeight: 600,
                   color: "var(--cafe-accent)",
                   cursor: modifierDraft.name.trim() ? "pointer" : "not-allowed",
@@ -816,21 +816,21 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={formData.available}
                 onChange={(e) => setFormData(prev => ({ ...prev, available: e.target.checked }))}
-                style={{ width: 20, height: 20 }}
+                style={{ width: isMobile ? 18 : 20, height: isMobile ? 18 : 20 }}
               />
-              <span style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-primary)" }}>
+              <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-primary)" }}>
                 Available immediately
               </span>
             </label>
           </div>
 
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: isMobile ? 10 : 12 }}>
             <button
               onClick={() => {
                 setShowAddForm(false);
@@ -839,11 +839,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
                 setModifierDraft({ name: '', price: '' });
               }}
               style={{
-                padding: "12px 24px",
+                padding: isMobile ? "10px 20px" : "12px 24px",
                 background: "var(--cafe-bg-surface)",
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 8,
-                fontSize: 14,
+                borderRadius: isMobile ? 6 : 8,
+                fontSize: isMobile ? 13 : 14,
                 fontWeight: 600,
                 color: "var(--cafe-text-secondary)",
                 cursor: "pointer"
@@ -854,11 +854,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
             <button
               onClick={handleAddItem}
               style={{
-                padding: "12px 24px",
+                padding: isMobile ? "10px 20px" : "12px 24px",
                 background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
                 border: "none",
-                borderRadius: 8,
-                fontSize: 14,
+                borderRadius: isMobile ? 6 : 8,
+                fontSize: isMobile ? 13 : 14,
                 fontWeight: 600,
                 color: "#fff",
                 cursor: "pointer"
@@ -871,16 +871,16 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
       )}
 
       {/* Navigation */}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: isMobile ? 10 : 12 }}>
         <button
           onClick={onBack}
           disabled={isLoading}
           style={{
-            padding: "14px 28px",
+            padding: isMobile ? "12px 20px" : "14px 28px",
             background: "var(--cafe-bg-surface)",
             border: "1px solid var(--cafe-border)",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "var(--cafe-text-secondary)",
             cursor: isLoading ? "not-allowed" : "pointer",
@@ -893,11 +893,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
           onClick={onSkip}
           disabled={isLoading}
           style={{
-            padding: "14px 28px",
+            padding: isMobile ? "12px 20px" : "14px 28px",
             background: "var(--cafe-bg-surface)",
             border: "1px solid var(--cafe-border)",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "var(--cafe-text-secondary)",
             cursor: isLoading ? "not-allowed" : "pointer",
@@ -910,11 +910,11 @@ export default function MenuBasicsStep({ settings, onNext, onBack, onSkip, stepI
           onClick={handleNext}
           disabled={isLoading}
           style={{
-            padding: "14px 32px",
+            padding: isMobile ? "12px 24px" : "14px 32px",
             background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
             border: "none",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "#fff",
             cursor: isLoading ? "not-allowed" : "pointer",

@@ -4,25 +4,25 @@ import React from 'react';
 
 import { card, btn } from "../../../styles/theme";
 
-export default function WelcomeStep({ onNext, stepIndex: _stepIndex, totalSteps: _totalSteps }) {
+export default function WelcomeStep({ onNext, stepIndex: _stepIndex, totalSteps: _totalSteps, isMobile, isTablet }) {
   return (
-    <div style={{ padding: "32px", maxWidth: 800, margin: "0 auto" }}>
-      <div style={{ textAlign: "center", marginBottom: 48 }}>
+    <div style={{ padding: isMobile ? "16px" : isTablet ? "24px" : "32px", maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 48 }}>
         <div style={{
-          width: 80,
-          height: 80,
-          borderRadius: 20,
+          width: isMobile ? 64 : 80,
+          height: isMobile ? 64 : 80,
+          borderRadius: isMobile ? 16 : 20,
           background: "var(--cafe-accent)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           margin: "0 auto 24px",
-          fontSize: 40
+          fontSize: isMobile ? 32 : 40
         }}>
           🏪
         </div>
         <h2 style={{
-          fontSize: 28,
+          fontSize: isMobile ? 22 : isTablet ? 26 : 28,
           fontWeight: 700,
           color: "var(--cafe-text-primary)",
           margin: "0 0 16px"
@@ -30,7 +30,7 @@ export default function WelcomeStep({ onNext, stepIndex: _stepIndex, totalSteps:
           Let's Set Up Your Cafe
         </h2>
         <p style={{
-          fontSize: 16,
+          fontSize: isMobile ? 14 : 16,
           color: "var(--cafe-text-secondary)",
           margin: 0,
           lineHeight: 1.6,
@@ -42,16 +42,16 @@ export default function WelcomeStep({ onNext, stepIndex: _stepIndex, totalSteps:
         </p>
       </div>
 
-      <div style={{ ...card, padding: 24, marginBottom: 24 }}>
+      <div style={{ ...card, padding: isMobile ? 16 : 24, marginBottom: isMobile ? 24 : 32 }}>
         <h3 style={{
-          fontSize: 16,
+          fontSize: isMobile ? 14 : 16,
           fontWeight: 600,
           color: "var(--cafe-text-secondary)",
           margin: "0 0 16px"
         }}>
           What We'll Set Up
         </h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ color: "var(--cafe-success)" }}>✓</span>
             <span style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>Business details</span>

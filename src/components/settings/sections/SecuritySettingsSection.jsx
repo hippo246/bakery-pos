@@ -58,35 +58,37 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <div style={{
-        padding: isMobile ? "20px" : "32px",
+        padding: isMobile ? "20px" : "28px",
         borderBottom: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)"
+        background: "var(--cafe-bg-surface)"
       }}>
         <h2 style={{
           fontSize: isMobile ? 20 : 24,
-          fontWeight: 700,
+          fontWeight: 800,
           color: "var(--cafe-text-primary)",
-          margin: "0 0 8px"
+          margin: "0 0 8px",
+          letterSpacing: "-0.02em"
         }}>
           Security
         </h2>
         <p style={{
           fontSize: isMobile ? 13 : 14,
           color: "var(--cafe-text-secondary)",
-          margin: 0
+          margin: 0,
+          fontWeight: 500
         }}>
           Manage access control and security settings
         </p>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "28px" }}>
         {/* Security Score */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
             padding: 24,
             display: "flex",
             alignItems: "center",
@@ -124,26 +126,26 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
         </div>
 
         {/* Access Control */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Access Control
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Owner Password
                 </label>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -155,22 +157,29 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                     style={{
                       flex: 1,
                       padding: "12px 16px",
-                      fontSize: 15,
-                      border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      fontSize: 14,
+                      border: "1px solid var(--cafe-border-light)",
+                      borderRadius: 12,
                       background: "var(--cafe-bg-surface)",
-                      color: "var(--cafe-text-primary)"
+                      color: "var(--cafe-text-primary)",
+                      outline: "none",
+                      transition: "all 0.2s"
                     }}
+                    onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                   />
                   <button
                     onClick={() => setShowPassword(!showPassword)}
                     style={{
                       padding: "12px 16px",
                       background: "var(--cafe-bg-surface)",
-                      border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
-                      cursor: "pointer"
+                      border: "1px solid var(--cafe-border-light)",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      transition: "all 0.2s"
                     }}
+                    onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}
                   >
                     {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
@@ -178,7 +187,7 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Manager Override PIN
                 </label>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -191,22 +200,29 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                     style={{
                       flex: 1,
                       padding: "12px 16px",
-                      fontSize: 15,
-                      border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      fontSize: 14,
+                      border: "1px solid var(--cafe-border-light)",
+                      borderRadius: 12,
                       background: "var(--cafe-bg-surface)",
-                      color: "var(--cafe-text-primary)"
+                      color: "var(--cafe-text-primary)",
+                      outline: "none",
+                      transition: "all 0.2s"
                     }}
+                    onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                   />
                   <button
                     onClick={() => setShowPin(!showPin)}
                     style={{
                       padding: "12px 16px",
                       background: "var(--cafe-bg-surface)",
-                      border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
-                      cursor: "pointer"
+                      border: "1px solid var(--cafe-border-light)",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      transition: "all 0.2s"
                     }}
+                    onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}
                   >
                     {showPin ? "👁️" : "👁️‍🗨️"}
                   </button>
@@ -214,7 +230,7 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Session Timeout (minutes)
                 </label>
                 <input
@@ -226,27 +242,31 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    outline: "none",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 />
               </div>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.autoLock}
                   onChange={(e) => handleChange('autoLock', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Auto-Lock
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Automatically lock after session timeout
                   </div>
                 </div>
@@ -256,36 +276,36 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
         </div>
 
         {/* Login Protection */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Login Protection
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.failedLoginProtection}
                   onChange={(e) => handleChange('failedLoginProtection', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Failed Login Protection
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Lock account after multiple failed attempts
                   </div>
                 </div>
@@ -295,7 +315,7 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                 <>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                     <div>
-                      <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                      <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                         Max Failed Attempts
                       </label>
                       <input
@@ -307,16 +327,20 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                         style={{
                           width: "100%",
                           padding: "12px 16px",
-                          fontSize: 15,
-                          border: "1px solid var(--cafe-border)",
-                          borderRadius: 8,
+                          fontSize: 14,
+                          border: "1px solid var(--cafe-border-light)",
+                          borderRadius: 12,
                           background: "var(--cafe-bg-surface)",
-                          color: "var(--cafe-text-primary)"
+                          color: "var(--cafe-text-primary)",
+                          outline: "none",
+                          transition: "all 0.2s"
                         }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                      <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                         Lockout Duration (minutes)
                       </label>
                       <input
@@ -328,30 +352,34 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                         style={{
                           width: "100%",
                           padding: "12px 16px",
-                          fontSize: 15,
-                          border: "1px solid var(--cafe-border)",
-                          borderRadius: 8,
+                          fontSize: 14,
+                          border: "1px solid var(--cafe-border-light)",
+                          borderRadius: 12,
                           background: "var(--cafe-bg-surface)",
-                          color: "var(--cafe-text-primary)"
+                          color: "var(--cafe-text-primary)",
+                          outline: "none",
+                          transition: "all 0.2s"
                         }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                       />
                     </div>
                   </div>
                 </>
               )}
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.requireTwoFactor}
                   onChange={(e) => handleChange('requireTwoFactor', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Require Two-Factor Authentication
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Additional security for sensitive operations
                   </div>
                 </div>
@@ -361,26 +389,26 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
         </div>
 
         {/* Password Requirements */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Password Requirements
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Minimum Password Length
                 </label>
                 <input
@@ -392,21 +420,25 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    outline: "none",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 />
               </div>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.requireUppercase}
                   onChange={(e) => handleChange('requireUppercase', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
@@ -415,12 +447,12 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                 </div>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.requireNumbers}
                   onChange={(e) => handleChange('requireNumbers', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
@@ -429,12 +461,12 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
                 </div>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.requireSpecialChars}
                   onChange={(e) => handleChange('requireSpecialChars', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
@@ -449,51 +481,51 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
         {/* Audit & Support */}
         <div>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Audit & Support
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.auditLogEnabled}
                   onChange={(e) => handleChange('auditLogEnabled', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Enable Audit Logging
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Log all security-related events
                   </div>
                 </div>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.supportMode}
                   onChange={(e) => handleChange('supportMode', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Support Mode
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Allow remote support access (use with caution)
                   </div>
                 </div>
@@ -505,9 +537,9 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
 
       {/* Footer */}
       <div style={{
-        padding: isMobile ? "20px" : "32px",
+        padding: isMobile ? "20px" : "28px",
         borderTop: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)",
+        background: "var(--cafe-bg-surface)",
         display: "flex",
         justifyContent: "flex-end"
       }}>
@@ -515,20 +547,24 @@ export default function SecuritySettingsSection({ settings, onUpdate, isMobile }
           onClick={handleSave}
           style={{
             padding: "12px 32px",
-            background: "var(--cafe-accent)",
-            border: "none",
-            borderRadius: 8,
+            background: "var(--cafe-accent-bg)",
+            border: "1px solid var(--cafe-accent)",
+            borderRadius: 12,
             fontSize: 14,
-            fontWeight: 600,
-            color: "#fff",
+            fontWeight: 700,
+            color: "var(--cafe-accent)",
             cursor: "pointer",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s"
           }}
-          onMouseEnter={(e) => {
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "var(--cafe-accent)";
+            e.currentTarget.style.color = '#1A1208';
             e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.4)";
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.3)";
           }}
           onMouseLeave={(e) => {
+            e.currentTarget.style.background = "var(--cafe-accent-bg)";
+            e.currentTarget.style.color = "var(--cafe-accent)";
             e.currentTarget.style.transform = "translateY(0)";
             e.currentTarget.style.boxShadow = "none";
           }}

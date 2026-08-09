@@ -155,47 +155,47 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
           min-width: 0;
         }
       `}</style>
-      <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+      <div style={{ marginBottom: isMobile ? 24 : 32 }}>
+        <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
           Staff & Roles Setup
         </h3>
-        <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)" }}>
           Add team members and configure their access permissions using RBAC or ABAC.
         </p>
       </div>
 
-      {/* Access Model Selection */}
+      {/* Access Control Model */}
       <div style={{
         background: "var(--cafe-bg-surface)",
         border: "1px solid var(--cafe-border-light)",
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 24
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? 16 : 24,
+        marginBottom: isMobile ? 20 : 24
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <span style={{ fontSize: 24 }}>🔐</span>
-          <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 16 : 20 }}>
+          <span style={{ fontSize: isMobile ? 20 : 24 }}>🔐</span>
+          <h4 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
             Access Control Model
           </h4>
         </div>
-        <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ display: "flex", gap: isMobile ? 12 : 16 }}>
           <button
             type="button"
             onClick={() => setAccessModel('rbac')}
             style={{
               flex: 1,
-              padding: "16px",
+              padding: isMobile ? "12px" : "16px",
               border: accessModel === 'rbac' ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-              borderRadius: 10,
+              borderRadius: isMobile ? 8 : 10,
               background: accessModel === 'rbac' ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
               cursor: "pointer",
               textAlign: "left"
             }}
           >
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
+            <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
               RBAC (Role-Based)
             </div>
-            <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)" }}>
+            <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-secondary)" }}>
               Permissions based on predefined roles
             </div>
           </button>
@@ -204,18 +204,18 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
             onClick={() => setAccessModel('abac')}
             style={{
               flex: 1,
-              padding: "16px",
+              padding: isMobile ? "12px" : "16px",
               border: accessModel === 'abac' ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-              borderRadius: 10,
+              borderRadius: isMobile ? 8 : 10,
               background: accessModel === 'abac' ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
               cursor: "pointer",
               textAlign: "left"
             }}
           >
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
+            <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
               ABAC (Attribute-Based)
             </div>
-            <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)" }}>
+            <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-secondary)" }}>
               Dynamic permissions based on attributes
             </div>
           </button>
@@ -226,14 +226,14 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
       <div style={{
         background: "var(--cafe-bg-surface)",
         border: "1px solid var(--cafe-border-light)",
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 24
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? 16 : 24,
+        marginBottom: isMobile ? 20 : 24
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 24 }}>👥</span>
-            <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 20, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12 }}>
+            <span style={{ fontSize: isMobile ? 20 : 24 }}>👥</span>
+            <h4 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
               Team Members ({staff.length})
             </h4>
           </div>
@@ -245,7 +245,7 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
               setShowAddForm(true);
             }}
             style={{
-              padding: "10px 20px",
+              padding: isMobile ? "8px 16px" : "10px 20px",
               background: "var(--cafe-accent)",
               border: "none",
               borderRadius: 8,
@@ -261,73 +261,73 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
 
         {staff.length === 0 ? (
           <div style={{
-            padding: "40px 24px",
+            padding: isMobile ? "32px 16px" : "40px 24px",
             textAlign: "center",
             color: "var(--cafe-text-tertiary)",
             background: "var(--cafe-bg)",
-            borderRadius: 12,
+            borderRadius: isMobile ? 10 : 12,
             border: "1px dashed var(--cafe-border)"
           }}>
-            <span style={{ fontSize: 48, display: "block", marginBottom: 16 }}>👥</span>
-            <p style={{ fontSize: 14, margin: 0 }}>
+            <span style={{ fontSize: isMobile ? 40 : 48, display: "block", marginBottom: isMobile ? 12 : 16 }}>👥</span>
+            <p style={{ fontSize: isMobile ? 13 : 14, margin: 0 }}>
               No staff members added yet. Click "Add Staff" to get started.
             </p>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: isMobile ? 10 : 12 }}>
             {staff.map(staffMember => {
               const role = ROLES.find(r => r.id === staffMember.role);
               return (
                 <div
                   key={staffMember.id}
                   style={{
-                    padding: "16px",
+                    padding: isMobile ? "12px" : "16px",
                     background: "var(--cafe-bg)",
                     border: "1px solid var(--cafe-border)",
-                    borderRadius: 10,
+                    borderRadius: isMobile ? 8 : 10,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between"
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 12 : 16 }}>
                     <div style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
+                      width: isMobile ? 40 : 48,
+                      height: isMobile ? 40 : 48,
+                      borderRadius: isMobile ? 20 : 24,
                       background: "var(--cafe-accent-bg)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 24
+                      fontSize: isMobile ? 20 : 24
                     }}>
                       {role?.icon || '👤'}
                     </div>
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                      <div style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                         {staffMember.name}
                       </div>
-                      <div style={{ fontSize: 13, color: "var(--cafe-text-secondary)" }}>
+                      <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-secondary)" }}>
                         {role?.name || staffMember.role} • {staffMember.email || staffMember.phone || 'No contact info'}
                       </div>
                       {accessModel === 'abac' && staffMember.attributes && (
-                        <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 4 }}>
+                        <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 2 : 4 }}>
                           {staffMember.attributes.department && `Dept: ${staffMember.attributes.department}`}
                           {staffMember.attributes.shift && ` • Shift: ${staffMember.attributes.shift}`}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: isMobile ? 6 : 8 }}>
                     <button
                       type="button"
                       onClick={() => handleEditStaff(staffMember)}
                       style={{
-                        padding: "8px 12px",
+                        padding: isMobile ? "6px 10px" : "8px 12px",
                         background: "var(--cafe-info-bg)",
                         border: "1px solid var(--cafe-info-border)",
-                        borderRadius: 6,
-                        fontSize: 12,
+                        borderRadius: isMobile ? 4 : 6,
+                        fontSize: isMobile ? 11 : 12,
                         color: "var(--cafe-info)",
                         cursor: "pointer"
                       }}
@@ -342,11 +342,11 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                         }
                       }}
                       style={{
-                        padding: "8px 12px",
+                        padding: isMobile ? "6px 10px" : "8px 12px",
                         background: "var(--cafe-danger-bg)",
                         border: "1px solid var(--cafe-danger-border)",
-                        borderRadius: 6,
-                        fontSize: 12,
+                        borderRadius: isMobile ? 4 : 6,
+                        fontSize: isMobile ? 11 : 12,
                         color: "var(--cafe-danger)",
                         cursor: "pointer"
                       }}
@@ -366,20 +366,20 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
         <div style={{
           background: "var(--cafe-bg-surface)",
           border: "1px solid var(--cafe-border-light)",
-          borderRadius: 16,
-          padding: 24,
-          marginBottom: 24
+          borderRadius: isMobile ? 12 : 16,
+          padding: isMobile ? 16 : 24,
+          marginBottom: isMobile ? 20 : 24
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <span style={{ fontSize: 24 }}>{editingStaff ? '✏️' : '➕'}</span>
-            <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12, marginBottom: isMobile ? 16 : 20 }}>
+            <span style={{ fontSize: isMobile ? 20 : 24 }}>{editingStaff ? '✏️' : '➕'}</span>
+            <h4 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
               {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
             </h4>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
             <div>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+              <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
                 Name <span style={{ color: "var(--cafe-danger)" }}>*</span>
               </label>
               <input
@@ -389,10 +389,10 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                 placeholder="Full name"
                 style={{
                   width: "100%",
-                  padding: "14px 16px",
-                  fontSize: 15,
+                  padding: isMobile ? "12px 14px" : "14px 16px",
+                  fontSize: isMobile ? 14 : 15,
                   border: "1px solid var(--cafe-border)",
-                  borderRadius: 10,
+                  borderRadius: isMobile ? 8 : 10,
                   background: "var(--cafe-bg)",
                   color: "var(--cafe-text-primary)",
                   outline: "none"
@@ -400,7 +400,7 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
               />
             </div>
             <div>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+              <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
                 Email
               </label>
               <input
@@ -410,10 +410,10 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                 placeholder="email@example.com"
                 style={{
                   width: "100%",
-                  padding: "14px 16px",
-                  fontSize: 15,
+                  padding: isMobile ? "12px 14px" : "14px 16px",
+                  fontSize: isMobile ? 14 : 15,
                   border: "1px solid var(--cafe-border)",
-                  borderRadius: 10,
+                  borderRadius: isMobile ? 8 : 10,
                   background: "var(--cafe-bg)",
                   color: "var(--cafe-text-primary)",
                   outline: "none"
@@ -422,8 +422,8 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
             </div>
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Phone
             </label>
             <input
@@ -433,10 +433,10 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
               placeholder="+91 9876543210"
               style={{
                 width: "100%",
-                padding: "14px 16px",
-                fontSize: 15,
+                padding: isMobile ? "12px 14px" : "14px 16px",
+                fontSize: isMobile ? 14 : 15,
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 10,
+                borderRadius: isMobile ? 8 : 10,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
                 outline: "none"
@@ -444,28 +444,28 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
             />
           </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Role
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12 }}>
               {ROLES.map(role => (
                 <button
                   key={role.id}
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, role: role.id, permissions: role.permissions }))}
                   style={{
-                    padding: "12px",
+                    padding: isMobile ? "10px" : "12px",
                     border: formData.role === role.id ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    borderRadius: isMobile ? 6 : 8,
                     background: formData.role === role.id ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
                     cursor: "pointer",
                     textAlign: "left"
                   }}
                 >
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>{role.icon}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{role.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-secondary)" }}>{role.description}</div>
+                  <div style={{ fontSize: isMobile ? 16 : 18, marginBottom: isMobile ? 2 : 4 }}>{role.icon}</div>
+                  <div style={{ fontSize: isMobile ? 12 : 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{role.name}</div>
+                  <div style={{ fontSize: isMobile ? 10 : 11, color: "var(--cafe-text-secondary)" }}>{role.description}</div>
                 </button>
               ))}
             </div>
@@ -473,13 +473,13 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
 
           {/* ABAC Attributes */}
           {accessModel === 'abac' && (
-            <div style={{ marginBottom: 16, padding: 16, background: "var(--cafe-bg)", borderRadius: 10, border: "1px solid var(--cafe-border)" }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 12 }}>
+            <div style={{ marginBottom: isMobile ? 12 : 16, padding: isMobile ? 12 : 16, background: "var(--cafe-bg)", borderRadius: isMobile ? 8 : 10, border: "1px solid var(--cafe-border)" }}>
+              <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: isMobile ? 10 : 12 }}>
                 ABAC Attributes
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 6, display: "block" }}>
+                  <label style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 4 : 6, display: "block" }}>
                     Department
                   </label>
                   <input
@@ -489,10 +489,10 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                     placeholder="e.g., Kitchen"
                     style={{
                       width: "100%",
-                      padding: "10px 12px",
-                      fontSize: 14,
+                      padding: isMobile ? "8px 10px" : "10px 12px",
+                      fontSize: isMobile ? 13 : 14,
                       border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      borderRadius: isMobile ? 6 : 8,
                       background: "var(--cafe-bg-surface)",
                       color: "var(--cafe-text-primary)",
                       outline: "none"
@@ -500,7 +500,7 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 6, display: "block" }}>
+                  <label style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 4 : 6, display: "block" }}>
                     Location
                   </label>
                   <input
@@ -510,10 +510,10 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                     placeholder="e.g., Main Floor"
                     style={{
                       width: "100%",
-                      padding: "10px 12px",
-                      fontSize: 14,
+                      padding: isMobile ? "8px 10px" : "10px 12px",
+                      fontSize: isMobile ? 13 : 14,
                       border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      borderRadius: isMobile ? 6 : 8,
                       background: "var(--cafe-bg-surface)",
                       color: "var(--cafe-text-primary)",
                       outline: "none"
@@ -521,7 +521,7 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 6, display: "block" }}>
+                  <label style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 4 : 6, display: "block" }}>
                     Shift
                   </label>
                   <input
@@ -531,10 +531,10 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                     placeholder="e.g., Morning"
                     style={{
                       width: "100%",
-                      padding: "10px 12px",
-                      fontSize: 14,
+                      padding: isMobile ? "8px 10px" : "10px 12px",
+                      fontSize: isMobile ? 13 : 14,
                       border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      borderRadius: isMobile ? 6 : 8,
                       background: "var(--cafe-bg-surface)",
                       color: "var(--cafe-text-primary)",
                       outline: "none"
@@ -546,23 +546,23 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
           )}
 
           {/* Custom Permissions */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Custom Permissions (optional override)
             </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 6 : 8 }}>
               {PERMISSIONS.map(permission => (
                 <button
                   key={permission.id}
                   type="button"
                   onClick={() => handleTogglePermission(permission.id)}
                   style={{
-                    padding: "8px 14px",
+                    padding: isMobile ? "6px 12px" : "8px 14px",
                     border: formData.permissions.includes(permission.id) ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
                     borderRadius: 20,
                     background: formData.permissions.includes(permission.id) ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
                     cursor: "pointer",
-                    fontSize: 12,
+                    fontSize: isMobile ? 11 : 12,
                     fontWeight: 600,
                     color: "var(--cafe-text-primary)"
                   }}
@@ -574,7 +574,7 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: isMobile ? 10 : 12 }}>
             <button
               type="button"
               onClick={() => {
@@ -583,11 +583,11 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
                 setFormData(emptyFormData());
               }}
               style={{
-                padding: "12px 24px",
+                padding: isMobile ? "10px 20px" : "12px 24px",
                 background: "var(--cafe-bg-surface)",
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 8,
-                fontSize: 14,
+                borderRadius: isMobile ? 6 : 8,
+                fontSize: isMobile ? 13 : 14,
                 fontWeight: 600,
                 color: "var(--cafe-text-secondary)",
                 cursor: "pointer"
@@ -599,11 +599,11 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
               type="button"
               onClick={handleAddStaff}
               style={{
-                padding: "12px 24px",
+                padding: isMobile ? "10px 20px" : "12px 24px",
                 background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
                 border: "none",
-                borderRadius: 8,
-                fontSize: 14,
+                borderRadius: isMobile ? 6 : 8,
+                fontSize: isMobile ? 13 : 14,
                 fontWeight: 600,
                 color: "#fff",
                 cursor: "pointer"
@@ -616,17 +616,17 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
       )}
 
       {/* Navigation */}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: isMobile ? 10 : 12 }}>
         <button
           type="button"
           onClick={onBack}
           disabled={isLoading}
           style={{
-            padding: "14px 28px",
+            padding: isMobile ? "12px 20px" : "14px 28px",
             background: "var(--cafe-bg-surface)",
             border: "1px solid var(--cafe-border)",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "var(--cafe-text-secondary)",
             cursor: isLoading ? "not-allowed" : "pointer",
@@ -640,11 +640,11 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
           onClick={onSkip}
           disabled={isLoading}
           style={{
-            padding: "14px 28px",
+            padding: isMobile ? "12px 20px" : "14px 28px",
             background: "var(--cafe-bg-surface)",
             border: "1px solid var(--cafe-border)",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "var(--cafe-text-secondary)",
             cursor: isLoading ? "not-allowed" : "pointer",
@@ -658,11 +658,11 @@ export default function StaffRolesStep({ settings, onNext, onBack, onSkip, stepI
           onClick={handleNext}
           disabled={isLoading}
           style={{
-            padding: "14px 32px",
+            padding: isMobile ? "12px 24px" : "14px 32px",
             background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
             border: "none",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "#fff",
             cursor: isLoading ? "not-allowed" : "pointer",

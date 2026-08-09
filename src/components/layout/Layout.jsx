@@ -4,6 +4,8 @@ import { C } from "../../styles/theme";
 import LiveClock from "../common/LiveClock";
 import NotificationBell from "../notifications/NotificationBell";
 import CommandPalette from "../common/CommandPalette";
+import SidebarDropdown from "./SidebarDropdown";
+import { useTheme } from "../../theme/useTheme";
 import "../../styles/responsive.css";
 import { isSetupIncomplete, isDemoMode, exitDemoMode } from "../../utils/appMode.js";
 import { isFeatureEnabled } from "../../utils/featureConfig.js";
@@ -21,10 +23,11 @@ const Icon = ({ name, size = 15, color = "currentColor" }) => {
     inventory: <><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round"/><polyline points="3,8 12,13 21,8" stroke={color} strokeWidth="1.4" fill="none"/><line x1="12" y1="13" x2="12" y2="21" stroke={color} strokeWidth="1.4"/></>,
     staff:     <><circle cx="12" cy="7" r="3.5" stroke={color} strokeWidth="1.4" fill="none"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke={color} strokeWidth="1.4" fill="none" strokeLinecap="round"/></>,
     tables:    <><rect x="2" y="6" width="20" height="3" rx="1" stroke={color} strokeWidth="1.4" fill="none"/><line x1="8" y1="9" x2="6" y2="18" stroke={color} strokeWidth="1.4" strokeLinecap="round"/><line x1="16" y1="9" x2="18" y2="18" stroke={color} strokeWidth="1.4" strokeLinecap="round"/></>,
+    classicpos: <><rect x="2" y="3" width="18" height="16" rx="2" stroke={color} strokeWidth="1.4" fill="none"/><line x1="6" y1="8" x2="16" y2="8" stroke={color} strokeWidth="1.4"/><line x1="6" y1="12" x2="16" y2="12" stroke={color} strokeWidth="1.4"/><line x1="6" y1="16" x2="12" y2="16" stroke={color} strokeWidth="1.4"/><rect x="14" y="14" width="2" height="2" fill={color}/></>,
     delivery:  <><rect x="2" y="8" width="14" height="10" rx="1.5" stroke={color} strokeWidth="1.4" fill="none"/><polyline points="16,10 21,10 21,18 16,18" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round"/><circle cx="7" cy="18" r="2" stroke={color} strokeWidth="1.4" fill="none"/><circle cx="16" cy="18" r="2" stroke={color} strokeWidth="1.4" fill="none"/></>,
     qr:        <><rect x="3" y="3" width="16" height="16" rx="2" stroke={color} strokeWidth="1.4" fill="none"/><rect x="6" y="6" width="3" height="3" fill={color}/><rect x="13" y="6" width="3" height="3" fill={color}/><rect x="6" y="13" width="3" height="3" fill={color}/><rect x="10" y="10" width="3" height="3" fill={color}/><rect x="13" y="13" width="3" height="3" fill={color}/></>,
     production: <><path d="M12 2L2 7v10l10 5 10-5V7L12 2zm0 2.5l7 3.5v7l-7 3.5-7-3.5v-7l7-3.5z" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round"/><path d="M12 7v5" stroke={color} strokeWidth="1.4" strokeLinecap="round"/><path d="M9 9l3-2 3 2" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></>,
-    tracking:  <><path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.4" fill="none"/><path d="M12 9v3l2 1" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></>,
+    tracking:  <><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.4" fill="none"/><path d="M12 9v3l2 1" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></>,
     intelligence: <><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke={color} strokeWidth="1.4" fill="none" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.4" fill="none"/><path d="M12 9v3l2 1" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></>,
     health: <><path d="M22 12h-4l-3 9L9 3l-6 9H2" stroke={color} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.4" fill="none"/><path d="M12 9v3" stroke={color} strokeWidth="1.4" strokeLinecap="round"/></>,
     operations: <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke={color} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/><polyline points="9,5 9,11 13,11 13,5" stroke={color} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 11l4 4 4-4" stroke={color} strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round"/></>,
@@ -103,14 +106,40 @@ const NAV_SECONDARY = NAV.slice(4);
 const TITLES = {
   dashboard: "Today's Counter", orders: "POS", kitchen: "Kitchen Flow", crm: "Customers",
   analytics: "Reports", menu: "Menu Management", inventory: "Stock Room",
-  staff: "Staff Management", tables: "Floor Plan",
+  staff: "Staff Management", tables: "Floor Plan", classicpos: "Classic POS Table Management",
   delivery: "Delivery Partners", qr: "QR Ordering", production: "Production Control", tracking: "Route & Tracking", purchasing: "Purchasing Desk", documents: "Receipts & Documents", expenses: "Cost Control", workflows: "Workflows", intelligence: "Operations Intelligence", health: "System Health", operations: "Operations Center", activity: "Activity Feed", notifications: "Operational Inbox", backup: "Backup & Data Center", security: "Security & Access", settings: "Settings",
 };
 
-export default function Layout({ tab, setTab, children, newOrderCount, urgentKds, notificationCount, theme, toggleTheme, notifications, setNotifications, appMode, role, setRole, canSeeTab }) {
+export default function Layout({ tab, setTab, children, newOrderCount, urgentKds, notificationCount, notifications, setNotifications, appMode, role, setRole, canSeeTab, currentTerminal, isConnected, onShowTerminalSelector }) {
+  const { theme, toggleThemeMode } = useTheme();
   const [isOpen,       setIsOpen]       = useState(true);
   const [showMoreTray, setShowMoreTray] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Check if classic-pos theme is active
+  const isClassicPos = theme?.layout?.structure === 'classic-pos' || theme?.id === 'classic';
+
+  // Classic POS theme styles
+  const classicPosStyles = {
+    sidebarBg: '#000000',
+    sidebarBorder: '3px solid #FFFFFF',
+    headerBg: '#1A1A1A',
+    headerBorder: '3px solid #FFFFFF',
+    activeBg: '#22C55E',
+    activeColor: '#000000',
+    activeBorder: '#FFFFFF',
+    textPrimary: '#FFFFFF',
+    textSecondary: '#888888',
+    groupTitle: '#888888',
+  };
+
+  // Get appropriate styles based on theme
+  const getStyle = (property, defaultValue) => {
+    if (isClassicPos && classicPosStyles[property]) {
+      return classicPosStyles[property];
+    }
+    return defaultValue;
+  };
 
   // Reactive mobile breakpoint — drives conditional JSX, not just CSS
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
@@ -288,31 +317,34 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
 
         {/* Sidebar — desktop only */}
         {!isMobile && (
-        <div style={{
-          width: 220, background: "var(--cafe-bg-elevated)", borderRight: `1px solid var(--cafe-border)`,
+        <div className={isSmallDesktop || isTablet ? "sidebar-compact" : ""} style={{
+          width: isSmallDesktop || isTablet ? (isTablet ? 160 : 180) : 220, 
+          background: getStyle('sidebarBg', "var(--cafe-bg-elevated)"), 
+          borderRight: getStyle('sidebarBorder', `1px solid var(--cafe-border)`),
           display: "flex", flexDirection: "column", flexShrink: 0,
           height: "100%", overflow: "hidden",
+          transition: "width 0.2s ease"
         }}>
           {/* Brand lockup */}
-          <div style={{ padding: "20px 16px 18px", borderBottom: `1px solid var(--cafe-border)`, flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-                <rect width="32" height="32" rx="8" fill="var(--cafe-accent)"/>
-                <rect x="8" y="10" width="16" height="2" rx="1" fill="rgba(26,18,8,0.6)"/>
-                <rect x="10" y="14" width="12" height="10" rx="2" fill="rgba(26,18,8,0.6)"/>
+          <div style={{ padding: isSmallDesktop || isTablet ? "16px 12px 14px" : "20px 16px 18px", borderBottom: getStyle('sidebarBorder', `1px solid var(--cafe-border)`), flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isSmallDesktop || isTablet ? 8 : 10 }}>
+              <svg width={isSmallDesktop || isTablet ? 28 : 32} height={isSmallDesktop || isTablet ? 28 : 32} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+                <rect width="32" height="32" rx={isClassicPos ? 4 : 8} fill={isClassicPos ? "#22C55E" : "var(--cafe-accent)"}/>
+                <rect x="8" y="10" width="16" height="2" rx="1" fill={isClassicPos ? "#000000" : "rgba(26,18,8,0.6)"}/>
+                <rect x="10" y="14" width="12" height="10" rx="2" fill={isClassicPos ? "#000000" : "rgba(26,18,8,0.6)"}/>
               </svg>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
-                    Cafe<span style={{ color: "var(--cafe-accent)" }}>OS</span>
+                  <div style={{ fontSize: isSmallDesktop || isTablet ? 13 : 15, fontWeight: 800, color: getStyle('textPrimary', "var(--cafe-text-primary)"), letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+                    Cafe<span style={{ color: isClassicPos ? "#22C55E" : "var(--cafe-accent)" }}>OS</span>
                   </div>
                   {appMode === "demo" && (
                     <span style={{
                       fontSize: 9,
                       fontWeight: 700,
-                      color: "var(--cafe-text-tertiary)",
-                      background: "var(--cafe-bg-surface)",
-                      border: "1px solid var(--cafe-border-light)",
+                      color: getStyle('textSecondary', "var(--cafe-text-tertiary)"),
+                      background: isClassicPos ? "#333333" : "var(--cafe-bg-surface)",
+                      border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)",
                       padding: "2px 6px",
                       borderRadius: 4,
                       textTransform: "uppercase",
@@ -322,12 +354,12 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", marginTop: 4, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Operating System</div>
+                <div style={{ fontSize: isSmallDesktop || isTablet ? 9 : 10, color: getStyle('textSecondary', "var(--cafe-text-tertiary)"), marginTop: 4, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Operating System</div>
               </div>
             </div>
           </div>
 
-          <nav style={{ flex: 1, padding: "10px 10px", overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <nav style={{ flex: 1, padding: isSmallDesktop || isTablet ? "8px 8px" : "10px 10px", overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {NAV_GROUPS.map((group) => {
               const visibleItems = group.items.filter(n => 
                 (!n.featureId || isFeatureEnabled(n.featureId)) && 
@@ -337,14 +369,14 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
               if (visibleItems.length === 0) return null;
 
               return (
-                <div key={group.title} style={{ marginBottom: 16 }}>
-                  <div style={{ 
-                    fontSize: 10, 
+                <div key={group.title} style={{ marginBottom: isSmallDesktop || isTablet ? 12 : 16 }}>
+                  <div className="nav-group-title" style={{ 
+                    fontSize: isSmallDesktop || isTablet ? 9 : 10, 
                     fontWeight: 700, 
-                    color: "var(--cafe-text-muted)", 
+                    color: getStyle('groupTitle', "var(--cafe-text-muted)"), 
                     letterSpacing: "0.08em", 
                     textTransform: "uppercase", 
-                    padding: "0 12px 8px",
+                    padding: isSmallDesktop || isTablet ? "0 10px 6px" : "0 12px 8px",
                   }}>
                     {group.title}
                   </div>
@@ -354,32 +386,32 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                     return (
                       <button key={n.id} onClick={() => safeSetTab(n.id)}
                         aria-label={n.label} aria-current={active ? "page" : undefined}
+                        className="nav-item"
                         style={{
-                          display: "flex", alignItems: "center", gap: 10, padding: "0 12px",
-                          borderRadius: "var(--cafe-radius-md)", cursor: "pointer",
-                          fontWeight: active ? 600 : 500,
-                          color: active ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
-                          background: active ? "var(--cafe-accent-dim)" : "transparent",
-                          border: "none",
-                          marginBottom: 2, transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                          height: 38, width: "100%", textAlign: "left",
+                          display: "flex", alignItems: "center", gap: isSmallDesktop || isTablet ? 8 : 10, padding: isSmallDesktop || isTablet ? "0 10px" : "0 12px",
+                          borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)", cursor: "pointer",
+                          fontWeight: active ? 800 : 700,
+                          color: active ? getStyle('activeColor', "var(--cafe-accent)") : getStyle('textSecondary', "var(--cafe-text-secondary)"),
+                          background: active ? getStyle('activeBg', "var(--cafe-accent-dim)") : "transparent",
+                          border: isClassicPos ? (active ? "2px solid #FFFFFF" : "none") : "none",
+                          marginBottom: isClassicPos ? 0 : 2, transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                          height: isSmallDesktop || isTablet ? 34 : 38, width: "100%", textAlign: "left",
                           boxSizing: "border-box", position: "relative",
-                          boxShadow: active ? "inset 0 0 0 1px var(--cafe-accent-border)" : "none",
+                          boxShadow: active ? (isClassicPos ? "none" : "inset 0 0 0 1px var(--cafe-accent-border)") : "none",
+                          borderLeft: active && isClassicPos ? "4px solid #FFFFFF" : "none",
                         }}>
-                        {/* Active indicator pill on left edge */}
-                        {active && <span style={{ position: "absolute", left: -2, top: "25%", height: "50%", width: 4, borderRadius: "0 4px 4px 0", background: "var(--cafe-accent)", boxShadow: "var(--cafe-shadow-glow)" }} />}
-                        <Icon name={n.id} size={16} color={active ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)"} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, fontSize: 13, letterSpacing: "-0.01em" }}>{n.label}</span>
+                        <Icon name={n.id} size={isSmallDesktop || isTablet ? 14 : 16} color={active ? (isClassicPos ? "#000000" : "var(--cafe-accent)") : getStyle('textSecondary', "var(--cafe-text-tertiary)")} />
+                        <span className="nav-item-label" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, fontSize: isSmallDesktop || isTablet ? 12 : 13, letterSpacing: "-0.01em" }}>{n.label}</span>
                         {b > 0 && (
                           <span style={{
                             marginLeft: "auto", flexShrink: 0,
-                            background: n.id === "kitchen" ? "var(--cafe-danger)" : (active ? "var(--cafe-accent)" : "var(--cafe-bg-card)"),
-                            color: active ? "#fff" : "var(--cafe-text-secondary)",
-                            fontSize: 10, fontWeight: 700,
-                            padding: "2px 6px", borderRadius: "var(--cafe-radius-sm)",
+                            background: n.id === "kitchen" ? "var(--cafe-danger)" : (active ? (isClassicPos ? "#000000" : "var(--cafe-accent)") : (isClassicPos ? "#333333" : "var(--cafe-bg-card)")),
+                            color: active ? "#fff" : (isClassicPos ? "#FFFFFF" : "var(--cafe-text-secondary)"),
+                            fontSize: 10, fontWeight: 800,
+                            padding: "4px 8px", borderRadius: isClassicPos ? 0 : "var(--cafe-radius-sm)",
                             letterSpacing: "0.03em",
                             minWidth: 18, textAlign: "center",
-                            border: active ? "none" : "1px solid var(--cafe-border)",
+                            border: isClassicPos ? "2px solid #FFFFFF" : (active ? "none" : "1px solid var(--cafe-border)"),
                           }}>{badgeLabel(n.id)}</span>
                         )}
                       </button>
@@ -390,115 +422,23 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
             })}
           </nav>
 
-          {/* Status + theme footer */}
-          <div style={{ padding: "12px 10px", borderTop: `1px solid var(--cafe-border)`, display: "flex", flexDirection: "column", gap: 8 }}>
-            {/* Role Switcher */}
-            {typeof setRole === 'function' && (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--cafe-text-tertiary)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 6, paddingLeft: 4 }}>
-                  Active Role
-                </div>
-                <select
-                  value={role || 'owner'}
-                  onChange={(e) => setRole(e.target.value)}
-                  style={{
-                    width: "100%", fontSize: 12,
-                    background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-secondary)",
-                    padding: "8px 10px", borderRadius: "var(--cafe-radius-md)",
-                    border: "1px solid var(--cafe-border)",
-                    cursor: "pointer", height: 36,
-                    fontWeight: 500,
-                  }}
-                >
-                  <option value="owner">👑 Owner</option>
-                  <option value="manager">🏢 Manager</option>
-                  <option value="staff">🧑‍💼 Staff</option>
-                  <option value="cashier">💰 Cashier</option>
-                  <option value="kitchen">👨‍🍳 Kitchen</option>
-                </select>
-              </div>
-            )}
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              style={{
-                width: "100%", fontSize: 11,
-                background: "var(--cafe-bg-surface)",
-                color: "var(--cafe-text-secondary)",
-                padding: "10px 12px", borderRadius: "var(--cafe-radius-md)",
-                border: `1px solid var(--cafe-border)`,
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
-                fontWeight: 500, letterSpacing: "0.04em", transition: "all 0.15s ease", height: 40,
-              }}
-            >
-              <span style={{ fontSize: 14 }}>🔍</span>
-              <span>Search...</span>
-              <kbd style={{ marginLeft: "auto", fontSize: 9, padding: "2px 6px", background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 4 }}>⌘K</kbd>
-            </button>
-            {isDemoMode() && (
-              <button
-                onClick={() => {
-                  if (confirm("Exit demo mode and switch to production? This will clear demo data.")) {
-                    exitDemoMode();
-                    window.location.reload();
-                  }
-                }}
-                style={{
-                  width: "100%", fontSize: 11,
-                  background: "var(--cafe-danger-bg)",
-                  color: "var(--cafe-danger)",
-                  padding: "10px 12px", borderRadius: "var(--cafe-radius-md)",
-                  border: `1px solid var(--cafe-danger-border)`,
-                  cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
-                  fontWeight: 600, letterSpacing: "0.04em", transition: "all 0.15s ease", height: 40,
-                }}
-              >
-                <span style={{ fontSize: 14 }}>🚪</span>
-                <span>Exit Demo</span>
-              </button>
-            )}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <NotificationBell 
-                notifications={notifications} 
-                setNotifications={setNotifications}
-                onNavigateToInbox={() => safeSetTab('notifications')}
-              />
-            </div>
-            <button
-              onClick={() => setIsOpen(o => !o)}
-              aria-label={isOpen ? "Mark cafe as closed" : "Mark cafe as open"}
-              aria-pressed={isOpen}
-              style={{
-                width: "100%", fontSize: 11,
-                background: isOpen ? "var(--cafe-success-bg)" : "var(--cafe-danger-bg)",
-                color: isOpen ? "var(--cafe-success)" : "var(--cafe-danger)",
-                padding: "10px 12px", borderRadius: "var(--cafe-radius-md)",
-                border: `1px solid ${isOpen ? "var(--cafe-success-border)" : "var(--cafe-danger-border)"}`,
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
-                fontWeight: 600, letterSpacing: "0.04em", transition: "all 0.15s ease", height: 40,
-              }}>
-              <span style={{
-                width: 7, height: 7, borderRadius: "50%",
-                background: isOpen ? "var(--cafe-success)" : "var(--cafe-danger)",
-                boxShadow: `0 0 8px ${isOpen ? "var(--cafe-success)" : "var(--cafe-danger)"}`,
-                flexShrink: 0,
-              }} />
-              {isOpen ? "Open Now" : "Closed"}
-            </button>
-            <button
-              onClick={() => typeof toggleTheme === "function" && toggleTheme()}
-              aria-label={`Switch to ${typeof theme === "string" && theme === "dark" ? "light" : "dark"} theme`}
-              style={{
-                width: "100%", fontSize: 11,
-                background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)",
-                padding: "10px 12px", borderRadius: "var(--cafe-radius-md)",
-                border: `1px solid var(--cafe-border-light)`,
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 8,
-                fontWeight: 500, letterSpacing: "0.02em", transition: "all 0.15s ease", height: 40,
-              }}>
-              <span style={{ fontSize: 13 }}>{typeof theme === "string" ? (theme === "dark" ? "◐" : "◑") : "◐"}</span>
-              {typeof theme === "string" ? (theme === "dark" ? "Dark Mode" : "Light Mode") : "Theme"}
-            </button>
+          {/* Status + theme footer - Collapsible dropdown */}
+          <div style={{ padding: "12px 10px", borderTop: getStyle('sidebarBorder', `1px solid var(--cafe-border)`) }}>
+            <SidebarDropdown
+              role={role}
+              setRole={setRole}
+              isOpen={isOpen}
+              setIsOpen={setIsOpen}
+              theme={theme}
+              toggleTheme={toggleThemeMode}
+              setCommandPaletteOpen={setCommandPaletteOpen}
+              notifications={notifications}
+              setNotifications={setNotifications}
+              onNavigateToInbox={() => safeSetTab('notifications')}
+              isDemoMode={isDemoMode}
+              exitDemoMode={exitDemoMode}
+              safeSetTab={safeSetTab}
+            />
           </div>
         </div>
         )}
@@ -508,24 +448,24 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
           {/* Desktop header bar */}
           {!isMobile && (
             <div style={{
-              height: 64, background: "var(--cafe-bg-elevated)", borderBottom: `1px solid var(--cafe-border)`,
+              height: 64, background: getStyle('headerBg', "var(--cafe-bg-elevated)"), borderBottom: getStyle('headerBorder', `1px solid var(--cafe-border)`),
               display: "flex", alignItems: "center", padding: "0 24px", gap: 20, flexShrink: 0,
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              boxShadow: isClassicPos ? "none" : "0 1px 3px rgba(0,0,0,0.1)",
             }}>
               {/* Breadcrumbs & Title */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontSize: 10, color: "var(--cafe-text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span style={{ fontSize: 10, color: getStyle('textSecondary', "var(--cafe-text-muted)"), fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {NAV_GROUPS.find(g => g.items.some(i => i.id === tab))?.title || "CafeOS"}
                   </span>
-                  <span style={{ fontSize: 10, color: "var(--cafe-text-muted)" }}>/</span>
-                  <span style={{ fontSize: 10, color: "var(--cafe-accent)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span style={{ fontSize: 10, color: getStyle('textSecondary', "var(--cafe-text-muted)") }}>/</span>
+                  <span style={{ fontSize: 10, color: isClassicPos ? "#22C55E" : "var(--cafe-accent)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {NAV.find(n => n.id === tab)?.short || safeTitle}
                   </span>
                 </div>
                 <div style={{
                   fontSize: 20, fontWeight: 800,
-                  letterSpacing: "-0.03em", color: "var(--cafe-text-primary)",
+                  letterSpacing: "-0.03em", color: getStyle('textPrimary', "var(--cafe-text-primary)"),
                   lineHeight: 1.1,
                 }}>{safeTitle}</div>
               </div>
@@ -534,20 +474,74 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
               <button
                 onClick={() => setCommandPaletteOpen(true)}
                 style={{
-                  width: 280, height: 36, background: "var(--cafe-bg-surface)",
-                  border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)",
+                  width: 280, height: 36, background: isClassicPos ? "#000000" : "var(--cafe-bg-surface)",
+                  border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)", borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)",
                   padding: "0 12px", display: "flex", alignItems: "center", gap: 10,
                   cursor: "pointer", transition: "all 0.2s ease",
                 }}
               >
                 <span style={{ fontSize: 14 }}>🔍</span>
-                <span style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", flex: 1, textAlign: "left" }}>Search everything...</span>
-                <kbd style={{ fontSize: 10, color: "var(--cafe-text-muted)", background: "var(--cafe-bg-card)", padding: "2px 6px", borderRadius: 4, border: "1px solid var(--cafe-border-light)" }}>⌘K</kbd>
+                <span style={{ fontSize: 13, color: getStyle('textSecondary', "var(--cafe-text-tertiary)"), flex: 1, textAlign: "left" }}>Search everything...</span>
+                <kbd style={{ fontSize: 10, color: getStyle('textSecondary', "var(--cafe-text-muted)"), background: isClassicPos ? "#333333" : "var(--cafe-bg-card)", padding: "2px 6px", borderRadius: isClassicPos ? 0 : 4, border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)" }}>⌘K</kbd>
               </button>
 
-              <div style={{ height: 24, width: 1, background: "var(--cafe-border-light)" }} />
+              <div style={{ height: 24, width: 1, background: isClassicPos ? "#FFFFFF" : "var(--cafe-border-light)" }} />
+
+              {/* Terminal Status Indicator */}
+              {currentTerminal && (
+                <button
+                  onClick={onShowTerminalSelector}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: isClassicPos ? "#000000" : "var(--cafe-bg-surface)",
+                    border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)",
+                    borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)",
+                    padding: "6px 12px",
+                    cursor: "pointer", transition: "all 0.2s ease",
+                  }}
+                  title={`Terminal: ${currentTerminal.name} (${currentTerminal.type.toUpperCase()})`}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: isConnected ? (isClassicPos ? "#22C55E" : "var(--cafe-success)") : (isClassicPos ? "#EF4444" : "var(--cafe-danger)"),
+                    boxShadow: `0 0 6px ${isConnected ? (isClassicPos ? "#22C55E" : "var(--cafe-success)") : (isClassicPos ? "#EF4444" : "var(--cafe-danger)")}`,
+                    flexShrink: 0
+                  }} />
+                  <span style={{ fontSize: 11, color: getStyle('textPrimary', "var(--cafe-text-secondary)"), fontWeight: 700, letterSpacing: "0.02em" }}>
+                    {currentTerminal.name}
+                  </span>
+                </button>
+              )}
 
               <LiveClock />
+
+              {/* Theme Switcher Desktop */}
+              <select
+                value={localStorage.getItem('cafeos-pos-theme') || 'modern'}
+                onChange={(e) => {
+                  localStorage.setItem('cafeos-pos-theme', e.target.value);
+                  window.location.reload();
+                }}
+                style={{
+                  fontSize: 12, fontWeight: 800,
+                  background: isClassicPos ? "#000000" : "var(--cafe-bg-surface)",
+                  color: getStyle('textPrimary', "var(--cafe-text-secondary)"),
+                  padding: "8px 12px", borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)",
+                  border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)",
+                  cursor: "pointer", outline: "none",
+                }}
+              >
+                <option value="modern">🎨 Modern</option>
+                <option value="classic">📟 Classic POS</option>
+                <option value="fastfood">🍔 Fast Food</option>
+                <option value="fastfood-comprehensive">🍔 Fast Food (Comprehensive)</option>
+                <option value="fastfood-simple">🍔 Fast Food (Simple)</option>
+                <option value="cafe">☕ Cafe</option>
+                <option value="finedining">🍽️ Fine Dining</option>
+                <option value="bar">🍸 Bar</option>
+                <option value="bakery">🥐 Bakery</option>
+                <option value="accessibility">♿ Accessibility</option>
+              </select>
 
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {/* Status pill */}
@@ -555,19 +549,19 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                   onClick={() => setIsOpen(o => !o)}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
-                    background: isOpen ? "var(--cafe-success-bg)" : "var(--cafe-danger-bg)",
-                    border: `1px solid ${isOpen ? "var(--cafe-success-border)" : "var(--cafe-danger-border)"}`,
-                    borderRadius: "var(--cafe-radius-lg)", padding: "6px 14px",
+                    background: isOpen ? (isClassicPos ? "#22C55E" : "var(--cafe-success-bg)") : (isClassicPos ? "#EF4444" : "var(--cafe-danger-bg)"),
+                    border: isClassicPos ? "2px solid #FFFFFF" : `1px solid ${isOpen ? "var(--cafe-success-border)" : "var(--cafe-danger-border)"}`,
+                    borderRadius: isClassicPos ? 0 : "var(--cafe-radius-lg)", padding: "6px 14px",
                     cursor: "pointer", transition: "all 0.2s ease",
                   }}
                 >
                   <span style={{ 
                     width: 8, height: 8, borderRadius: "50%", 
-                    background: isOpen ? "var(--cafe-success)" : "var(--cafe-danger)", 
-                    boxShadow: `0 0 8px ${isOpen ? "var(--cafe-success)" : "var(--cafe-danger)"}`, 
+                    background: isOpen ? (isClassicPos ? "#000000" : "var(--cafe-success)") : (isClassicPos ? "#FFFFFF" : "var(--cafe-danger)"), 
+                    boxShadow: `0 0 8px ${isOpen ? (isClassicPos ? "#22C55E" : "var(--cafe-success)") : (isClassicPos ? "#EF4444" : "var(--cafe-danger)")}`, 
                     flexShrink: 0 
                   }} />
-                  <span style={{ fontSize: 11, color: isOpen ? "var(--cafe-success)" : "var(--cafe-danger)", fontWeight: 700, letterSpacing: "0.05em" }}>
+                  <span style={{ fontSize: 11, color: isOpen ? (isClassicPos ? "#000000" : "var(--cafe-success)") : (isClassicPos ? "#FFFFFF" : "var(--cafe-danger)"), fontWeight: 800, letterSpacing: "0.05em" }}>
                     {isOpen ? "CAFE OPEN" : "CAFE CLOSED"}
                   </span>
                 </button>
@@ -723,21 +717,39 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                       </div>
                     )}
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                      {/* Theme Toggle Mobile */}
-                      <button
-                         onClick={() => typeof toggleTheme === "function" && toggleTheme()}
-                         style={{
-                           display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                           padding: "14px", borderRadius: "var(--cafe-radius-lg)",
-                           background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)",
-                           color: "var(--cafe-text-primary)", fontSize: 13, fontWeight: 600
-                         }}
-                       >
-                         <span style={{ fontSize: 16 }}>{typeof theme === "string" ? (theme === "dark" ? "🌙" : "☀️") : "🌓"}</span>
-                         <span>{typeof theme === "string" ? (theme === "dark" ? "Dark" : "Light") : "Theme"}</span>
-                       </button>
+                    {/* Theme Switcher Mobile */}
+                    <div style={{ 
+                      background: "var(--cafe-bg-surface)", 
+                      padding: "12px 16px", 
+                      borderRadius: "var(--cafe-radius-lg)",
+                      border: "1px solid var(--cafe-border-light)",
+                      display: "flex", alignItems: "center", justifyContent: "space-between"
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-secondary)" }}>Theme</span>
+                      <select
+                        value={localStorage.getItem('cafeos-pos-theme') || 'modern'}
+                        onChange={(e) => {
+                          localStorage.setItem('cafeos-pos-theme', e.target.value);
+                          window.location.reload();
+                        }}
+                        style={{
+                          background: "transparent", border: "none", color: "var(--cafe-accent)",
+                          fontSize: 13, fontWeight: 700, cursor: "pointer", outline: "none",
+                          textAlign: "right"
+                        }}
+                      >
+                        <option value="modern">🎨 Modern</option>
+                        <option value="classic">📟 Classic</option>
+                        <option value="fastfood">🍔 Fast Food</option>
+                        <option value="cafe">☕ Cafe</option>
+                        <option value="finedining">🍽️ Fine Dining</option>
+                        <option value="bar">🍸 Bar</option>
+                        <option value="bakery">🥐 Bakery</option>
+                        <option value="accessibility">♿ Accessibility</option>
+                      </select>
+                    </div>
 
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                        {/* Exit Demo Mobile */}
                        {isDemoMode() && (
                          <button

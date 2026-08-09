@@ -34,7 +34,12 @@ function ModifierModal({
       alignItems: "center",
       justifyContent: "center",
       zIndex: 1000,
+      animation: "modifierFadeIn 0.15s ease",
     }}>
+      <style>{`
+        @keyframes modifierFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modifierScaleIn { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      `}</style>
       <div style={{
         background: "var(--cafe-bg-card)",
         borderRadius: "var(--cafe-radius-lg)",
@@ -43,6 +48,8 @@ function ModifierModal({
         width: "90%",
         maxHeight: "80vh",
         overflowY: "auto",
+        boxShadow: "var(--cafe-shadow-xl)",
+        animation: "modifierScaleIn 0.18s ease",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--cafe-space-lg)" }}>
           <div>
@@ -55,7 +62,10 @@ function ModifierModal({
           </div>
           <button
             onClick={onClose}
-            style={{ background: "transparent", border: "none", color: "var(--cafe-text-tertiary)", fontSize: 24, cursor: "pointer" }}
+            aria-label="Close"
+            style={{ background: "transparent", border: "none", borderRadius: "var(--cafe-radius-sm)", color: "var(--cafe-text-tertiary)", fontSize: 24, cursor: "pointer", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .15s, color .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.color = "var(--cafe-text-primary)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--cafe-text-tertiary)"; }}
           >
             ×
           </button>
@@ -93,7 +103,10 @@ function ModifierModal({
                         borderRadius: "var(--cafe-radius-sm)",
                         cursor: "pointer",
                         textAlign: "left",
+                        transition: "background .15s, border-color .15s",
                       }}
+                      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = "var(--cafe-accent)"; }}
+                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = "var(--cafe-border-light)"; }}
                     >
                       <span style={{ fontSize: "var(--cafe-font-sm)", color: isSelected ? "var(--cafe-accent)" : "var(--cafe-text-secondary)" }}>
                         {option.name}
@@ -114,13 +127,17 @@ function ModifierModal({
         <div style={{ display: "flex", gap: "var(--cafe-space-sm)", marginTop: "var(--cafe-space-lg)" }}>
           <button
             onClick={onClose}
-            style={{ ...btn("ghost"), flex: 1 }}
+            style={{ ...btn("ghost"), flex: 1, transition: "background .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = ""; }}
           >
             Cancel
           </button>
           <button
             onClick={() => onApply(itemId)}
-            style={{ ...btn("primary"), flex: 1 }}
+            style={{ ...btn("primary"), flex: 1, transition: "filter .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.filter = ""; }}
           >
             Apply Modifiers
           </button>

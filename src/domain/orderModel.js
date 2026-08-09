@@ -625,3 +625,4 @@ export function isOrderActive(order) {
 export function isOrderPaid(order) {
   return order?.paymentStatus === 'PAID';
 }
+

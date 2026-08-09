@@ -7,6 +7,7 @@ import { INIT_PRODUCTION_BATCHES, PRODUCTION_SECTIONS, calculateProductionStats,
 // eslint-disable-next-line no-unused-vars
 import { BATCH_STATUS, QC_GRADES, TRACEABILITY_STATES, EXPIRY_GROUPS, validateBatchId, checkBatchIdUnique, generateBatchId, getNextBatchSequence, normalizeProductionBatch, reconcileBatchQuantities, getExpiryGroup, getDaysUntilExpiry, calculateWastagePercentage, calculateTotalReplacements, searchBatches, filterByStatus, sortBatches } from "../../domain/productionModel.js";
 import DestructiveDialog from "../common/DestructiveDialog";
+import AlertDialog from "../common/AlertDialog.jsx";
  
 // eslint-disable-next-line no-unused-vars
 import WarningDialog from "../common/WarningDialog";
@@ -32,6 +33,7 @@ export default function Production({ productionBatches: externalBatches, setProd
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
 
   const stats = useMemo(() => calculateProductionStats(batches), [batches]);
 
@@ -121,12 +123,12 @@ export default function Production({ productionBatches: externalBatches, setProd
   const handleSaveBatch = useCallback(() => {
     const validation = validateBatchId(batchForm.batchId);
     if (!validation.valid) {
-      alert(validation.error);
+      setAlertDialog({ isOpen: true, title: 'Validation Error', message: validation.error, type: 'error' });
       return;
     }
     const uniqueness = checkBatchIdUnique(batchForm.batchId, batches);
     if (!uniqueness.unique) {
-      alert(uniqueness.error);
+      setAlertDialog({ isOpen: true, title: 'Duplicate Batch ID', message: uniqueness.error, type: 'error' });
       return;
     }
     const newBatch = normalizeProductionBatch({
@@ -570,6 +572,14 @@ export default function Production({ productionBatches: externalBatches, setProd
           onCancel={() => setShowDeleteDialog(false)}
         />
       )}
+
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

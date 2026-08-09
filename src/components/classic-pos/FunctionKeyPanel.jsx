@@ -1,0 +1,155 @@
+/**
+ * Classic POS Function Key Panel
+ * 
+ * Tabbed panel with MENU and MORE tabs, each showing a 3x3 grid of function buttons.
+ * Buttons are large rounded-rectangle tiles with gradient dark reddish-maroon background.
+ */
+
+import { useState } from 'react';
+
+export default function FunctionKeyPanel({ onKeyPress }) {
+  const [activeTab, setActiveTab] = useState('MENU');
+
+  const menuButtons = [
+    { key: 'F1', label: 'SEARCH', action: 'search' },
+    { key: 'F2', label: 'HOLD', action: 'hold' },
+    { key: 'F3', label: 'RECALL', action: 'recall' },
+    { key: 'F4', label: 'CLEAR', action: 'clear' },
+    { key: 'F5', label: 'CHECKOUT', action: 'checkout' },
+    { key: 'F6', label: 'DISCOUNT', action: 'discount' },
+    { key: 'F7', label: 'CUSTOMER', action: 'customer' },
+    { key: 'F8', label: 'TABLE', action: 'table' },
+    { key: 'F9', label: 'SETTLEMENT', action: 'settlement' },
+  ];
+
+  const moreButtons = [
+    { key: '', label: 'SPLIT BILL', action: 'splitBill' },
+    { key: '', label: 'ORDER QUEUE', action: 'orderSequence' },
+    { key: '', label: 'VOID REASON', action: 'voidReason' },
+    { key: '', label: 'MGR OVERRIDE', action: 'managerOverride' },
+    { key: '', label: 'INVENTORY', action: 'inventory' },
+    { key: '', label: 'WASTE TRACK', action: 'waste_tracking' },
+    { key: '', label: 'TABLE MAP', action: 'table_map' },
+    { key: '', label: 'RESERVATIONS', action: 'reservations' },
+    { key: '', label: 'WAITLIST', action: 'waitlist' },
+    { key: '', label: 'SALES DASH', action: 'sales_dashboard' },
+    { key: '', label: 'ANALYTICS', action: 'analytics' },
+    { key: '', label: 'DELAYED FIRE', action: 'delayed_firing' },
+    { key: '', label: 'STAFF', action: 'staff_management' },
+    { key: '', label: 'SHIFTS', action: 'shift_management' },
+    { key: '', label: 'DIETARY', action: 'dietary_options' },
+    { key: '', label: 'DEPOSITS', action: 'split_payment' },
+    { key: '', label: 'CANCEL ORD', action: 'order_cancellation' },
+  ];
+
+  const buttons = activeTab === 'MENU' ? menuButtons : moreButtons;
+
+  const handleButtonClick = (button) => {
+    console.log('Button clicked:', button);
+    if (onKeyPress) {
+      try {
+        onKeyPress(button.key, button.action);
+      } catch (error) {
+        console.error('Error handling button click:', error);
+      }
+    } else {
+      console.error('onKeyPress handler not provided');
+    }
+  };
+
+  const buttonStyle = {
+    width: '100%',
+    height: '85px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'linear-gradient(135deg, #5B2020 0%, #3D1414 100%)',
+    color: '#ffffff',
+    fontSize: '13px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    padding: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    boxShadow: '0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+    transition: 'all 0.15s ease',
+    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+  };
+
+  const getTabStyle = (tab) => ({
+    padding: '10px 28px',
+    borderRadius: '8px 8px 0 0',
+    border: 'none',
+    background: activeTab === tab ? '#5B2020' : '#2A2A2A',
+    color: '#ffffff',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    marginRight: '4px',
+    boxShadow: activeTab === tab ? '0 2px 8px rgba(91, 32, 32, 0.4)' : 'none',
+  });
+
+  const containerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0',
+  };
+
+  const gridStyle = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateRows: activeTab === 'MENU' ? 'repeat(3, 85px)' : 'repeat(6, 70px)',
+    gap: '6px',
+    padding: '8px',
+    background: '#1E1E1E',
+    borderRadius: '0 8px 8px 8px',
+    maxHeight: activeTab === 'MENU' ? 'auto' : '450px',
+    overflowY: 'auto',
+  };
+
+  return (
+    <div style={containerStyle}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '4px', paddingLeft: '8px' }}>
+        <button
+          style={getTabStyle('MENU')}
+          onClick={() => setActiveTab('MENU')}
+        >
+          MENU
+        </button>
+        <button
+          style={getTabStyle('MORE')}
+          onClick={() => setActiveTab('MORE')}
+        >
+          MORE
+        </button>
+      </div>
+
+      {/* 3x3 Grid */}
+      <div style={gridStyle}>
+        {buttons.map((button, index) => (
+          <button
+            key={index}
+            style={buttonStyle}
+            onClick={() => handleButtonClick(button)}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'linear-gradient(135deg, #7B3030 0%, #5B2020 100%)';
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'linear-gradient(135deg, #5B2020 0%, #3D1414 100%)';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)';
+            }}
+          >
+            {button.key && <span style={{ fontSize: '10px', opacity: 0.7, fontWeight: '600' }}>{button.key}</span>}
+            <span style={{ lineHeight: '1.2' }}>{button.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -63,50 +63,52 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header */}
       <div style={{
-        padding: isMobile ? "20px" : "32px",
+        padding: isMobile ? "20px" : "28px",
         borderBottom: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)"
+        background: "var(--cafe-bg-surface)"
       }}>
         <h2 style={{
           fontSize: isMobile ? 20 : 24,
-          fontWeight: 700,
+          fontWeight: 800,
           color: "var(--cafe-text-primary)",
-          margin: "0 0 8px"
+          margin: "0 0 8px",
+          letterSpacing: "-0.02em"
         }}>
           General
         </h2>
         <p style={{
           fontSize: isMobile ? 13 : 14,
           color: "var(--cafe-text-secondary)",
-          margin: 0
+          margin: 0,
+          fontWeight: 500
         }}>
           Configure language, timezone, currency, and operational preferences
         </p>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "28px" }}>
         {/* Regional Settings */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Regional Settings
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Language
                 </label>
                 <select
@@ -115,12 +117,16 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 >
                   {languages.map(lang => (
                     <option key={lang.code} value={lang.code}>{lang.name}</option>
@@ -129,7 +135,7 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Timezone
                 </label>
                 <select
@@ -138,12 +144,16 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 >
                   {timezones.map(tz => (
                     <option key={tz.value} value={tz.value}>{tz.name}</option>
@@ -152,7 +162,7 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Currency
                 </label>
                 <select
@@ -161,12 +171,16 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 >
                   {currencies.map(curr => (
                     <option key={curr.code} value={curr.code}>{curr.symbol} {curr.name}</option>
@@ -178,26 +192,26 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
         </div>
 
         {/* Date & Time */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Date & Time
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Date Format
                 </label>
                 <select
@@ -206,12 +220,16 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 >
                   {dateFormats.map(df => (
                     <option key={df.value} value={df.value}>{df.example}</option>
@@ -220,7 +238,7 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
               </div>
 
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Time Format
                 </label>
                 <div style={{ display: "flex", gap: 12 }}>
@@ -231,14 +249,17 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                       style={{
                         flex: 1,
                         padding: "12px",
-                        background: formData.timeFormat === format ? "var(--cafe-accent)" : "var(--cafe-bg-surface)",
-                        border: formData.timeFormat === format ? "1px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                        borderRadius: 8,
+                        background: formData.timeFormat === format ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
+                        border: formData.timeFormat === format ? "1px solid var(--cafe-accent)" : "1px solid var(--cafe-border-light)",
+                        borderRadius: 12,
                         fontSize: 14,
-                        fontWeight: 600,
-                        color: formData.timeFormat === format ? "#fff" : "var(--cafe-text-primary)",
-                        cursor: "pointer"
+                        fontWeight: 700,
+                        color: formData.timeFormat === format ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
                       }}
+                      onMouseOver={e => { if (formData.timeFormat !== format) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+                      onMouseOut={e => { if (formData.timeFormat !== format) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}
                     >
                       {format.toUpperCase()}
                     </button>
@@ -250,22 +271,22 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
         </div>
 
         {/* Measurement Units */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Measurement Units
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
             <div style={{ display: "flex", gap: 12 }}>
               {[
@@ -278,14 +299,17 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     flex: 1,
                     padding: "12px",
-                    background: formData.measurementUnits === unit.id ? "var(--cafe-accent)" : "var(--cafe-bg-surface)",
-                    border: formData.measurementUnits === unit.id ? "1px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    background: formData.measurementUnits === unit.id ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
+                    border: formData.measurementUnits === unit.id ? "1px solid var(--cafe-accent)" : "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     fontSize: 14,
-                    fontWeight: 600,
-                    color: formData.measurementUnits === unit.id ? "#fff" : "var(--cafe-text-primary)",
-                    cursor: "pointer"
+                    fontWeight: 700,
+                    color: formData.measurementUnits === unit.id ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
                   }}
+                  onMouseOver={e => { if (formData.measurementUnits !== unit.id) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+                  onMouseOut={e => { if (formData.measurementUnits !== unit.id) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}
                 >
                   {unit.name}
                 </button>
@@ -297,24 +321,24 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
         {/* Operational Preferences */}
         <div>
           <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 12,
+            fontWeight: 700,
             color: "var(--cafe-text-secondary)",
             margin: "0 0 16px",
             textTransform: "uppercase",
-            letterSpacing: "0.05em"
+            letterSpacing: "0.06em"
           }}>
             Operational Preferences
           </h3>
           <div style={{
             background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 16,
+            padding: 24
           }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                   Default View
                 </label>
                 <select
@@ -323,12 +347,16 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    fontSize: 15,
-                    border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    fontSize: 14,
+                    border: "1px solid var(--cafe-border-light)",
+                    borderRadius: 12,
                     background: "var(--cafe-bg-surface)",
-                    color: "var(--cafe-text-primary)"
+                    color: "var(--cafe-text-primary)",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                 >
                   <option value="dashboard">Dashboard</option>
                   <option value="pos">POS</option>
@@ -337,18 +365,18 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                 </select>
               </div>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.autoRefresh}
                   onChange={(e) => handleChange('autoRefresh', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Auto-Refresh Data
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Automatically refresh data every {formData.refreshInterval} seconds
                   </div>
                 </div>
@@ -356,7 +384,7 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
 
               {formData.autoRefresh && (
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8, display: "block" }}>
                     Refresh Interval (seconds)
                   </label>
                   <input
@@ -368,45 +396,49 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
                     style={{
                       width: "100%",
                       padding: "12px 16px",
-                      fontSize: 15,
-                      border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      fontSize: 14,
+                      border: "1px solid var(--cafe-border-light)",
+                      borderRadius: 12,
                       background: "var(--cafe-bg-surface)",
-                      color: "var(--cafe-text-primary)"
+                      color: "var(--cafe-text-primary)",
+                      outline: "none",
+                      transition: "all 0.2s"
                     }}
+                    onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
                   />
                 </div>
               )}
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.showTips}
                   onChange={(e) => handleChange('showTips', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Show Tips & Hints
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Display helpful tips throughout the interface
                   </div>
                 </div>
               </label>
 
-              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", padding: "12px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
                 <input
                   type="checkbox"
                   checked={formData.compactMode}
                   onChange={(e) => handleChange('compactMode', e.target.checked)}
-                  style={{ margin: 0 }}
+                  style={{ margin: 0, width: 18, height: 18, accentColor: 'var(--cafe-accent)' }}
                 />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
                     Compact Mode
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                     Use more compact spacing throughout the interface
                   </div>
                 </div>
@@ -418,9 +450,9 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
 
       {/* Footer */}
       <div style={{
-        padding: isMobile ? "20px" : "32px",
+        padding: isMobile ? "20px" : "28px",
         borderTop: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)",
+        background: "var(--cafe-bg-surface)",
         display: "flex",
         justifyContent: "flex-end"
       }}>
@@ -428,20 +460,24 @@ export default function GeneralSettingsSection({ settings, onUpdate, isMobile })
           onClick={handleSave}
           style={{
             padding: "12px 32px",
-            background: "var(--cafe-accent)",
-            border: "none",
-            borderRadius: 8,
+            background: "var(--cafe-accent-bg)",
+            border: "1px solid var(--cafe-accent)",
+            borderRadius: 12,
             fontSize: 14,
-            fontWeight: 600,
-            color: "#fff",
+            fontWeight: 700,
+            color: "var(--cafe-accent)",
             cursor: "pointer",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s"
           }}
-          onMouseEnter={(e) => {
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "var(--cafe-accent)";
+            e.currentTarget.style.color = '#1A1208';
             e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.4)";
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.3)";
           }}
           onMouseLeave={(e) => {
+            e.currentTarget.style.background = "var(--cafe-accent-bg)";
+            e.currentTarget.style.color = "var(--cafe-accent)";
             e.currentTarget.style.transform = "translateY(0)";
             e.currentTarget.style.boxShadow = "none";
           }}

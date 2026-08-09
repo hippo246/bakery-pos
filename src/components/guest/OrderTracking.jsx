@@ -192,7 +192,7 @@ export default function OrderTracking({ order, tableId, onAddMoreItems, onCallWa
           Your order has been sent to the kitchen
         </div>
 
-        <div style={{ ...card, backgroundColor: "white", padding: 20, marginBottom: 24, textAlign: "left" }}>
+        <div style={{ ...card, backgroundColor: "var(--cafe-bg-card)", padding: 20, marginBottom: 24, textAlign: "left" }}>
           <div style={{ fontSize: 12, color: "#a89070", marginBottom: 4 }}>Order Reference</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: "#3d2c1f", marginBottom: 16 }}>
             #{order?.id || "GUEST-" + Date.now()}
@@ -215,7 +215,7 @@ export default function OrderTracking({ order, tableId, onAddMoreItems, onCallWa
         </div>
 
         {/* Order Status Tracker */}
-        <div style={{ ...card, backgroundColor: "white", padding: 20, marginBottom: 24 }}>
+        <div style={{ ...card, backgroundColor: "var(--cafe-bg-card)", padding: 20, marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#3d2c1f" }}>Order Status</div>
             <div style={{ fontSize: 12, color: "#8b7355" }}>
@@ -299,7 +299,7 @@ export default function OrderTracking({ order, tableId, onAddMoreItems, onCallWa
 
         {/* Order Items */}
         {order?.items && order.items.length > 0 && (
-          <div style={{ ...card, backgroundColor: "white", padding: 20, marginBottom: 24, textAlign: "left" }}>
+          <div style={{ ...card, backgroundColor: "var(--cafe-bg-card)", padding: 20, marginBottom: 24, textAlign: "left" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: "#3d2c1f" }}>Order Items</div>
               <span style={{ fontSize: 12, color: "#8b7355", backgroundColor: "#f5f0e8", borderRadius: 12, padding: "2px 10px" }}>
@@ -385,7 +385,7 @@ export default function OrderTracking({ order, tableId, onAddMoreItems, onCallWa
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: "white",
+        backgroundColor: "var(--cafe-bg-card)",
         borderTop: "1px solid #e8e4df",
         padding: "12px 16px",
         display: "flex",

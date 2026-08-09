@@ -1,10 +1,12 @@
 import React from 'react';
 import { useState } from "react";
+import AlertDialog from "../common/AlertDialog.jsx";
 import { SHIFT_TYPES, createShift } from "../../utils/shiftManagement.js";
 
 // ── Opening Shift Wizard Component ───────────────────────────────────────
 export default function OpeningShiftWizard({ onComplete, onCancel, isMobile = false }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [shiftData, setShiftData] = useState({
     shiftType: 'morning',
     staffId: '',
@@ -517,7 +519,7 @@ function Step4PrinterCheck({ checked, onChange, onNext, isMobile }) {
         <button
           onClick={() => {
             // Simulate print test
-            alert("Printing test receipt...");
+            setAlertDialog({ isOpen: true, title: 'Print Test', message: 'Printing test receipt...', type: 'info' });
             onChange(true);
             setTimeout(onNext, 500);
           }}
@@ -704,7 +706,7 @@ function Step7InventoryWarnings({ warnings, onChange, isMobile }) {
   ];
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       <h3 style={{
         fontSize: 16,
         fontWeight: 600,

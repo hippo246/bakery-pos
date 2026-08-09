@@ -942,7 +942,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); markPickedUp(o.id); }}
-                      style={{ padding: isMobile ? "4px 10px" : "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "white", fontSize: isMobile ? "var(--cafe-font-xs)" : "var(--cafe-font-xs)", cursor: "pointer", fontWeight: 600 }}
+                      style={{ padding: isMobile ? "4px 10px" : "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "var(--cafe-text-primary)", fontSize: isMobile ? "var(--cafe-font-xs)" : "var(--cafe-font-xs)", cursor: "pointer", fontWeight: 600 }}
                     >
                       Mark Picked Up
                     </button>
@@ -970,12 +970,12 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
               Clear
             </button>
             {pipelineFilter === "PACKING" && (
-              <button onClick={handleBulkMarkReady} style={{ padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "white", fontSize: "var(--cafe-font-xs)", cursor: "pointer", fontWeight: 600 }}>
+              <button onClick={handleBulkMarkReady} style={{ padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-xs)", cursor: "pointer", fontWeight: 600 }}>
                 Mark Ready for Pickup
               </button>
             )}
             {pipelineFilter === "READY_FOR_PICKUP" && (
-              <button onClick={handleBulkMarkPickedUp} style={{ padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-info)", color: "white", fontSize: "var(--cafe-font-xs)", cursor: "pointer", fontWeight: 600 }}>
+              <button onClick={handleBulkMarkPickedUp} style={{ padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-info)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-xs)", cursor: "pointer", fontWeight: 600 }}>
                 Mark Picked Up
               </button>
             )}
@@ -1306,7 +1306,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                     )}
                   </div>
                   {isCodPending && (
-                    <button onClick={() => collectCOD(so.id)} style={{ padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "white", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
+                    <button onClick={() => collectCOD(so.id)} style={{ padding: "8px 16px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
                       Collect Cash
                     </button>
                   )}
@@ -1407,22 +1407,22 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
             {isActive && (
               <div style={{ padding: 16, borderTop: "1px solid var(--cafe-border-light)", display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {so.status === "PACKING" && (
-                  <button onClick={() => markPacked(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-success)", color: "white", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
+                  <button onClick={() => markPacked(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-success)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
                     Ready for Pickup
                   </button>
                 )}
                 {so.status === "READY_FOR_PICKUP" && (
-                  <button onClick={() => markPickedUp(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-info)", color: "white", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
+                  <button onClick={() => markPickedUp(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-info)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
                     Mark Picked Up
                   </button>
                 )}
                 {so.status === "PICKED_UP" && (
-                  <button onClick={() => markOutForDelivery(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-accent)", color: "white", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
+                  <button onClick={() => markOutForDelivery(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-accent)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
                     Out for Delivery
                   </button>
                 )}
                 {so.status === "OUT_FOR_DELIVERY" && (
-                  <button onClick={() => markDelivered(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-success)", color: "white", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
+                  <button onClick={() => markDelivered(so.id)} style={{ flex: 1, padding: "10px 20px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-success)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}>
                     Mark Delivered
                   </button>
                 )}
@@ -1559,7 +1559,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                       {!settlement.paidDate && <div />}
                       {!isPaid && (
                         <button
-                          style={{ padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "white", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}
+                          style={{ padding: "6px 14px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "var(--cafe-success)", color: "var(--cafe-text-primary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 600 }}
                           onClick={() => {
                             setSettlementDialog({
                               open: true,

@@ -58,17 +58,22 @@ const checkmark = `
 import WelcomeStep from "./steps/WelcomeStep";
 import BusinessDetailsStep from "./steps/BusinessDetailsStep";
 import BranchDetailsStep from "./steps/BranchDetailsStep";
+import ThemeSelectionStep from "./steps/ThemeSelectionStep";
 import StorageSelectionStep from "./steps/StorageSelectionStep";
 import OwnerAccessStep from "./steps/OwnerAccessStep";
 import StaffRolesStep from "./steps/StaffRolesStep";
 import TablesStep from "./steps/TablesStep";
 import MenuBasicsStep from "./steps/MenuBasicsStep";
 import PaymentMethodsStep from "./steps/PaymentMethodsStep";
+import PaymentGatewayStep from "./steps/PaymentGatewayStep";
+import DeliveryIntegrationStep from "./steps/DeliveryIntegrationStep";
 import ReceiptsPrintersStep from "./steps/ReceiptsPrintersStep";
 import QROrderingStep from "./steps/QROrderingStep";
 import StockBasicsStep from "./steps/StockBasicsStep";
+import WorkflowsStep from "./steps/WorkflowsStep";
 import DataImportStep from "./steps/DataImportStep";
 import SecurityReviewStep from "./steps/SecurityReviewStep";
+import SelfHealingStep from "./steps/SelfHealingStep";
 import BackupStep from "./steps/BackupStep";
 import LaunchChecklistStep from "./steps/LaunchChecklistStep";
 import KitchenStationsStep from "./steps/KitchenStationsStep";
@@ -138,6 +143,17 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
     checkResponsive();
     window.addEventListener('resize', checkResponsive);
     return () => window.removeEventListener('resize', checkResponsive);
+  }, []);
+
+  // Handle orientation changes for mobile
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      const width = window.innerWidth;
+      setIsMobile(width <= 768);
+      setIsTablet(width > 768 && width <= 1024);
+    };
+    window.addEventListener('orientationchange', handleOrientationChange);
+    return () => window.removeEventListener('orientationchange', handleOrientationChange);
   }, []);
 
   // Load setup state on mount with crash recovery
@@ -412,6 +428,16 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
       return;
     }
     
+    // Apply selected theme from setup
+    if (localSettings.selectedTheme) {
+      try {
+        localStorage.setItem('cafeos-pos-theme', localSettings.selectedTheme);
+        console.log('[SetupWizard] Applied theme from setup:', localSettings.selectedTheme);
+      } catch (error) {
+        console.error('[SetupWizard] Failed to save theme:', error);
+      }
+    }
+    
     // All validations passed - complete setup
     completeSetup();
     markOnboardingCompleted();
@@ -457,6 +483,8 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
         return <BusinessDetailsStep {...stepProps} />;
       case 'branch':
         return <BranchDetailsStep {...stepProps} />;
+      case 'theme':
+        return <ThemeSelectionStep {...stepProps} />;
       case 'storage':
         return <StorageSelectionStep {...stepProps} />;
       case 'owner':
@@ -473,16 +501,24 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
         return <OrderSourcesStep {...stepProps} />;
       case 'payments':
         return <PaymentMethodsStep {...stepProps} />;
+      case 'payment-gateway':
+        return <PaymentGatewayStep {...stepProps} />;
+      case 'delivery':
+        return <DeliveryIntegrationStep {...stepProps} />;
       case 'receipts':
         return <ReceiptsPrintersStep {...stepProps} />;
       case 'qr':
         return <QROrderingStep {...stepProps} />;
       case 'stock':
         return <StockBasicsStep {...stepProps} />;
+      case 'workflows':
+        return <WorkflowsStep {...stepProps} />;
       case 'import':
         return <DataImportStep {...stepProps} />;
       case 'security':
         return <SecurityReviewStep {...stepProps} />;
+      case 'self-healing':
+        return <SelfHealingStep {...stepProps} />;
       case 'backup':
         return <BackupStep {...stepProps} />;
       case 'checklist':
@@ -531,6 +567,20 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           "Operating hours affect order availability",
           "Time zone ensures accurate timestamps",
           "Multiple branches can be managed from one account"
+        ]
+      },
+      theme: {
+        title: "Theme Selection",
+        tip: "Choose a visual theme that matches your cafe's style. Themes control the look and feel of your POS interface.",
+        warning: "Theme can be changed anytime in Settings. All themes support the same features.",
+        preview: null,
+        details: [
+          "Modern: Clean, contemporary design",
+          "Classic POS: Traditional layout with function keys",
+          "Fast Food: Optimized for quick service",
+          "Cafe: Warm, inviting design",
+          "Fine Dining: Elegant, upscale design",
+          "Bar: Dark theme for bars and pubs"
         ]
       },
       storage: {
@@ -617,6 +667,30 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           "Payment gateway setup (if applicable)"
         ]
       },
+      'payment-gateway': {
+        title: "Payment Gateway",
+        tip: "Select and configure a payment gateway for online payments. This enables card, UPI, and wallet payments.",
+        warning: "API credentials are required for production. Test mode is available for development.",
+        preview: null,
+        details: [
+          "Razorpay: Popular in India, supports UPI/cards",
+          "Stripe: Global gateway, international cards",
+          "Paytm: India-focused, UPI and wallet",
+          "Multiple gateways can be configured"
+        ]
+      },
+      delivery: {
+        title: "Delivery Integration",
+        tip: "Connect with food delivery platforms to receive orders directly in your POS.",
+        warning: "Each platform requires API credentials. Integration can be set up later.",
+        preview: null,
+        details: [
+          "Swiggy: India's largest food delivery",
+          "Zomato: Popular delivery platform",
+          "Uber Eats: Global delivery service",
+          "Own delivery fleet management"
+        ]
+      },
       channels: {
         title: "Order Sources",
         tip: "Choose how customers can place orders — dine-in walk-in, takeaway, or delivery. You can enable all three or just the ones you operate.",
@@ -665,6 +739,18 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           "Stock deducted automatically from orders"
         ]
       },
+      workflows: {
+        title: "Workflows & Automation",
+        tip: "Enable automated workflows to streamline operations and reduce manual tasks.",
+        warning: "Workflows can be customized with triggers and conditions. Start with recommended ones.",
+        preview: null,
+        details: [
+          "Auto stock alerts when items run low",
+          "Auto order routing to kitchen stations",
+          "Auto receipt printing on completion",
+          "Auto backup scheduling"
+        ]
+      },
       import: {
         title: "Data Import",
         tip: "Import existing data from other systems like POS software, spreadsheets, or previous CafeOS backups.",
@@ -687,6 +773,18 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           "Check password requirements",
           "Enable two-factor authentication",
           "Review audit logs if needed"
+        ]
+      },
+      'self-healing': {
+        title: "Self-Healing Configuration",
+        tip: "Enable self-healing features to automatically detect and recover from system issues.",
+        warning: "Recommended features help maintain system stability. Can be customized later.",
+        preview: null,
+        details: [
+          "Auto recovery from common errors",
+          "Real-time health monitoring",
+          "Circuit breaker to prevent failures",
+          "Auto retry for failed operations"
         ]
       },
       backup: {
@@ -1273,9 +1371,9 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
 
       {/* Left Panel - Progress & Branding (35%) */}
       <div style={{
-        width: "35%",
-        padding: "48px",
-        display: "flex",
+        width: isTablet ? "30%" : "35%",
+        padding: isTablet ? "32px" : "48px",
+        display: isTablet ? "none" : "flex",
         flexDirection: "column",
         position: "relative",
         zIndex: 1
@@ -1527,7 +1625,7 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
 
       {/* Right Panel - Content (65%) */}
       <div style={{
-        width: "65%",
+        width: isTablet ? "100%" : "65%",
         display: "flex",
         flexDirection: "column",
         background: "var(--cafe-bg)",
@@ -1536,17 +1634,19 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
       }}>
         {/* Header */}
         <div style={{
-          padding: "28px 40px",
+          padding: isTablet ? "20px 24px" : "28px 40px",
           borderBottom: "1px solid var(--cafe-border-light)",
           background: "var(--cafe-bg-elevated)",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between"
+          alignItems: isTablet ? "flex-start" : "center",
+          justifyContent: "space-between",
+          flexDirection: isTablet ? "column" : "row",
+          gap: isTablet ? 12 : 0
         }}>
           <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
               <h2 style={{
-                fontSize: 24,
+                fontSize: isTablet ? 20 : 24,
                 fontWeight: 700,
                 color: "var(--cafe-text-primary)",
                 margin: 0,
@@ -1585,7 +1685,7 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
               )}
             </div>
             <p style={{
-              fontSize: 14,
+              fontSize: isTablet ? 13 : 14,
               color: "var(--cafe-text-secondary)",
               margin: 0,
               lineHeight: 1.5
@@ -1673,7 +1773,7 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           <div style={{ 
             flex: 1, 
             overflowY: "auto", 
-            padding: "40px",
+            padding: isTablet ? "24px" : "40px",
             opacity: isTransitioning ? 0.5 : 1,
             transition: "opacity 0.3s ease"
           }}>
@@ -1741,7 +1841,7 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           </div>
 
           {/* Context Panel */}
-          {!isMobile && showContextPanel && (
+          {!isMobile && !isTablet && showContextPanel && (
             <div style={{
               width: 320,
               padding: "32px 24px",
@@ -1909,12 +2009,13 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
 
         {/* Navigation */}
         <div style={{
-          padding: "24px 40px",
+          padding: isTablet ? "16px 24px" : "24px 40px",
           borderTop: "1px solid var(--cafe-border-light)",
           background: "var(--cafe-bg-elevated)",
           display: "flex",
-          gap: 12,
-          alignItems: "center"
+          gap: isTablet ? 8 : 12,
+          alignItems: "center",
+          flexWrap: isTablet ? "wrap" : "nowrap"
         }}>
           {stepIndex > 0 && (
             <button
@@ -1922,11 +2023,11 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
               disabled={isLoading || isTransitioning}
               aria-label="Go to previous step"
               style={{
-                padding: "14px 28px",
+                padding: isTablet ? "12px 20px" : "14px 28px",
                 background: "var(--cafe-bg-surface)",
                 border: "1px solid var(--cafe-border)",
                 borderRadius: 10,
-                fontSize: 15,
+                fontSize: isTablet ? 14 : 15,
                 fontWeight: 600,
                 color: "var(--cafe-text-secondary)",
                 cursor: (isLoading || isTransitioning) ? "not-allowed" : "pointer",
@@ -1958,11 +2059,11 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
               disabled={isLoading || isTransitioning}
               aria-label="Skip this step"
               style={{
-                padding: "14px 20px",
+                padding: isTablet ? "12px 16px" : "14px 20px",
                 background: "transparent",
                 border: "1px solid transparent",
                 borderRadius: 10,
-                fontSize: 15,
+                fontSize: isTablet ? 14 : 15,
                 fontWeight: 600,
                 color: "var(--cafe-text-tertiary)",
                 cursor: (isLoading || isTransitioning) ? "not-allowed" : "pointer",
@@ -1989,11 +2090,11 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
             </button>
           )}
           <div style={{ flex: 1 }} />
-          {!isMobile && !showContextPanel && (
+          {!isMobile && !isTablet && !showContextPanel && (
             <button
               onClick={() => setShowContextPanel(true)}
               style={{
-                padding: "14px 20px",
+                padding: isTablet ? "12px 16px" : "14px 20px",
                 background: "transparent",
                 border: "1px solid var(--cafe-border)",
                 borderRadius: 10,
@@ -2020,11 +2121,11 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
             disabled={isLoading || isTransitioning}
             aria-label="Save progress and exit"
             style={{
-              padding: "14px 28px",
+              padding: isTablet ? "12px 20px" : "14px 28px",
               background: "var(--cafe-bg-surface)",
               border: "1px solid var(--cafe-border)",
               borderRadius: 10,
-              fontSize: 15,
+              fontSize: isTablet ? 14 : 15,
               fontWeight: 600,
               color: "var(--cafe-text-secondary)",
               cursor: (isLoading || isTransitioning) ? "not-allowed" : "pointer",
@@ -2065,21 +2166,22 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          zIndex: 10000
+          zIndex: 10000,
+          padding: isMobile ? "16px" : 0
         }}>
           <div style={{
             background: "var(--cafe-bg-card)",
             border: "1px solid var(--cafe-border)",
-            borderRadius: 20,
-            padding: 40,
-            maxWidth: 650,
-            width: "90%",
-            maxHeight: "85vh",
+            borderRadius: isMobile ? 16 : 20,
+            padding: isMobile ? "24px" : 40,
+            maxWidth: isMobile ? "100%" : 650,
+            width: isMobile ? "100%" : "90%",
+            maxHeight: isMobile ? "90vh" : "85vh",
             overflowY: "auto",
             boxShadow: "0 32px 80px rgba(0, 0, 0, 0.4)"
           }}>
             <h2 style={{
-              fontSize: 26,
+              fontSize: isMobile ? 22 : 26,
               fontWeight: 700,
               color: "var(--cafe-text-primary)",
               margin: "0 0 8px"
@@ -2087,7 +2189,7 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
               Setup Guide
             </h2>
             <p style={{
-              fontSize: 15,
+              fontSize: isMobile ? 14 : 15,
               color: "var(--cafe-text-secondary)",
               margin: "0 0 28px",
               lineHeight: 1.6

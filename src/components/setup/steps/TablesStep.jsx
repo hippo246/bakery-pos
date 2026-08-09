@@ -283,14 +283,14 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
     <div style={{
       background: "var(--cafe-bg-surface)",
       border: "1px solid var(--cafe-border-light)",
-      borderRadius: 16,
-      padding: 24,
-      marginBottom: 20
+      borderRadius: isMobile ? 12 : 16,
+      padding: isMobile ? 16 : 24,
+      marginBottom: isMobile ? 16 : 20
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 24 }}>{icon}</span>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 20, flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 10 : 12 }}>
+          <span style={{ fontSize: isMobile ? 20 : 24 }}>{icon}</span>
+          <h3 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
             {title}
           </h3>
         </div>
@@ -299,11 +299,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
             type="button"
             onClick={() => toggleHelp(title)}
             style={{
-              padding: "6px 10px",
+              padding: isMobile ? "4px 8px" : "6px 10px",
               background: "var(--cafe-accent-bg)",
               border: "1px solid var(--cafe-accent)",
-              borderRadius: 6,
-              fontSize: 12,
+              borderRadius: isMobile ? 4 : 6,
+              fontSize: isMobile ? 11 : 12,
               fontWeight: 600,
               color: "var(--cafe-accent)",
               cursor: "pointer"
@@ -315,12 +315,12 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
       </div>
       {showHelp[title] && helpText && (
         <div style={{
-          padding: 12,
+          padding: isMobile ? 10 : 12,
           background: "var(--cafe-info-bg)",
           border: "1px solid var(--cafe-info-border)",
-          borderRadius: 8,
-          marginBottom: 16,
-          fontSize: 13,
+          borderRadius: isMobile ? 6 : 8,
+          marginBottom: isMobile ? 12 : 16,
+          fontSize: isMobile ? 12 : 13,
           color: "var(--cafe-info)"
         }}>
           {helpText}
@@ -336,16 +336,16 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
       {renderFieldCard(
         "Quick Presets",
         "⚡",
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 10 : 12 }}>
           {TABLE_PRESETS.map(preset => (
             <button
               key={preset.id}
               type="button"
               onClick={() => applyPreset(preset.id)}
               style={{
-                padding: "20px",
+                padding: isMobile ? "16px" : "20px",
                 border: selectedPreset === preset.id ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                borderRadius: 12,
+                borderRadius: isMobile ? 10 : 12,
                 background: selectedPreset === preset.id ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
                 cursor: "pointer",
                 textAlign: "left",
@@ -364,11 +364,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                 }
               }}
             >
-              <div style={{ fontSize: 28, marginBottom: 8 }}>{preset.icon}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
+              <div style={{ fontSize: isMobile ? 24 : 28, marginBottom: isMobile ? 6 : 8 }}>{preset.icon}</div>
+              <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
                 {preset.name}
               </div>
-              <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)", lineHeight: 1.4 }}>
+              <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-secondary)", lineHeight: 1.4 }}>
                 {preset.description}
               </div>
             </button>
@@ -382,19 +382,19 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
         "Table Configuration",
         "🪑",
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-secondary)", margin: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 12 : 16, flexWrap: "wrap", gap: 8 }}>
+            <h4 style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "var(--cafe-text-secondary)", margin: 0 }}>
               Tables ({tables.length})
             </h4>
             <button
               type="button"
               onClick={addTable}
               style={{
-                padding: "10px 16px",
+                padding: isMobile ? "8px 14px" : "10px 16px",
                 background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
                 border: "none",
-                borderRadius: 8,
-                fontSize: 13,
+                borderRadius: isMobile ? 6 : 8,
+                fontSize: isMobile ? 12 : 13,
                 fontWeight: 600,
                 color: "#fff",
                 cursor: "pointer",
@@ -415,14 +415,14 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
 
           {tables.length === 0 ? (
             <div style={{
-              padding: 40,
+              padding: isMobile ? 32 : 40,
               textAlign: "center",
               background: "var(--cafe-bg)",
               border: "1px dashed var(--cafe-border)",
-              borderRadius: 12
+              borderRadius: isMobile ? 10 : 12
             }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🪑</div>
-              <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
+              <div style={{ fontSize: isMobile ? 40 : 48, marginBottom: isMobile ? 10 : 12 }}>🪑</div>
+              <div style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)" }}>
                 No tables yet. Add a table or select a preset.
               </div>
             </div>
@@ -430,7 +430,7 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
             <div style={{
               background: "var(--cafe-bg)",
               border: "1px solid var(--cafe-border)",
-              borderRadius: 12,
+              borderRadius: isMobile ? 10 : 12,
               overflow: "hidden"
             }}>
               {tables.map((table, idx) => (
@@ -439,21 +439,21 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                   style={{
                     display: "grid",
                     gridTemplateColumns: isMobile ? "auto 1fr auto auto auto" : "80px 1fr auto auto auto",
-                    gap: 16,
-                    padding: "16px 20px",
+                    gap: isMobile ? 12 : 16,
+                    padding: isMobile ? "12px 16px" : "16px 20px",
                     borderBottom: idx < tables.length - 1 ? "1px solid var(--cafe-border-light)" : "none",
                     alignItems: "center"
                   }}
                 >
                   <div style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 10,
+                    width: isMobile ? 44 : 52,
+                    height: isMobile ? 44 : 52,
+                    borderRadius: isMobile ? 8 : 10,
                     background: "var(--cafe-accent)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 22,
+                    fontSize: isMobile ? 18 : 22,
                     fontWeight: 700,
                     color: "#fff"
                   }}>
@@ -461,7 +461,7 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                   </div>
 
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 8 }}>
                       <input
                         type="number"
                         value={table.capacity}
@@ -481,11 +481,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                           if (e.key === 'Enter') e.preventDefault();
                         }}
                         style={{
-                          width: 80,
-                          padding: "10px 12px",
-                          fontSize: 14,
+                          width: isMobile ? 70 : 80,
+                          padding: isMobile ? "8px 10px" : "10px 12px",
+                          fontSize: isMobile ? 13 : 14,
                           border: validation[table.id]?.status === 'warning' ? "1px solid var(--cafe-warning)" : "1px solid var(--cafe-border)",
-                          borderRadius: 8,
+                          borderRadius: isMobile ? 6 : 8,
                           background: "var(--cafe-bg-surface)",
                           color: "var(--cafe-text-primary)",
                           outline: "none",
@@ -500,27 +500,27 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                           e.currentTarget.style.boxShadow = "none";
                         }}
                       />
-                      <span style={{ fontSize: 13, color: "var(--cafe-text-tertiary)" }}>
+                      <span style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)" }}>
                         seats
                       </span>
                       {validation[table.id]?.status === 'warning' && (
-                        <span style={{ fontSize: 12, color: "var(--cafe-warning)" }}>⚠</span>
+                        <span style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-warning)" }}>⚠</span>
                       )}
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 2 : 4 }}>
                     <button
                       type="button"
                       onClick={() => moveTable(table.id, -1)}
                       disabled={idx === 0}
                       aria-label={`Move table ${table.number} up`}
                       style={{
-                        padding: "4px 10px",
+                        padding: isMobile ? "3px 8px" : "4px 10px",
                         background: "var(--cafe-bg-surface)",
                         border: "1px solid var(--cafe-border)",
-                        borderRadius: 6,
-                        fontSize: 12,
+                        borderRadius: isMobile ? 4 : 6,
+                        fontSize: isMobile ? 11 : 12,
                         color: idx === 0 ? "var(--cafe-text-tertiary)" : "var(--cafe-text-primary)",
                         cursor: idx === 0 ? "not-allowed" : "pointer",
                         opacity: idx === 0 ? 0.5 : 1
@@ -534,11 +534,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                       disabled={idx === tables.length - 1}
                       aria-label={`Move table ${table.number} down`}
                       style={{
-                        padding: "4px 10px",
+                        padding: isMobile ? "3px 8px" : "4px 10px",
                         background: "var(--cafe-bg-surface)",
                         border: "1px solid var(--cafe-border)",
-                        borderRadius: 6,
-                        fontSize: 12,
+                        borderRadius: isMobile ? 4 : 6,
+                        fontSize: isMobile ? 11 : 12,
                         color: idx === tables.length - 1 ? "var(--cafe-text-tertiary)" : "var(--cafe-text-primary)",
                         cursor: idx === tables.length - 1 ? "not-allowed" : "pointer",
                         opacity: idx === tables.length - 1 ? 0.5 : 1
@@ -552,10 +552,10 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                     value={table.area}
                     onChange={(e) => updateTable(table.id, 'area', e.target.value)}
                     style={{
-                      padding: "10px 12px",
-                      fontSize: 14,
+                      padding: isMobile ? "8px 10px" : "10px 12px",
+                      fontSize: isMobile ? 13 : 14,
                       border: "1px solid var(--cafe-border)",
-                      borderRadius: 8,
+                      borderRadius: isMobile ? 6 : 8,
                       background: "var(--cafe-bg-surface)",
                       color: "var(--cafe-text-primary)",
                       outline: "none",
@@ -583,11 +583,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
                       }
                     }}
                     style={{
-                      padding: "10px 14px",
+                      padding: isMobile ? "8px 12px" : "10px 14px",
                       background: "var(--cafe-danger-bg)",
                       border: "1px solid var(--cafe-danger-border)",
-                      borderRadius: 8,
-                      fontSize: 12,
+                      borderRadius: isMobile ? 6 : 8,
+                      fontSize: isMobile ? 11 : 12,
                       fontWeight: 600,
                       color: "var(--cafe-danger)",
                       cursor: "pointer",
@@ -616,12 +616,12 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
       <div style={{
         background: "linear-gradient(135deg, var(--cafe-accent-bg) 0%, var(--cafe-bg-surface) 100%)",
         border: "1px solid var(--cafe-border-light)",
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 24
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? 16 : 24,
+        marginBottom: isMobile ? 20 : 24
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 12 : 16, flexWrap: "wrap", gap: 8 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
             <span>👁️</span>
             Floor Preview
           </h3>
@@ -631,11 +631,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
               onClick={resetFloorLayout}
               title="Snap all tables back into a tidy grid"
               style={{
-                padding: "6px 12px",
+                padding: isMobile ? "4px 10px" : "6px 12px",
                 background: "var(--cafe-bg-card)",
                 border: "1px solid var(--cafe-border-light)",
-                borderRadius: 8,
-                fontSize: 12,
+                borderRadius: isMobile ? 6 : 8,
+                fontSize: isMobile ? 11 : 12,
                 fontWeight: 600,
                 color: "var(--cafe-text-secondary)",
                 cursor: "pointer"
@@ -647,31 +647,31 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
         </div>
         <div style={{
           background: "#fff",
-          borderRadius: 12,
-          padding: 20,
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 16 : 20,
           color: "#000"
         }}>
-          <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: 14, color: "#666" }}>
+          <div style={{ display: "flex", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16, flexWrap: "wrap" }}>
+            <div style={{ fontSize: isMobile ? 13 : 14, color: "#666" }}>
               <strong style={{ color: "#000" }}>{tables.length}</strong> tables
             </div>
-            <div style={{ fontSize: 14, color: "#666" }}>
+            <div style={{ fontSize: isMobile ? 13 : 14, color: "#666" }}>
               <strong style={{ color: "#000" }}>{totalCapacity}</strong> total seats
             </div>
           </div>
           
           {Object.keys(tablesByArea).length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 6 : 8, marginBottom: isMobile ? 12 : 16 }}>
               {Object.entries(tablesByArea).map(([area, count]) => {
                 const areaType = AREA_TYPES.find(a => a.id === area);
                 return (
                   <span
                     key={area}
                     style={{
-                      padding: "8px 14px",
+                      padding: isMobile ? "6px 12px" : "8px 14px",
                       background: "var(--cafe-accent-bg)",
                       borderRadius: 20,
-                      fontSize: 12,
+                      fontSize: isMobile ? 11 : 12,
                       fontWeight: 600,
                       color: "var(--cafe-accent)",
                       border: "1px solid var(--cafe-accent)"
@@ -782,11 +782,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
           onClick={onBack}
           disabled={isLoading}
           style={{
-            padding: "14px 28px",
+            padding: isMobile ? "12px 20px" : "14px 28px",
             background: "var(--cafe-bg-surface)",
             border: "1px solid var(--cafe-border)",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "var(--cafe-text-secondary)",
             cursor: isLoading ? "not-allowed" : "pointer",
@@ -810,11 +810,11 @@ export default function TablesStep({ settings, onNext, onBack, isMobile, isTable
           onClick={handleNext}
           disabled={isLoading}
           style={{
-            padding: "14px 32px",
+            padding: isMobile ? "12px 24px" : "14px 32px",
             background: "linear-gradient(135deg, #8B4513 0%, #A0522D 100%)",
             border: "none",
-            borderRadius: 10,
-            fontSize: 15,
+            borderRadius: isMobile ? 8 : 10,
+            fontSize: isMobile ? 14 : 15,
             fontWeight: 600,
             color: "#fff",
             cursor: isLoading ? "not-allowed" : "pointer",

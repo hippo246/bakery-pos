@@ -2,6 +2,7 @@
 // Premium Cloud Operations Command Center
 
 import React, { useState, useEffect, useCallback } from 'react';
+import AlertDialog from '../common/AlertDialog.jsx';
 import { getSystemHealthMonitor } from '../../operations/SystemHealthMonitor.js';
 import { getLiveMetricsCollector } from '../../operations/LiveMetricsCollector.js';
 import { getServiceStatusTracker } from '../../operations/ServiceStatusTracker.js';
@@ -11,6 +12,7 @@ import { getLogViewer } from '../../operations/LogViewer.js';
 import { getPerformanceDashboard } from '../../operations/PerformanceDashboard.js';
 import { getDiagnosticsGenerator } from '../../operations/DiagnosticsGenerator.js';
 import { SystemHealthStatus, ServiceStatus, AlertSeverity, AlertStatus } from '../../operations/OperationsTypes.js';
+import AutomationChains from './AutomationChains.jsx';
 
 export default function OperationsCenter() {
   const healthMonitor = getSystemHealthMonitor();
@@ -25,6 +27,7 @@ export default function OperationsCenter() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [systemHealth, setSystemHealth] = useState(null);
   const [healthStats, setHealthStats] = useState(null);
   const [metrics, setMetrics] = useState(null);
@@ -33,6 +36,9 @@ export default function OperationsCenter() {
   const [alerts, setAlerts] = useState([]);
   const [logs, setLogs] = useState([]);
   const [performanceSummary, setPerformanceSummary] = useState(null);
+  const [automationRules, setAutomationRules] = useState([]);
+  const [workflows, setWorkflows] = useState([]);
+  const [staff, setStaff] = useState([]);
 
   useEffect(() => {
     refreshData();
@@ -74,7 +80,7 @@ export default function OperationsCenter() {
   const handleGenerateDiagnostics = useCallback(() => {
     const report = diagnosticsGenerator.generateDiagnosticsReport();
     console.log('Diagnostics Report:', report);
-    alert('Diagnostics report generated. Check console for details.');
+    setAlertDialog({ isOpen: true, title: 'Diagnostics Generated', message: 'Diagnostics report generated. Check console for details.', type: 'success' });
   }, [diagnosticsGenerator]);
 
   return (
@@ -103,7 +109,7 @@ export default function OperationsCenter() {
 
       <div className="border-b border-gray-200">
         <nav className="flex gap-2 overflow-x-auto">
-          {['dashboard', 'health', 'metrics', 'services', 'errors', 'alerts', 'logs', 'history', 'performance'].map(tab => (
+          {['dashboard', 'health', 'metrics', 'services', 'errors', 'alerts', 'logs', 'history', 'performance', 'automation'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -274,6 +280,23 @@ export default function OperationsCenter() {
           </div>
         </div>
       )}
+
+      {activeTab === 'automation' && (
+        <AutomationChains
+          automationRules={automationRules}
+          setAutomationRules={setAutomationRules}
+          workflows={workflows}
+          staff={staff}
+        />
+      )}
+
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

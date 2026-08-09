@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // ── Debounce Hook ─────────────────────────────────────────────────────────────
@@ -66,9 +65,22 @@ const SEARCH_INDEX = [
 export default function CommandPalette({ isOpen, onClose, onNavigate }) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isCommandMode, setIsCommandMode] = useState(false);
-  const [recentSearches, setRecentSearches] = useState([]);
-  const [favorites, setFavorites] = useState([]);
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const recent = localStorage.getItem("cafeos_recent_searches");
+      return recent ? JSON.parse(recent) : [];
+    } catch (_e) {
+      return [];
+    }
+  });
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const favs = localStorage.getItem("cafeos_favorites");
+      return favs ? JSON.parse(favs) : [];
+    } catch (_e) {
+      return [];
+    }
+  });
   const [isMobile, setIsMobile] = useState(false);
   const inputRef = useRef(null);
   
@@ -83,16 +95,6 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
   
-  // Load recent searches and favorites from localStorage
-  useEffect(() => {
-    try {
-      const recent = localStorage.getItem("cafeos_recent_searches");
-      const favs = localStorage.getItem("cafeos_favorites");
-      if (recent) setRecentSearches(JSON.parse(recent));
-      if (favs) setFavorites(JSON.parse(favs));
-    } catch {}
-  }, []);
-  
   // Focus input when opened
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -101,18 +103,47 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
   }, [isOpen]);
   
   // Reset state when closed
+  const closedRef = useRef(false);
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && !closedRef.current) {
+      closedRef.current = true;
       setQuery("");
       setSelectedIndex(0);
-      setIsCommandMode(false);
+    } else if (isOpen) {
+      closedRef.current = false;
     }
   }, [isOpen]);
   
-  // Detect command mode
-  useEffect(() => {
-    setIsCommandMode(query.startsWith(">"));
-  }, [query]);
+  // Detect command mode - derive from query instead of setState
+  const isCommandMode = query.startsWith(">");
+  
+  // Fuzzy match helper
+  function fuzzyMatch(query, text) {
+    let score = 0;
+    let queryIndex = 0;
+    let textIndex = 0;
+    
+    while (queryIndex < query.length && textIndex < text.length) {
+      if (query[queryIndex] === text[textIndex]) {
+        score += 1;
+        queryIndex++;
+      }
+      textIndex++;
+    }
+    
+    return queryIndex === query.length ? score : 0;
+  }
+  
+  // Handle selection
+  const handleSelect = useCallback((item) => {
+    // Save to recent searches
+    const newRecent = [item.id, ...recentSearches.filter(id => id !== item.id)].slice(0, 10);
+    setRecentSearches(newRecent);
+    localStorage.setItem("cafeos_recent_searches", JSON.stringify(newRecent));
+    
+    onNavigate(item.module);
+    onClose();
+  }, [recentSearches, onNavigate, onClose]);
   
   // Filter and rank results
   const filteredResults = useCallback(() => {
@@ -130,7 +161,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
     }
     
     // Search with ranking
-    const results = SEARCH_INDEX.map(item => {
+    SEARCH_INDEX.map(item => {
       const title = item.title.toLowerCase();
       const description = item.description.toLowerCase();
       const module = item.module.toLowerCase();
@@ -160,27 +191,10 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
     .sort((a, b) => b.score - a.score)
     .map(({ item }) => item);
     
-  }, [query, isCommandMode, recentSearches, favorites]);
+  }, [isCommandMode, debouncedQuery, recentSearches, favorites]);
   
   const results = filteredResults();
-  
-  // Fuzzy match helper
-  function fuzzyMatch(query, text) {
-    let score = 0;
-    let queryIndex = 0;
-    let textIndex = 0;
-    
-    while (queryIndex < query.length && textIndex < text.length) {
-      if (query[queryIndex] === text[textIndex]) {
-        score += 1;
-        queryIndex++;
-      }
-      textIndex++;
-    }
-    
-    return queryIndex === query.length ? score : 0;
-  }
-  
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
     switch (e.key) {
@@ -211,22 +225,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
         }
         break;
     }
-  }, [results, selectedIndex, onClose]);
-  
-  // Handle selection
-  const handleSelect = useCallback((item) => {
-    // Save to recent searches
-    const newRecent = [item.id, ...recentSearches.filter(id => id !== item.id)].slice(0, 10);
-    setRecentSearches(newRecent);
-    localStorage.setItem("cafeos_recent_searches", JSON.stringify(newRecent));
-    
-    // Navigate
-    if (onNavigate) {
-      onNavigate(item);
-    }
-    
-    onClose();
-  }, [recentSearches, onNavigate, onClose]);
+  }, [results, selectedIndex, handleSelect, onClose]);
   
   // Toggle favorite
   const toggleFavorite = useCallback((e, itemId) => {
@@ -237,14 +236,6 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
     setFavorites(newFavorites);
     localStorage.setItem("cafeos_favorites", JSON.stringify(newFavorites));
   }, [favorites]);
-  
-  // Remove from recent
-  const removeFromRecent = useCallback((e, itemId) => {
-    e.stopPropagation();
-    const newRecent = recentSearches.filter(id => id !== itemId);
-    setRecentSearches(newRecent);
-    localStorage.setItem("cafeos_recent_searches", JSON.stringify(newRecent));
-  }, [recentSearches]);
   
   // Clear all recent
   const clearRecent = useCallback(() => {

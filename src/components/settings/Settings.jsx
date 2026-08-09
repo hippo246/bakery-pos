@@ -5,6 +5,7 @@ import SettingsHomeSection from "./sections/SettingsHomeSection";
 import GeneralSettingsSection from "./sections/GeneralSettingsSection";
 import BusinessProfileSection from "./sections/BusinessProfileSection";
 import PaymentsSettingsSection from "./sections/PaymentsSettingsSection";
+import PaymentGatewaySettingsSection from "./sections/PaymentGatewaySettingsSection";
 import TaxesSettingsSection from "./sections/TaxesSettingsSection";
 import OrdersSettingsSection from "./sections/OrdersSettingsSection";
 import OperatingHoursSettingsSection from "./sections/OperatingHoursSettingsSection";
@@ -20,6 +21,8 @@ import AboutSettingsSection from "./sections/AboutSettingsSection";
 import DataBackupsSettingsSection from "./sections/DataBackupsSettingsSection";
 import AdvancedSettingsSection from "./sections/AdvancedSettingsSection";
 import DangerZoneSettingsSection from "./sections/DangerZoneSettingsSection";
+import ThemeSettingsSection from "./sections/ThemeSettingsSection";
+import TerminalSettingsSection from "./sections/TerminalSettingsSection";
 import { useMobile } from '../../hooks/useMobile.js';
 
 // Default settings
@@ -123,6 +126,8 @@ export default function Settings({ theme, toggleTheme, dataTools }) {
         return <BusinessProfileSection {...sectionProps} />;
       case 'payments':
         return <PaymentsSettingsSection {...sectionProps} />;
+      case 'payment-gateways':
+        return <PaymentGatewaySettingsSection {...sectionProps} />;
       case 'taxes':
         return <TaxesSettingsSection {...sectionProps} />;
       case 'orders':
@@ -153,6 +158,10 @@ export default function Settings({ theme, toggleTheme, dataTools }) {
         return <DangerZoneSettingsSection {...sectionProps} />;
       case 'about':
         return <AboutSettingsSection {...sectionProps} />;
+      case 'theme':
+        return <ThemeSettingsSection {...sectionProps} />;
+      case 'terminals':
+        return <TerminalSettingsSection {...sectionProps} />;
       default:
         return <SettingsHomeSection {...sectionProps} onNavigate={handleSectionChange} />;
     }
@@ -162,13 +171,13 @@ export default function Settings({ theme, toggleTheme, dataTools }) {
   const SaveStatusIndicator = () => {
     switch (saveStatus) {
       case 'saved':
-        return <span style={{ color: '#198754', fontSize: '12px' }}>✓ Saved</span>;
+        return <span style={{ color: "var(--cafe-success)", fontSize: 12, fontWeight: 600 }}>✓ Saved</span>;
       case 'saving':
-        return <span style={{ color: '#ffc107', fontSize: '12px' }}>⏳ Saving...</span>;
+        return <span style={{ color: "var(--cafe-warning)", fontSize: 12, fontWeight: 600 }}>⏳ Saving...</span>;
       case 'error':
-        return <span style={{ color: '#dc3545', fontSize: '12px' }}>✗ Error</span>;
+        return <span style={{ color: "var(--cafe-danger)", fontSize: 12, fontWeight: 600 }}>✗ Error</span>;
       default:
-        return <span style={{ color: '#6c757d', fontSize: '12px' }}>● Unsaved</span>;
+        return <span style={{ color: "var(--cafe-text-tertiary)", fontSize: 12, fontWeight: 600 }}>● Unsaved</span>;
     }
   };
 
@@ -182,43 +191,47 @@ export default function Settings({ theme, toggleTheme, dataTools }) {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: '#f8f9fa'
+        background: 'var(--cafe-bg)'
       }}>
         {/* Header with save status */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '16px 24px',
-          background: '#ffffff',
-          borderBottom: '1px solid #dee2e6'
+          padding: '20px 28px',
+          background: 'var(--cafe-bg-surface)',
+          borderBottom: '1px solid var(--cafe-border-light)'
         }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#212529' }}>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em" }}>
               Settings
             </h1>
-            <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6c757d' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 14, color: "var(--cafe-text-secondary)", fontWeight: 500 }}>
               Configure your cafe system
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <SaveStatusIndicator />
             {lastSaved && (
-              <span style={{ fontSize: '12px', color: '#6c757d' }}>
+              <span style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>
                 Last saved: {new Date(lastSaved).toLocaleTimeString()}
               </span>
             )}
             <button
               onClick={toggleTheme}
               style={{
-                padding: '8px 16px',
-                background: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
+                padding: '10px 18px',
+                background: 'var(--cafe-bg-hover)',
+                color: "var(--cafe-text-secondary)",
+                border: '1px solid var(--cafe-border-light)',
+                borderRadius: 12,
                 cursor: 'pointer',
-                fontSize: '14px'
+                fontSize: 13,
+                fontWeight: 600,
+                transition: 'all 0.2s'
               }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; e.currentTarget.style.color = 'var(--cafe-text-secondary)'; }}
             >
               {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
             </button>
@@ -229,8 +242,8 @@ export default function Settings({ theme, toggleTheme, dataTools }) {
         <div style={{
           flex: 1,
           overflow: 'auto',
-          padding: '24px',
-          background: '#f8f9fa'
+          padding: '28px',
+          background: 'var(--cafe-bg)'
         }}>
           {renderSection()}
         </div>

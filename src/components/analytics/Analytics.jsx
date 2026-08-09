@@ -4,6 +4,7 @@ import { calculateReportData } from "../../dashboard/biEngine/ReportCalculations
 import ReportViewer from "./ReportViewer";
 import { AnalyticsPermissions } from "../../utils/permissionService.js";
 import { getCurrentUserId } from "../../utils/authService.js";
+import AlertDialog from "../common/AlertDialog.jsx";
 
 const S = {
   container: { display: "flex", height: "100%", background: "var(--cafe-bg)", overflow: "hidden", flexDirection: "column" },
@@ -12,14 +13,14 @@ const S = {
   main: { display: "flex", flex: 1, overflow: "hidden" },
   sidebar: { width: 280, borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", background: "var(--cafe-bg-card)", flexShrink: 0 },
   searchBar: { padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" },
-  searchInput: { width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "10px 14px", color: "white", fontSize: 13, outline: "none" },
+  searchInput: { width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "10px 14px", color: "var(--cafe-text-primary)", fontSize: 13, outline: "none" },
   navItem: { padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.02)", transition: "background 0.15s" },
   navItemActive: { background: "rgba(212,146,42,0.1)", borderLeft: "3px solid var(--cafe-accent)" },
   navItemText: { fontSize: 13, fontWeight: 600, color: "var(--cafe-text-secondary)" },
   navItemTextActive: { color: "var(--cafe-accent)", fontWeight: 800 },
   reportList: { flex: 1, overflowY: "auto", padding: "16px 0" },
   reportLink: { padding: "8px 16px 8px 48px", cursor: "pointer", fontSize: 13, color: "var(--cafe-text-tertiary)", display: "flex", alignItems: "center", transition: "color 0.1s" },
-  reportLinkActive: { color: "white", fontWeight: 700 },
+  reportLinkActive: { color: "var(--cafe-text-primary)", fontWeight: 700 },
   contentArea: { flex: 1, overflowY: "auto", padding: 32, background: "rgba(0,0,0,0.2)" },
   emptyState: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--cafe-text-tertiary)" }
 };
@@ -29,6 +30,7 @@ export default function Analytics({ orders, customers, inventory, staff }) {
   const [activeCat, setActiveCat] = useState("financial");
   const [activeReportId, setActiveReportId] = useState("fin_01");
   const [dateRange, setDateRange] = useState("today"); // today, week, month
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
 
   const filteredReports = useMemo(() => {
     if (!search.trim()) return REPORTS;
@@ -47,10 +49,20 @@ export default function Analytics({ orders, customers, inventory, staff }) {
   const handleExport = () => {
     const perm = AnalyticsPermissions.canExport();
     if (!perm.allowed) {
-      alert(`Permission Denied: Requires ${perm.requiredPermission} to export reports.`);
+      setAlertDialog({
+        isOpen: true,
+        title: 'Permission Denied',
+        message: `Requires ${perm.requiredPermission} to export reports.`,
+        type: 'error'
+      });
       return;
     }
-    alert("Report exported successfully. (Check downloads folder in a real environment)");
+    setAlertDialog({
+      isOpen: true,
+      title: 'Export Successful',
+      message: 'Report exported successfully. (Check downloads folder in a real environment)',
+      type: 'success'
+    });
   };
 
   return (
@@ -59,16 +71,16 @@ export default function Analytics({ orders, customers, inventory, staff }) {
       <div style={S.header}>
         <div style={S.title}>CafeOS Analytics Engine</div>
         <div style={{ display: "flex", gap: 12 }}>
-          <select 
-            value={dateRange} 
+          <select
+            value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            style={{ background: "rgba(255,255,255,0.05)", color: "white", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 12px", outline: "none" }}>
+            style={{ background: "rgba(255,255,255,0.05)", color: "var(--cafe-text-primary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 12px", outline: "none" }}>
             <option value="today">Today</option>
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="year">This Year</option>
           </select>
-          <button onClick={handleExport} style={{ background: "var(--cafe-primary)", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={handleExport} style={{ background: "var(--cafe-primary)", color: "var(--cafe-text-primary)", border: "none", borderRadius: 6, padding: "8px 16px", fontWeight: 700, cursor: "pointer" }}>
             Export Report
           </button>
         </div>
@@ -144,6 +156,15 @@ export default function Analytics({ orders, customers, inventory, staff }) {
           )}
         </div>
       </div>
+
+      {/* AlertDialog */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

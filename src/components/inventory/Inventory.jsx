@@ -567,14 +567,14 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
       )}
 
       {/* Stock Room Header */}
-      <div style={{ marginBottom: "var(--cafe-space-lg)" }}>
-        <div style={{ marginBottom: "var(--cafe-space-sm)" }}>
-          <div style={{ fontSize: "var(--cafe-font-xl)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--cafe-text-primary)", marginBottom: 4 }}>Stock Room</div>
-          <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)" }}>Track ingredients, packaging, wastage, and restocking</div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", color: "var(--cafe-text-primary)", marginBottom: 6 }}>Stock Room</div>
+          <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)", fontWeight: 500 }}>Track ingredients, packaging, wastage, and restocking</div>
         </div>
 
         {/* Operational Stat Chips */}
-        <div style={{ display: "flex", gap: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {[
             { label: "Total Items", count: safeArr.length, color: "var(--cafe-text-secondary)" },
             { label: "Low Stock", count: lowStockCount, color: lowStockCount > 0 ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)" },
@@ -585,16 +585,17 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
             <div key={chip.label} style={{
               background: "var(--cafe-bg-surface)",
               border: `1px solid var(--cafe-border-light)`,
-              borderRadius: "var(--cafe-radius-md)",
-              padding: "10px 14px",
+              borderRadius: 12,
+              padding: "12px 16px",
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 10,
+              transition: "all 0.2s"
             }}>
-              <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 {chip.label}
               </span>
-              <span style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: chip.color, fontFamily: "monospace" }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: chip.color, fontFamily: "monospace", letterSpacing: "-0.02em" }}>
                 {chip.count}
               </span>
             </div>
@@ -603,7 +604,7 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
       </div>
 
       {/* Stock Health Strip */}
-      <div style={{ marginBottom: "var(--cafe-space-md)", display: "flex", gap: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
+      <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
         {[
           { label: "Healthy", count: safeArr.filter(i => !safeIsLowStock(i) && !safeIsOutOfStock(i)).length, color: "var(--cafe-success)", filter: null },
           { label: "Low", count: lowStockCount, color: "var(--cafe-warning)", filter: "low" },
@@ -616,77 +617,83 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
             else if (health.filter === "expiring") { setShowLowStock(false); setShowOutOfStock(false); setShowExpiring(true); }
             else { setShowLowStock(false); setShowOutOfStock(false); setShowExpiring(false); }
           }} style={{
-            padding: "8px 14px",
-            borderRadius: "var(--cafe-radius-md)",
+            padding: "10px 16px",
+            borderRadius: 12,
             border: `1px solid ${health.count > 0 ? health.color : "var(--cafe-border-light)"}`,
             background: health.count > 0 ? `${health.color}22` : "var(--cafe-bg-surface)",
             color: health.count > 0 ? health.color : "var(--cafe-text-tertiary)",
-            fontSize: "var(--cafe-font-sm)",
-            fontWeight: 600,
+            fontSize: 13,
+            fontWeight: 700,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             gap: 8,
-            transition: "all 0.15s ease"
-          }}>
+            transition: "all 0.2s"
+          }}
+          onMouseOver={e => { if (health.count > 0) { e.currentTarget.style.background = health.color + '33'; } }}
+          onMouseOut={e => { if (health.count > 0) { e.currentTarget.style.background = health.color + '22'; } }}
+          >
             <span>{health.label}</span>
-            <span style={{ fontFamily: "monospace", fontSize: "var(--cafe-font-base)" }}>{health.count}</span>
+            <span style={{ fontFamily: "monospace", fontSize: 14 }}>{health.count}</span>
           </button>
         ))}
       </div>
 
       {/* Stock Room Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--cafe-space-md)", marginBottom: "var(--cafe-space-md)", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         {/* Search */}
         <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
-          <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-tertiary)" }}>⌕</span>
-          <input style={{ ...input, paddingLeft: 36, paddingRight: search ? 36 : undefined, borderRadius: "var(--cafe-radius-md)", fontSize: "var(--cafe-font-sm)" }} placeholder="Search items, suppliers, batches…" value={search} onChange={e => setSearch(e.target.value)} />
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--cafe-text-tertiary)" }}>⌕</span>
+          <input style={{ paddingLeft: 40, paddingRight: search ? 40 : undefined, borderRadius: 12, fontSize: 13, minHeight: 44, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} placeholder="Search items, suppliers, batches…" value={search} onChange={e => setSearch(e.target.value)} onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
           {search && (
-            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", lineHeight: 1, padding: 0 }} title="Clear search" aria-label="Clear search">×</button>
+            <button onClick={() => setSearch("")} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--cafe-text-tertiary)", fontSize: 14, cursor: "pointer", lineHeight: 1, padding: 0 }} title="Clear search" aria-label="Clear search">×</button>
           )}
         </div>
 
         {/* Category Rail */}
-        <div style={{ display: "flex", gap: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {INVENTORY_CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setCategoryFilter(cat)} style={{
-              padding: "8px 14px",
-              borderRadius: "var(--cafe-radius-md)",
-              border: `1px solid ${categoryFilter === cat ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`,
-              background: categoryFilter === cat ? "var(--cafe-accent-bg)" : "transparent",
+              padding: "10px 16px",
+              borderRadius: 12,
+              border: `1px solid ${categoryFilter === cat ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`,
+              background: categoryFilter === cat ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
               color: categoryFilter === cat ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
-              fontSize: "var(--cafe-font-sm)",
-              fontWeight: categoryFilter === cat ? 600 : 500,
+              fontSize: 13,
+              fontWeight: categoryFilter === cat ? 700 : 600,
               cursor: "pointer",
               whiteSpace: "nowrap",
-              transition: "all 0.15s ease"
-            }}>
+              transition: "all 0.2s"
+            }}
+            onMouseOver={e => { if (categoryFilter !== cat) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+            onMouseOut={e => { if (categoryFilter !== cat) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}
+            >
               {cat}
             </button>
           ))}
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "var(--cafe-space-sm)" }}>
+        <div style={{ display: "flex", gap: 8 }}>
           {(search || showLowStock || showOutOfStock || showExpiring || categoryFilter !== "All") && (
-            <button onClick={() => { setSearch(""); setShowLowStock(false); setShowOutOfStock(false); setShowExpiring(false); setCategoryFilter("All"); }} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", color: "var(--cafe-text-secondary)" }}>
+            <button onClick={() => { setSearch(""); setShowLowStock(false); setShowOutOfStock(false); setShowExpiring(false); setCategoryFilter("All"); }} style={{ padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600, minHeight: 44, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-secondary)", cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>
               Clear Filters
             </button>
           )}
-          <button onClick={() => setShowLowStock(v => !v)} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", color: showLowStock ? "var(--cafe-warning)" : "var(--cafe-text-secondary)", borderColor: showLowStock ? "var(--cafe-warning-border)" : "var(--cafe-border-light)" }}>
+          <button onClick={() => setShowLowStock(v => !v)} style={{ padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600, minHeight: 44, background: showLowStock ? "var(--cafe-warning-bg)" : "var(--cafe-bg-surface)", border: `1px solid ${showLowStock ? "var(--cafe-warning)" : "var(--cafe-border-light)"}`, color: showLowStock ? "var(--cafe-warning)" : "var(--cafe-text-secondary)", cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => { if (!showLowStock) { e.currentTarget.style.borderColor = 'var(--cafe-warning)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }} onMouseOut={e => { if (!showLowStock) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}>
             ⚠ Low Stock
           </button>
-          <button onClick={() => setShowOutOfStock(v => !v)} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", color: showOutOfStock ? "var(--cafe-danger)" : "var(--cafe-text-secondary)", borderColor: showOutOfStock ? "var(--cafe-danger-border)" : "var(--cafe-border-light)" }}>
+          <button onClick={() => setShowOutOfStock(v => !v)} style={{ padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600, minHeight: 44, background: showOutOfStock ? "var(--cafe-danger-bg)" : "var(--cafe-bg-surface)", border: `1px solid ${showOutOfStock ? "var(--cafe-danger)" : "var(--cafe-border-light)"}`, color: showOutOfStock ? "var(--cafe-danger)" : "var(--cafe-text-secondary)", cursor: "pointer", transition: "all 0.2s" }} onMouseOver={e => { if (!showOutOfStock) { e.currentTarget.style.borderColor = 'var(--cafe-danger)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }} onMouseOut={e => { if (!showOutOfStock) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}>
             ✕ Out of Stock
           </button>
-          <button style={btn("ghost")} onClick={exportInventory} title="Export inventory to CSV">↓ Export</button>
-          <button style={btn("primary")} onClick={openAdd}>+ Add Item</button>
+          <button style={{ padding: "10px 16px", borderRadius: 12, fontSize: 13, fontWeight: 600, minHeight: 44, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-secondary)", cursor: "pointer", transition: "all 0.2s" }} onClick={exportInventory} title="Export inventory to CSV" onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>↓ Export</button>
+          <button style={{ padding: "10px 20px", borderRadius: 12, fontSize: 13, fontWeight: 700, minHeight: 44, background: "var(--cafe-accent-bg)", border: "1px solid var(--cafe-accent)", color: "var(--cafe-accent)", cursor: "pointer", transition: "all 0.2s" }} onClick={openAdd} onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; }} onMouseOut={e => { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}>+ Add Item</button>
         </div>
       </div>
 
       {/* Sort Options */}
-      <div style={{ display: "flex", gap: "var(--cafe-space-sm)", alignItems: "center", marginBottom: "var(--cafe-space-md)" }}>
-        <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Sort by:</span>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+        <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Sort by:</span>
         {[
           { key: "name", label: "Name" },
           { key: "qty", label: "Quantity" },
@@ -697,18 +704,22 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
           { key: "lastRestock", label: "Restock Date" },
         ].map(sortOpt => (
           <button key={sortOpt.key} onClick={() => handleSort(sortOpt.key)} style={{
-            padding: "6px 12px",
-            borderRadius: "var(--cafe-radius-sm)",
-            border: `1px solid ${sortBy === sortOpt.key ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`,
-            background: sortBy === sortOpt.key ? "var(--cafe-accent-bg)" : "transparent",
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: `1px solid ${sortBy === sortOpt.key ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`,
+            background: sortBy === sortOpt.key ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
             color: sortBy === sortOpt.key ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
-            fontSize: "var(--cafe-font-xs)",
-            fontWeight: sortBy === sortOpt.key ? 600 : 500,
+            fontSize: 12,
+            fontWeight: sortBy === sortOpt.key ? 700 : 600,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 4
-          }}>
+            gap: 6,
+            transition: "all 0.2s"
+          }}
+          onMouseOver={e => { if (sortBy !== sortOpt.key) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+          onMouseOut={e => { if (sortBy !== sortOpt.key) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}
+          >
             {sortOpt.label}
             {sortBy === sortOpt.key && <span>{sortOrder === "asc" ? "↑" : "↓"}</span>}
           </button>
@@ -733,54 +744,56 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
           return (
             <div key={item.id} style={{
               background: "var(--cafe-bg-card)",
-              border: `1px solid ${itemIsOutOfStock ? "var(--cafe-danger-border)" : itemIsLowStock ? "var(--cafe-warning-border)" : "var(--cafe-border-light)"}`,
-              borderRadius: "var(--cafe-radius-lg)",
+              border: `1px solid ${itemIsOutOfStock ? "var(--cafe-danger)" : itemIsLowStock ? "var(--cafe-warning)" : "var(--cafe-border-light)"}`,
+              borderRadius: 16,
               overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              transition: "all 0.2s ease",
-              boxShadow: "var(--cafe-shadow-sm)"
-            }}>
+              transition: "all 0.2s",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+            }}
+            onMouseOver={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseOut={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
               {/* Status indicator bar */}
               <div style={{ height: 4, background: accentColor, opacity: itemIsOutOfStock || itemIsLowStock ? 1 : 0.4 }} />
 
-              <div style={{ padding: "16px", flex: 1 }}>
+              <div style={{ padding: "18px", flex: 1 }}>
                 {/* Header row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 4 }}>{itemName(item)}</div>
-                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span>{itemCategory(item)}</span>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 6, letterSpacing: "-0.01em" }}>{itemName(item)}</div>
+                    <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontWeight: 600 }}>{itemCategory(item)}</span>
                       {item?.batchNo && <><span style={{ opacity: 0.4 }}>·</span><span style={{ fontFamily: "monospace", letterSpacing: "0.03em" }}>{item.batchNo}</span></>}
                     </div>
                   </div>
                   {itemIsOutOfStock
-                    ? <span style={{ padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-xs)", fontWeight: 700, flexShrink: 0, marginLeft: 8, textTransform: "uppercase" }}>OUT</span>
+                    ? <span style={{ padding: "4px 10px", borderRadius: 8, background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", fontSize: 11, fontWeight: 700, flexShrink: 0, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>OUT</span>
                     : itemIsLowStock
-                    ? <span style={{ padding: "4px 10px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-warning-bg)", color: "var(--cafe-warning)", fontSize: "var(--cafe-font-xs)", fontWeight: 700, flexShrink: 0, marginLeft: 8, textTransform: "uppercase" }}>LOW</span>
+                    ? <span style={{ padding: "4px 10px", borderRadius: 8, background: "var(--cafe-warning-bg)", color: "var(--cafe-warning)", fontSize: 11, fontWeight: 700, flexShrink: 0, marginLeft: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>LOW</span>
                     : null}
                 </div>
 
                 {/* Stock bar + qty */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
-                    <span style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", color: accentColor, lineHeight: 1 }}>{qty}<span style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 500, color: "var(--cafe-text-tertiary)", marginLeft: 4 }}>{itemUnit(item)}</span></span>
-                    <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>min <strong style={{ color: "var(--cafe-text-secondary)", fontFamily: "monospace" }}>{min}</strong></span>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+                    <span style={{ fontSize: 26, fontWeight: 800, fontFamily: "monospace", color: accentColor, lineHeight: 1, letterSpacing: "-0.02em" }}>{qty}<span style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-tertiary)", marginLeft: 4 }}>{itemUnit(item)}</span></span>
+                    <span style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 600 }}>min <strong style={{ color: "var(--cafe-text-secondary)", fontFamily: "monospace" }}>{min}</strong></span>
                   </div>
-                  <div style={{ height: 6, background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-sm)", overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: "var(--cafe-radius-sm)", background: accentColor, width: `${stockPercent}%`, transition: "width 0.3s", opacity: itemIsOutOfStock ? 0.5 : 1 }} />
+                  <div style={{ height: 8, background: "var(--cafe-bg-surface)", borderRadius: 6, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 6, background: accentColor, width: `${stockPercent}%`, transition: "width 0.3s", opacity: itemIsOutOfStock ? 0.5 : 1 }} />
                   </div>
                 </div>
 
                 {/* Value row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, padding: "8px 0", borderTop: "1px solid var(--cafe-border-light)", borderBottom: "1px solid var(--cafe-border-light)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, padding: "10px 0", borderTop: "1px solid var(--cafe-border-light)", borderBottom: "1px solid var(--cafe-border-light)" }}>
                   <div>
-                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 2 }}>Cost/unit</div>
-                    <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, fontFamily: "monospace", color: "var(--cafe-text-secondary)" }}>₹{itemCost(item).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginBottom: 4 }}>Cost/unit</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-text-secondary)", letterSpacing: "-0.01em" }}>₹{itemCost(item).toLocaleString()}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600, marginBottom: 2 }}>Total Value</div>
-                    <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-success)" }}>₹{(qty * itemCost(item)).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700, marginBottom: 4 }}>Total Value</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "monospace", color: "var(--cafe-success)", letterSpacing: "-0.02em" }}>₹{(qty * itemCost(item)).toLocaleString()}</div>
                   </div>
                 </div>
 
@@ -831,9 +844,9 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
 
               {/* Action footer */}
               <div style={{ display: "flex", borderTop: "1px solid var(--cafe-border-light)", marginTop: "auto" }}>
-                <button onClick={() => openAdjustmentModal(item)} style={{ flex: 1, padding: "10px 0", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer", fontWeight: 500 }}>Adjust</button>
-                <button onClick={() => openEdit(item)} style={{ padding: "10px 16px", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }} aria-label={`Edit ${itemName(item)}`} title="Edit item">✎</button>
-                <button onClick={() => deleteItem(item.id)} style={{ padding: "10px 16px", border: "none", background: "transparent", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }} aria-label={`Delete ${itemName(item)}`} title="Delete item">✕</button>
+                <button onClick={() => openAdjustmentModal(item)} style={{ flex: 1, padding: "12px 0", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-secondary)", fontSize: 13, cursor: "pointer", fontWeight: 600, transition: "all 0.2s" }} onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}>Adjust</button>
+                <button onClick={() => openEdit(item)} style={{ padding: "12px 18px", border: "none", borderRight: "1px solid var(--cafe-border-light)", background: "transparent", color: "var(--cafe-text-tertiary)", fontSize: 14, cursor: "pointer", transition: "all 0.2s" }} aria-label={`Edit ${itemName(item)}`} title="Edit item" onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-bg-hover)'; e.currentTarget.style.color = 'var(--cafe-text-secondary)'; }} onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--cafe-text-tertiary)'; }}>✎</button>
+                <button onClick={() => deleteItem(item.id)} style={{ padding: "12px 18px", border: "none", background: "transparent", color: "var(--cafe-danger)", fontSize: 14, cursor: "pointer", transition: "all 0.2s" }} aria-label={`Delete ${itemName(item)}`} title="Delete item" onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-danger-bg)'; }} onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}>✕</button>
               </div>
             </div>
           );
@@ -842,53 +855,53 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
 
       {sorted.length === 0 && (
         <div style={{ textAlign: "center", padding: "80px 24px", color: "var(--cafe-text-tertiary)" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "var(--cafe-radius-lg)", border: "2px dashed var(--cafe-border-light)", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, opacity: 0.4 }}>
+          <div style={{ width: 72, height: 72, borderRadius: 16, border: "2px dashed var(--cafe-border-light)", margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, opacity: 0.4 }}>
             ▣
           </div>
-          <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-secondary)", marginBottom: 8 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--cafe-text-secondary)", marginBottom: 8, letterSpacing: "-0.01em" }}>
             Your stock room is empty
           </div>
-          <div style={{ fontSize: "var(--cafe-font-sm)" }}>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 20 }}>
             Add your first item to start tracking stock
           </div>
-          <button style={{ ...btn("primary"), marginTop: 20, padding: "10px 24px" }} onClick={openAdd}>+ Add First Item</button>
+          <button style={{ padding: "12px 24px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "var(--cafe-accent-bg)", border: "1px solid var(--cafe-accent)", color: "var(--cafe-accent)", cursor: "pointer", transition: "all 0.2s" }} onClick={openAdd} onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; }} onMouseOut={e => { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}>+ Add First Item</button>
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setShowModal(false)}>
-          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-lg)", padding: 24, width: "min(450px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--cafe-shadow-lg)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid var(--cafe-border-light)" }}>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 16, padding: 28, width: "min(480px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--cafe-border-light)" }}>
               <div>
-                <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-primary)" }}>{editItem ? "Edit Item" : "New Inventory Item"}</div>
-                {editItem && <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>Changes save immediately</div>}
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>{editItem ? "Edit Item" : "New Inventory Item"}</div>
+                {editItem && <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 4, fontWeight: 500 }}>Changes save immediately</div>}
               </div>
-              <button style={{ padding: "6px 10px", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 14, lineHeight: 1 }} aria-label="Close" onClick={() => { setShowModal(false); setFormError(""); }}>✕</button>
+              <button style={{ padding: "8px 12px", border: "1px solid var(--cafe-border-light)", borderRadius: 10, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 14, lineHeight: 1, transition: "all 0.2s" }} aria-label="Close" onClick={() => { setShowModal(false); setFormError(""); }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>✕</button>
             </div>
             
             {/* Basic Details Section */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Basic Details</div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ ...label, marginBottom: 6 }}>Name *</label>
-                <input autoFocus style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); if (formError) setFormError(""); }} placeholder="Item name" />
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.06em" }}>Basic Details</div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Name *</label>
+                <input autoFocus style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); if (formError) setFormError(""); }} placeholder="Item name" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <div>
-                  <label style={{ ...label, marginBottom: 6 }}>Category</label>
-                  <select style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Category</label>
+                  <select style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", cursor: "pointer", transition: "all 0.2s" }} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}>
                     {INVENTORY_CATEGORIES.filter(c => c !== "All").map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ ...label, marginBottom: 6 }}>Unit</label>
-                  <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="kg, liters, pieces" />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Unit</label>
+                  <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="kg, liters, pieces" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
                 </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ ...label, marginBottom: 6 }}>Supplier</label>
-                <select style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Supplier</label>
+                <select style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", cursor: "pointer", transition: "all 0.2s" }} value={form.supplier} onChange={e => setForm({ ...form, supplier: e.target.value })} onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}>
                   <option value="">Select supplier</option>
                   {SUPPLIERS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -896,47 +909,47 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
             </div>
 
             {/* Stock Setup Section */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Stock Setup</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.06em" }}>Stock Setup</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <div>
-                  <label style={{ ...label, marginBottom: 6 }}>Quantity *</label>
-                  <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} placeholder="0" />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Quantity *</label>
+                  <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} type="number" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} placeholder="0" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
                 </div>
                 <div>
-                  <label style={{ ...label, marginBottom: 6 }}>Min Stock</label>
-                  <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} type="number" value={form.minStock} onChange={e => setForm({ ...form, minStock: e.target.value })} placeholder="0" />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Min Stock</label>
+                  <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} type="number" value={form.minStock} onChange={e => setForm({ ...form, minStock: e.target.value })} placeholder="0" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
                 </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ ...label, marginBottom: 6 }}>Cost per Unit *</label>
-                <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} type="number" value={form.cost} onChange={e => setForm({ ...form, cost: e.target.value })} placeholder="0" />
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Cost per Unit *</label>
+                <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} type="number" value={form.cost} onChange={e => setForm({ ...form, cost: e.target.value })} placeholder="0" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
               </div>
             </div>
 
             {/* Tracking Section */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-secondary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tracking</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.06em" }}>Tracking</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <div>
-                  <label style={{ ...label, marginBottom: 6 }}>Expiry Date <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>(optional)</span></label>
-                  <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} type="date" value={form.expiryDate} onChange={e => setForm({ ...form, expiryDate: e.target.value })} />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Expiry Date <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>(optional)</span></label>
+                  <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} type="date" value={form.expiryDate} onChange={e => setForm({ ...form, expiryDate: e.target.value })} onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
                 </div>
                 <div>
-                  <label style={{ ...label, marginBottom: 6 }}>Batch No. <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>(optional)</span></label>
-                  <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={form.batchNo} onChange={e => setForm({ ...form, batchNo: e.target.value })} placeholder="e.g. B-2024-07" />
+                  <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Batch No. <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>(optional)</span></label>
+                  <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} value={form.batchNo} onChange={e => setForm({ ...form, batchNo: e.target.value })} placeholder="e.g. B-2024-07" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
                 </div>
               </div>
             </div>
 
             {formError && (
-              <div style={{ marginBottom: 16, padding: "10px 12px", borderRadius: "var(--cafe-radius-md)", background: "var(--cafe-danger-bg)", border: "1px solid var(--cafe-danger-border)", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)" }}>
+              <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 10, background: "var(--cafe-danger-bg)", border: "1px solid var(--cafe-danger)", color: "var(--cafe-danger)", fontSize: 13, fontWeight: 600 }}>
                 {formError}
               </div>
             )}
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-              <button style={{ ...btn("ghost"), padding: "10px 20px", borderRadius: "var(--cafe-radius-md)" }} onClick={() => { setShowModal(false); setFormError(""); }}>Cancel</button>
-              <button style={btn("primary")} onClick={saveItem}>{editItem ? "Save Changes" : "Add Item"}</button>
+              <button style={{ padding: "12px 24px", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-secondary)", cursor: "pointer", transition: "all 0.2s" }} onClick={() => { setShowModal(false); setFormError(""); }} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>Cancel</button>
+              <button style={{ padding: "12px 24px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "var(--cafe-accent-bg)", border: "1px solid var(--cafe-accent)", color: "var(--cafe-accent)", cursor: "pointer", transition: "all 0.2s" }} onClick={saveItem} onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; }} onMouseOut={e => { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}>{editItem ? "Save Changes" : "Add Item"}</button>
             </div>
           </div>
         </div>
@@ -945,36 +958,36 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
       {/* Stock Adjustment Modal */}
       {adjustmentModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 12 }} onClick={() => setAdjustmentModal(null)}>
-          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-lg)", padding: 24, width: "min(450px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--cafe-shadow-lg)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid var(--cafe-border-light)" }}>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 16, padding: 28, width: "min(480px,95vw)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid var(--cafe-border-light)" }}>
               <div>
-                <div style={{ fontSize: "var(--cafe-font-lg)", fontWeight: 700, color: "var(--cafe-text-primary)" }}>Stock Adjustment</div>
-                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>Logged to movement history</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>Stock Adjustment</div>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 4, fontWeight: 500 }}>Logged to movement history</div>
               </div>
-              <button style={{ padding: "6px 10px", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 14, lineHeight: 1 }} onClick={() => setAdjustmentModal(null)} aria-label="Close">✕</button>
+              <button style={{ padding: "8px 12px", border: "1px solid var(--cafe-border-light)", borderRadius: 10, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", cursor: "pointer", fontSize: 14, lineHeight: 1, transition: "all 0.2s" }} onClick={() => setAdjustmentModal(null)} aria-label="Close" onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>✕</button>
             </div>
-            <div style={{ marginBottom: 16, padding: "12px 14px", background: "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-md)", border: "1px solid var(--cafe-border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ marginBottom: 18, padding: "14px 18px", background: "var(--cafe-bg-surface)", borderRadius: 12, border: "1px solid var(--cafe-border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: "var(--cafe-font-base)", fontWeight: 600, color: "var(--cafe-text-primary)" }}>{adjustmentModal.item.name}</div>
-                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{adjustmentModal.item.category}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>{adjustmentModal.item.name}</div>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 4, fontWeight: 500 }}>{adjustmentModal.item.category}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)", lineHeight: 1 }}>{adjustmentModal.item.quantity}</div>
-                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>{adjustmentModal.item.unit} on hand</div>
+                <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "monospace", color: "var(--cafe-accent)", lineHeight: 1, letterSpacing: "-0.02em" }}>{adjustmentModal.item.quantity}</div>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>{adjustmentModal.item.unit} on hand</div>
               </div>
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ ...label, marginBottom: 6 }}>Adjustment Type</label>
-              <select style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={adjustmentModal.type} onChange={e => { setAdjustmentError(""); setAdjustmentModal({ ...adjustmentModal, type: e.target.value }); }}>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Adjustment Type</label>
+              <select style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", cursor: "pointer", transition: "all 0.2s" }} value={adjustmentModal.type} onChange={e => { setAdjustmentError(""); setAdjustmentModal({ ...adjustmentModal, type: e.target.value }); }} onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}>
                 <option value="RESTOCK">Restock (Add stock)</option>
                 <option value="WASTAGE">Wastage (Remove stock)</option>
                 <option value="CORRECTION">Correction (Set exact quantity)</option>
                 <option value="RETURN">Reduce (Use / Return to supplier)</option>
               </select>
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ ...label, marginBottom: 6 }}>{adjustmentModal.type === "CORRECTION" ? "New Quantity (exact) *" : "Quantity Change *"}</label>
-              <input autoFocus style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} type="number" min="0" value={adjustmentModal.quantity} onChange={e => { setAdjustmentError(""); setAdjustmentModal({ ...adjustmentModal, quantity: e.target.value }); }} placeholder={adjustmentModal.type === "CORRECTION" ? "Enter final quantity" : "Enter quantity to add/remove"} />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>{adjustmentModal.type === "CORRECTION" ? "New Quantity (exact) *" : "Quantity Change *"}</label>
+              <input autoFocus style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} type="number" min="0" value={adjustmentModal.quantity} onChange={e => { setAdjustmentError(""); setAdjustmentModal({ ...adjustmentModal, quantity: e.target.value }); }} placeholder={adjustmentModal.type === "CORRECTION" ? "Enter final quantity" : "Enter quantity to add/remove"} onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
             </div>
             {(() => {
               const qtyChange = Number(adjustmentModal.quantity);
@@ -986,32 +999,32 @@ export default function Inventory({ inventory: propInventory, setInventory: prop
               else projected = previousQty - qtyChange;
               const projectedInvalid = projected < 0;
               return (
-                <div style={{ marginBottom: 12, fontSize: "var(--cafe-font-sm)", color: projectedInvalid ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)", padding: "8px 12px", background: projectedInvalid ? "var(--cafe-danger-bg)" : "var(--cafe-bg-surface)", borderRadius: "var(--cafe-radius-sm)", border: projectedInvalid ? "1px solid var(--cafe-danger-border)" : "1px solid var(--cafe-border-light)" }}>
-                  Projected quantity: <strong style={{ color: projectedInvalid ? "var(--cafe-danger)" : "var(--cafe-text-secondary)" }}>{Math.max(0, Math.round(projected * 100) / 100)}</strong> {adjustmentModal.item.unit}
+                <div style={{ marginBottom: 14, fontSize: 13, color: projectedInvalid ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)", padding: "10px 14px", background: projectedInvalid ? "var(--cafe-danger-bg)" : "var(--cafe-bg-surface)", borderRadius: 10, border: projectedInvalid ? "1px solid var(--cafe-danger)" : "1px solid var(--cafe-border-light)", fontWeight: 500 }}>
+                  Projected quantity: <strong style={{ color: projectedInvalid ? "var(--cafe-danger)" : "var(--cafe-text-secondary)", fontFamily: "monospace", letterSpacing: "-0.01em" }}>{Math.max(0, Math.round(projected * 100) / 100)}</strong> {adjustmentModal.item.unit}
                   {projectedInvalid && " — cannot go below 0"}
                 </div>
               );
             })()}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ ...label, marginBottom: 6 }}>Reason {(adjustmentModal.type === "WASTAGE" || adjustmentModal.type === "CORRECTION") && <span style={{ color: "var(--cafe-danger)" }}>*</span>}</label>
-              <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={adjustmentModal.reason} onChange={e => { setAdjustmentError(""); setAdjustmentModal({ ...adjustmentModal, reason: e.target.value }); }} placeholder="Reason for adjustment" />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Reason {(adjustmentModal.type === "WASTAGE" || adjustmentModal.type === "CORRECTION") && <span style={{ color: "var(--cafe-danger)" }}>*</span>}</label>
+              <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} value={adjustmentModal.reason} onChange={e => { setAdjustmentError(""); setAdjustmentModal({ ...adjustmentModal, reason: e.target.value }); }} placeholder="Reason for adjustment" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ ...label, marginBottom: 6 }}>Staff</label>
-              <input style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px" }} value={adjustmentModal.staff} onChange={e => setAdjustmentModal({ ...adjustmentModal, staff: e.target.value })} placeholder="Staff name" />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Staff</label>
+              <input style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s" }} value={adjustmentModal.staff} onChange={e => setAdjustmentModal({ ...adjustmentModal, staff: e.target.value })} placeholder="Staff name" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ ...label, marginBottom: 6 }}>Note</label>
-              <textarea style={{ ...input, borderRadius: "var(--cafe-radius-md)", padding: "10px 14px", resize: "none" }} rows={2} value={adjustmentModal.note} onChange={e => setAdjustmentModal({ ...adjustmentModal, note: e.target.value })} placeholder="Additional notes" />
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 6, display: "block" }}>Note</label>
+              <textarea style={{ borderRadius: 12, padding: "12px 16px", fontSize: 14, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-primary)", outline: "none", transition: "all 0.2s", resize: "none" }} rows={2} value={adjustmentModal.note} onChange={e => setAdjustmentModal({ ...adjustmentModal, note: e.target.value })} placeholder="Additional notes" onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'} onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'} />
             </div>
             {adjustmentError && (
-              <div style={{ marginBottom: 12, padding: "10px 12px", borderRadius: "var(--cafe-radius-md)", background: "var(--cafe-danger-bg)", border: "1px solid var(--cafe-danger-border)", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)" }}>
+              <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 10, background: "var(--cafe-danger-bg)", border: "1px solid var(--cafe-danger)", color: "var(--cafe-danger)", fontSize: 13, fontWeight: 600 }}>
                 {adjustmentError}
               </div>
             )}
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-              <button style={{ ...btn("ghost"), padding: "10px 20px", borderRadius: "var(--cafe-radius-md)" }} onClick={() => setAdjustmentModal(null)}>Cancel</button>
-              <button style={btn("primary")} onClick={handleAdjustment}>Apply Adjustment</button>
+              <button style={{ padding: "12px 24px", borderRadius: 12, fontSize: 14, fontWeight: 600, background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", color: "var(--cafe-text-secondary)", cursor: "pointer", transition: "all 0.2s" }} onClick={() => setAdjustmentModal(null)} onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }} onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; }}>Cancel</button>
+              <button style={{ padding: "12px 24px", borderRadius: 12, fontSize: 14, fontWeight: 700, background: "var(--cafe-accent-bg)", border: "1px solid var(--cafe-accent)", color: "var(--cafe-accent)", cursor: "pointer", transition: "all 0.2s" }} onClick={handleAdjustment} onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; }} onMouseOut={e => { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}>Apply Adjustment</button>
             </div>
           </div>
         </div>

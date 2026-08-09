@@ -124,6 +124,24 @@
   .tables-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  /* Extra compact sidebar for smaller laptop screens */
+  .sidebar-compact {
+    width: 160px !important;
+  }
+
+  .sidebar-compact .nav-item-label {
+    font-size: 12px;
+  }
+
+  .sidebar-compact .nav-group-title {
+    font-size: 10px;
+    padding: 8px 12px;
+  }
+
+  .sidebar-compact .nav-item {
+    padding: 8px 12px;
+  }
 }
 
 /* ── Small Desktop (1025px – 1280px) ───────────────────────── */
@@ -154,6 +172,19 @@
 
   .tables-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  /* Compact sidebar for laptop screens */
+  .sidebar-compact {
+    width: 180px !important;
+  }
+
+  .sidebar-compact .nav-item-label {
+    font-size: 13px;
+  }
+
+  .sidebar-compact .nav-group-title {
+    font-size: 11px;
   }
 }
 

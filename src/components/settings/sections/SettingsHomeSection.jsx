@@ -21,6 +21,7 @@ export default function SettingsHomeSection({ settings, onNavigate, isMobile }) 
     { id: "backup", label: "Create Backup", icon: "💾", description: "Backup all data", action: () => onNavigate("backups") },
     { id: "sync", label: "Sync Data", icon: "🔄", description: "Sync with cloud", action: () => {} },
     { id: "security", label: "Security Check", icon: "🔒", description: "Review security", action: () => onNavigate("security") },
+    { id: "theme", label: "Theme Settings", icon: "🎭", description: "Change appearance", action: () => onNavigate("theme") },
     { id: "support", label: "Get Help", icon: "🛠️", description: "Contact support", action: () => onNavigate("support") }
   ], [onNavigate]);
 

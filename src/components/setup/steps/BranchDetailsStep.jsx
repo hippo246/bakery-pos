@@ -159,14 +159,14 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
     <div style={{
       background: "var(--cafe-bg-surface)",
       border: "1px solid var(--cafe-border-light)",
-      borderRadius: 16,
-      padding: 24,
-      marginBottom: 20
+      borderRadius: isMobile ? 12 : 16,
+      padding: isMobile ? 16 : 24,
+      marginBottom: isMobile ? 16 : 20
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 16 : 20, flexWrap: "wrap", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 24 }}>{icon}</span>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
+          <span style={{ fontSize: isMobile ? 20 : 24 }}>{icon}</span>
+          <h3 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", margin: 0 }}>
             {title}
           </h3>
         </div>
@@ -209,9 +209,9 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
     const { tooltip, transform, autoComplete, min, onBlurNormalize } = options;
     const inputId = `branch-${field}`;
     return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <label htmlFor={inputId} style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)", display: "flex", alignItems: "center" }}>
+    <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isMobile ? 6 : 8 }}>
+        <label htmlFor={inputId} style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "var(--cafe-text-secondary)", display: "flex", alignItems: "center" }}>
           {label} {required && <span style={{ color: "var(--cafe-danger)" }}>*</span>}
           {tooltip && <Tooltip content={tooltip} position="top" />}
         </label>
@@ -227,10 +227,10 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
         placeholder={placeholder}
         style={{
           width: "100%",
-          padding: "14px 16px",
-          fontSize: 15,
+          padding: isMobile ? "12px 14px" : "14px 16px",
+          fontSize: isMobile ? 14 : 15,
           border: validation[field]?.status === 'warning' ? "1px solid var(--cafe-warning)" : "1px solid var(--cafe-border)",
-          borderRadius: 10,
+          borderRadius: isMobile ? 8 : 10,
           background: "var(--cafe-bg)",
           color: "var(--cafe-text-primary)",
           outline: "none",
@@ -269,12 +269,12 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
   );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ marginBottom: 32 }}>
-        <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "16px" : 0 }}>
+      <div style={{ marginBottom: isMobile ? 24 : 32 }}>
+        <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
           Branch Details
         </h3>
-        <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)" }}>
           Configure your branch location, contact information, and service options.
         </p>
       </div>
@@ -282,7 +282,7 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
       {/* Branch Identity */}
       {renderFieldCard('Branch Identity', '🏢', (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
             {renderInput('Branch Name', 'branchName', 'e.g., Main Branch', 'text', true, null, {
               tooltip: 'The display name for this branch location. This will appear on receipts, invoices, and internal reports.',
               autoComplete: 'off'
@@ -293,30 +293,30 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
             })}
           </div>
           <div>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 12, display: "block" }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 10 : 12, display: "block" }}>
               Branch Type
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12 }}>
               {BRANCH_TYPES.map(type => (
                 <button
                   key={type.id}
                   onClick={() => handleChange('branchType', type.id)}
                   aria-pressed={formData.branchType === type.id}
                   style={{
-                    padding: "16px",
+                    padding: isMobile ? "12px" : "16px",
                     border: formData.branchType === type.id ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                    borderRadius: 10,
+                    borderRadius: isMobile ? 8 : 10,
                     background: formData.branchType === type.id ? "var(--cafe-accent-bg)" : "var(--cafe-bg)",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "all 0.2s ease"
                   }}
                 >
-                  <div style={{ fontSize: 20, marginBottom: 8 }}>{type.icon}</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
+                  <div style={{ fontSize: isMobile ? 18 : 20, marginBottom: isMobile ? 6 : 8 }}>{type.icon}</div>
+                  <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
                     {type.name}
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)" }}>
+                  <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-secondary)" }}>
                     {type.description}
                   </div>
                 </button>
@@ -330,11 +330,11 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
       {renderFieldCard('Location Details', '📍', (
         <>
           {renderInput('Street Address', 'branchAddress', '123 Main Street', 'text', false, null, { autoComplete: 'street-address' })}
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
             {renderInput('City', 'branchCity', 'Mumbai', 'text', false, null, { autoComplete: 'address-level2' })}
             {renderInput('State', 'branchState', 'Maharashtra', 'text', false, null, { autoComplete: 'address-level1' })}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "repeat(2, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 12 : 16 }}>
             {renderInput('Postal Code', 'branchPostalCode', '400001', 'text', false, null, { autoComplete: 'postal-code' })}
             {renderInput('Country', 'branchCountry', 'India', 'text', false, null, { autoComplete: 'country-name' })}
             {renderInput('Google Maps Link', 'googleMapsLink', 'https://maps.google.com/...', 'url', false, null, {
@@ -349,7 +349,7 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
 
       {/* Contact Information */}
       {renderFieldCard('Contact Information', '📞', (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
           {renderInput('Branch Phone', 'branchPhone', '+91 9876543210', 'tel', false, null, { autoComplete: 'tel' })}
           {renderInput('Branch Email', 'branchEmail', 'branch@yourcafe.com', 'email', false, null, { autoComplete: 'email' })}
         </div>
@@ -359,7 +359,7 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
       {renderFieldCard('Branch Manager', '👤', (
         <>
           {renderInput('Manager Name', 'branchManager', 'John Doe', 'text', false, null, { autoComplete: 'name' })}
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
             {renderInput('Manager Phone', 'managerPhone', '+91 9876543210', 'tel', false, null, { autoComplete: 'tel' })}
             {renderInput('Manager Email', 'managerEmail', 'manager@yourcafe.com', 'email', false, null, { autoComplete: 'email' })}
           </div>
@@ -374,9 +374,9 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
       {/* Capacity & Services */}
       {renderFieldCard('Capacity & Services', '🪑', (
         <>
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
           <div>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Capacity Range
             </label>
             <select
@@ -384,10 +384,10 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
               onChange={(e) => handleChange('capacity', e.target.value)}
               style={{
                 width: "100%",
-                padding: "14px 16px",
-                fontSize: 15,
+                padding: isMobile ? "12px 14px" : "14px 16px",
+                fontSize: isMobile ? 14 : 15,
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 10,
+                borderRadius: isMobile ? 8 : 10,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
                 outline: "none"
@@ -399,7 +399,7 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
             </select>
           </div>
           <div>
-            <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" }}>
+            <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" }}>
               Seating Capacity
             </label>
             <input
@@ -410,65 +410,65 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
               placeholder="30"
               style={{
                 width: "100%",
-                padding: "14px 16px",
-                fontSize: 15,
+                padding: isMobile ? "12px 14px" : "14px 16px",
+                fontSize: isMobile ? 14 : 15,
                 border: capacityMismatch ? "1px solid var(--cafe-warning)" : "1px solid var(--cafe-border)",
-                borderRadius: 10,
+                borderRadius: isMobile ? 8 : 10,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
                 outline: "none"
               }}
             />
             {capacityMismatch && (
-              <div style={{ fontSize: 12, color: "#f59e0b", marginTop: 6 }}>
+              <div style={{ fontSize: isMobile ? 11 : 12, color: "#f59e0b", marginTop: 6 }}>
                 Doesn't match the "{selectedCapacityRange.name}" range ({selectedCapacityRange.min}-{selectedCapacityRange.max === 999 ? '100+' : selectedCapacityRange.max})
               </div>
             )}
           </div>
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 12, display: "block" }}>
+        <div style={{ marginBottom: isMobile ? 12 : 16 }}>
+          <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 10 : 12, display: "block" }}>
             Service Types
           </label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 10 : 12 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={formData.hasDineIn}
                 onChange={(e) => handleChange('hasDineIn', e.target.checked)}
-                style={{ width: 18, height: 18 }}
+                style={{ width: isMobile ? 16 : 18, height: isMobile ? 16 : 18 }}
               />
-              <span style={{ fontSize: 14, color: "var(--cafe-text-primary)" }}>Dine-In</span>
+              <span style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-primary)" }}>Dine-In</span>
             </label>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={formData.hasTakeaway}
                 onChange={(e) => handleChange('hasTakeaway', e.target.checked)}
-                style={{ width: 18, height: 18 }}
+                style={{ width: isMobile ? 16 : 18, height: isMobile ? 16 : 18 }}
               />
-              <span style={{ fontSize: 14, color: "var(--cafe-text-primary)" }}>Takeaway</span>
+              <span style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-primary)" }}>Takeaway</span>
             </label>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={formData.hasDelivery}
                 onChange={(e) => handleChange('hasDelivery', e.target.checked)}
-                style={{ width: 18, height: 18 }}
+                style={{ width: isMobile ? 16 : 18, height: isMobile ? 16 : 18 }}
               />
-              <span style={{ fontSize: 14, color: "var(--cafe-text-primary)" }}>Delivery</span>
+              <span style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-primary)" }}>Delivery</span>
             </label>
           </div>
         </div>
         <div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 8 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: isMobile ? 6 : 8 }}>
             <input
               type="checkbox"
               checked={formData.hasOutdoorSeating}
               onChange={(e) => handleChange('hasOutdoorSeating', e.target.checked)}
-              style={{ width: 18, height: 18 }}
+              style={{ width: isMobile ? 16 : 18, height: isMobile ? 16 : 18 }}
             />
-            <span style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-primary)" }}>Has Outdoor Seating</span>
+            <span style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-primary)" }}>Has Outdoor Seating</span>
           </label>
           {formData.hasOutdoorSeating && (
             <input
@@ -476,17 +476,17 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
               min={0}
               value={formData.outdoorCapacity}
               onChange={(e) => handleChange('outdoorCapacity', parseInt(e.target.value) || 0)}
-              placeholder="Outdoor capacity"
+              placeholder="10"
               style={{
                 width: "100%",
-                maxWidth: 200,
-                padding: "12px 16px",
-                fontSize: 14,
+                padding: isMobile ? "12px 14px" : "14px 16px",
+                fontSize: isMobile ? 14 : 15,
                 border: "1px solid var(--cafe-border)",
-                borderRadius: 8,
+                borderRadius: isMobile ? 8 : 10,
                 background: "var(--cafe-bg)",
                 color: "var(--cafe-text-primary)",
-                outline: "none"
+                outline: "none",
+                marginTop: isMobile ? 6 : 8
               }}
             />
           )}
@@ -503,10 +503,10 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
           rows={3}
           style={{
             width: "100%",
-            padding: "14px 16px",
-            fontSize: 15,
+            padding: isMobile ? "12px 14px" : "14px 16px",
+            fontSize: isMobile ? 14 : 15,
             border: "1px solid var(--cafe-border)",
-            borderRadius: 10,
+            borderRadius: isMobile ? 8 : 10,
             background: "var(--cafe-bg)",
             color: "var(--cafe-text-primary)",
             outline: "none",
@@ -519,30 +519,30 @@ export default function BranchDetailsStep({ settings, onNext, onBack, stepIndex,
       <div style={{
         background: "linear-gradient(135deg, var(--cafe-accent-bg) 0%, var(--cafe-bg-surface) 100%)",
         border: "1px solid var(--cafe-border-light)",
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 24
+        borderRadius: isMobile ? 12 : 16,
+        padding: isMobile ? 16 : 24,
+        marginBottom: isMobile ? 20 : 24
       }}>
-        <h4 style={{ fontSize: 16, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        <h4 style={{ fontSize: isMobile ? 14 : 16, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: isMobile ? 12 : 16, display: "flex", alignItems: "center", gap: 8 }}>
           <span>👁️</span>
           Branch Preview
         </h4>
         <div style={{
           background: "#fff",
-          borderRadius: 12,
-          padding: 24,
+          borderRadius: isMobile ? 10 : 12,
+          padding: isMobile ? 16 : 24,
           color: "#000"
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
             <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: 12,
+              width: isMobile ? 48 : 56,
+              height: isMobile ? 48 : 56,
+              borderRadius: isMobile ? 10 : 12,
               background: "var(--cafe-accent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 28,
+              fontSize: isMobile ? 24 : 28,
               color: "#fff"
             }}>
               {BRANCH_TYPES.find(t => t.id === formData.branchType)?.icon || '🏢'}

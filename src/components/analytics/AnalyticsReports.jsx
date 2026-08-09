@@ -1,12 +1,12 @@
-import React from 'react';
 // Analytics & Reports - Main Component
 // Comprehensive analytics and reporting workspace for CafeOS
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { 
-  DATE_PRESETS, 
+import AlertDialog from "../common/AlertDialog.jsx";
+import {
+  DATE_PRESETS,
   DATE_PRESET_LABELS,
-  getDateRangeForPreset, 
+  getDateRangeForPreset,
   formatDate
 } from "../../utils/dateRangeUtils.js";
 import {
@@ -67,7 +67,7 @@ const MiniBarChart = ({ items, maxValue, height = 48, barColor = "var(--cafe-acc
   if (!items || items.length === 0) return null;
   const max = maxValue || Math.max(...items.map(i => i.value || 0), 1);
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height, marginTop: 8 }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height, marginTop: 10 }}>
       {items.map((item, idx) => {
         const pct = max > 0 ? Math.max(2, (item.value / max) * 100) : 2;
         return (
@@ -78,10 +78,10 @@ const MiniBarChart = ({ items, maxValue, height = 48, barColor = "var(--cafe-acc
                 width: "100%",
                 height: `${pct}%`,
                 background: item.color || barColor,
-                borderRadius: "2px 2px 0 0",
-                minHeight: 2,
-                transition: "height .3s",
-                opacity: 0.85,
+                borderRadius: "3px 3px 0 0",
+                minHeight: 3,
+                transition: "height .35s",
+                opacity: 0.9,
               }}
             />
           </div>
@@ -97,11 +97,11 @@ const ProgressBar = ({ value, max = 100, color = "var(--cafe-accent)", height = 
   return (
     <div style={{
       width: "100%", height, background: "var(--cafe-bg-surface)",
-      borderRadius: height, overflow: "hidden", marginTop: 4,
+      borderRadius: height + 2, overflow: "hidden", marginTop: 6,
     }}>
       <div style={{
         width: `${pct}%`, height: "100%",
-        background: color, borderRadius: height, transition: "width .4s",
+        background: color, borderRadius: height + 2, transition: "width .45s",
       }} />
     </div>
   );
@@ -112,11 +112,11 @@ const KPICard = ({ label, value, change, isPositive, isLoading }) => {
   if (isLoading) {
     return (
       <div style={{
-        background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)",
-        borderRadius: "var(--cafe-radius-md)", padding: 16, minHeight: 100,
+        background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
+        borderRadius: 12, padding: 18, minHeight: 110,
       }}>
-        <div style={{ width: 60, height: 12, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 12 }} />
-        <div style={{ width: 100, height: 24, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 8 }} />
+        <div style={{ width: 60, height: 12, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 14 }} />
+        <div style={{ width: 100, height: 26, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 10 }} />
         <div style={{ width: 80, height: 16, background: "var(--cafe-bg-surface)", borderRadius: 4 }} />
       </div>
     );
@@ -131,29 +131,31 @@ const KPICard = ({ label, value, change, isPositive, isLoading }) => {
 
   return (
     <div style={{
-      background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)",
-      borderRadius: "var(--cafe-radius-md)", padding: 16,
-      borderLeft: '3px solid ' + (isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"),
+      background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
+      borderRadius: 12, padding: 18,
+      borderLeft: '4px solid ' + (isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"),
+      transition: 'all 0.2s ease',
     }}>
       <div style={{
-        fontSize: 10, fontWeight: 600, letterSpacing: "0.08em",
-        textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 8,
+        fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+        textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10,
       }}>
         {label}
       </div>
       <div style={{
-        fontSize: 20, fontWeight: 700, fontFamily: "monospace",
-        color: valueColor, lineHeight: 1, marginBottom: 8,
+        fontSize: 22, fontWeight: 800, fontFamily: "monospace",
+        color: valueColor, lineHeight: 1, marginBottom: 10,
+        letterSpacing: '-0.02em',
       }}>
         {value}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13 }}>{trendEmoji}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 14 }}>{trendEmoji}</span>
         <span style={{
-          fontSize: 11, fontWeight: 600, fontFamily: "monospace",
+          fontSize: 12, fontWeight: 700, fontFamily: "monospace",
           color: isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)",
           background: isNeutral ? "var(--cafe-bg-surface)" : isPositive ? "var(--cafe-success-bg)" : "var(--cafe-danger-bg)",
-          borderRadius: 4, padding: "2px 6px",
+          borderRadius: 6, padding: "4px 8px",
         }}>
           {changeDisplay}
         </span>
@@ -164,9 +166,9 @@ const KPICard = ({ label, value, change, isPositive, isLoading }) => {
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 const EmptyState = ({ message, icon = "📊" }) => (
-  <div style={{ textAlign: "center", padding: 48, color: "var(--cafe-text-tertiary)" }}>
-    <div style={{ fontSize: 48, marginBottom: 16 }}>{icon}</div>
-    <div style={{ fontSize: 14, fontWeight: 500 }}>{message}</div>
+  <div style={{ textAlign: "center", padding: 56, color: "var(--cafe-text-tertiary)" }}>
+    <div style={{ fontSize: 52, marginBottom: 18, opacity: 0.4 }}>{icon}</div>
+    <div style={{ fontSize: 15, fontWeight: 500, color: "var(--cafe-text-secondary)" }}>{message}</div>
   </div>
 );
 
@@ -197,6 +199,7 @@ function AnalyticsReports({
   const [datePreset, setDatePreset] = useState(DATE_PRESETS.TODAY);
   const [activeSection, setActiveSection] = useState('overview');
   const [exportDialog, setExportDialog] = useState({ open: false, format: 'csv' });
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [isExporting, setIsExporting] = useState(false);
 
   // Normalize data
@@ -308,7 +311,12 @@ function AnalyticsReports({
   const handleExport = useCallback(async () => {
     if (isExporting) return;
     if (currentPeriodOrders.length === 0) {
-      alert('No data available for the selected period.');
+      setAlertDialog({
+        isOpen: true,
+        title: 'No Data Available',
+        message: 'No data available for the selected period.',
+        type: 'warning'
+      });
       return;
     }
     setIsExporting(true);
@@ -332,9 +340,20 @@ function AnalyticsReports({
         case 'documents':     exportGenericCSV([documentStats], 'Document-Stats', currentDateRange); break;
         default:              exportFullAnalyticsCSV({ kpis: currentKPIs, channels: channelPerformance, menuItems: menuPerformance, payments: paymentBreakdown }, currentDateRange);
       }
+      setAlertDialog({
+        isOpen: true,
+        title: 'Export Successful',
+        message: 'Report exported successfully.',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
+      setAlertDialog({
+        isOpen: true,
+        title: 'Export Failed',
+        message: 'Export failed. Please try again.',
+        type: 'error'
+      });
     } finally {
       setIsExporting(false);
       setExportDialog({ open: false, format: 'csv' });
@@ -363,35 +382,35 @@ function AnalyticsReports({
   };
 
   return (
-    <div style={{ padding: isMobile ? 16 : 24, maxWidth: '100%', overflow: 'hidden' }}>
+    <div style={{ padding: isMobile ? 18 : 28, maxWidth: '100%', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ 
         display: "flex", justifyContent: "space-between",
         alignItems: isMobile ? "flex-start" : "center",
-        marginBottom: 24, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0,
+        marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0,
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.02em" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.03em" }}>
             Analytics &amp; Reports
           </div>
-          <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)" }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)" }}>
             Review sales, costs, operations, and business performance
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {/* Date Range Selector */}
-          <div style={{ display: "flex", gap: 2, background: "var(--cafe-bg-surface)", padding: 3, borderRadius: "var(--cafe-radius-md)" }}>
+          <div style={{ display: "flex", gap: 2, background: "var(--cafe-bg-hover)", padding: 4, borderRadius: 10 }}>
             {Object.values(DATE_PRESETS).slice(0, 6).map(preset => (
               <button
                 key={preset} type="button" aria-pressed={datePreset === preset}
                 onClick={() => setDatePreset(preset)}
                 style={{ 
-                  padding: isMobile ? "6px 12px" : "8px 16px", borderRadius: 6, border: "none",
+                  padding: isMobile ? "8px 14px" : "10px 18px", borderRadius: 8, border: "none",
                   background: datePreset === preset ? "var(--cafe-bg-card)" : "transparent",
                   color: datePreset === preset ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)",
-                  fontSize: isMobile ? 11 : 12, cursor: "pointer",
-                  fontWeight: datePreset === preset ? 600 : 400, minHeight: 36, transition: "all .15s",
+                  fontSize: isMobile ? 12 : 13, cursor: "pointer",
+                  fontWeight: datePreset === preset ? 700 : 500, minHeight: 38, transition: "all .18s",
                 }}
               >
                 {DATE_PRESET_LABELS[preset]}
@@ -405,11 +424,11 @@ function AnalyticsReports({
             disabled={isExporting || currentPeriodOrders.length === 0}
             style={{
               background: 'transparent', border: '1px solid var(--cafe-border-light)',
-              borderRadius: 'var(--cafe-radius-sm)', color: 'var(--cafe-text-primary)',
-              fontSize: isMobile ? 11 : 12, padding: isMobile ? "6px 12px" : "8px 16px", minHeight: 36,
+              borderRadius: 10, color: 'var(--cafe-text-primary)',
+              fontSize: isMobile ? 12 : 13, padding: isMobile ? "8px 14px" : "10px 18px", minHeight: 38,
               opacity: (isExporting || currentPeriodOrders.length === 0) ? 0.5 : 1,
               cursor: (isExporting || currentPeriodOrders.length === 0) ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4,
+              display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
             }}
           >
             <span>📥</span>{isExporting ? 'Exporting...' : 'Export'}
@@ -420,11 +439,11 @@ function AnalyticsReports({
             disabled={currentPeriodOrders.length === 0}
             style={{
               background: 'transparent', border: '1px solid var(--cafe-border-light)',
-              borderRadius: 'var(--cafe-radius-sm)', color: 'var(--cafe-text-primary)',
-              fontSize: isMobile ? 11 : 12, padding: isMobile ? "6px 12px" : "8px 16px", minHeight: 36,
+              borderRadius: 10, color: 'var(--cafe-text-primary)',
+              fontSize: isMobile ? 12 : 13, padding: isMobile ? "8px 14px" : "10px 18px", minHeight: 38,
               opacity: currentPeriodOrders.length === 0 ? 0.5 : 1,
               cursor: currentPeriodOrders.length === 0 ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4,
+              display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
             }}
           >
             <span>🖨️</span>Print
@@ -434,18 +453,19 @@ function AnalyticsReports({
 
       {/* Date Range Display */}
       <div style={{ 
-        marginBottom: 20, padding: 12, background: "var(--cafe-bg-surface)",
-        borderRadius: "var(--cafe-radius-md)", fontSize: 12, color: "var(--cafe-text-secondary)",
+        marginBottom: 24, padding: "14px 18px", background: "var(--cafe-bg-hover)",
+        borderRadius: 12, fontSize: 13, color: "var(--cafe-text-secondary)",
         display: "flex", justifyContent: "space-between", alignItems: "center",
+        border: "1px solid var(--cafe-border-light)",
       }}>
         <div><strong>Period:</strong> {currentDateRange.label}</div>
-        <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>
+        <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
           {currentPeriodOrders.length} orders in period
         </div>
       </div>
 
       {/* Report Navigation */}
-      <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 4, marginBottom: 20, scrollbarWidth: "none" }}>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 24, scrollbarWidth: "none" }}>
         {REPORT_SECTIONS.map(section => {
           const count = sectionCounts[section.id] || 0;
           const isActive = activeSection === section.id;
@@ -453,22 +473,22 @@ function AnalyticsReports({
             <button key={section.id} type="button" aria-pressed={isActive}
               onClick={() => setActiveSection(section.id)}
               style={{ 
-                padding: "8px 12px", borderRadius: "var(--cafe-radius-sm)", border: "none",
+                padding: "10px 16px", borderRadius: 10, border: "none",
                 background: isActive ? "var(--cafe-accent)" : "transparent",
-                color: isActive ? "white" : "var(--cafe-text-secondary)",
-                fontSize: 12, cursor: "pointer", fontWeight: isActive ? 600 : 400,
-                whiteSpace: "nowrap", transition: "all .15s",
-                display: "flex", alignItems: "center", gap: 5, position: "relative",
+                color: isActive ? "#1A1208" : "var(--cafe-text-secondary)",
+                fontSize: 13, cursor: "pointer", fontWeight: isActive ? 700 : 500,
+                whiteSpace: "nowrap", transition: "all .18s",
+                display: "flex", alignItems: "center", gap: 6, position: "relative",
               }}
             >
-              <span style={{ fontSize: 13 }}>{section.icon}</span>
+              <span style={{ fontSize: 14 }}>{section.icon}</span>
               {section.label}
               {count > 0 && (
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  minWidth: 16, height: 16, borderRadius: 8, fontSize: 9, fontWeight: 700,
-                  background: isActive ? "rgba(255,255,255,0.3)" : "var(--cafe-accent)",
-                  color: isActive ? "white" : "white", padding: "0 4px",
+                  minWidth: 18, height: 18, borderRadius: 9, fontSize: 10, fontWeight: 800,
+                  background: isActive ? "rgba(26,18,8,0.2)" : "var(--cafe-accent-bg)",
+                  color: isActive ? "#1A1208" : "var(--cafe-accent)", padding: "0 5px",
                 }}>
                   {count > 99 ? '99+' : count}
                 </span>
@@ -556,13 +576,22 @@ function AnalyticsReports({
                 Cancel
               </button>
               <button onClick={() => handleExport(exportDialog.format)} disabled={isExporting}
-                style={{ background: 'var(--cafe-primary)', border: '1px solid var(--cafe-primary)', borderRadius: 'var(--cafe-radius-sm)', color: 'white', padding: '8px 16px', opacity: isExporting ? 0.5 : 1, cursor: isExporting ? 'not-allowed' : 'pointer' }}>
+                style={{ background: 'var(--cafe-primary)', border: '1px solid var(--cafe-primary)', borderRadius: 'var(--cafe-radius-sm)', color: 'var(--cafe-text-primary)', padding: '8px 16px', opacity: isExporting ? 0.5 : 1, cursor: isExporting ? 'not-allowed' : 'pointer' }}>
                 {isExporting ? 'Exporting...' : 'Export'}
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* AlertDialog */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }
@@ -591,19 +620,21 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
         const h = d.getHours();
         slots[h].revenue += Number(o.total || o.amount || 0);
         slots[h].count += 1;
-      } catch (_) {}
+      } catch (_) {
+        // Skip invalid orders
+      }
     });
     return slots;
   }, [currentPeriodOrders]);
 
   const maxHourlyRevenue = Math.max(...hourlyRevenue.map(s => s.revenue), 1);
   const channelMax = Math.max(...channelPerformance.map(c => c.grossSales || 0), 1);
-  const menuMax    = Math.max(...menuPerformance.slice(0,5).map(m => m.grossSales || 0), 1);
+  const menuMax = Math.max(...menuPerformance.slice(0,5).map(m => m.grossSales || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}              change={salesComparison.display}  isPositive={salesComparison.isPositive} />
         <KPICard label="Orders"          value={currentKPIs.orders.total}                                change={ordersComparison.display} isPositive={ordersComparison.isPositive} />
         <KPICard label="Avg Order Value" value={formatCurrency(currentKPIs.sales.averageOrderValue)}     change={aovComparison.display}    isPositive={aovComparison.isPositive} />
@@ -613,11 +644,11 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
       </div>
 
       {/* Hourly Revenue Chart */}
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 12 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 14 }}>
           Hourly Revenue Breakdown
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 60 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 70 }}>
           {hourlyRevenue.map((slot) => {
             const pct = maxHourlyRevenue > 0 ? Math.max(2, (slot.revenue / maxHourlyRevenue) * 100) : 2;
             const hasData = slot.revenue > 0;
@@ -633,31 +664,31 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
             );
           })}
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
           {[0,6,12,18,23].map(h => (
-            <div key={h} style={{ fontSize: 9, color: "var(--cafe-text-tertiary)" }}>{h}:00</div>
+            <div key={h} style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>{h}:00</div>
           ))}
         </div>
       </div>
 
       {/* Channel Breakdown */}
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>
           Sales by Channel
         </div>
         {channelPerformance.length === 0 ? <EmptyState message="No channel data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {channelPerformance.map((channel, idx) => (
-              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
-                <div style={{ width: 12, height: 12, borderRadius: 4, background: channelColor(channel.source), flexShrink: 0 }} />
+              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+                <div style={{ width: 14, height: 14, borderRadius: 5, background: channelColor(channel.source), flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
-                  <ProgressBar value={channel.grossSales} max={channelMax} color={channelColor(channel.source)} height={4} />
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
+                  <ProgressBar value={channel.grossSales} max={channelMax} color={channelColor(channel.source)} height={5} />
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{channel.revenueShare.toFixed(1)}% share</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{channel.revenueShare.toFixed(1)}% share</div>
                 </div>
               </div>
             ))}
@@ -666,28 +697,28 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
       </div>
 
       {/* Top Items */}
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>
           Top Selling Items
         </div>
         {menuPerformance.length === 0 ? <EmptyState message="No menu data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {menuPerformance.slice(0, 5).map((item, idx) => {
               const medals = ['🏆','🥈','🥉'];
               const badge = medals[idx] || null;
               return (
-                <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: idx < Math.min(5, menuPerformance.length) - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 6, background: idx === 0 ? "var(--cafe-accent-dim)" : "var(--cafe-bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: badge ? 14 : 10, color: idx === 0 ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)", fontFamily: "monospace", fontWeight: 700, flexShrink: 0 }}>
+                <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: idx < Math.min(5, menuPerformance.length) - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 7, background: idx === 0 ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: badge ? 15 : 11, color: idx === 0 ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)", fontFamily: "monospace", fontWeight: 800, flexShrink: 0 }}>
                     {badge || (idx + 1)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{item.category} · {item.quantitySold} sold</div>
-                    <ProgressBar value={item.grossSales} max={menuMax} height={3} />
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{item.category} · {item.quantitySold} sold</div>
+                    <ProgressBar value={item.grossSales} max={menuMax} height={4} />
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(item.grossSales)}</div>
-                    <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(item.averagePrice)} avg</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(item.grossSales)}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(item.averagePrice)} avg</div>
                   </div>
                 </div>
               );
@@ -704,11 +735,11 @@ function SalesSection({ currentKPIs, comparison, channelPerformance, isMobile, f
   const grossSalesComparison = formatComparison(comparison?.grossSales);
   const netSalesComparison   = formatComparison(comparison?.netSales);
   const refundsComparison    = formatComparison(comparison?.refunds);
-  const channelMax = Math.max(...channelPerformance.map(c => c.grossSales || 0), 1);
+  const _channelMax = Math.max(...channelPerformance.map(c => c.grossSales || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Gross Sales"     value={formatCurrency(currentKPIs.sales.grossSales)}    change={grossSalesComparison.display} isPositive={grossSalesComparison.isPositive} />
         <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}       change={netSalesComparison.display}   isPositive={netSalesComparison.isPositive} />
         <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}   change="—" isPositive={true} />
@@ -717,20 +748,20 @@ function SalesSection({ currentKPIs, comparison, channelPerformance, isMobile, f
         <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}        change={refundsComparison.display}    isPositive={false} />
       </div>
 
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Sales by Channel</div>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Sales by Channel</div>
         {channelPerformance.length === 0 ? <EmptyState message="No channel data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {channelPerformance.map((channel, idx) => (
-              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
-                  <ProgressBar value={channel.revenueShare} max={100} color={channelColor(channel.source)} height={4} />
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
+                  <ProgressBar value={channel.revenueShare} max={100} color={channelColor(channel.source)} height={5} />
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{channel.revenueShare.toFixed(1)}% share</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{channel.revenueShare.toFixed(1)}% share</div>
                 </div>
               </div>
             ))}
@@ -761,8 +792,8 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
   const totalOrders = orders.length || 1;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Total Orders"     value={currentKPIs.orders.total}                              change={ordersComparison.display}      isPositive={ordersComparison.isPositive} />
         <KPICard label="Completed"        value={currentKPIs.orders.completed}                          change="—"                             isPositive={true} />
         <KPICard label="Cancelled"        value={currentKPIs.orders.cancelled}                          change="—"                             isPositive={false} />
@@ -773,12 +804,12 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
 
       {/* Order Status Breakdown — pie-style row */}
       {statusCounts.length > 0 && (
-        <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 12 }}>
+        <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 14 }}>
             Order Status Breakdown
           </div>
           {/* Stacked bar */}
-          <div style={{ display: "flex", height: 16, borderRadius: 8, overflow: "hidden", marginBottom: 12, gap: 1 }}>
+          <div style={{ display: "flex", height: 18, borderRadius: 9, overflow: "hidden", marginBottom: 14, gap: 1 }}>
             {statusCounts.map(([status, count]) => {
               const pct = (count / totalOrders) * 100;
               const color = statusColors[status] || "var(--cafe-text-tertiary)";
@@ -789,15 +820,15 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
             })}
           </div>
           {/* Legend */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {statusCounts.map(([status, count]) => {
               const pct = (count / totalOrders) * 100;
               const color = statusColors[status] || "var(--cafe-text-tertiary)";
               return (
-                <div key={status} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 3, background: color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: "var(--cafe-text-secondary)", fontWeight: 500 }}>{status}</span>
-                  <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", fontFamily: "monospace" }}>{count} ({pct.toFixed(1)}%)</span>
+                <div key={status} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 4, background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: "var(--cafe-text-secondary)", fontWeight: 600 }}>{status}</span>
+                  <span style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontFamily: "monospace" }}>{count} ({pct.toFixed(1)}%)</span>
                 </div>
               );
             })}
@@ -806,29 +837,29 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
       )}
 
       {/* Recent Orders Table */}
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20, overflowX: "auto" }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Recent Orders</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22, overflowX: "auto" }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Recent Orders</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--cafe-border-light)" }}>
               {["Order ID","Date","Customer","Source","Status","Amount"].map((h, i) => (
-                <th key={h} style={{ padding: "8px", textAlign: i === 5 ? "right" : "left", fontWeight: 600, color: "var(--cafe-text-tertiary)" }}>{h}</th>
+                <th key={h} style={{ padding: "10px 12px", textAlign: i === 5 ? "right" : "left", fontWeight: 700, color: "var(--cafe-text-tertiary)", fontSize: 11 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {orders.slice(0, 20).map((order) => (
               <tr key={order.id} style={{ borderBottom: "1px solid var(--cafe-border-light)" }}>
-                <td style={{ padding: "8px", fontFamily: "monospace" }}>{order.id}</td>
-                <td style={{ padding: "8px" }}>{formatDate(order.createdAt, 'short')}</td>
-                <td style={{ padding: "8px" }}>{order.customer?.name || order.customerName || 'Guest'}</td>
-                <td style={{ padding: "8px" }}>{order.source}</td>
-                <td style={{ padding: "8px" }}>
-                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4, background: statusColors[order.status] ? statusColors[order.status] + '22' : "var(--cafe-bg-surface)", color: statusColors[order.status] || "var(--cafe-text-tertiary)", fontWeight: 600 }}>
+                <td style={{ padding: "10px 12px", fontFamily: "monospace", fontWeight: 500 }}>{order.id}</td>
+                <td style={{ padding: "10px 12px" }}>{formatDate(order.createdAt, 'short')}</td>
+                <td style={{ padding: "10px 12px" }}>{order.customer?.name || order.customerName || 'Guest'}</td>
+                <td style={{ padding: "10px 12px" }}>{order.source}</td>
+                <td style={{ padding: "10px 12px" }}>
+                  <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: statusColors[order.status] ? statusColors[order.status] + '22' : "var(--cafe-bg-surface)", color: statusColors[order.status] || "var(--cafe-text-tertiary)", fontWeight: 700 }}>
                     {order.status}
                   </span>
                 </td>
-                <td style={{ padding: "8px", textAlign: "right", fontFamily: "monospace" }}>{formatCurrency(order.total || order.amount)}</td>
+                <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "monospace", fontWeight: 700 }}>{formatCurrency(order.total || order.amount)}</td>
               </tr>
             ))}
           </tbody>
@@ -844,32 +875,32 @@ function MenuSection({ menuPerformance, formatCurrency }) {
   const maxSales = Math.max(...menuPerformance.map(m => m.grossSales || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Menu Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Menu Performance</div>
         {menuPerformance.length === 0 ? <EmptyState message="No menu data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {menuPerformance.map((item, idx) => {
               const isTop3 = idx < 3;
               const isZero = item.quantitySold === 0;
               const isVeryLow = !isZero && item.quantitySold <= 2 && menuPerformance.length > 3;
               return (
-                <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: idx < menuPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
-                  <div style={{ width: 26, height: 26, borderRadius: 6, background: isTop3 ? "var(--cafe-accent-dim)" : "var(--cafe-bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isTop3 ? 14 : 10, fontFamily: "monospace", fontWeight: 700, flexShrink: 0 }}>
+                <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: idx < menuPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 7, background: isTop3 ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: isTop3 ? 15 : 11, fontFamily: "monospace", fontWeight: 800, flexShrink: 0 }}>
                     {isTop3 ? medals[idx] : (idx + 1)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-                      {isZero && <span title="No sales this period" style={{ fontSize: 11, background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", borderRadius: 4, padding: "1px 5px" }}>⚠ 0 sold</span>}
-                      {isVeryLow && <span title="Very low sales" style={{ fontSize: 11, background: "var(--cafe-warning-bg, #fef3c7)", color: "var(--cafe-warning, #d97706)", borderRadius: 4, padding: "1px 5px" }}>⚠ low</span>}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+                      {isZero && <span title="No sales this period" style={{ fontSize: 11, background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", borderRadius: 5, padding: "2px 6px" }}>⚠ 0 sold</span>}
+                      {isVeryLow && <span title="Very low sales" style={{ fontSize: 11, background: "var(--cafe-warning-bg)", color: "var(--cafe-warning)", borderRadius: 5, padding: "2px 6px" }}>⚠ low</span>}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{item.category} · {item.quantitySold} sold</div>
-                    <ProgressBar value={item.grossSales} max={maxSales} height={3} />
+                    <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{item.category} · {item.quantitySold} sold</div>
+                    <ProgressBar value={item.grossSales} max={maxSales} height={4} />
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(item.grossSales)}</div>
-                    <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(item.averagePrice)} avg</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(item.grossSales)}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(item.averagePrice)} avg</div>
                   </div>
                 </div>
               );
@@ -883,13 +914,13 @@ function MenuSection({ menuPerformance, formatCurrency }) {
 
 // ─── Channels Section ─────────────────────────────────────────────────────────
 function ChannelsSection({ channelPerformance, formatCurrency }) {
-  const maxSales = Math.max(...channelPerformance.map(c => c.grossSales || 0), 1);
-  const maxOrders= Math.max(...channelPerformance.map(c => c.orders || 0), 1);
+  const _maxSales = Math.max(...channelPerformance.map(c => c.grossSales || 0), 1);
+  const maxOrders = Math.max(...channelPerformance.map(c => c.orders || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 8 }}>Channel Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10 }}>Channel Performance</div>
         {/* Mini bar chart of orders per channel */}
         {channelPerformance.length > 0 && (
           <MiniBarChart
@@ -900,17 +931,17 @@ function ChannelsSection({ channelPerformance, formatCurrency }) {
         )}
         <div style={{ height: 1, background: "var(--cafe-border-light)", margin: "16px 0" }} />
         {channelPerformance.length === 0 ? <EmptyState message="No channel data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {channelPerformance.map((channel, idx) => (
-              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
                   <ProgressBar value={channel.revenueShare} max={100} color={channelColor(channel.source)} height={5} />
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{channel.revenueShare.toFixed(1)}% revenue share</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{channel.revenueShare.toFixed(1)}% revenue share</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
                 </div>
               </div>
             ))}
@@ -924,27 +955,27 @@ function ChannelsSection({ channelPerformance, formatCurrency }) {
 // ─── Customers Section ────────────────────────────────────────────────────────
 function CustomersSection({ customerPerformance, newVsReturning, isMobile, formatCurrency }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="New Customers"         value={newVsReturning.newCustomerCount}               change="—" isPositive={true} />
         <KPICard label="Returning Customers"   value={newVsReturning.returningCustomerCount}          change="—" isPositive={true} />
         <KPICard label="New Customer Sales"    value={formatCurrency(newVsReturning.newCustomerSales)}      change="—" isPositive={true} />
         <KPICard label="Returning Sales"       value={formatCurrency(newVsReturning.returningCustomerSales)} change="—" isPositive={true} />
       </div>
 
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Top Customers</div>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Top Customers</div>
         {customerPerformance.length === 0 ? <EmptyState message="No customer data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {customerPerformance.slice(0, 20).map((customer, idx) => (
-              <div key={customer.id || customer.phone} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: idx < Math.min(20, customerPerformance.length) - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={customer.id || customer.phone} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: idx < Math.min(20, customerPerformance.length) - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{customer.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{customer.orderCount} orders · {formatDate(customer.lastOrderDate, 'short')}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{customer.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{customer.orderCount} orders · {formatDate(customer.lastOrderDate, 'short')}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(customer.totalSpend)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(customer.averageOrderValue)} avg</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(customer.totalSpend)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(customer.averageOrderValue)} avg</div>
                 </div>
               </div>
             ))}
@@ -960,16 +991,16 @@ function PaymentsSection({ paymentBreakdown, currentKPIs, isMobile, formatCurren
   const maxAmount = Math.max(...paymentBreakdown.map(p => p.amountCollected || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Total Collected" value={formatCurrency(currentKPIs.sales.totalCollected)} change="—" isPositive={true} />
         <KPICard label="Outstanding"     value={formatCurrency(currentKPIs.sales.outstanding)}    change="—" isPositive={false} />
         <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}   change="—" isPositive={true} />
         <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}        change="—" isPositive={false} />
       </div>
 
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 8 }}>Payment Methods</div>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10 }}>Payment Methods</div>
         {paymentBreakdown.length > 0 && (
           <MiniBarChart
             items={paymentBreakdown.map(p => ({ label: p.name, value: p.amountCollected }))}
@@ -979,17 +1010,17 @@ function PaymentsSection({ paymentBreakdown, currentKPIs, isMobile, formatCurren
         )}
         <div style={{ height: 1, background: "var(--cafe-border-light)", margin: "16px 0" }} />
         {paymentBreakdown.length === 0 ? <EmptyState message="No payment data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {paymentBreakdown.map((payment, idx) => (
-              <div key={payment.method} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < paymentBreakdown.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={payment.method} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < paymentBreakdown.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{payment.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{payment.transactionCount} transactions</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{payment.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{payment.transactionCount} transactions</div>
                   <ProgressBar value={payment.share} max={100} height={5} />
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{payment.share.toFixed(1)}% share</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{payment.share.toFixed(1)}% share</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(payment.amountCollected)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(payment.amountCollected)}</div>
                 </div>
               </div>
             ))}
@@ -1005,9 +1036,9 @@ function StaffSection({ staffPerformance, formatCurrency }) {
   const maxSales = Math.max(...staffPerformance.map(s => s.salesProcessed || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 8 }}>Staff Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10 }}>Staff Performance</div>
         {staffPerformance.length > 0 && (
           <MiniBarChart
             items={staffPerformance.map(s => ({ label: s.staffName, value: s.salesProcessed }))}
@@ -1017,17 +1048,17 @@ function StaffSection({ staffPerformance, formatCurrency }) {
         )}
         <div style={{ height: 1, background: "var(--cafe-border-light)", margin: "16px 0" }} />
         {staffPerformance.length === 0 ? <EmptyState message="No staff data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {staffPerformance.map((s, idx) => (
-              <div key={s.staffId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < staffPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={s.staffId} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < staffPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{s.staffName}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{s.ordersHandled} orders handled</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{s.staffName}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{s.ordersHandled} orders handled</div>
                   <ProgressBar value={s.salesProcessed} max={maxSales} height={4} />
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(s.salesProcessed)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(s.averageOrderValue)} avg</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(s.salesProcessed)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(s.averageOrderValue)} avg</div>
                 </div>
               </div>
             ))}
@@ -1043,9 +1074,9 @@ function CategoriesSection({ categoryPerformance, formatCurrency }) {
   const maxSales = Math.max(...categoryPerformance.map(c => c.grossSales || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 8 }}>Category Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10 }}>Category Performance</div>
         {categoryPerformance.length > 0 && (
           <MiniBarChart
             items={categoryPerformance.map(c => ({ label: c.category, value: c.grossSales }))}
@@ -1055,18 +1086,18 @@ function CategoriesSection({ categoryPerformance, formatCurrency }) {
         )}
         <div style={{ height: 1, background: "var(--cafe-border-light)", margin: "16px 0" }} />
         {categoryPerformance.length === 0 ? <EmptyState message="No category data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {categoryPerformance.map((category, idx) => (
-              <div key={category.category} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < categoryPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={category.category} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < categoryPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{category.category}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{category.quantitySold} items sold</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{category.category}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{category.quantitySold} items sold</div>
                   <ProgressBar value={category.orderShare} max={100} height={5} />
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{category.orderShare.toFixed(1)}% share</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{category.orderShare.toFixed(1)}% share</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(category.grossSales)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(category.averagePrice)} avg</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(category.grossSales)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(category.averagePrice)} avg</div>
                 </div>
               </div>
             ))}
@@ -1084,26 +1115,26 @@ function ProfitabilitySection({ profitability, currentKPIs, isMobile, formatCurr
   const marginPercent= currentKPIs.sales.netSales > 0 ? (grossProfit / currentKPIs.sales.netSales) * 100 : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)} change="—" isPositive={true} />
-        <KPICard label="Estimated COGS"  value={formatCurrency(cogs)}                       change="—" isPositive={false} />
-        <KPICard label="Gross Profit"    value={formatCurrency(grossProfit)}                change="—" isPositive={grossProfit >= 0} />
+        <KPICard label="Estimated COGS"  value={formatCurrency(cogs)}                      change="—" isPositive={false} />
+        <KPICard label="Gross Profit"    value={formatCurrency(grossProfit)}               change="—" isPositive={grossProfit >= 0} />
         <KPICard label="Gross Margin"    value={marginPercent.toFixed(1) + '%'}             change="—" isPositive={marginPercent >= 0} />
       </div>
 
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Profitability Summary</div>
-        <div style={{ fontSize: 13, color: "var(--cafe-text-secondary)", lineHeight: 1.6 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Profitability Summary</div>
+        <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)", lineHeight: 1.7 }}>
           {[
             { label: "Net Sales",       val: formatCurrency(currentKPIs.sales.netSales) },
             { label: "Estimated COGS",  val: formatCurrency(cogs) + " (calculated from menu item costs)" },
             { label: "Gross Profit",    val: formatCurrency(grossProfit) + " (Net Sales - COGS)" },
             { label: "Gross Margin",    val: marginPercent.toFixed(1) + "% (Gross Profit / Net Sales)" },
           ].map(r => (
-            <div key={r.label} style={{ marginBottom: 8 }}><strong>{r.label}:</strong> {r.val}</div>
+            <div key={r.label} style={{ marginBottom: 10 }}><strong>{r.label}:</strong> {r.val}</div>
           ))}
-          <div style={{ marginTop: 16, fontSize: 11, color: "var(--cafe-text-tertiary)" }}>
+          <div style={{ marginTop: 18, fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
             Note: COGS is estimated based on menu item cost data. Actual costs may vary.
           </div>
         </div>
@@ -1117,9 +1148,9 @@ function TablesSection({ tablePerformance, formatCurrency }) {
   const maxSpend = Math.max(...tablePerformance.map(t => t.totalSpend || 0), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 8 }}>Table Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10 }}>Table Performance</div>
         {tablePerformance.length > 0 && (
           <MiniBarChart
             items={tablePerformance.map(t => ({ label: t.tableName, value: t.totalSpend }))}
@@ -1129,17 +1160,17 @@ function TablesSection({ tablePerformance, formatCurrency }) {
         )}
         <div style={{ height: 1, background: "var(--cafe-border-light)", margin: "16px 0" }} />
         {tablePerformance.length === 0 ? <EmptyState message="No table data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {tablePerformance.map((table, idx) => (
-              <div key={table.tableId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < tablePerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={table.tableId} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < tablePerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{table.tableName}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{table.orders} orders · {table.averageGuests.toFixed(1)} avg guests</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{table.tableName}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{table.orders} orders · {table.averageGuests.toFixed(1)} avg guests</div>
                   <ProgressBar value={table.totalSpend} max={maxSpend} height={4} />
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(table.totalSpend)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(table.averageSpend)} avg</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(table.totalSpend)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(table.averageSpend)} avg</div>
                 </div>
               </div>
             ))}
@@ -1153,25 +1184,25 @@ function TablesSection({ tablePerformance, formatCurrency }) {
 // ─── Delivery Section ─────────────────────────────────────────────────────────
 function DeliverySection({ deliveryPerformance }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Delivery Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Delivery Performance</div>
         {deliveryPerformance.length === 0 ? <EmptyState message="No delivery data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {deliveryPerformance.map((driver, idx) => (
-              <div key={driver.driverId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < deliveryPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={driver.driverId} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < deliveryPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{driver.driverName}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{driver.driverName}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>
                     {driver.deliveries} deliveries · {driver.onTimeRate.toFixed(1)}% on-time
                   </div>
                   <ProgressBar value={driver.onTimeRate} max={100} color="var(--cafe-success)" height={4} />
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>
                     {driver.averageDeliveryTime ? driver.averageDeliveryTime.toFixed(1) + 'm' : 'N/A'}
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{driver.completionRate.toFixed(1)}% complete</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{driver.completionRate.toFixed(1)}% complete</div>
                 </div>
               </div>
             ))}
@@ -1185,20 +1216,20 @@ function DeliverySection({ deliveryPerformance }) {
 // ─── Inventory Section ────────────────────────────────────────────────────────
 function InventorySection({ inventoryPerformance }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Inventory Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Inventory Performance</div>
         {inventoryPerformance.length === 0 ? <EmptyState message="No inventory data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {inventoryPerformance.map((item, idx) => (
-              <div key={item.itemId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < inventoryPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.isOutOfStock ? "var(--cafe-danger)" : item.isLowStock ? "var(--cafe-warning)" : "var(--cafe-success)", flexShrink: 0 }} />
+              <div key={item.itemId} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < inventoryPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: item.isOutOfStock ? "var(--cafe-danger)" : item.isLowStock ? "var(--cafe-warning)" : "var(--cafe-success)", flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{item.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{item.totalUsed} used · {item.currentStock} {item.unit} in stock</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{item.name}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{item.totalUsed} used · {item.currentStock} {item.unit} in stock</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 10, color: item.isOutOfStock ? "var(--cafe-danger)" : item.isLowStock ? "var(--cafe-warning)" : "var(--cafe-success)" }}>
+                  <div style={{ fontSize: 11, color: item.isOutOfStock ? "var(--cafe-danger)" : item.isLowStock ? "var(--cafe-warning)" : "var(--cafe-success)", fontWeight: 600 }}>
                     {item.isOutOfStock ? 'Out of Stock' : item.isLowStock ? 'Low Stock' : 'In Stock'}
                   </div>
                 </div>
@@ -1214,21 +1245,21 @@ function InventorySection({ inventoryPerformance }) {
 // ─── Purchasing Section ───────────────────────────────────────────────────────
 function PurchasingSection({ purchasingPerformance, formatCurrency }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Purchasing Performance</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Purchasing Performance</div>
         {purchasingPerformance.length === 0 ? <EmptyState message="No purchasing data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {purchasingPerformance.map((supplier, idx) => (
-              <div key={supplier.supplierId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < purchasingPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+              <div key={supplier.supplierId} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < purchasingPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{supplier.supplierName}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{supplier.orders} orders · {supplier.onTimeRate.toFixed(1)}% on-time</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{supplier.supplierName}</div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{supplier.orders} orders · {supplier.onTimeRate.toFixed(1)}% on-time</div>
                   <ProgressBar value={supplier.onTimeRate} max={100} color="var(--cafe-info)" height={4} />
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(supplier.totalAmount)}</div>
-                  <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(supplier.averageOrderValue)} avg</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(supplier.totalAmount)}</div>
+                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{formatCurrency(supplier.averageOrderValue)} avg</div>
                 </div>
               </div>
             ))}
@@ -1242,8 +1273,8 @@ function PurchasingSection({ purchasingPerformance, formatCurrency }) {
 // ─── Production Section ───────────────────────────────────────────────────────
 function ProductionSection({ productionPerformance, isMobile }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Total Batches"  value={productionPerformance.totalBatches}               change="—" isPositive={true} />
         <KPICard label="Completed"      value={productionPerformance.completedBatches}            change="—" isPositive={true} />
         <KPICard label="In Progress"    value={productionPerformance.inProgressBatches}           change="—" isPositive={true} />
@@ -1258,26 +1289,26 @@ function ProductionSection({ productionPerformance, isMobile }) {
 // ─── Documents Section ────────────────────────────────────────────────────────
 function DocumentsSection({ documentStats, isMobile }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
         <KPICard label="Total Documents" value={documentStats.totalDocuments} change="—" isPositive={true} />
       </div>
 
-      <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)", padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>Documents by Type</div>
+      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>Documents by Type</div>
         {Object.keys(documentStats.byType).length === 0 ? <EmptyState message="No document data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {Object.entries(documentStats.byType).map(([type, count], idx) => {
               const total = documentStats.totalDocuments || 1;
               return (
-                <div key={type} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < Object.keys(documentStats.byType).length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+                <div key={type} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < Object.keys(documentStats.byType).length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{type}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{type}</div>
                     <ProgressBar value={count} max={total} height={4} />
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{count}</div>
-                    <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)" }}>{((count / total) * 100).toFixed(1)}%</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{count}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{((count / total) * 100).toFixed(1)}%</div>
                   </div>
                 </div>
               );
@@ -1294,17 +1325,22 @@ function HistorySection({ isMobile }) {
   const [archivedDays, setArchivedDays] = useState([]);
   const [selectedDay, setSelectedDay]   = useState("");
   const [archivedData, setArchivedData] = useState(null);
+  const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
 
   useEffect(() => {
     const days = DailyArchive.getArchivedDays();
-    setArchivedDays(days);
-    if (days.length > 0) setSelectedDay(days[0]);
+    setTimeout(() => {
+      setArchivedDays(days);
+      if (days.length > 0) setSelectedDay(days[0]);
+    }, 0);
   }, []);
 
   useEffect(() => {
     if (selectedDay) {
       const orders = DailyArchive.getArchivedOrders(selectedDay);
-      setArchivedData(DailyArchive.summarizeOrders(orders));
+      setTimeout(() => {
+        setArchivedData(DailyArchive.summarizeOrders(orders));
+      }, 0);
     }
   }, [selectedDay]);
 
@@ -1325,7 +1361,9 @@ function HistorySection({ isMobile }) {
         byMonth[key].revenue += summary?.totalRevenue || 0;
         byMonth[key].orders  += summary?.completedOrders || 0;
         byMonth[key].days    += 1;
-      } catch (_) {}
+      } catch (_) {
+        // Skip invalid archive entries
+      }
     });
     return Object.values(byMonth).sort((a, b) => b.month.localeCompare(a.month));
   }, [archivedDays]);
@@ -1411,6 +1449,15 @@ function HistorySection({ isMobile }) {
           </div>
         </div>
       )}
+
+      {/* AlertDialog */}
+      <AlertDialog
+        isOpen={alertDialog.isOpen}
+        onClose={() => setAlertDialog({ ...alertDialog, isOpen: false })}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        type={alertDialog.type}
+      />
     </div>
   );
 }

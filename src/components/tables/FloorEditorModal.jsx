@@ -81,6 +81,14 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
     setScale(s => clamp(Number((s * factor).toFixed(2)), 0.1, 3));
   };
 
+  // Ctrl/Cmd + scroll wheel zooms (plain scroll is left alone in case the
+  // canvas area ever grows a scrollbar). Mirrors the zoomBy step size.
+  const onCanvasWheel = useCallback((e) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    zoomBy(e.deltaY < 0 ? 1.1 : 0.9);
+  }, []);
+
   // ── Select helpers ─────────────────────────────────────────────────────────
   const selectFloor = (id) => {
     setFloorId(id);
@@ -122,6 +130,11 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
   // ── Apply changes ──────────────────────────────────────────────────────────
   const applyChanges = () => {
     if (!draft || !dirty) return;
+    if (!String(draft.name || '').trim()) {
+      setSaveMsg('⚠ Name cannot be empty');
+      setTimeout(() => setSaveMsg(''), 2500);
+      return;
+    }
     if (selType === 'floor') {
       floorEngine.updateFloor(draft.id, { name: draft.name, dimensions: draft.dimensions });
     } else if (selType === 'section') {
@@ -172,6 +185,30 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
     setDraft({ ...s });
     setDirty(false);
     setSaveMsg('');
+  };
+
+  const duplicateFloor = () => {
+    if (!floorId) return;
+    const src = floors.find(f => f.id === floorId);
+    if (!src) return;
+    const newFloor = floorEngine.createFloor({ name: `${src.name} copy`, dimensions: { ...src.dimensions } });
+    // Clone every section onto the new floor so a duplicated floor is a
+    // ready-to-use starting point, not just an empty shell with the right size.
+    floorEngine.getFloorSections(floorId).forEach(s => {
+      floorEngine.createSection(newFloor.id, {
+        name: s.name, type: s.type, color: s.color,
+        position: { ...s.position }, dimensions: { ...s.dimensions },
+      });
+    });
+    setFloors(floorEngine.getAllFloors());
+    setFloorId(newFloor.id);
+    setSelType('floor');
+    setSelId(newFloor.id);
+    setSections(floorEngine.getFloorSections(newFloor.id));
+    setDraft({ ...newFloor });
+    setDirty(false);
+    setSaveMsg('');
+    if (onUpdate) onUpdate();
   };
 
   const duplicateSection = () => {
@@ -292,6 +329,12 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
         return;
       }
 
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd' && selType === 'section') {
+        e.preventDefault();
+        duplicateSection();
+        return;
+      }
+
       if (inField) return;
 
       if ((e.key === 'Delete' || e.key === 'Backspace') && selId) {
@@ -358,7 +401,10 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
           <div style={{ padding:'12px 14px 8px', borderBottom:'1px solid var(--cafe-border-light)', flexShrink:0 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
               <span style={{ fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.1em', color:'var(--cafe-text-tertiary)' }}>Floors</span>
-              <button onClick={createFloor} style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'1px solid var(--cafe-border)', background:'transparent', color:'var(--cafe-accent)', cursor:'pointer', fontWeight:700 }}>+ Add</button>
+              <div style={{ display:'flex', gap:6 }}>
+                {floorId && <button onClick={duplicateFloor} title="Duplicate current floor (with its sections)" style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'1px solid var(--cafe-border)', background:'transparent', color:'var(--cafe-accent)', cursor:'pointer', fontWeight:700 }}>⧉</button>}
+                <button onClick={createFloor} style={{ fontSize:11, padding:'3px 8px', borderRadius:6, border:'1px solid var(--cafe-border)', background:'transparent', color:'var(--cafe-accent)', cursor:'pointer', fontWeight:700 }}>+ Add</button>
+              </div>
             </div>
             {floors.map(f => (
               <div key={f.id} onClick={() => selectFloor(f.id)}
@@ -472,12 +518,18 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
                   <div style={{ display:'flex', gap:6 }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:9, color:'var(--cafe-text-tertiary)', marginBottom:2 }}>X</div>
-                      <input type="number" value={draft.position?.x || 0} onChange={e => setField('position.x', Number(e.target.value))}
+                      <input type="number" value={draft.position?.x || 0} onChange={e => {
+                        const maxX = Math.max(0, (activeFloor?.dimensions?.width || 4000) - (draft.dimensions?.width || 0));
+                        setField('position.x', clamp(Number(e.target.value), 0, maxX));
+                      }}
                         style={{ width:'100%', padding:'7px 8px', background:'var(--cafe-bg-surface)', border:'1px solid var(--cafe-border)', borderRadius:7, color:'var(--cafe-text-primary)', fontSize:12, boxSizing:'border-box' }} />
                     </div>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:9, color:'var(--cafe-text-tertiary)', marginBottom:2 }}>Y</div>
-                      <input type="number" value={draft.position?.y || 0} onChange={e => setField('position.y', Number(e.target.value))}
+                      <input type="number" value={draft.position?.y || 0} onChange={e => {
+                        const maxY = Math.max(0, (activeFloor?.dimensions?.height || 4000) - (draft.dimensions?.height || 0));
+                        setField('position.y', clamp(Number(e.target.value), 0, maxY));
+                      }}
                         style={{ width:'100%', padding:'7px 8px', background:'var(--cafe-bg-surface)', border:'1px solid var(--cafe-border)', borderRadius:7, color:'var(--cafe-text-primary)', fontSize:12, boxSizing:'border-box' }} />
                     </div>
                   </div>
@@ -491,7 +543,7 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
                   <button onClick={applyChanges} style={{ flex:2, padding:'8px 0', borderRadius:8, border:'none', background:'var(--cafe-accent)', color:'#1a0e00', fontSize:12, fontWeight:800, cursor:'pointer' }}>✓ Apply</button>
                 </div>
               )}
-              {saveMsg && <div style={{ marginTop:8, textAlign:'center', fontSize:12, color:'var(--cafe-success)', fontWeight:700 }}>{saveMsg}</div>}
+              {saveMsg && <div style={{ marginTop:8, textAlign:'center', fontSize:12, color: saveMsg.startsWith('⚠') ? 'var(--cafe-danger, #ef4444)' : 'var(--cafe-success)', fontWeight:700 }}>{saveMsg}</div>}
             </div>
           ) : (
             <div style={{ padding:20, textAlign:'center', color:'var(--cafe-text-tertiary)', fontSize:12 }}>
@@ -504,6 +556,7 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
         <div ref={canvasRef} style={{ flex:1, background:'#1e1a14', position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
           backgroundImage:'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize:'20px 20px' }}
           onMouseLeave={() => { interRef.current = null; }}
+          onWheel={onCanvasWheel}
         >
           {activeFloor ? (
             <div style={{ position:'relative', width:activeFloor.dimensions?.width || 1200, height:activeFloor.dimensions?.height || 900,
@@ -550,7 +603,7 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
           {/* Zoom controls */}
           <div style={{ position:'absolute', bottom:16, right:16, display:'flex', alignItems:'center', gap:2, background:'rgba(0,0,0,0.4)', borderRadius:8, padding:2 }}>
             <button onClick={() => zoomBy(0.8)} title="Zoom out" style={{ width:26, height:26, border:'none', borderRadius:6, background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:15, fontWeight:700, cursor:'pointer' }}>−</button>
-            <span style={{ fontSize:11, color:'rgba(255,255,255,0.6)', fontFamily:'monospace', minWidth:40, textAlign:'center' }}>{Math.round(scale*100)}%</span>
+            <span title="Ctrl/Cmd + scroll to zoom" style={{ fontSize:11, color:'rgba(255,255,255,0.6)', fontFamily:'monospace', minWidth:40, textAlign:'center' }}>{Math.round(scale*100)}%</span>
             <button onClick={() => zoomBy(1.25)} title="Zoom in" style={{ width:26, height:26, border:'none', borderRadius:6, background:'transparent', color:'rgba(255,255,255,0.7)', fontSize:15, fontWeight:700, cursor:'pointer' }}>+</button>
             <button onClick={fitToScreen} title="Fit to screen" style={{ padding:'0 8px', height:26, border:'none', borderRadius:6, background:'transparent', color:'rgba(255,255,255,0.6)', fontSize:10, fontWeight:700, cursor:'pointer' }}>FIT</button>
           </div>
@@ -558,7 +611,7 @@ export default function FloorEditorModal({ onClose, onUpdate }) {
           {/* Instructions */}
           {activeFloor && selType === 'section' && (
             <div style={{ position:'absolute', bottom:16, left:16, fontSize:11, color:'rgba(255,255,255,0.4)', background:'rgba(0,0,0,0.4)', padding:'4px 10px', borderRadius:8 }}>
-              Drag to move · Drag ◉ to resize · Arrow keys to nudge · ⌘/Ctrl+S to save · Del to delete
+              Drag to move · Drag ◉ to resize · Arrow keys to nudge · ⌘/Ctrl+S to save · ⌘/Ctrl+D to duplicate · Del to delete
             </div>
           )}
         </div>

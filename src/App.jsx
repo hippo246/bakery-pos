@@ -1,21 +1,15 @@
 import React from 'react';
-import { THEME_CSS } from "./styles/theme";
+import { ThemeProvider } from "./theme";
 import BrewCRM from "./components/BrewCRM";
 import GuestOrder from "./pages/GuestOrder";
+import { TerminalProvider } from "./terminal/TerminalContext.jsx";
 
-// Run once, synchronously, at module load — before the first paint.
-if (typeof document !== "undefined" && !document.getElementById("brew-theme")) {
+// Add smooth transitions for theme switching
+if (typeof document !== "undefined" && !document.getElementById("brew-theme-transitions")) {
   const el = document.createElement("style");
-  el.id = "brew-theme";
-  el.textContent = THEME_CSS + "\n* { transition: background-color 0.25s ease, border-color 0.25s ease; }";
+  el.id = "brew-theme-transitions";
+  el.textContent = "* { transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }";
   document.head.appendChild(el);
-
-  try {
-    if (typeof localStorage !== "undefined") {
-      const saved = localStorage.getItem("brew-theme");
-      if (saved === "light") document.documentElement.classList.add("light");
-    }
-  } catch { /* storage blocked — default theme applies */ }
 
   try {
     console.log(
@@ -28,6 +22,18 @@ if (typeof document !== "undefined" && !document.getElementById("brew-theme")) {
 export default function App() {
   // Detect /guest/<code> path — render customer-facing ordering page
   const isGuestPage = typeof window !== "undefined" && window.location.pathname.startsWith('/guest/');
-  if (isGuestPage) return <GuestOrder />;
-  return <BrewCRM />;
+  if (isGuestPage) {
+    return (
+      <ThemeProvider defaultTheme="modern">
+        <GuestOrder />
+      </ThemeProvider>
+    );
+  }
+  return (
+    <ThemeProvider defaultTheme="modern">
+      <TerminalProvider>
+        <BrewCRM />
+      </TerminalProvider>
+    </ThemeProvider>
+  );
 }

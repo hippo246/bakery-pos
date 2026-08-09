@@ -81,78 +81,45 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{
-        padding: isMobile ? "20px" : "32px",
-        borderBottom: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)"
-      }}>
-        <h2 style={{
-          fontSize: isMobile ? 20 : 24,
-          fontWeight: 700,
-          color: "var(--cafe-text-primary)",
-          margin: "0 0 8px"
-        }}>
-          Support
-        </h2>
-        <p style={{
-          fontSize: isMobile ? 13 : 14,
-          color: "var(--cafe-text-secondary)",
-          margin: 0
-        }}>
-          Diagnostics, logs, and support information
-        </p>
+      <div style={{ padding: isMobile ? "20px" : "28px", borderBottom: "1px solid var(--cafe-border-light)", background: "var(--cafe-bg-surface)" }}>
+        <h2 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 800, color: "var(--cafe-text-primary)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>Support</h2>
+        <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", margin: 0, fontWeight: 500 }}>Diagnostics, logs, and support information</p>
       </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "32px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px" : "28px" }}>
         {/* System Information */}
-        <div style={{ marginBottom: 32 }}>
-          <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--cafe-text-secondary)",
-            margin: "0 0 16px",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em"
-          }}>
-            System Information
-          </h3>
-          <div style={{
-            background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
-          }}>
+        <div style={{ marginBottom: 28 }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", margin: "0 0 16px", textTransform: "uppercase", letterSpacing: "0.06em" }}>System Information</h3>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 16, padding: 24 }}>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 16 }}>
               <div>
-                <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginBottom: 4, fontWeight: 500 }}>
                   Version
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>
                   {formData.version}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginBottom: 4, fontWeight: 500 }}>
                   Build
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>
                   {formData.build}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginBottom: 4, fontWeight: 500 }}>
                   Installation ID
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>
                   {formData.installationId}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginBottom: 4, fontWeight: 500 }}>
                   Device ID
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)", letterSpacing: "-0.01em" }}>
                   {formData.deviceId}
                 </div>
               </div>
@@ -161,37 +128,26 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
         </div>
 
         {/* Diagnostics */}
-        <div style={{ marginBottom: 32 }}>
-          <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--cafe-text-secondary)",
-            margin: "0 0 16px",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em"
-          }}>
-            Diagnostics
-          </h3>
-          <div style={{
-            background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
-          }}>
+        <div style={{ marginBottom: 28 }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", margin: "0 0 16px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Diagnostics</h3>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 16, padding: 24 }}>
             <button
               onClick={handleGenerateDiagnostics}
               disabled={isGenerating}
               style={{
-                padding: "12px 20px",
-                background: "var(--cafe-accent)",
-                border: "none",
-                borderRadius: 8,
+                padding: "12px 24px",
+                background: "var(--cafe-accent-bg)",
+                border: "1px solid var(--cafe-accent)",
+                borderRadius: 12,
                 fontSize: 14,
-                fontWeight: 600,
-                color: "#fff",
+                fontWeight: 700,
+                color: "var(--cafe-accent)",
                 cursor: isGenerating ? "not-allowed" : "pointer",
-                opacity: isGenerating ? 0.6 : 1
+                opacity: isGenerating ? 0.6 : 1,
+                transition: "all 0.2s"
               }}
+              onMouseOver={e => { if (!isGenerating) { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)'; } }}
+              onMouseOut={e => { if (!isGenerating) { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; } }}
             >
               {isGenerating ? "Generating..." : "Generate Diagnostics"}
             </button>
@@ -201,8 +157,8 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
                 marginTop: 16,
                 padding: 16,
                 background: "var(--cafe-bg-surface)",
-                border: "1px solid var(--cafe-border)",
-                borderRadius: 8,
+                border: "1px solid var(--cafe-border-light)",
+                borderRadius: 12,
                 fontFamily: "monospace",
                 fontSize: 12,
                 color: "var(--cafe-text-primary)"
@@ -216,35 +172,24 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
         </div>
 
         {/* Logs */}
-        <div style={{ marginBottom: 32 }}>
-          <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--cafe-text-secondary)",
-            margin: "0 0 16px",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em"
-          }}>
-            Logs
-          </h3>
-          <div style={{
-            background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
-          }}>
+        <div style={{ marginBottom: 28 }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", margin: "0 0 16px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Logs</h3>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 16, padding: 24 }}>
             <button
               onClick={handleExportLogs}
               style={{
-                padding: "12px 20px",
+                padding: "12px 24px",
                 background: "var(--cafe-bg-surface)",
-                border: "1px solid var(--cafe-border)",
-                borderRadius: 8,
+                border: "1px solid var(--cafe-border-light)",
+                borderRadius: 12,
                 fontSize: 14,
                 fontWeight: 600,
                 color: "var(--cafe-text-secondary)",
-                cursor: "pointer"
+                cursor: "pointer",
+                transition: "all 0.2s"
               }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; e.currentTarget.style.color = 'var(--cafe-accent)'; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; e.currentTarget.style.color = 'var(--cafe-text-secondary)'; }}
             >
               Export Logs
             </button>
@@ -253,8 +198,8 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
               marginTop: 16,
               padding: 16,
               background: "var(--cafe-bg-surface)",
-              border: "1px solid var(--cafe-border)",
-              borderRadius: 8,
+              border: "1px solid var(--cafe-border-light)",
+              borderRadius: 12,
               fontFamily: "monospace",
               fontSize: 11,
               color: "var(--cafe-text-secondary)"
@@ -274,45 +219,21 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
 
         {/* Support Information */}
         <div>
-          <h3 style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--cafe-text-secondary)",
-            margin: "0 0 16px",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em"
-          }}>
-            Support Information
-          </h3>
-          <div style={{
-            background: "var(--cafe-bg-card)",
-            border: "1px solid var(--cafe-border)",
-            borderRadius: 12,
-            padding: 20
-          }}>
+          <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--cafe-text-secondary)", margin: "0 0 16px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Support Information</h3>
+          <div style={{ background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: 16, padding: 24 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
-                  Email Support
-                </div>
-                <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
-                  support@cafeos.com
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>Email Support</div>
+                <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)", fontWeight: 500 }}>support@cafeos.com</div>
               </div>
 
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
-                  Phone Support
-                </div>
-                <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
-                  +91 1800-CAFE-OS
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>Phone Support</div>
+                <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)", fontWeight: 500 }}>+91 1800-CAFE-OS</div>
               </div>
 
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
-                  Documentation
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>Documentation</div>
                 <a
                   href="https://docs.cafeos.com"
                   target="_blank"
@@ -320,8 +241,11 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
                   style={{
                     fontSize: 14,
                     color: "var(--cafe-accent)",
-                    textDecoration: "none"
+                    textDecoration: "none",
+                    fontWeight: 500
                   }}
+                  onMouseOver={e => e.currentTarget.style.textDecoration = 'underline'}
+                  onMouseOut={e => e.currentTarget.style.textDecoration = 'none'}
                 >
                   docs.cafeos.com
                 </a>
@@ -330,11 +254,12 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
               <div style={{
                 marginTop: 16,
                 padding: 16,
-                background: "var(--cafe-info-bg)",
-                border: "1px solid var(--cafe-info-border)",
-                borderRadius: 8,
+                background: "var(--cafe-accent-bg)",
+                border: "1px solid var(--cafe-accent)",
+                borderRadius: 12,
                 fontSize: 12,
-                color: "var(--cafe-info)"
+                color: "var(--cafe-accent)",
+                fontWeight: 500
               }}>
                 <strong>💡 Tip:</strong> Include your Installation ID ({formData.installationId}) when contacting support for faster assistance.
               </div>
@@ -343,40 +268,28 @@ export default function SupportSettingsSection({ settings, onUpdate, isMobile })
         </div>
 
         {/* Remote Assistance Integration */}
-        <div style={{ marginTop: 32 }}>
+        <div style={{ marginTop: 28 }}>
            <RemoteAssistance />
         </div>
       </div>
 
       {/* Footer */}
-      <div style={{
-        padding: isMobile ? "20px" : "32px",
-        borderTop: "1px solid var(--cafe-border-light)",
-        background: "var(--cafe-bg-elevated)",
-        display: "flex",
-        justifyContent: "flex-end"
-      }}>
+      <div style={{ padding: isMobile ? "20px" : "28px", borderTop: "1px solid var(--cafe-border-light)", background: "var(--cafe-bg-surface)", display: "flex", justifyContent: "flex-end" }}>
         <button
           onClick={handleSave}
           style={{
             padding: "12px 32px",
-            background: "var(--cafe-accent)",
-            border: "none",
-            borderRadius: 8,
+            background: "var(--cafe-accent-bg)",
+            border: "1px solid var(--cafe-accent)",
+            borderRadius: 12,
             fontSize: 14,
-            fontWeight: 600,
-            color: "#fff",
+            fontWeight: 700,
+            color: "var(--cafe-accent)",
             cursor: "pointer",
-            transition: "all 0.2s ease"
+            transition: "all 0.2s"
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-2px)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.4)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
+          onMouseOver={e => { e.currentTarget.style.background = 'var(--cafe-accent)'; e.currentTarget.style.color = '#1A1208'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)'; }}
+          onMouseOut={e => { e.currentTarget.style.background = 'var(--cafe-accent-bg)'; e.currentTarget.style.color = 'var(--cafe-accent)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
         >
           Save Changes
         </button>

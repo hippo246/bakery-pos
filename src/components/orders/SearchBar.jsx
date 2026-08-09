@@ -93,15 +93,27 @@ const SearchBar = ({
 
   return (
     <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-      <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "var(--cafe-text-tertiary)", zIndex: 1 }}>🔍</span>
+      <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16, color: "var(--cafe-text-tertiary)", zIndex: 1 }}>🔍</span>
       <input 
         ref={inputRef}
-        style={{ ...input, paddingLeft: 36, width: "100%" }} 
+        style={{ 
+          width: "100%",
+          padding: "14px 14px 14px 42px",
+          borderRadius: 12,
+          border: "1px solid var(--cafe-border-light)",
+          background: "var(--cafe-bg-surface)",
+          color: "var(--cafe-text-primary)",
+          fontSize: 14,
+          outline: "none",
+          boxShadow: "none",
+          transition: "border-color 0.2s, box-shadow 0.2s"
+        }} 
         placeholder={placeholder} 
         value={value} 
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
+        onBlur={e => { e.currentTarget.style.borderColor = "var(--cafe-border-light)"; e.currentTarget.style.boxShadow = "none"; handleBlur(e); }}
+        onFocus={e => { e.currentTarget.style.borderColor = "var(--cafe-accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px var(--cafe-accent-dim)"; }}
         aria-label="Search menu items"
         aria-autocomplete="list"
         aria-expanded={isOpen}
@@ -113,16 +125,19 @@ const SearchBar = ({
           id="search-results"
           role="listbox"
           style={{
-            ...card(),
             position: "absolute",
             top: "100%",
             left: 0,
             right: 0,
-            marginTop: 4,
-            maxHeight: 320,
+            marginTop: 6,
+            maxHeight: 340,
             overflowY: "auto",
             zIndex: 100,
-            padding: 0
+            padding: 0,
+            background: "var(--cafe-bg-card)",
+            border: "1px solid var(--cafe-border-light)",
+            borderRadius: 12,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
           }}
         >
           {results.map((item, index) => (
@@ -133,26 +148,28 @@ const SearchBar = ({
               onClick={() => handleSelect(item)}
               onMouseEnter={() => setSelectedIndex(index)}
               style={{
-                padding: "12px 16px",
+                padding: "14px 16px",
                 cursor: "pointer",
-                background: selectedIndex === index ? "var(--cafe-accent-dim)" : "var(--cafe-bg-card)",
+                background: selectedIndex === index ? "var(--cafe-accent-bg)" : "transparent",
+                borderLeft: selectedIndex === index ? "3px solid var(--cafe-accent)" : "3px solid transparent",
                 borderBottom: index < results.length - 1 ? "1px solid var(--cafe-border-light)" : "none",
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                gap: 14,
+                transition: "background 0.15s, border-color 0.15s"
               }}
             >
-              <span style={{ fontSize: 24 }}>{item.emoji || "🍽️"}</span>
+              <span style={{ fontSize: 26 }}>{item.emoji || "🍽️"}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 600, color: "var(--cafe-text-primary)" }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)" }}>
                   {item.name}
                 </div>
-                <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginTop: 2 }}>
-                  {item.sku && <span style={{ fontFamily: "monospace", marginRight: 8 }}>SKU: {item.sku}</span>}
+                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>
+                  {item.sku && <span style={{ fontFamily: "monospace", marginRight: 10, fontWeight: 600 }}>SKU: {item.sku}</span>}
                   {item.category && <span>{item.category}</span>}
                 </div>
               </div>
-              <div style={{ fontSize: "var(--cafe-font-sm)", fontWeight: 700, color: "var(--cafe-accent)" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "var(--cafe-accent)", fontFamily: "monospace" }}>
                 ₹{item.price?.toFixed(2) || "0.00"}
               </div>
             </div>

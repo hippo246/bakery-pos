@@ -27,6 +27,7 @@ import { saveNotifications } from "../../utils/notificationService.js";
 import printEngine, { DOCUMENT_TYPES } from "../../print/printEngine.js";
 import { getActiveShift } from "../../domain/shiftModel.js";
 import moduleEventPublisher from "../../dashboard/liveEngine/ModuleEventPublisher.js";
+import { useTerminal } from "../../terminal/TerminalContext.jsx";
 
 // Prep time estimates for menu items (in minutes)
 const PREP_TIMES = {
@@ -49,6 +50,9 @@ const PREP_TIMES = {
 function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notifications, setNotifications, shifts, setShifts }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
   useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
+  
+  // ── Multi-Terminal Integration ─────────────────────────────────────────────
+  const { currentTerminal, syncClient } = useTerminal();
 
   const [isFullScreen, setIsFullScreen] = useState(true);
   const [view, setView] = useState("cards");
@@ -127,6 +131,69 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
       return updated;
     });
   }, [setNotifications]);
+
+  // ── Real-time Sync Integration ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!syncClient || !currentTerminal) return;
+
+    // Listen for order events from other terminals
+    const handleOrderCreated = (data) => {
+      console.log('[Kitchen] Order created from another terminal:', data);
+      if (data.sourceTerminal !== currentTerminal.id) {
+        // Create KDS tickets for the new order
+        const newOrder = data.data;
+        const tickets = createKdsTicketsFromOrder(newOrder);
+        if (tickets?.length && setKdsCards) {
+          setKdsCards(prev => [...tickets, ...prev]);
+          addToast({ message: `New order from ${data.sourceTerminal}` });
+        }
+      }
+    };
+
+    const handleOrderUpdated = (data) => {
+      console.log('[Kitchen] Order updated from another terminal:', data);
+      if (data.sourceTerminal !== currentTerminal.id) {
+        // Update KDS tickets if order status changed
+        const updatedOrder = data.data;
+        setKdsCards(prev => prev.map(ticket => 
+          ticket.orderId === updatedOrder.id 
+            ? { ...ticket, orderStatus: updatedOrder.status }
+            : ticket
+        ));
+      }
+    };
+
+    const handleOrderDeleted = (data) => {
+      console.log('[Kitchen] Order deleted from another terminal:', data);
+      if (data.sourceTerminal !== currentTerminal.id) {
+        // Remove KDS tickets for the deleted order
+        setKdsCards(prev => prev.filter(ticket => ticket.orderId !== data.data.orderId));
+        addToast({ message: `Order cancelled by ${data.sourceTerminal}` });
+      }
+    };
+
+    const handleOrderToKitchen = (data) => {
+      console.log('[Kitchen] Order routed to kitchen:', data);
+      // Create KDS tickets for routed order
+      const tickets = createKdsTicketsFromOrder(data.data);
+      if (tickets?.length && setKdsCards) {
+        setKdsCards(prev => [...tickets, ...prev]);
+        playChime();
+      }
+    };
+
+    syncClient.on('order_created', handleOrderCreated);
+    syncClient.on('order_updated', handleOrderUpdated);
+    syncClient.on('order_deleted', handleOrderDeleted);
+    syncClient.on('order_to_kitchen', handleOrderToKitchen);
+
+    return () => {
+      syncClient.off('order_created', handleOrderCreated);
+      syncClient.off('order_updated', handleOrderUpdated);
+      syncClient.off('order_deleted', handleOrderDeleted);
+      syncClient.off('order_to_kitchen', handleOrderToKitchen);
+    };
+  }, [syncClient, currentTerminal, setKdsCards, addToast, playChime]);
 
   // Safe base list: never let a null/undefined/malformed kdsCards crash the screen
   const safeKdsCards = useMemo(() => {
@@ -1025,11 +1092,11 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
               const active = stationFilter === station;
               const count = stationCounts[station] || 0;
               const stationColorMap = {
-                All:       { color: "var(--cafe-accent)",   glow: "rgba(212,146,42,0.3)",  bg: "rgba(212,146,42,0.15)" },
-                Bar:       { color: "var(--cafe-info)",     glow: "rgba(33,150,243,0.3)",  bg: "rgba(33,150,243,0.12)" },
-                Kitchen:   { color: "var(--cafe-purple)",   glow: "rgba(156,39,176,0.3)",  bg: "rgba(156,39,176,0.12)" },
-                Packaging: { color: "var(--cafe-success)",  glow: "rgba(76,175,80,0.3)",   bg: "rgba(76,175,80,0.12)" },
-                Dessert:   { color: "var(--cafe-warning)",  glow: "rgba(255,152,0,0.3)",   bg: "rgba(255,152,0,0.12)" },
+                All:       { color: "var(--cafe-accent)",   glow: "var(--cafe-amber-bg)",  bg: "var(--cafe-amber-bg)" },
+                Bar:       { color: "var(--cafe-info)",     glow: "var(--cafe-blue-bg)",   bg: "var(--cafe-blue-bg)" },
+                Kitchen:   { color: "var(--cafe-purple)",   glow: "var(--cafe-purple-bg)", bg: "var(--cafe-purple-bg)" },
+                Packaging: { color: "var(--cafe-success)",  glow: "var(--cafe-green-bg)",   bg: "var(--cafe-green-bg)" },
+                Dessert:   { color: "var(--cafe-warning)",  glow: "var(--cafe-amber-bg)",   bg: "var(--cafe-amber-bg)" },
               };
               const sc = stationColorMap[station] || { color: "var(--cafe-text-tertiary)", glow: "transparent", bg: "transparent" };
               const isValidDropTarget = station !== "All";
@@ -1209,43 +1276,44 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
 
         {/* ── List view ── */}
         {safeKdsCards.length > 0 && sorted.length > 0 && view === "list" && (
-          <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+          <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
             {sorted.map(card => {
               const table = tables?.find(t => t.id === card.tableId);
               return (
-              <KDSCard
-                key={card.id}
-                card={card}
-                tableName={table?.number}
-                onDone={completeCard}
-                onHold={holdCard}
-                onUrgencyChange={changeUrgency}
-                onNoteEdit={editNote}
-                onItemCheck={checkItem}
-                onStart={startTicket}
-                onMoveStation={(id) => setMoveStationModal(id)}
-                onBump={bumpTicket}
-                onDragStart={(e) => handleDragStart(e, card)}
-                onFocusCard={setFocusedCardId}
-                focused={focusedCardId === card.id}
-                compact={true}
-              />
+              <div key={card.id} style={{ marginBottom: 8 }}>
+                <KDSCard
+                  card={card}
+                  tableName={table?.number}
+                  onDone={completeCard}
+                  onHold={holdCard}
+                  onUrgencyChange={changeUrgency}
+                  onNoteEdit={editNote}
+                  onItemCheck={checkItem}
+                  onStart={startTicket}
+                  onMoveStation={(id) => setMoveStationModal(id)}
+                  onBump={bumpTicket}
+                  onDragStart={(e) => handleDragStart(e, card)}
+                  onFocusCard={setFocusedCardId}
+                  focused={focusedCardId === card.id}
+                  compact={true}
+                />
+              </div>
             )})}
           </div>
         )}
 
         {/* ── Station split view ── */}
         {safeKdsCards.length > 0 && view === "station" && (
-          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: "var(--cafe-space-md)", overflowY: "auto", flex: 1 }}>
+          <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 12, overflowY: "auto", flex: 1 }}>
             {stationOrder.map((station, index) => {
               const stCards = sorted.filter(c => c.station === station);
               const stationColorMap = {
-                Bar: { color: "var(--cafe-info)" },
-                Kitchen: { color: "var(--cafe-purple)" },
-                Packaging: { color: "var(--cafe-success)" },
-                Dessert: { color: "var(--cafe-warning)" },
+                Bar: { color: "var(--cafe-info)", bg: "var(--cafe-blue-bg)", border: "var(--cafe-blue-border)" },
+                Kitchen: { color: "var(--cafe-purple)", bg: "var(--cafe-purple-bg)", border: "var(--cafe-purple-border)" },
+                Packaging: { color: "var(--cafe-success)", bg: "var(--cafe-green-bg)", border: "var(--cafe-green-border)" },
+                Dessert: { color: "var(--cafe-warning)", bg: "var(--cafe-amber-bg)", border: "var(--cafe-amber-border)" },
               };
-              const colors = stationColorMap[station] || { color: "var(--cafe-text-tertiary)" };
+              const colors = stationColorMap[station] || { color: "var(--cafe-text-tertiary)", bg: "var(--cafe-bg-hover)", border: "var(--cafe-border)" };
               const urgentInStation = stCards.filter(c => c.urgency === "urgent").length;
               const heldInStation = stCards.filter(c => c.held).length;
               const delayedInStation = stCards.filter(c => !c.held && !c.completed && c.startedAt && getPrepTimeStatus(c).label === "Delayed").length;
@@ -1253,7 +1321,7 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
               return (
                 <div 
                   key={station} 
-                  style={{ display: "flex", flexDirection: "column", gap: "var(--cafe-space-sm)", background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-lg)", padding: 6, height: "100%" }}
+                  style={{ display: "flex", flexDirection: "column", gap: 10, background: "var(--cafe-bg-hover)", border: `1px solid ${colors.border}`, borderRadius: 12, padding: 10, height: "100%", minHeight: 200 }}
                   onDragOver={(e) => handleDragOver(e, station)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, station)}
@@ -1269,51 +1337,55 @@ function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notificatio
                     style={{ 
                       display: "flex", 
                       alignItems: "center", 
-                      gap: "var(--cafe-space-sm)", 
-                      padding: "10px 14px", 
-                      background: isDragOver ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)", 
-                      borderRadius: "var(--cafe-radius-md)", 
-                      border: `1px solid ${isDragOver ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`, 
-                      borderTop: `2px solid ${colors.color}`,
+                      gap: 10, 
+                      padding: "12px 16px", 
+                      background: isDragOver ? colors.bg : "var(--cafe-bg-surface)", 
+                      borderRadius: 8, 
+                      border: `1px solid ${isDragOver ? colors.color : colors.border}`, 
+                      borderTop: `3px solid ${colors.color}`,
                       cursor: "move",
-                      userSelect: "none"
+                      userSelect: "none",
+                      transition: "all 0.2s ease"
                     }}
                   >
-                    <span style={{ fontSize: "var(--cafe-font-xs)", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.color }}>{station}</span>
-                    <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: "var(--cafe-font-sm)", fontWeight: 700, color: stCards.length > 0 ? "var(--cafe-text-secondary)" : "var(--cafe-text-tertiary)" }}>{stCards.length}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.color }}>{station}</span>
+                    <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: stCards.length > 0 ? "var(--cafe-text-secondary)" : "var(--cafe-text-tertiary)" }}>{stCards.length}</span>
                     {urgentInStation > 0 && (
-                      <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-danger)", fontWeight: 800, background: "var(--cafe-danger-bg)", borderRadius: "var(--cafe-radius-sm)", padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{urgentInStation} URG</span>
+                      <span style={{ fontSize: 10, color: "var(--cafe-danger)", fontWeight: 800, background: "var(--cafe-danger-bg)", borderRadius: 4, padding: "3px 8px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{urgentInStation} URG</span>
                     )}
                     {delayedInStation > 0 && (
-                      <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-danger)", fontWeight: 800, background: "var(--cafe-danger-bg)", borderRadius: "var(--cafe-radius-sm)", padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{delayedInStation} LATE</span>
+                      <span style={{ fontSize: 10, color: "var(--cafe-danger)", fontWeight: 800, background: "var(--cafe-danger-bg)", borderRadius: 4, padding: "3px 8px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{delayedInStation} LATE</span>
                     )}
                     {heldInStation > 0 && (
-                      <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-accent)", fontWeight: 800, background: "var(--cafe-accent-bg)", borderRadius: "var(--cafe-radius-sm)", padding: "2px 6px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{heldInStation} HELD</span>
+                      <span style={{ fontSize: 10, color: "var(--cafe-accent)", fontWeight: 800, background: "var(--cafe-accent-bg)", borderRadius: 4, padding: "3px 8px", letterSpacing: "0.05em", fontFamily: "monospace" }}>{heldInStation} HELD</span>
                     )}
                   </div>
-                  {stCards.length === 0 && <div style={{ textAlign: "center", padding: "24px 0", color: "var(--cafe-text-tertiary)", fontSize: "var(--cafe-font-sm)", borderRadius: "var(--cafe-radius-md)", border: `1px dashed var(--cafe-border-light)` }}>No tickets</div>}
-                  {stCards.map(card => {
-                    const table = tables?.find(t => t.id === card.tableId);
-                    return (
-                    <KDSCard 
-                      key={card.id} 
-                      card={card} 
-                      tableName={table?.number} 
-                      onDone={completeCard} 
-                      onHold={holdCard} 
-                      onUrgencyChange={changeUrgency} 
-                      onNoteEdit={editNote} 
-                      onItemCheck={checkItem}
-                      onStart={startTicket}
-                      onMoveStation={(id) => setMoveStationModal(id)}
-                      onBump={bumpTicket}
-                      onDragStart={(e) => handleDragStart(e, card)}
-                      onFocusCard={setFocusedCardId}
-                      focused={focusedCardId === card.id}
-                      compact={false} 
-                    />
-                    );
-                  })}
+                  {stCards.length === 0 && <div style={{ textAlign: "center", padding: "32px 0", color: "var(--cafe-text-tertiary)", fontSize: 12, borderRadius: 8, border: `1px dashed var(--cafe-border-light)`, background: "var(--cafe-bg-surface)" }}>No tickets</div>}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, overflowY: "auto" }}>
+                    {stCards.map(card => {
+                      const table = tables?.find(t => t.id === card.tableId);
+                      return (
+                      <div key={card.id} style={{ marginBottom: 8 }}>
+                        <KDSCard
+                          card={card} 
+                          tableName={table?.number} 
+                          onDone={completeCard} 
+                          onHold={holdCard} 
+                          onUrgencyChange={changeUrgency} 
+                          onNoteEdit={editNote} 
+                          onItemCheck={checkItem}
+                          onStart={startTicket}
+                          onMoveStation={(id) => setMoveStationModal(id)}
+                          onBump={bumpTicket}
+                          onDragStart={(e) => handleDragStart(e, card)}
+                          onFocusCard={setFocusedCardId}
+                          focused={focusedCardId === card.id}
+                          compact={true} 
+                        />
+                      </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}

@@ -73,31 +73,31 @@ const ACCENT_COLORS = [
   { name: 'Purple', value: '#8b5cf6' }
 ];
 
-const inputStyle = {
+const inputStyle = (isMobile) => ({
   width: "100%",
-  padding: "16px 20px",
-  fontSize: 15,
+  padding: isMobile ? "12px 16px" : "16px 20px",
+  fontSize: isMobile ? 14 : 15,
   border: "1px solid var(--cafe-border)",
-  borderRadius: 12,
+  borderRadius: isMobile ? 8 : 12,
   background: "var(--cafe-bg-surface)",
   color: "var(--cafe-text-primary)",
   outline: "none"
-};
+});
 
-const labelStyle = { fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8, display: "block" };
+const labelStyle = (isMobile) => ({ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 6 : 8, display: "block" });
 
-const smallInputStyle = {
+const smallInputStyle = (isMobile) => ({
   width: "100%",
-  padding: "14px 16px",
-  fontSize: 14,
+  padding: isMobile ? "10px 14px" : "14px 16px",
+  fontSize: isMobile ? 13 : 14,
   border: "1px solid var(--cafe-border)",
-  borderRadius: 10,
+  borderRadius: isMobile ? 6 : 10,
   background: "var(--cafe-bg-surface)",
   color: "var(--cafe-text-primary)",
   outline: "none"
-};
+});
 
-const smallLabelStyle = { fontSize: 13, fontWeight: 500, color: "var(--cafe-text-tertiary)", marginBottom: 6, display: "block" };
+const smallLabelStyle = (isMobile) => ({ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "var(--cafe-text-tertiary)", marginBottom: isMobile ? 4 : 6, display: "block" });
 
 const MAX_LOGO_SIZE_BYTES = 2 * 1024 * 1024; // 2MB, matches the "up to 2MB" hint shown to users
 
@@ -404,17 +404,17 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
   };
 
   const renderBusinessIdentity = () => (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "16px" : 0 }}>
+      <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
         Business Identity
       </h3>
-      <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)", marginBottom: 32 }}>
+      <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 24 : 32 }}>
         Enter your cafe's basic information. This will appear on receipts and customer communications.
       </p>
       
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 20 : 24 }}>
         <div>
-          <label htmlFor="biz-cafeName" style={labelStyle}>
+          <label htmlFor="biz-cafeName" style={labelStyle(isMobile)}>
             Cafe Name <span style={{ color: "var(--cafe-danger)" }}>*</span>
           </label>
           <input
@@ -424,16 +424,16 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.cafeName}
             onChange={(e) => handleChange('cafeName', e.target.value)}
             placeholder="e.g., Sunrise Cafe"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
-          <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8, display: "flex", alignItems: "center" }}>
             {validation.cafeName?.message}
             {renderValidationIcon('cafeName')}
           </div>
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Legal Name (Optional)
           </label>
           <input
@@ -441,12 +441,12 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.legalName}
             onChange={(e) => handleChange('legalName', e.target.value)}
             placeholder="e.g., Sunrise Cafe Pvt Ltd"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Tagline (Optional)
           </label>
           <input
@@ -454,35 +454,35 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.tagline}
             onChange={(e) => handleChange('tagline', e.target.value)}
             placeholder="e.g., Your daily dose of happiness"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
         </div>
 
         <div>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 12, display: "block" }}>
+          <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 10 : 12, display: "block" }}>
             Business Type
           </label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(140px, 1fr))", gap: isMobile ? 10 : 12 }}>
             {BUSINESS_TYPES.map(type => (
               <button
                 key={type.id}
                 onClick={() => handleChange('businessType', type.id)}
                 aria-pressed={formData.businessType === type.id}
                 style={{
-                  padding: "16px",
+                  padding: isMobile ? "12px" : "16px",
                   border: formData.businessType === type.id ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                  borderRadius: 12,
+                  borderRadius: isMobile ? 8 : 12,
                   background: formData.businessType === type.id ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
                   cursor: "pointer",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: 8,
+                  gap: isMobile ? 6 : 8,
                   transition: "all 0.2s ease"
                 }}
               >
-                <span style={{ fontSize: 24 }}>{type.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-secondary)" }}>{type.name}</span>
+                <span style={{ fontSize: isMobile ? 20 : 24 }}>{type.icon}</span>
+                <span style={{ fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "var(--cafe-text-secondary)" }}>{type.name}</span>
               </button>
             ))}
           </div>
@@ -494,17 +494,17 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
   const renderLocation = () => {
     const postalPattern = POSTAL_CODE_PATTERNS[formData.country];
     return (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "16px" : 0 }}>
+      <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
         Location Details
       </h3>
-      <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)", marginBottom: 32 }}>
+      <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 24 : 32 }}>
         Enter your cafe's address and regional settings for accurate operations.
       </p>
       
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 20 : 24 }}>
         <div>
-          <label htmlFor="loc-address" style={labelStyle}>
+          <label htmlFor="loc-address" style={labelStyle(isMobile)}>
             Street Address
           </label>
           <input
@@ -514,13 +514,13 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.address}
             onChange={(e) => handleChange('address', e.target.value)}
             placeholder="123 Main Street"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
           <div>
-            <label htmlFor="loc-city" style={labelStyle}>
+            <label htmlFor="loc-city" style={labelStyle(isMobile)}>
               City
             </label>
             <input
@@ -530,11 +530,11 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
               value={formData.city}
               onChange={(e) => handleChange('city', e.target.value)}
               placeholder="Mumbai"
-              style={inputStyle}
+              style={inputStyle(isMobile)}
             />
           </div>
           <div>
-            <label htmlFor="loc-state" style={labelStyle}>
+            <label htmlFor="loc-state" style={labelStyle(isMobile)}>
               State
             </label>
             <input
@@ -544,14 +544,14 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
               value={formData.state}
               onChange={(e) => handleChange('state', e.target.value)}
               placeholder="Maharashtra"
-              style={inputStyle}
+              style={inputStyle(isMobile)}
             />
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
           <div>
-            <label htmlFor="loc-country" style={labelStyle}>
+            <label htmlFor="loc-country" style={labelStyle(isMobile)}>
               Country
             </label>
             <select
@@ -559,7 +559,7 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
               autoComplete="country"
               value={formData.country}
               onChange={(e) => handleChange('country', e.target.value)}
-              style={inputStyle}
+              style={inputStyle(isMobile)}
             >
               {COUNTRIES.map(country => (
                 <option key={country.code} value={country.code}>{country.name}</option>
@@ -567,7 +567,7 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             </select>
           </div>
           <div>
-            <label htmlFor="loc-postal" style={labelStyle}>
+            <label htmlFor="loc-postal" style={labelStyle(isMobile)}>
               Postal Code
             </label>
             <input
@@ -577,7 +577,7 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
               value={formData.postalCode}
               onChange={(e) => handleChange('postalCode', e.target.value)}
               placeholder={postalPattern?.example || '400001'}
-              style={inputStyle}
+              style={inputStyle(isMobile)}
             />
             {validation.postalCode && (
               <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
@@ -589,7 +589,7 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
         </div>
 
         <div>
-          <label htmlFor="loc-maps" style={labelStyle}>
+          <label htmlFor="loc-maps" style={labelStyle(isMobile)}>
             Google Maps Link (Optional)
           </label>
           <input
@@ -604,19 +604,19 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
               }
             }}
             placeholder="https://maps.google.com/..."
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
           {validation.googleMapsLink && (
-            <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
+            <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8, display: "flex", alignItems: "center" }}>
               {validation.googleMapsLink.message}
               {renderValidationIcon('googleMapsLink')}
             </div>
           )}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 12 : 16 }}>
           <div>
-            <label htmlFor="loc-currency" style={labelStyle}>
+            <label htmlFor="loc-currency" style={labelStyle(isMobile)}>
               Currency
             </label>
             <select
@@ -629,7 +629,7 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
                   handleChange('currencySymbol', selectedCountry.currencySymbol);
                 }
               }}
-              style={inputStyle}
+              style={inputStyle(isMobile)}
             >
               {COUNTRIES.map(country => (
                 <option key={country.currency} value={country.currency}>
@@ -639,14 +639,14 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             </select>
           </div>
           <div>
-            <label htmlFor="loc-timezone" style={labelStyle}>
+            <label htmlFor="loc-timezone" style={labelStyle(isMobile)}>
               Timezone
             </label>
             <select
               id="loc-timezone"
               value={formData.timezone}
               onChange={(e) => handleChange('timezone', e.target.value)}
-              style={inputStyle}
+              style={inputStyle(isMobile)}
             >
               {TIMEZONES.map(tz => (
                 <option key={tz.id} value={tz.id}>
@@ -662,17 +662,17 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
   };
 
   const renderLegal = () => (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "16px" : 0 }}>
+      <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
         Legal Information
       </h3>
-      <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)", marginBottom: 32 }}>
+      <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 24 : 32 }}>
         These details are used for tax compliance and invoicing. All fields are optional.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 20 : 24 }}>
         <div>
-          <label htmlFor="legal-gstin" style={labelStyle}>
+          <label htmlFor="legal-gstin" style={labelStyle(isMobile)}>
             GST Number (Optional)
           </label>
           <input
@@ -682,16 +682,16 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             onChange={(e) => handleChange('gstin', e.target.value.toUpperCase())}
             placeholder="29ABCDE1234F1Z5"
             maxLength={15}
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
-          <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8, display: "flex", alignItems: "center" }}>
             Required for GST-registered businesses in India
             {renderValidationIcon('gstin')}
           </div>
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             FSSAI License (Optional)
           </label>
           <input
@@ -699,15 +699,15 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.fssaiNumber}
             onChange={(e) => handleChange('fssaiNumber', e.target.value)}
             placeholder="10012345678987"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
-          <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8 }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8 }}>
             Required for food businesses in India
           </div>
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Business Registration (Optional)
           </label>
           <input
@@ -715,15 +715,15 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.businessRegistration}
             onChange={(e) => handleChange('businessRegistration', e.target.value)}
             placeholder="Company registration number"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Tax Mode
           </label>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: isMobile ? 10 : 12 }}>
             {TAX_MODES.map(mode => (
               <button
                 key={mode.id}
@@ -731,19 +731,19 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
                 aria-pressed={formData.taxMode === mode.id}
                 style={{
                   flex: 1,
-                  padding: "16px",
+                  padding: isMobile ? "12px" : "16px",
                   border: formData.taxMode === mode.id ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
-                  borderRadius: 12,
+                  borderRadius: isMobile ? 8 : 12,
                   background: formData.taxMode === mode.id ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
                   cursor: "pointer",
                   textAlign: "left",
                   transition: "all 0.2s ease"
                 }}
               >
-                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
+                <div style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 4 }}>
                   {mode.name}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)" }}>
+                <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-secondary)" }}>
                   {mode.description}
                 </div>
               </button>
@@ -753,13 +753,13 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
       </div>
 
       <div style={{
-        padding: 20,
+        padding: isMobile ? 16 : 20,
         background: "var(--cafe-info-bg)",
         border: "1px solid var(--cafe-info-border)",
-        borderRadius: 12,
-        fontSize: 14,
+        borderRadius: isMobile ? 8 : 12,
+        fontSize: isMobile ? 13 : 14,
         color: "var(--cafe-info)",
-        marginTop: 24
+        marginTop: isMobile ? 20 : 24
       }}>
         <strong>💡 Tip:</strong> You can update these details later in Settings &gt; Business Information.
       </div>
@@ -767,17 +767,17 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
   );
 
   const renderContact = () => (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "16px" : 0 }}>
+      <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
         Contact Details
       </h3>
-      <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)", marginBottom: 32 }}>
+      <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 24 : 32 }}>
         Enter your contact information for customer support and communications.
       </p>
       
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 20 : 24 }}>
         <div>
-          <label htmlFor="contact-phone" style={labelStyle}>
+          <label htmlFor="contact-phone" style={labelStyle(isMobile)}>
             Phone Number <span style={{ color: "var(--cafe-danger)" }}>*</span>
           </label>
           <input
@@ -787,16 +787,16 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.phone}
             onChange={(e) => handleChange('phone', e.target.value)}
             placeholder="+91 9876543210"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
-          <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8, display: "flex", alignItems: "center" }}>
             Used for order notifications and customer support
             {renderValidationIcon('phone')}
           </div>
         </div>
 
         <div>
-          <label htmlFor="contact-email" style={labelStyle}>
+          <label htmlFor="contact-email" style={labelStyle(isMobile)}>
             Email Address (Optional)
           </label>
           <input
@@ -806,16 +806,16 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
             value={formData.email}
             onChange={(e) => handleChange('email', e.target.value)}
             placeholder="contact@yourcafe.com"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
-          <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
+          <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8, display: "flex", alignItems: "center" }}>
             For receipts and marketing
             {renderValidationIcon('email')}
           </div>
         </div>
 
         <div>
-          <label htmlFor="contact-website" style={labelStyle}>
+          <label htmlFor="contact-website" style={labelStyle(isMobile)}>
             Website (Optional)
           </label>
           <input
@@ -831,10 +831,10 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
               }
             }}
             placeholder="https://yourcafe.com"
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           />
           {validation.website && (
-            <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginTop: 8, display: "flex", alignItems: "center" }}>
+            <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 6 : 8, display: "flex", alignItems: "center" }}>
               {validation.website.message}
               {renderValidationIcon('website')}
             </div>
@@ -842,12 +842,12 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
         </div>
 
         <div>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 12, display: "block" }}>
+          <label style={{ fontSize: isMobile ? 13 : 14, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 10 : 12, display: "block" }}>
             Social Media (Optional)
           </label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 12 : 16 }}>
             <div>
-              <label style={smallLabelStyle}>
+              <label style={smallLabelStyle(isMobile)}>
                 Instagram
               </label>
               <input
@@ -855,11 +855,11 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
                 value={formData.instagram}
                 onChange={(e) => handleChange('instagram', e.target.value)}
                 placeholder="@yourcafe"
-                style={smallInputStyle}
+                style={smallInputStyle(isMobile)}
               />
             </div>
             <div>
-              <label style={smallLabelStyle}>
+              <label style={smallLabelStyle(isMobile)}>
                 Facebook
               </label>
               <input
@@ -867,11 +867,11 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
                 value={formData.facebook}
                 onChange={(e) => handleChange('facebook', e.target.value)}
                 placeholder="Your Cafe"
-                style={smallInputStyle}
+                style={smallInputStyle(isMobile)}
               />
             </div>
             <div>
-              <label style={smallLabelStyle}>
+              <label style={smallLabelStyle(isMobile)}>
                 WhatsApp
               </label>
               <input
@@ -879,7 +879,7 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
                 value={formData.whatsapp}
                 onChange={(e) => handleChange('whatsapp', e.target.value)}
                 placeholder="+91..."
-                style={smallInputStyle}
+                style={smallInputStyle(isMobile)}
               />
             </div>
           </div>
@@ -889,23 +889,23 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
   );
 
   const renderBranding = () => (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <h3 style={{ fontSize: 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "16px" : 0 }}>
+      <h3 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, color: "var(--cafe-text-primary)", marginBottom: 8 }}>
         Branding
       </h3>
-      <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)", marginBottom: 32 }}>
+      <p style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)", marginBottom: isMobile ? 24 : 32 }}>
         Customize how your cafe looks to customers with colors, themes, and logos.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? 20 : 24 }}>
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Upload Logo
           </label>
           <div style={{
             border: "2px dashed var(--cafe-border)",
-            borderRadius: 12,
-            padding: 40,
+            borderRadius: isMobile ? 8 : 12,
+            padding: isMobile ? 24 : 40,
             textAlign: "center",
             cursor: "pointer",
             transition: "all 0.2s ease",
@@ -944,14 +944,14 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
           }}
           >
             {formData.logo ? (
-              <img src={formData.logo} alt="Logo" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 12, margin: "0 auto" }} />
+              <img src={formData.logo} alt="Logo" style={{ width: isMobile ? 80 : 100, height: isMobile ? 80 : 100, objectFit: "cover", borderRadius: isMobile ? 8 : 12, margin: "0 auto" }} />
             ) : (
               <div>
-                <div style={{ fontSize: 36, marginBottom: 12 }}>📤</div>
-                <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)" }}>
+                <div style={{ fontSize: isMobile ? 28 : 36, marginBottom: isMobile ? 8 : 12 }}>📤</div>
+                <div style={{ fontSize: isMobile ? 13 : 14, color: "var(--cafe-text-secondary)" }}>
                   Click to upload logo
                 </div>
-                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 6 }}>
+                <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)", marginTop: isMobile ? 4 : 6 }}>
                   PNG, JPG up to 2MB
                 </div>
               </div>
@@ -960,10 +960,10 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Accent Color
           </label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(3, 1fr)", gap: isMobile ? 10 : 12 }}>
             {ACCENT_COLORS.map(color => (
               <button
                 key={color.value}
@@ -972,9 +972,9 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
                 aria-pressed={formData.accentColor === color.value}
                 title={color.name}
                 style={{
-                  padding: "20px",
+                  padding: isMobile ? "16px" : "20px",
                   border: formData.accentColor === color.value ? "3px solid var(--cafe-accent)" : "2px solid var(--cafe-border)",
-                  borderRadius: 12,
+                  borderRadius: isMobile ? 8 : 12,
                   background: color.value,
                   cursor: "pointer",
                   transition: "all 0.2s ease",
@@ -986,13 +986,13 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Receipt Style
           </label>
           <select
             value={formData.receiptStyle}
             onChange={(e) => handleChange('receiptStyle', e.target.value)}
-            style={inputStyle}
+            style={inputStyle(isMobile)}
           >
             <option value="modern">Modern</option>
             <option value="classic">Classic</option>
@@ -1001,16 +1001,16 @@ export default function BusinessDetailsStep({ settings, onNext, onBack, stepInde
         </div>
 
         <div>
-          <label style={labelStyle}>
+          <label style={labelStyle(isMobile)}>
             Theme
           </label>
-          <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", gap: isMobile ? 10 : 12 }}>
             <button
               onClick={() => handleChange('theme', 'light')}
               aria-pressed={formData.theme === 'light'}
               style={{
                 flex: 1,
-                padding: "16px",
+                padding: isMobile ? "12px" : "16px",
                 border: formData.theme === 'light' ? "2px solid var(--cafe-accent)" : "1px solid var(--cafe-border)",
                 borderRadius: 12,
                 background: formData.theme === 'light' ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",

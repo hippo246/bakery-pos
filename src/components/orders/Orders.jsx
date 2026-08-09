@@ -10,6 +10,12 @@ import { markTableOccupied, markTableAvailable } from "../../domain/tableModel.j
 import { calculateCartTotals } from "./utils/cartCalculations";
 import { MODIFIER_CATEGORIES } from "../../data/constants.js";
 import { useMobile } from "../../hooks/useMobile.js";
+import { getDeliveryPlatformFactory } from "../../delivery/DeliveryPlatformFactory.js";
+import { PlatformType } from "../../delivery/DeliveryPlatformAdapter.js";
+import { getDeliveryOrderStorage, DeliveryOrderStatus } from "../../delivery/DeliveryPlatformAdapter.js";
+import { useTerminal } from "../../terminal/TerminalContext.jsx";
+import { getOrderRouter } from "../../terminal/OrderRouter.js";
+import { getMultiTerminalConflictResolver } from "../../terminal/MultiTerminalConflictResolver.js";
 
 // ── Devin's extracted components ──────────────────────────────────────────────
 import CategorySidebar from "./CategorySidebar";
@@ -76,8 +82,8 @@ function CartContent({
   else if ((orderType === "SWIGGY" || orderType === "ZOMATO") && !platformOrderId.trim()) block.push(`Enter ${orderType} order ID`);
   const isBlocked = isPlacingOrder || block.length > 0 || !isPaymentComplete;
 
-  const sectionLabel = { fontSize: isMobile ? 13 : 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: C.text3, marginBottom: isMobile ? 10 : 8 };
-  const cardStyle   = { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: isMobile ? "16px" : "12px", marginBottom: isMobile ? 12 : 8 };
+  const sectionLabel = { fontSize: isMobile ? 13 : 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: C.text3, marginBottom: isMobile ? 12 : 10 };
+  const cardStyle   = { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? "16px" : "14px", marginBottom: isMobile ? 12 : 10 };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 0 : 8, height: isMobile ? "auto" : "100%", overflow: isMobile ? "visible" : "hidden" }}>
@@ -85,9 +91,9 @@ function CartContent({
       {/* ── Held orders ── */}
       {heldOrders.length > 0 && (
         <div style={{ ...cardStyle, overflow: "hidden", flexShrink: 0 }}>
-          <div style={{ padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.amber3}`, margin: isMobile ? "-16px -16px 12px" : "-12px -12px 10px" }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: C.amber2 }}>⏸ Held Orders ({heldOrders.length})</span>
-            <span style={{ fontSize: 10, color: C.text3 }}>Tap to resume</span>
+          <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, margin: isMobile ? "-16px -16px 12px" : "-14px -14px 12px" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.text2 }}>⏸ Held Orders ({heldOrders.length})</span>
+            <span style={{ fontSize: 11, color: C.text3 }}>Tap to resume</span>
           </div>
           {heldOrders.map(h => {
             const mins = Math.max(0, Math.round((Date.now() - h.savedAt) / 60000));
@@ -99,14 +105,14 @@ function CartContent({
               : h.orderType === "DIRECT_DELIVERY" ? (h.customerPhone || "Delivery")
               : h.platformOrderId || h.orderType;
             return (
-              <div key={h.id} className="pos-held-row" style={{ padding: "8px 0", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${C.border}` }}>
+              <div key={h.id} className="pos-held-row" style={{ padding: "10px 0", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: 16 }}>{typeIcon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: isMobile ? 13 : 11, fontWeight: 700, color: C.text }}>{who} · {itemCount} items <span style={{ color: C.text3, fontWeight: 400 }}>{mins}m ago</span></div>
-                  <div style={{ fontSize: isMobile ? 12 : 10, color: C.text3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.cart.slice(0,2).map(i=>i.name).join(", ")}{h.cart.length>2?` +${h.cart.length-2}`:""}</div>
+                  <div style={{ fontSize: isMobile ? 13 : 12, fontWeight: 500, color: C.text }}>{who} · {itemCount} items <span style={{ color: C.text3, fontWeight: 400 }}>{mins}m ago</span></div>
+                  <div style={{ fontSize: isMobile ? 12 : 11, color: C.text3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.cart.slice(0,2).map(i=>i.name).join(", ")}{h.cart.length>2?` +${h.cart.length-2}`:""}</div>
                 </div>
-                <button className="pos-held-resume-btn" onClick={() => resumeHeldBill(h.id)} style={{ padding: "5px 9px", borderRadius: 6, border: `1px solid ${C.amber3}`, background: C.amberDim, color: C.amber2, fontSize: isMobile ? 13 : 11, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>↩ Resume</button>
-                <button onClick={() => discardHeldBill(h.id)} style={{ padding: isMobile ? "8px 10px" : "5px 7px", borderRadius: 6, border: `1px solid ${C.redBorder}`, background: C.redBg, color: C.red, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>✕</button>
+                <button className="pos-held-resume-btn" onClick={() => resumeHeldBill(h.id)} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text, fontSize: isMobile ? 13 : 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}>↩ Resume</button>
+                <button onClick={() => discardHeldBill(h.id)} style={{ padding: isMobile ? "8px 10px" : "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text3, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>✕</button>
               </div>
             );
           })}
@@ -116,15 +122,15 @@ function CartContent({
       {/* ── Order Slip ── */}
       <div style={{ ...cardStyle, flexShrink: 0 }}>
         {!isMobile && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, borderBottom: `1px solid ${C.border}`, paddingBottom: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, borderBottom: `1px solid ${C.border}`, paddingBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span>🧾</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Order Slip</span>
-              {cart.items.length > 0 && <span style={{ background: C.amber, color: "#1a0e00", fontSize: 10, fontWeight: 800, padding: "1px 6px", borderRadius: 20 }}>{cart.items.length}</span>}
+              <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>Order Slip</span>
+              {cart.items.length > 0 && <span style={{ background: C.bg3, color: C.text2, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6 }}>{cart.items.length}</span>}
             </div>
-            <div style={{ display: "flex", gap: 5 }}>
-              {cart.items.length > 0 && <button onClick={holdBill} style={{ padding: "5px 10px", borderRadius: 7, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>⏸ Hold</button>}
-              {cart.items.length > 0 && <button onClick={clearCart} style={{ padding: "5px 10px", borderRadius: 7, border: `1px solid ${C.redBorder}`, background: C.redBg, color: C.red, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>🗑 Clear</button>}
+            <div style={{ display: "flex", gap: 6 }}>
+              {cart.items.length > 0 && <button onClick={holdBill} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 11, fontWeight: 500, cursor: "pointer" }}>⏸ Hold</button>}
+              {cart.items.length > 0 && <button onClick={clearCart} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text3, fontSize: 11, fontWeight: 500, cursor: "pointer" }}>🗑 Clear</button>}
             </div>
           </div>
         )}
@@ -134,7 +140,7 @@ function CartContent({
             <div style={{ fontSize: 40, marginBottom: 12 }}>🛒</div>
             <div>Empty — tap menu items to add</div>
             {isMobile && (
-              <button onClick={() => setPosMobileTab("menu")} style={{ marginTop: 16, padding: "12px 24px", borderRadius: 10, border: `1px solid ${C.amber3}`, background: C.amberDim, color: C.amber2, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+              <button onClick={() => setPosMobileTab("menu")} style={{ marginTop: 16, padding: "12px 24px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                 ← Browse Menu
               </button>
             )}
@@ -144,34 +150,34 @@ function CartContent({
             {/* Hold button on mobile — inside cart section */}
             {isMobile && (
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                <button onClick={holdBill} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg3, color: C.text2, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>⏸ Hold Order</button>
+                <button onClick={holdBill} style={{ flex: 1, padding: "10px 0", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>⏸ Hold Order</button>
               </div>
             )}
             {cart.items.map(item => {
               const modsTotal = (item.modifiers||[]).reduce((s,m)=>s+(Number(m.price)||0),0);
               const unitPrice = (item.overridePrice ?? item.price) + modsTotal;
               return (
-                <div key={item.id} className="pos-cart-item" style={{ background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <div key={item.id} className="pos-cart-item" style={{ background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px", marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: isMobile ? 15 : 12, fontWeight: 700, color: C.text }}>{item.name}</div>
-                      {item.notes && <div style={{ fontSize: isMobile ? 12 : 10, color: C.amber2, marginTop: 2 }}>📝 {item.notes}</div>}
+                      <div style={{ fontSize: isMobile ? 15 : 13, fontWeight: 500, color: C.text }}>{item.name}</div>
+                      {item.notes && <div style={{ fontSize: isMobile ? 12 : 11, color: C.text3, marginTop: 4 }}>📝 {item.notes}</div>}
                     </div>
-                    <button className="pos-cart-remove-btn" onClick={() => removeFromCart(item.id)} style={{ padding: "2px 8px", borderRadius: 6, border: `1px solid ${C.redBorder}`, background: C.redBg, color: C.red, fontSize: 14, fontWeight: 700, cursor: "pointer", marginLeft: 8, flexShrink: 0 }}>✕</button>
+                    <button className="pos-cart-remove-btn" onClick={() => removeFromCart(item.id)} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg3, color: C.text3, fontSize: 12, fontWeight: 500, cursor: "pointer", marginLeft: 8, flexShrink: 0 }}>✕</button>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     {/* Qty stepper */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, -1)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.border2}`, background: C.bg4, color: C.text, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>−</button>
-                      <span className="pos-cart-qty-val" style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 800, color: C.amber2, width: 28, textAlign: "center" }}>{item.qty}</span>
-                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, 1)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${C.amber3}`, background: C.amberDim, color: C.amber2, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>+</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, -1)} style={{ width: 28, height: 28, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, color: C.text, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500 }}>−</button>
+                      <span className="pos-cart-qty-val" style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 500, color: C.text, width: 24, textAlign: "center" }}>{item.qty}</span>
+                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, 1)} style={{ width: 28, height: 28, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, color: C.text, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500 }}>+</button>
                     </div>
                     {/* Price + action buttons */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontFamily: "monospace", fontSize: isMobile ? 15 : 13, fontWeight: 800, color: C.amber2 }}>₹{(unitPrice*item.qty).toFixed(0)}</span>
-                      <button className="pos-cart-action-btn" onClick={() => setModifierModal({ open: true, item })} title="Customise" style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 13, cursor: "pointer" }}>⚙️</button>
-                      <button className="pos-cart-action-btn" onClick={() => openItemNotesModal(item)} title="Notes" style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 13, cursor: "pointer" }}>📝</button>
-                      <button className="pos-cart-action-btn" onClick={() => openPriceOverrideModal(item)} title="Price" style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 13, cursor: "pointer" }}>💰</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontFamily: "monospace", fontSize: isMobile ? 15 : 13, fontWeight: 500, color: C.text }}>₹{(unitPrice*item.qty).toFixed(0)}</span>
+                      <button className="pos-cart-action-btn" onClick={() => setModifierModal({ open: true, item })} title="Customise" style={{ width: 26, height: 26, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 12, cursor: "pointer" }}>⚙️</button>
+                      <button className="pos-cart-action-btn" onClick={() => openItemNotesModal(item)} title="Notes" style={{ width: 26, height: 26, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 12, cursor: "pointer" }}>📝</button>
+                      <button className="pos-cart-action-btn" onClick={() => openPriceOverrideModal(item)} title="Price" style={{ width: 26, height: 26, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 12, cursor: "pointer" }}>💰</button>
                     </div>
                   </div>
                 </div>
@@ -209,15 +215,15 @@ function CartContent({
 
           {/* Covers (pax) */}
           {orderType === "DINE_IN" && (
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 16 }}>
               <div style={sectionLabel}>Covers (Pax)</div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {[1,2,3,4,5,6,7,8].map(n => (
-                  <button key={n} onClick={() => setPax(n)} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 9, border: `2px solid ${pax===n?C.amber:C.border}`, background: pax===n?C.amberDim:C.bg3, color: pax===n?C.amber2:C.text2, fontWeight: pax===n?800:500, fontSize: isMobile ? 15 : 13, cursor: "pointer" }}>{n}</button>
+                  <button key={n} onClick={() => setPax(n)} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 6, border: `1px solid ${pax===n?C.amber:C.border}`, background: pax===n?C.amberDim:C.bg3, color: pax===n?C.text:C.text2, fontWeight: pax===n?600:400, fontSize: isMobile ? 15 : 13, cursor: "pointer" }}>{n}</button>
                 ))}
-                <button onClick={() => setPax(p=>Math.max(1,p-1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 9, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 18, cursor: "pointer" }}>−</button>
-                <button onClick={() => setPax(p=>Math.min(40,p+1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 9, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 18, cursor: "pointer" }}>+</button>
-                {pax > 8 && <span style={{ alignSelf: "center", fontSize: 13, fontWeight: 700, color: C.amber2 }}>{pax} guests</span>}
+                <button onClick={() => setPax(p=>Math.max(1,p-1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 16, cursor: "pointer" }}>−</button>
+                <button onClick={() => setPax(p=>Math.min(40,p+1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 16, cursor: "pointer" }}>+</button>
+                {pax > 8 && <span style={{ alignSelf: "center", fontSize: 13, fontWeight: 500, color: C.text }}>{pax} guests</span>}
               </div>
             </div>
           )}
@@ -226,7 +232,7 @@ function CartContent({
 
           <DiscountPanel discountInput={discountInput} discountMode={discountMode} cartSubtotal={cartSubtotal} onDiscountModeChange={setDiscountMode} onDiscountInputChange={setDiscountInput} />
 
-          <button onClick={() => { setOrderNotesDraft(orderNotes); setOrderNotesModal(true); }} style={{ width: "100%", padding: isMobile ? "12px 14px" : "8px 12px", borderRadius: 8, border: `1px dashed ${orderNotes?C.amber3:C.border2}`, background: orderNotes?C.amberDim:"transparent", color: orderNotes?C.amber2:C.text3, fontSize: isMobile ? 14 : 12, fontWeight: 600, cursor: "pointer", textAlign: "left", marginBottom: 12 }}>
+          <button onClick={() => { setOrderNotesDraft(orderNotes); setOrderNotesModal(true); }} style={{ width: "100%", padding: isMobile ? "12px 14px" : "10px 12px", borderRadius: 6, border: `1px dashed ${orderNotes?C.border:C.border}`, background: orderNotes?C.bg3:"transparent", color: orderNotes?C.text:C.text3, fontSize: isMobile ? 14 : 12, fontWeight: 400, cursor: "pointer", textAlign: "left", marginBottom: 12 }}>
             {orderNotes ? `📝 ${orderNotes.slice(0,40)}${orderNotes.length>40?"…":""}` : "+ Add kitchen notes / allergy info"}
           </button>
 
@@ -255,14 +261,27 @@ function CartContent({
 
           <div style={{ height: 1, background: C.border, margin: "0 0 12px" }} />
 
-          <PaymentPanel cartTotal={activeCartTotal} onBreakdownChange={(bd,ic)=>{setPaymentBreakdown(bd);setIsPaymentComplete(ic);}} isPlacingOrder={isPlacingOrder} cartLength={cart.items.length} resetKey={paymentResetKey} />
+          <PaymentPanel 
+            cartTotal={activeCartTotal} 
+            onBreakdownChange={(bd,ic)=>{setPaymentBreakdown(bd);setIsPaymentComplete(ic);}} 
+            isPlacingOrder={isPlacingOrder} 
+            cartLength={cart.items.length} 
+            resetKey={paymentResetKey}
+            orderId={cart.orderId}
+            customerInfo={{
+              name: customerPhone ? (availableCustomers.find(c => c.phone === customerPhone)?.name || '') : '',
+              phone: customerPhone,
+              email: '',
+              businessName: 'Cafe OS'
+            }}
+          />
 
           {/* Place order — inline for desktop, sticky bar for mobile */}
           <div className="pos-place-order-bar">
             {block.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "10px 14px" : "8px 12px", borderRadius: 8, background: C.amberDim, border: `1px solid ${C.amber3}`, marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "10px 14px" : "8px 12px", borderRadius: 6, background: C.bg3, border: `1px solid ${C.border}`, marginBottom: 10 }}>
                 <span>⚠️</span>
-                <span style={{ fontSize: isMobile ? 13 : 12, color: C.amber2, fontWeight: 600 }}>{block[0]}</span>
+                <span style={{ fontSize: isMobile ? 13 : 12, color: C.text, fontWeight: 400 }}>{block[0]}</span>
               </div>
             )}
             <button
@@ -270,12 +289,12 @@ function CartContent({
               onClick={placeOrder}
               disabled={isBlocked}
               style={{
-                width: "100%", padding: "15px 0", fontSize: isMobile ? 16 : 15, fontWeight: 900, border: "none",
-                borderRadius: 12, cursor: isBlocked ? "not-allowed" : "pointer",
-                background: isBlocked ? C.bg4 : `linear-gradient(135deg, ${C.amber} 0%, ${C.amber2} 100%)`,
-                color: isBlocked ? C.text3 : "#1a0e00",
-                boxShadow: isBlocked ? "none" : `0 4px 20px ${C.amberDim}`,
-                marginTop: isMobile ? 0 : 10,
+                width: "100%", padding: "14px 0", fontSize: isMobile ? 15 : 14, fontWeight: 500, border: "none",
+                borderRadius: 6, cursor: isBlocked ? "not-allowed" : "pointer",
+                background: isBlocked ? C.bg3 : C.amber,
+                color: isBlocked ? C.text3 : "#000",
+                boxShadow: isBlocked ? "none" : `0 2px 8px ${C.amberDim}`,
+                marginTop: isMobile ? 0 : 12,
               }}
             >
               {isPlacingOrder ? "⏳ Placing…" : splitBillMode ? `🍳 Send to Kitchen (1/${splitBillCount}) · ₹${activeCartTotal}` : `🍳 Send to Kitchen · ₹${activeCartTotal}`}
@@ -289,6 +308,177 @@ function CartContent({
 
 function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, setTables, staff, discounts, inventory, setInventory, customers, setCustomers }) {
   const { isMobile } = useMobile();
+  
+  // ── Toast notification ─────────────────────────────────────────────────────
+  const [toast, setToast] = useState(null);
+  const showToast = useCallback((message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+  
+  // ── Multi-Terminal Integration ─────────────────────────────────────────────
+  const { currentTerminal, syncClient, terminalManager } = useTerminal();
+  const orderRouter = getOrderRouter();
+  const conflictResolver = getMultiTerminalConflictResolver();
+
+  // ── Delivery Platform Integration ─────────────────────────────────────────────
+  const deliveryFactory = getDeliveryPlatformFactory();
+  const deliveryStorage = getDeliveryOrderStorage();
+
+  // Listen for delivery orders from platforms
+  useEffect(() => {
+    const handleDeliveryOrderReceived = (event) => {
+      const deliveryOrder = event.detail;
+      console.log('[Orders] Delivery order received:', deliveryOrder);
+      
+      // Convert delivery order to POS order format
+      const posOrder = convertDeliveryOrderToPosOrder(deliveryOrder);
+      
+      // Add to orders
+      setOrders(prev => [...prev, posOrder]);
+      
+      // Auto-route to kitchen display
+      const kdsTicket = createKdsTicketsFromOrder(posOrder);
+      setKdsCards(prev => [...prev, ...kdsTicket]);
+      
+      showToast(`New ${deliveryOrder.platform} order received`, 'success');
+    };
+
+    window.addEventListener('deliveryOrderReceived', handleDeliveryOrderReceived);
+    
+    return () => {
+      window.removeEventListener('deliveryOrderReceived', handleDeliveryOrderReceived);
+    };
+  }, [setOrders, setKdsCards]);
+
+  // ── Real-time Sync Integration ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!syncClient || !currentTerminal) return;
+
+    // Listen for order events from other terminals
+    const handleOrderCreated = (data) => {
+      console.log('[Orders] Order created from another terminal:', data);
+      if (data.sourceTerminal !== currentTerminal.id) {
+        setOrders(prev => [...prev, data.data]);
+      }
+    };
+
+    const handleOrderUpdated = (data) => {
+      console.log('[Orders] Order updated from another terminal:', data);
+      if (data.sourceTerminal !== currentTerminal.id) {
+        setOrders(prev => prev.map(o => 
+          o.id === data.data.id ? { ...o, ...data.data } : o
+        ));
+      }
+    };
+
+    const handleOrderDeleted = (data) => {
+      console.log('[Orders] Order deleted from another terminal:', data);
+      if (data.sourceTerminal !== currentTerminal.id) {
+        setOrders(prev => prev.filter(o => o.id !== data.data.orderId));
+      }
+    };
+
+    const handleResourceLocked = (data) => {
+      console.log('[Orders] Resource locked by another terminal:', data);
+      if (data.lockedBy !== currentTerminal.id) {
+        // Show alert that resource is locked
+        console.warn(`Order being edited by another terminal`);
+      }
+    };
+
+    const handleResourceUnlocked = (data) => {
+      console.log('[Orders] Resource unlocked:', data);
+    };
+
+    syncClient.on('orderCreated', handleOrderCreated);
+    syncClient.on('orderUpdated', handleOrderUpdated);
+    syncClient.on('orderDeleted', handleOrderDeleted);
+    syncClient.on('resourceLocked', handleResourceLocked);
+    syncClient.on('resourceUnlocked', handleResourceUnlocked);
+
+    return () => {
+      syncClient.off('orderCreated', handleOrderCreated);
+      syncClient.off('orderUpdated', handleOrderUpdated);
+      syncClient.off('orderDeleted', handleOrderDeleted);
+      syncClient.off('resourceLocked', handleResourceLocked);
+      syncClient.off('resourceUnlocked', handleResourceUnlocked);
+    };
+  }, [syncClient, currentTerminal, setOrders]);
+
+  // Convert delivery order to POS order format
+  const convertDeliveryOrderToPosOrder = (deliveryOrder) => {
+    return {
+      id: deliveryOrder.id,
+      orderId: deliveryOrder.platformOrderId,
+      source: deliveryOrder.platform.toUpperCase(),
+      orderType: deliveryOrder.orderType,
+      status: 'NEW',
+      customerName: deliveryOrder.customerInfo.name,
+      customerPhone: deliveryOrder.customerInfo.phone,
+      customerAddress: deliveryOrder.deliveryAddress.address,
+      items: deliveryOrder.items.map(item => ({
+        id: item.id,
+        menuItemId: item.id,
+        name: item.name,
+        qty: item.quantity,
+        price: item.price,
+        category: 'Food',
+        modifiers: item.addons || [],
+        notes: deliveryOrder.specialInstructions
+      })),
+      totalAmount: deliveryOrder.totalAmount,
+      commission: deliveryOrder.commission,
+      netAmount: deliveryOrder.netAmount,
+      createdAt: deliveryOrder.createdAt,
+      updatedAt: deliveryOrder.updatedAt,
+      specialInstructions: deliveryOrder.specialInstructions,
+      deliveryPartner: deliveryOrder.deliveryPartner,
+      estimatedDeliveryTime: deliveryOrder.estimatedDeliveryTime,
+      metadata: {
+        platform: deliveryOrder.platform,
+        platformOrderId: deliveryOrder.platformOrderId,
+        isDeliveryOrder: true
+      }
+    };
+  };
+
+  // Update delivery order status on platform
+  const updateDeliveryOrderStatus = useCallback(async (orderId, status, metadata = {}) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || !order.metadata?.isDeliveryOrder) return;
+
+    try {
+      const platformType = order.metadata.platform === 'zomato' ? PlatformType.ZOMATO : PlatformType.SWIGGY;
+      const platformOrderId = order.metadata.platformOrderId || order.orderId;
+      
+      await deliveryFactory.updateOrderStatus(platformOrderId, status, metadata);
+      
+      // Update local order status
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: mapDeliveryStatusToPosStatus(status) } : o
+      ));
+      
+      console.log(`Order status updated on ${order.metadata.platform}`);
+    } catch (error) {
+      console.error('[Orders] Failed to update delivery order status:', error);
+    }
+  }, [orders, setOrders]);
+
+  // Map delivery status to POS status
+  const mapDeliveryStatusToPosStatus = (deliveryStatus) => {
+    const statusMap = {
+      [DeliveryOrderStatus.RECEIVED]: 'NEW',
+      [DeliveryOrderStatus.ACCEPTED]: 'ACCEPTED',
+      [DeliveryOrderStatus.PREPARING]: 'PREPARING',
+      [DeliveryOrderStatus.READY]: 'READY',
+      [DeliveryOrderStatus.PICKED_UP]: 'OUT_FOR_DELIVERY',
+      [DeliveryOrderStatus.DELIVERED]: 'COMPLETED',
+      [DeliveryOrderStatus.CANCELLED]: 'CANCELLED',
+      [DeliveryOrderStatus.REJECTED]: 'CANCELLED'
+    };
+    return statusMap[deliveryStatus] || 'NEW';
+  };
 
   // ── Mode ──────────────────────────────────────────────────────────────────
   const [mode, setMode] = useState("active");
@@ -302,7 +492,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
 
   // ── POS state ─────────────────────────────────────────────────────────────
   const [cart, setCart] = useState({ items: [] });        // shape: { items: [] }
-  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [menuQuery, setMenuQuery] = useState("");
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
   const [orderType, setOrderType] = useState("DINE_IN");
@@ -335,7 +525,6 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [receiptOptions, setReceiptOptions] = useState({ type: "print", email: "", phone: "", customFooter: "" });
   const updateReceiptOption = useCallback((key, val) => setReceiptOptions(prev => ({ ...prev, [key]: val })), []);
-  const [toast, setToast] = useState(null);
   const [stockWarningModal, setStockWarningModal] = useState(null);
   const [modifierModal, setModifierModal] = useState({ open: false, item: null });
   const [orderNotesModal, setOrderNotesModal] = useState(false);
@@ -348,11 +537,6 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
   const availableTables = useMemo(() => tables || INIT_TABLES, [tables]);
   const availableCustomers = useMemo(() => customers || [], [customers]);
   const _availableDiscounts = discounts || [];
-
-  const showToast = useCallback((message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
 
   const customerOrders = useMemo(() => {
     if (!customerPhone.trim()) return [];
@@ -375,7 +559,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       return { ...prev, items: next };
     });
     showToast("Items added from previous order");
-  }, [showToast]);
+  }, []);
 
   // ── Cart calculations ─────────────────────────────────────────────────────
   const cartTotals = useMemo(() => calculateCartTotals({
@@ -398,7 +582,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       if (existing) return { ...prev, items: prev.items.map(i => i.id === menuItem.id ? { ...i, qty: i.qty + 1 } : i) };
       return { ...prev, items: [...prev.items, { id: menuItem.id, menuItemId: menuItem.id, name: menuItem.name, qty: 1, price: Number.isFinite(menuItem.price) ? menuItem.price : 0, category: menuItem.cat, modifiers: [], notes: "" }] };
     });
-  }, [showToast]);
+  }, []);
 
   const updateCartQty = useCallback((itemId, delta) => {
     setCart(prev => {
@@ -499,7 +683,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     setCustomerAddress("");
     setPlatformOrderId("");
     showToast("Bill held");
-  }, [cart.items, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes, clearCart, showToast]);
+  }, [cart.items, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes, clearCart]);
 
   const resumeHeldBill = useCallback((id) => {
     const held = heldOrders.find(h => h.id === id);
@@ -532,12 +716,12 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     setOrderNotes(held.orderNotes || "");
     setPaymentResetKey(k => k + 1);
     showToast(cart.items.length > 0 ? "Swapped orders — current held" : "Order resumed");
-  }, [heldOrders, cart.items, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes, showToast]);
+  }, [heldOrders, cart.items, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes]);
 
   const discardHeldBill = useCallback((id) => {
     setHeldOrders(prev => prev.filter(h => h.id !== id));
     showToast("Held bill discarded");
-  }, [showToast]);
+  }, []);
 
   // ── Price override ───────────────────────────────────────────────────────
   const openPriceOverrideModal = useCallback((item) => {
@@ -555,7 +739,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     setCart(prev => ({ ...prev, items: prev.items.map(i => i.id === item.id ? { ...i, overridePrice: override, overrideReason: reason } : i) }));
     showToast("Price overridden");
     closePriceOverrideModal();
-  }, [priceOverrideModal, showToast, closePriceOverrideModal]);
+  }, [priceOverrideModal, closePriceOverrideModal]);
 
   // ── Order submission ──────────────────────────────────────────────────────
   const validateOrder = () => {
@@ -610,6 +794,14 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     }
 
     setOrders([newOrder, ...orders]);
+    
+    // Broadcast order creation to other terminals
+    if (syncClient && currentTerminal) {
+      syncClient.broadcastOrderCreated(newOrder);
+      // Auto-assign order to current terminal
+      orderRouter.assignOrder(newOrder.id, currentTerminal.id);
+    }
+    
     clearCart();
     setSelectedTable(null);
     setCustomerPhone("");
@@ -618,18 +810,26 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     if (isMobile) setPosMobileTab("menu");
     setReceiptOrder(newOrder);
     setShowReceipt(true);
-    showToast("Order created! 🎉");
-  }, [inventory, setInventory, kdsCards, setKdsCards, orderType, selectedTable, setTables, availableTables, customerPhone, setCustomers, availableCustomers, orders, setOrders, clearCart, showToast, isMobile]);
+    showToast("Order created! ");
+  }, [inventory, setInventory, kdsCards, setKdsCards, orderType, selectedTable, setTables, availableTables, customerPhone, setCustomers, availableCustomers, orders, setOrders, clearCart, isMobile, syncClient, currentTerminal, orderRouter]);
 
   const placeOrder = useCallback(() => {
     if (isPlacingOrder) return;
-    const err = validateOrder();
-    if (err) { showToast(err, "error"); return; }
+    
+    try {
+      const err = validateOrder();
+      if (err) { showToast(err, "error"); return; }
+    } catch (error) {
+      console.error('[Orders] Validation error:', error);
+      showToast("Order validation failed", "error");
+      return;
+    }
 
     // Disable button IMMEDIATELY before any async operations
     setIsPlacingOrder(true);
     try {
-      const orderItems = cart.items.map(item => ({
+      const items = cart?.items || [];
+      const orderItems = items.map(item => ({
         id: item.id, menuItemId: item.menuItemId, name: item.name, qty: item.qty,
         price: Number.isFinite(item.price) ? item.price : 0, modifiers: item.modifiers || [],
         station: item.category === "Coffee" ? "Bar" : "Kitchen",
@@ -652,7 +852,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       }
 
       // Calculate totals inline to avoid stale closure
-      const calculatedSubtotal = cart.items.reduce((sum, item) => {
+      const calculatedSubtotal = items.reduce((sum, item) => {
         const qty = Number(item.qty) || 0;
         const price = Number(item.price) || 0;
         return sum + (qty * price);
@@ -665,7 +865,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       const calculatedTotal = Math.round((calculatedSubtotal + calculatedTax - calculatedDiscount + (Number(packagingCharge) || 0)) * 100) / 100;
 
       const newOrder = createOrder({
-        source: sourceMap[orderType], orderType,
+        source: sourceMap?.[orderType] || 'POS', orderType,
         customerName: customerPhone ? "Guest" : "Walk-in Customer",
         customerPhone: customerPhone || "",
         customerAddress: orderType === "DIRECT_DELIVERY" ? (customerAddress || "") : undefined,
@@ -691,7 +891,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     } finally {
       setIsPlacingOrder(false);
     }
-  }, [isPlacingOrder, cart.items, inventory, kdsCards, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes, paymentBreakdown, availableTables, availableCustomers, orders, clearCart, showToast, isMobile]);
+  }, [isPlacingOrder, cart.items, inventory, kdsCards, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes, paymentBreakdown, availableTables, availableCustomers, orders, clearCart, isMobile]);
 
   const confirmOrderWithOverride = useCallback(() => {
     if (isPlacingOrder || !stockWarningModal) return;
@@ -706,29 +906,32 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
         return sum + (qty * price);
       }, 0);
       
-      const calculatedTax = Math.round(calculatedSubtotal * 0.18 * 100) / 100;
-      const calculatedDiscount = discountMode === "percent" 
-        ? Math.round(calculatedSubtotal * (Number(discountInput) || 0) / 100 * 100) / 100
-        : Math.min(Math.round(Number(discountInput) || 0 * 100) / 100, calculatedSubtotal);
-      const calculatedTotal = Math.round((calculatedSubtotal + calculatedTax - calculatedDiscount + (Number(packagingCharge) || 0)) * 100) / 100;
-
-      const newOrder = createOrder({
-        source: sourceMap[orderType], orderType,
-        customerName: customerPhone ? "Guest" : "Walk-in Customer",
-        customerPhone: customerPhone || "",
-        customerAddress: orderType === "DIRECT_DELIVERY" ? (customerAddress || "") : undefined,
-        platformOrderId: (orderType === "SWIGGY" || orderType === "ZOMATO") ? (platformOrderId || "").trim() : undefined,
-        tableId: orderType === "DINE_IN" ? selectedTable : null,
+      const calculatedDiscount = discountMode === "percentage"
+        ? calculatedSubtotal * (Number(discountInput) / 100)
+        : Number(discountInput);
+      const calculatedTax = (calculatedSubtotal - calculatedDiscount) * 0.18;
+      const calculatedTotal = calculatedSubtotal - calculatedDiscount + calculatedTax + Number(packagingCharge);
+      
+      const paymentBreakdown = calculateCartTotals({
         items: orderItems,
-        subtotal: calculatedSubtotal, 
-        discountAmount: calculatedDiscount, 
-        taxAmount: calculatedTax,
-        packagingAmount: Number(packagingCharge) || 0, 
-        total: calculatedTotal,
-        paymentStatus: (paymentBreakdown.length > 1) ? "PARTIAL" : (paymentBreakdown.length === 1 && paymentBreakdown[0].method === "COD") ? "COD" : "PAID",
-        paymentMethod: paymentBreakdown.length > 1 ? "SPLIT" : (paymentBreakdown[0]?.method || "CASH"),
-        paymentBreakdown: paymentBreakdown || [],
-        notes: `${(orderNotes || "").trim().slice(0, 400)} [MANAGER OVERRIDE: LOW STOCK]`.trim(),
+        discountInput,
+        discountMode,
+        packagingCharge,
+        taxRate: 0.18
+      });
+      
+      const newOrder = createOrder({
+        items: orderItems,
+        orderType,
+        tableId: selectedTable?.id || null,
+        customerPhone: customerPhone.trim() || null,
+        customerAddress: customerAddress.trim() || null,
+        platformOrderId: platformOrderId.trim() || null,
+        pax,
+        discountInput,
+        discountMode,
+        packagingCharge,
+        orderNotes: (orderNotes || "").trim().slice(0, ORDER_NOTES_MAX),
         createdBy: "local-user"
       });
       setStockWarningModal(null);
@@ -738,7 +941,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     } finally {
       setIsPlacingOrder(false);
     }
-  }, [isPlacingOrder, stockWarningModal, cartSubtotal, cartDiscount, cartTax, cartTotal, paymentBreakdown, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes, showToast]);
+  }, [isPlacingOrder, stockWarningModal, cartSubtotal, cartDiscount, cartTax, cartTotal, paymentBreakdown, orderType, selectedTable, customerPhone, customerAddress, platformOrderId, pax, discountInput, discountMode, packagingCharge, orderNotes]);
 
   // ── Active orders helpers ─────────────────────────────────────────────────
   const isStatusFilter = f => STATUS_FILTERS.includes(f);
@@ -752,23 +955,43 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
 
   const filtered = useMemo(() => {
     let result = orders || [];
+    // PERFORMANCE: Early return for no filter
+    if (filter === "ALL" && !search.trim()) return result.slice();
+    
     if (filter !== "ALL") {
       if (isStatusFilter(filter)) result = result.filter(o => o?.status === filter);
       else if (isSrcFilter(filter)) result = result.filter(o => o?.source === filter);
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
+      // PERFORMANCE: Cache computed values to avoid repeated function calls
       result = result.filter(o => {
         if (!o) return false;
         let name = "", items = "";
         try { name = (getOrderCustomerName(o) || "").toLowerCase(); } catch (_e) { /* non-fatal */ }
         try { items = (getOrderDisplayItems(o) || "").toLowerCase(); } catch (_e) { /* non-fatal */ }
         const id = typeof o.id === "string" ? o.id.toLowerCase() : "";
-        return name.includes(q) || id.includes(q) || (o.customerPhone || "").includes(q) || items.includes(q);
+        const phone = (o.customerPhone || "").toLowerCase();
+        // PERFORMANCE: Use indexOf instead of includes for slightly better performance
+        return name.indexOf(q) >= 0 || id.indexOf(q) >= 0 || phone.indexOf(q) >= 0 || items.indexOf(q) >= 0;
       });
     }
     return result.slice();
   }, [orders, filter, search]);
+
+  // PERFORMANCE: Pagination for large datasets
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
+  const paginated = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, page]);
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
 
   const toggleSelect = useCallback(id => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }), []);
 
@@ -803,7 +1026,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     }));
     if (status === "COMPLETED") showToast("Order completed");
     else if (status === "CANCELLED") showToast("Order cancelled");
-  }, [setOrders, applyStatusSideEffects, showToast]);
+  }, [setOrders, applyStatusSideEffects]);
 
   const openVoidModal = useCallback(order => {
     if (!order || ["COMPLETED", "CANCELLED"].includes(order.status)) return;
@@ -836,7 +1059,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
       showToast("Refund processed");
     }
     closeRefundVoidModal();
-  }, [refundVoidModal, applyStatusSideEffects, setOrders, showToast, closeRefundVoidModal]);
+  }, [refundVoidModal, applyStatusSideEffects, setOrders, closeRefundVoidModal]);
 
   const advanceSelected = useCallback(() => {
     if (!selected.size) return;
@@ -850,7 +1073,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     }));
     setSelected(new Set());
     showToast(moved > 0 ? `Advanced ${moved} order${moved !== 1 ? "s" : ""}` : "No eligible orders");
-  }, [selected, setOrders, applyStatusSideEffects, showToast]);
+  }, [selected, setOrders, applyStatusSideEffects]);
 
   const cancelSelected = useCallback(() => {
     if (!selected.size) return;
@@ -863,7 +1086,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
     }));
     setSelected(new Set());
     showToast(n > 0 ? `Cancelled ${n} order${n !== 1 ? "s" : ""}` : "No eligible orders");
-  }, [selected, setOrders, applyStatusSideEffects, showToast]);
+  }, [selected, setOrders, applyStatusSideEffects]);
 
   const activeCount = orders.filter(o => !["COMPLETED", "CANCELLED"].includes(o.status)).length;
 
@@ -885,28 +1108,29 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
         }
       `}</style>
 
-      {/* Premium Mode Toggle */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: C.bg3, borderRadius: 14, padding: 5, border: `1px solid ${C.border}` }}>
+      {/* Mode Toggle */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 24, background: "var(--cafe-bg-surface)", borderRadius: 12, padding: 5, border: "1px solid var(--cafe-border-light)" }}>
         {[
           { id: "active", label: "Live Orders", icon: "📋", badge: activeCount > 0 ? activeCount : null },
-          { id: "pos", label: "New Order", icon: "➕", badge: cart.items.length > 0 ? cart.items.length : null },
+          { id: "pos",    label: "New Order",   icon: "➕", badge: cart.items.length > 0 ? cart.items.length : null },
         ].map(({ id, label: lbl, icon, badge }) => (
           <button key={id} className="orders-mode-btn" onClick={() => setMode(id)} style={{
-            flex: 1, padding: "11px 16px", borderRadius: 10, border: "none",
-            background: mode === id ? `linear-gradient(135deg, ${C.amberDim} 0%, ${C.bg2} 100%)` : "transparent",
-            color: mode === id ? C.amber2 : C.text3,
+            flex: 1, padding: "10px 16px", borderRadius: 9, border: "none",
+            background: mode === id ? "var(--cafe-accent)" : "transparent",
+            color: mode === id ? "#fff" : "var(--cafe-text-secondary)",
             fontSize: 13, fontWeight: mode === id ? 700 : 500, cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
             transition: "all .2s",
-            boxShadow: mode === id ? `0 0 0 1px ${C.amber3}, 0 4px 12px rgba(212,146,42,0.15)` : "none",
+            boxShadow: mode === id ? "0 2px 8px rgba(0,0,0,0.12)" : "none",
           }}>
             <span style={{ fontSize: 15 }}>{icon}</span>
             {lbl}
             {badge !== null && <span style={{
-              background: mode === id ? C.amber3 : C.bg4,
-              color: mode === id ? "#1a1208" : C.text3,
-              fontSize: 10, fontFamily: "monospace", fontWeight: 800,
-              padding: "2px 7px", borderRadius: 20, minWidth: 20, textAlign: "center"
+              background: mode === id ? "rgba(255,255,255,0.25)" : "var(--cafe-bg-card)",
+              color: mode === id ? "#fff" : "var(--cafe-text-secondary)",
+              border: `1px solid ${mode === id ? "rgba(255,255,255,0.3)" : "var(--cafe-border-light)"}`,
+              fontSize: 11, fontWeight: 700,
+              padding: "2px 7px", borderRadius: 6, minWidth: 20, textAlign: "center"
             }}>{badge}</span>}
           </button>
         ))}
@@ -931,24 +1155,24 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             const revenue = paidOrders.reduce((s, o) => s + getOrderAmount(o), 0);
             const avg = Math.round(revenue / Math.max(1, paidOrders.length));
             return (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10, marginBottom: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 24 }}>
                 {[
-                  { icon: "🍽", label: "In Kitchen", val: activeOrders.length, sub: "active orders", color: C.amber2, glow: C.amberDim, urgent: false },
-                  { icon: "⚡", label: "Need Action", val: needAction, sub: needAction > 0 ? "waiting now" : "all caught up", color: needAction > 0 ? C.red : C.green, glow: needAction > 0 ? C.redBg : C.greenBg, urgent: needAction > 0 },
-                  { icon: "💰", label: "Revenue", val: "₹" + revenue.toLocaleString(), sub: `${paidOrders.length} orders`, color: C.green, glow: C.greenBg, urgent: false },
-                  { icon: "📊", label: "Avg Order", val: "₹" + avg.toLocaleString(), sub: "per ticket", color: C.blue, glow: C.blueBg, urgent: false },
+                  { icon: "🍽️", label: "In Kitchen",  val: activeOrders.length,              sub: "active orders",   color: "var(--cafe-accent)",  bg: "var(--cafe-accent-bg)",         border: "var(--cafe-accent-border)" },
+                  { icon: "⚡",  label: "Need Action", val: needAction,                        sub: needAction > 0 ? "waiting now" : "all good", color: needAction > 0 ? "#ef4444" : "#22c55e", bg: needAction > 0 ? "rgba(239,68,68,0.07)" : "rgba(34,197,94,0.07)", border: needAction > 0 ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)" },
+                  { icon: "💰",  label: "Revenue",     val: "₹" + revenue.toLocaleString(),   sub: `${paidOrders.length} orders`,   color: "#22c55e",             bg: "rgba(34,197,94,0.07)",          border: "rgba(34,197,94,0.25)" },
+                  { icon: "📊",  label: "Avg Order",   val: "₹" + avg.toLocaleString(),        sub: "per ticket",     color: "#3b82f6",             bg: "rgba(59,130,246,0.07)",         border: "rgba(59,130,246,0.25)" },
                 ].map(m => (
                   <div key={m.label} style={{
-                    background: C.bg2,
-                    border: `1px solid ${m.urgent ? C.redBorder : C.border}`,
-                    borderRadius: 14, padding: "16px 16px 14px",
-                    boxShadow: `0 4px 12px ${m.glow}`,
-                    animation: m.urgent ? "pulse 1.5s infinite" : "none"
+                    background: m.bg,
+                    border: `1px solid ${m.border}`,
+                    borderRadius: 14, padding: "16px",
+                    position: "relative", overflow: "hidden",
                   }}>
-                    <div style={{ fontSize: 20, marginBottom: 6 }}>{m.icon}</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, fontFamily: "monospace", color: m.color, lineHeight: 1, letterSpacing: "-0.03em" }}>{m.val}</div>
-                    <div style={{ fontSize: 11, color: C.text2, fontWeight: 700, marginTop: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{m.label}</div>
-                    <div style={{ fontSize: 10, color: C.text3, marginTop: 2 }}>{m.sub}</div>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: m.color, opacity: 0.8, borderRadius: "14px 14px 0 0" }} />
+                    <div style={{ fontSize: 20, marginBottom: 10 }}>{m.icon}</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: m.color, lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{m.val}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--cafe-text-primary)", marginTop: 6 }}>{m.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", marginTop: 2 }}>{m.sub}</div>
                   </div>
                 ))}
               </div>
@@ -960,15 +1184,15 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             const sops = PEAK_SOP.filter(s => counts[s.stat] >= s.threshold);
             if (!sops.length) return null;
             return (
-              <div style={{ marginBottom: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ marginBottom: 18, display: "flex", flexDirection: "column", gap: 8 }}>
                 {sops.map(s => (
-                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderRadius: 9, background: s.level === "alert" ? C.redBg : C.amberBg, border: `1px solid ${s.level === "alert" ? C.redBorder : C.amberBorder}` }}>
-                    <span style={{ fontSize: 15 }}>{s.level === "alert" ? "🔴" : "🟡"}</span>
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 6, background: s.level === "alert" ? C.redBg : C.warningBg, border: "1px solid " + (s.level === "alert" ? C.redBorder : C.warningBorder) }}>
+                    <span style={{ fontSize: 16 }}>{s.level === "alert" ? "🔴" : "🟡"}</span>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: s.level === "alert" ? C.red : C.amber, marginRight: 8 }}>{s.label}</span>
-                      <span style={{ fontSize: 11, color: C.text2 }}>{s.msg}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: s.level === "alert" ? C.red : C.warning, marginRight: 10 }}>{s.label}</span>
+                      <span style={{ fontSize: 13, color: C.text2 }}>{s.msg}</span>
                     </div>
-                    <span style={{ fontFamily: "monospace", fontSize: 11, color: C.text3 }}>{counts[s.stat]} / {s.threshold}</span>
+                    <span style={{ fontFamily: "monospace", fontSize: 12, color: C.text3, fontWeight: 500 }}>{counts[s.stat]} / {s.threshold}</span>
                   </div>
                 ))}
               </div>
@@ -976,33 +1200,68 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
           })()}
 
           {/* Filters */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "nowrap", minWidth: "max-content" }}>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-                  <div style={{ display: "flex", background: C.bg3, borderRadius: 8, padding: 4, gap: 4, marginRight: 8 }}>
-                    <button onClick={() => setViewMode("cards")} style={{ ...btn(viewMode === "cards" ? "primary" : "ghost"), padding: "8px", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center" }} title="Cards View">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ overflowX: "auto", paddingBottom: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "nowrap", minWidth: "max-content" }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ display: "flex", background: "var(--cafe-bg-surface)", borderRadius: 8, padding: 3, gap: 2, border: "1px solid var(--cafe-border-light)", marginRight: 12 }}>
+                    <button onClick={() => setViewMode("cards")} style={{ padding: "6px", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: viewMode === "cards" ? "var(--cafe-bg-card)" : "transparent", color: viewMode === "cards" ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", borderRadius: 6, cursor: "pointer", boxShadow: viewMode === "cards" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }} title="Cards View">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     </button>
-                    <button onClick={() => setViewMode("list")} style={{ ...btn(viewMode === "list" ? "primary" : "ghost"), padding: "8px", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center" }} title="List View">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    <button onClick={() => setViewMode("list")} style={{ padding: "6px", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", border: "none", background: viewMode === "list" ? "var(--cafe-bg-card)" : "transparent", color: viewMode === "list" ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", borderRadius: 6, cursor: "pointer", boxShadow: viewMode === "list" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }} title="List View">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                     </button>
                   </div>
                   <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.text3 }}>🔍</span>
-                    <input style={{ ...input, paddingLeft: 28, width: 180 }} placeholder="Search orders…" value={search} onChange={e => setSearch(e.target.value)} />
+                    <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "var(--cafe-text-secondary)" }}>🔍</span>
+                    <input style={{ ...input, paddingLeft: 32, width: 220, borderRadius: 8, height: 38, border: "1px solid var(--cafe-border-light)", background: "var(--cafe-bg-card)", color: "var(--cafe-text-primary)" }} placeholder="Search orders…" value={search} onChange={e => setSearch(e.target.value)} />
                   </div>
-                  <button onClick={() => setFilter("ALL")} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${filter === "ALL" ? C.amber3 : C.border2}`, background: filter === "ALL" ? C.amberDim : C.bg3, color: filter === "ALL" ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, minHeight: 44 }}>
-                    All <span style={{ background: C.bg4, color: C.text3, fontSize: 10, padding: "2px 5px", borderRadius: 3, fontFamily: "monospace" }}>{orders.length}</span>
+                  <button 
+                    onClick={() => setFilter("ALL")} 
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      border: "1px solid " + (filter === "ALL" ? "var(--cafe-accent)" : "var(--cafe-border-light)"),
+                      background: filter === "ALL" ? "var(--cafe-accent-bg)" : "var(--cafe-bg-card)",
+                      color: filter === "ALL" ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      height: 38,
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    All <span style={{ background: filter === "ALL" ? "rgba(255,255,255,0.4)" : "var(--cafe-bg-surface)", color: filter === "ALL" ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", fontSize: 11, padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>{orders.length}</span>
                   </button>
                   {STATUS_FILTERS.concat(SOURCE_FILTERS.slice(1)).map(f => {
                     const active = filter === f;
                     const count = isStatusFilter(f) ? orders.filter(o => o.status === f).length : orders.filter(o => o.source === f).length;
                     if (count === 0 && !active) return null;
                     return (
-                      <button key={f} onClick={() => setFilter(f)} style={{ padding: "10px 12px", borderRadius: 6, border: `1px solid ${active ? C.amber3 : C.border2}`, background: active ? C.amberDim : C.bg3, color: active ? C.amber2 : C.text2, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, minHeight: 44 }}>
+                      <button 
+                        key={f} 
+                        onClick={() => setFilter(f)} 
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: 8,
+                          border: "1px solid " + (active ? "var(--cafe-accent)" : "var(--cafe-border-light)"),
+                          background: active ? "var(--cafe-accent-bg)" : "var(--cafe-bg-card)",
+                          color: active ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          height: 38,
+                          transition: "all 0.2s",
+                        }}
+                      >
                         {f === "WALK_IN" ? "Walk-in" : f === "DIRECT_DELIVERY" ? "Delivery" : f.charAt(0) + f.slice(1).toLowerCase().replace(/_/g, " ")}
-                        {count > 0 && <span style={{ background: C.bg4, color: C.text3, fontSize: 10, padding: "2px 5px", borderRadius: 3, fontFamily: "monospace" }}>{count}</span>}
+                        {count > 0 && <span style={{ background: active ? "rgba(255,255,255,0.4)" : "var(--cafe-bg-surface)", color: active ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", fontSize: 11, padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>{count}</span>}
                       </button>
                     );
                   })}
@@ -1012,11 +1271,11 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
           </div>
 
           {selected.size > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10, background: C.amberDim, border: `1px solid ${C.amber3}`, borderRadius: 10, padding: "10px 14px", marginBottom: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: C.amber2, fontFamily: "monospace", fontWeight: 700 }}>{selected.size} order{selected.size !== 1 ? "s" : ""} selected</span>
-              <button style={{ ...btn("primary"), fontSize: 12, padding: "8px 14px" }} onClick={advanceSelected}>Advance all</button>
-              <button style={{ ...btn("danger"), fontSize: 12 }} onClick={cancelSelected}>Cancel all</button>
-              <button style={{ ...btn("ghost"), fontSize: 12, marginLeft: "auto" }} onClick={() => setSelected(new Set())}>Deselect</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.amberDim, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 14px", marginBottom: 16, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: C.text, fontFamily: "monospace", fontWeight: 400 }}>{selected.size} order{selected.size !== 1 && "s"} selected</span>
+              <button style={{ padding: "6px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 12, fontWeight: 400, cursor: "pointer" }} onClick={advanceSelected}>Advance all</button>
+              <button style={{ padding: "6px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 12, fontWeight: 400, cursor: "pointer" }} onClick={cancelSelected}>Cancel all</button>
+              <button style={{ padding: "6px 12px", borderRadius: 4, border: "none", background: "transparent", color: C.text3, fontSize: 12, fontWeight: 400, cursor: "pointer", marginLeft: "auto" }} onClick={() => setSelected(new Set())}>Deselect</button>
             </div>
           )}
 
@@ -1025,25 +1284,25 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             display: viewMode === "cards" ? "grid" : "flex", 
             flexDirection: viewMode === "cards" ? "row" : "column",
             gridTemplateColumns: viewMode === "cards" ? "repeat(auto-fill, minmax(320px, 1fr))" : "none",
-            gap: viewMode === "cards" ? 16 : 6 
+            gap: viewMode === "cards" ? 12 : 6 
           }}>
             {filtered.length === 0 && (
-              <div style={{ textAlign: "center", padding: "56px 24px", borderRadius: 16, background: C.bg2, border: `1px dashed ${C.border}` }}>
-                <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.3 }}>🍽</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.text2, marginBottom: 6 }}>
+              <div style={{ textAlign: "center", padding: "64px 32px", borderRadius: 8, background: C.bg2, border: "1px dashed " + C.border }}>
+                <div style={{ fontSize: 42, marginBottom: 14, opacity: 0.3 }}>🍽</div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: C.text2, marginBottom: 8 }}>
                   {search.trim() ? `No orders matching "${search}"` : filter !== "ALL" ? `No ${filter.toLowerCase().replace(/_/g, " ")} orders` : "All quiet right now"}
                 </div>
-                <div style={{ fontSize: 12, color: C.text3, marginBottom: 20 }}>
+                <div style={{ fontSize: 13, color: C.text3, marginBottom: 24 }}>
                   {search.trim() ? "Try a different search" : filter !== "ALL" ? "Switch to All to see everything" : "Ready to take the first order?"}
                 </div>
                 {!search.trim() && filter === "ALL" && (
-                  <button onClick={() => setMode("pos")} style={{ padding: "12px 28px", borderRadius: 12, border: "none", background: `linear-gradient(135deg, ${C.amber} 0%, ${C.amber2} 100%)`, color: "#1a0e00", fontSize: 14, fontWeight: 800, cursor: "pointer", boxShadow: `0 4px 16px ${C.amberDim}` }}>
+                  <button onClick={() => setMode("pos")} style={{ padding: "12px 24px", borderRadius: 6, border: "none", background: C.amber, color: "#000", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                     ➕ Take New Order
                   </button>
                 )}
               </div>
             )}
-            {filtered.map(o => {
+            {paginated.map(o => {
               const sc = STATUS_COLORS[o.status] || {};
               const src = SRC_COLORS[o.source] || {};
               const expanded = expandedId === o.id;
@@ -1065,62 +1324,62 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                 return (
                   <div key={o.id} className="orders-row" style={{
                     background: isOld ? "var(--cafe-danger-bg)" : "var(--cafe-bg-card)",
-                    border: `1px solid ${isOld ? "var(--cafe-danger-border)" : expanded ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`,
-                    borderRadius: 20,
+                    border: "1px solid " + (isOld ? "var(--cafe-danger-border)" : expanded ? "var(--cafe-accent)" : "var(--cafe-border-light)"),
+                    borderRadius: 18,
                     overflow: "hidden",
                     transition: "all .3s cubic-bezier(0.2, 0.8, 0.2, 1)",
-                    boxShadow: expanded ? "var(--cafe-shadow-lg)" : "var(--cafe-shadow-sm)",
+                    boxShadow: expanded ? "0 12px 32px rgba(0,0,0,0.12)" : "0 2px 8px rgba(0,0,0,0.04)",
                     display: "flex",
                     flexDirection: "column",
-                    minHeight: 220,
+                    minHeight: 240,
                     position: "relative"
                   }}>
                     {/* Top Progress Bar */}
                     {!isDone && (
                       <div style={{ height: 4, width: "100%", background: "var(--cafe-bg-surface)" }}>
-                        <div style={{ height: "100%", width: `${progressPct}%`, background: progressColor, transition: "width 1s linear" }} />
+                        <div style={{ height: "100%", width: progressPct + "%", background: progressColor, transition: "width 1s linear" }} />
                       </div>
                     )}
                     
                     {/* Header */}
-                    <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.bg4, border: `2px solid ${src.bg}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: C.text, flexShrink: 0, boxShadow: `0 0 10px ${src.bg}40` }}>
+                    <div style={{ padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--cafe-bg-surface)", border: "2px solid " + src.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "var(--cafe-text-primary)", flexShrink: 0, boxShadow: "0 0 12px " + src.bg + "40" }}>
                           {initials}
                         </div>
                         <div>
-                          <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>{customerName}</div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                            <span style={{ ...pill(src.bg, src.color), fontSize: 9 }}>{srcLabel(o.source)}</span>
-                            {o.tableId && <span style={{ fontSize: 10, color: C.text2, background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: 4, fontWeight: 700 }}>Table {o.tableId}</span>}
+                          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--cafe-text-primary)" }}>{customerName}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 5 }}>
+                            <span style={{ ...pill(src.bg, src.color), fontSize: 10, fontWeight: 700 }}>{srcLabel(o.source)}</span>
+                            {o.tableId && <span style={{ fontSize: 11, color: "var(--cafe-text-secondary)", background: "var(--cafe-bg-surface)", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>Table {o.tableId}</span>}
                           </div>
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 800, color: C.amber2 }}>₹{getOrderAmount(o)}</div>
-                        <div style={{ fontSize: 11, fontFamily: "monospace", color: isOld ? C.red : C.text3, fontWeight: 700, marginTop: 4 }}>
+                        <div style={{ fontFamily: "monospace", fontSize: 18, fontWeight: 800, color: "var(--cafe-accent)", letterSpacing: "-0.02em" }}>₹{getOrderAmount(o)}</div>
+                        <div style={{ fontSize: 12, fontFamily: "monospace", color: isOld ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)", fontWeight: 700, marginTop: 5 }}>
                           {timeElapsed} min ago
                         </div>
                       </div>
                     </div>
 
                     {/* Receipt Items Preview */}
-                    <div style={{ flex: 1, padding: "0 20px", marginTop: 4, cursor: "pointer" }} onClick={() => setExpandedId(expanded ? null : o.id)}>
-                      <div style={{ background: "var(--cafe-bg-surface)", borderRadius: 12, padding: "12px", border: `1px solid var(--cafe-border-light)`, maxHeight: expanded ? 400 : 70, overflow: "hidden", position: "relative" }}>
-                        <div style={{ fontSize: 13, color: "var(--cafe-text-primary)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                    <div style={{ flex: 1, padding: "0 22px", marginTop: 6, cursor: "pointer" }} onClick={() => setExpandedId(expanded ? null : o.id)}>
+                      <div style={{ background: "var(--cafe-bg-surface)", borderRadius: 13, padding: "14px", border: "1px solid var(--cafe-border-light)", maxHeight: expanded ? 400 : 80, overflow: "hidden", position: "relative" }}>
+                        <div style={{ fontSize: 14, color: "var(--cafe-text-primary)", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                           {getOrderDisplayItems(o).split(', ').map((item, i) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                               <span style={{ fontWeight: 600 }}>• {item.split(' x ')[1] || item}</span>
-                              <span style={{ color: "var(--cafe-text-tertiary)" }}>x{item.split(' x ')[0] || "1"}</span>
+                              <span style={{ color: "var(--cafe-text-tertiary)", fontWeight: 600 }}>x{item.split(' x ')[0] || "1"}</span>
                             </div>
                           ))}
                         </div>
                         {!expanded && (
-                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: `linear-gradient(transparent, var(--cafe-bg-surface))` }} />
+                          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 48, background: "linear-gradient(transparent, var(--cafe-bg-surface))" }} />
                         )}
                       </div>
                       {o.notes && expanded && (
-                        <div style={{ fontSize: 12, color: "var(--cafe-accent-dark)", marginTop: 10, background: "var(--cafe-accent-bg)", border: `1px dashed var(--cafe-accent-border)`, borderRadius: 8, padding: "8px 12px", fontWeight: 500 }}>
+                        <div style={{ fontSize: 13, color: "var(--cafe-accent-dark)", marginTop: 12, background: "var(--cafe-accent-bg)", border: "1px dashed var(--cafe-accent-border)", borderRadius: 10, padding: "10px 14px", fontWeight: 600 }}>
                           📝 {o.notes}
                         </div>
                       )}
@@ -1128,35 +1387,35 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
 
                     {/* Bottom Actions */}
                     <div style={{ 
-                      padding: "16px 20px", 
-                      borderTop: `1px solid var(--cafe-border-light)`,
-                      background: "var(--cafe-bg-elevated)",
+                      padding: "18px 22px", 
+                      borderTop: "1px solid var(--cafe-border-light)",
+                      background: "var(--cafe-bg-hover)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       marginTop: "auto"
                     }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: sc.color || "#555", boxShadow: `0 0 8px ${sc.color || "#555"}` }} />
-                        <span style={{ fontSize: 12, fontWeight: 700, color: sc.color || C.text2, textTransform: "uppercase", letterSpacing: "0.05em" }}>{sc.label || o.status}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 12, height: 12, borderRadius: "50%", background: sc.color || "#555", boxShadow: "0 0 10px " + (sc.color || "#555") }} />
+                        <span style={{ fontSize: 13, fontWeight: 800, color: sc.color || "var(--cafe-text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{sc.label || o.status}</span>
                       </div>
                       
                       {nextStatus && !isDone && (
                         <button
                           onClick={e => { e.stopPropagation(); updateStatus(o.id, nextStatus); }}
                           style={{ 
-                            padding: "10px 18px", 
+                            padding: "12px 20px", 
                             borderRadius: 12, 
-                            border: `1px solid ${sc.color || C.amber3}40`, 
-                            background: `${sc.color || C.amber}20`, 
-                            color: sc.color || C.amber2, 
-                            fontSize: 13, 
+                            border: "1px solid " + (sc.color || "var(--cafe-accent)") + "40", 
+                            background: (sc.color || "var(--cafe-accent)") + "20", 
+                            color: sc.color || "var(--cafe-accent)", 
+                            fontSize: 14, 
                             fontWeight: 800, 
                             cursor: "pointer", 
-                            transition: "all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)" 
+                            transition: "all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)" 
                           }}
-                          onMouseOver={e => { e.currentTarget.style.background = sc.color || C.amber; e.currentTarget.style.color = "#000"; e.currentTarget.style.transform = "scale(1.05)"; }}
-                          onMouseOut={e => { e.currentTarget.style.background = `${sc.color || C.amber}20`; e.currentTarget.style.color = sc.color || C.amber2; e.currentTarget.style.transform = "scale(1)"; }}
+                          onMouseOver={e => { e.currentTarget.style.background = sc.color || "var(--cafe-accent)"; e.currentTarget.style.color = "#1A1208"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)"; }}
+                          onMouseOut={e => { e.currentTarget.style.background = (sc.color || "var(--cafe-accent)") + "20"; e.currentTarget.style.color = sc.color || "var(--cafe-accent)"; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
                         >
                           → {STATUS_FLOW_LABEL[o.status]}
                         </button>
@@ -1169,62 +1428,65 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               // List View Render
               return (
                 <div key={o.id} className="orders-row" style={{
-                  background: isOld ? "var(--cafe-danger-bg)" : expanded ? "var(--cafe-bg-surface)" : "var(--cafe-bg-card)",
+                  background: isOld ? "var(--cafe-danger-bg)" : expanded ? "var(--cafe-bg-hover)" : "var(--cafe-bg-card)",
                   border: `1px solid ${isOld ? "var(--cafe-danger-border)" : expanded ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`,
-                  borderRadius: 16, overflow: "hidden",
-                  transition: "all .2s ease",
-                  marginBottom: 8,
-                  boxShadow: expanded ? "var(--cafe-shadow-md)" : "none",
+                  borderRadius: 14, overflow: "hidden",
+                  transition: "all .25s ease",
+                  marginBottom: 10,
+                  boxShadow: expanded ? "0 8px 24px rgba(0,0,0,0.1)" : "none",
                 }}>
                   {/* Main row */}
-                  <div className="orders-list-row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-                      <input type="checkbox" checked={selected.has(o.id)} onChange={e => { e.stopPropagation(); toggleSelect(o.id); }} style={{ accentColor: "var(--cafe-accent)", cursor: "pointer", width: 16, height: 16 }} />
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--cafe-bg-surface)", border: `1.5px solid ${src.bg}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "var(--cafe-text-primary)", flexShrink: 0 }}>
+                  <div className="orders-list-row" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+                      <input type="checkbox" checked={selected.has(o.id)} onChange={e => { e.stopPropagation(); toggleSelect(o.id); }} style={{ accentColor: "var(--cafe-accent)", cursor: "pointer", width: 18, height: 18 }} />
+                      <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--cafe-bg-surface)", border: `2px solid ${src.bg}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: "var(--cafe-text-primary)", flexShrink: 0 }}>
                         {initials}
                       </div>
                     </div>
 
                     {/* Customer + items */}
                     <div className="orders-list-meta" style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setExpandedId(expanded ? null : o.id)}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerName}</span>
-                        <span style={{ ...pill(src.bg, src.color), fontSize: 9 }}>{srcLabel(o.source)}</span>
-                        {o.tableId && <span style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", background: "var(--cafe-bg-surface)", padding: "1px 5px", borderRadius: 4, fontWeight: 700 }}>T{o.tableId}</span>}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700, color: "var(--cafe-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customerName}</span>
+                        <span style={{ ...pill(src.bg, src.color), fontSize: 10, fontWeight: 700 }}>{srcLabel(o.source)}</span>
+                        {o.tableId && <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", background: "var(--cafe-bg-surface)", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>T{o.tableId}</span>}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--cafe-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.8 }}>{getOrderDisplayItems(o)}</div>
+                      <div style={{ fontSize: 13, color: "var(--cafe-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.85 }}>{getOrderDisplayItems(o)}</div>
                     </div>
 
                     {/* Amount + time */}
-                    <div className="orders-list-amount" style={{ textAlign: "right", flexShrink: 0, padding: "0 8px" }}>
-                      <div style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 800, color: "var(--cafe-accent)" }}>₹{getOrderAmount(o)}</div>
-                      <div style={{ fontSize: 10, fontFamily: "monospace", color: isOld ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)", fontWeight: 700, marginTop: 2 }}>{timeElapsed}m{isOld ? " ⚠" : ""}</div>
+                    <div className="orders-list-amount" style={{ textAlign: "right", flexShrink: 0, padding: "0 10px" }}>
+                      <div style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 800, color: "var(--cafe-accent)", letterSpacing: "-0.02em" }}>₹{getOrderAmount(o)}</div>
+                      <div style={{ fontSize: 11, fontFamily: "monospace", color: isOld ? "var(--cafe-danger)" : "var(--cafe-text-tertiary)", fontWeight: 700, marginTop: 3 }}>{timeElapsed}m{isOld ? " ⚠" : ""}</div>
                     </div>
 
                     {/* Status badge */}
-                    <div className="orders-list-status" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, minWidth: 100, justifyContent: "flex-end" }}>
-                      <span style={{ ...pill(sc.bg, sc.color, sc.border), fontSize: 10, fontWeight: 800 }}>{sc.label || o.status}</span>
+                    <div className="orders-list-status" style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, minWidth: 110, justifyContent: "flex-end" }}>
+                      <span style={{ ...pill(sc.bg, sc.color, sc.border), fontSize: 11, fontWeight: 800 }}>{sc.label || o.status}</span>
                     </div>
 
                     {/* Quick advance button */}
-                    <div className="orders-list-actions" style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    <div className="orders-list-actions" style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
                       {nextStatus && !isDone && (
                         <button
                           onClick={e => { e.stopPropagation(); updateStatus(o.id, nextStatus); }}
                           style={{ 
-                            padding: "8px 14px", 
+                            padding: "10px 16px", 
                             borderRadius: 10, 
-                            border: `1px solid ${sc.color || C.amber3}40`, 
-                            background: `${sc.color || C.amber}20`, 
-                            color: sc.color || C.amber2, 
-                            fontSize: 11, 
+                            border: `1px solid ${sc.color || "var(--cafe-accent)"}40`, 
+                            background: `${sc.color || "var(--cafe-accent)"}20`, 
+                            color: sc.color || "var(--cafe-accent)", 
+                            fontSize: 12, 
                             fontWeight: 800, 
                             cursor: "pointer",
-                            whiteSpace: "nowrap"
+                            whiteSpace: "nowrap",
+                            transition: "all 0.2s"
                           }}
+                          onMouseOver={e => e.currentTarget.style.background = sc.color || "var(--cafe-accent-bg)"}
+                          onMouseOut={e => e.currentTarget.style.background = `${sc.color || "var(--cafe-accent)"}20`}
                         >→ {STATUS_FLOW_LABEL[o.status]}</button>
                       )}
-                      <button onClick={(e) => { e.stopPropagation(); setExpandedId(expanded ? null : o.id); }} style={{ background: "none", border: "none", color: "var(--cafe-text-tertiary)", fontSize: 12, cursor: "pointer", padding: "8px 4px" }}>
+                      <button onClick={(e) => { e.stopPropagation(); setExpandedId(expanded ? null : o.id); }} style={{ background: "none", border: "none", color: "var(--cafe-text-tertiary)", fontSize: 14, cursor: "pointer", padding: "8px 6px" }}>
                         {expanded ? "▲" : "▼"}
                       </button>
                     </div>
@@ -1362,6 +1624,59 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               );
             })}
           </div>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              gap: 12, 
+              padding: '20px 0',
+              borderTop: '1px solid var(--cafe-border-light)',
+              marginTop: 16 
+            }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid var(--cafe-border)',
+                  background: page === 1 ? 'var(--cafe-bg-surface)' : 'var(--cafe-bg-card)',
+                  color: page === 1 ? 'var(--cafe-text-tertiary)' : 'var(--cafe-text-primary)',
+                  cursor: page === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600
+                }}
+              >
+                ← Previous
+              </button>
+              <span style={{ 
+                fontSize: 14, 
+                fontWeight: 600, 
+                color: 'var(--cafe-text-secondary)',
+                padding: '0 16px'
+              }}>
+                Page {page} of {totalPages} ({filtered.length} orders)
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '1px solid var(--cafe-border)',
+                  background: page === totalPages ? 'var(--cafe-bg-surface)' : 'var(--cafe-bg-card)',
+                  color: page === totalPages ? 'var(--cafe-text-tertiary)' : 'var(--cafe-text-primary)',
+                  cursor: page === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600
+                }}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </>
       ) : (
         /* ── POS MODE ────────────────────────────────────────────────────── */
@@ -1427,13 +1742,13 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
           `}</style>
 
           {/* ── Mobile tab bar (shown only on phone) ── */}
-          <div className="pos-mobile-tab-bar" style={{ display: "flex", gap: 0, marginBottom: 10, background: C.bg3, borderRadius: 10, padding: 3 }}>
+          <div className="pos-mobile-tab-bar" style={{ display: "flex", gap: 6, marginBottom: 14, background: "var(--cafe-bg-surface)", borderRadius: 12, padding: 5, border: "1px solid var(--cafe-border-light)" }}>
             {cart.items.length === 0 
               ? [["menu", "🍽 Menu"], ["checkout", "🧾 New Order"]].map(([t, lbl]) => (
-                  <button key={t} onClick={() => setPosMobileTab(t)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: posMobileTab === t ? C.bg4 : "transparent", color: posMobileTab === t ? C.amber2 : C.text3, fontSize: 13, fontWeight: posMobileTab === t ? 700 : 400, cursor: "pointer" }}>{lbl}</button>
+                  <button key={t} onClick={() => setPosMobileTab(t)} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: posMobileTab === t ? "var(--cafe-accent)" : "transparent", color: posMobileTab === t ? "#1A1208" : "var(--cafe-text-secondary)", fontSize: 14, fontWeight: posMobileTab === t ? 800 : 600, cursor: "pointer", transition: "all 0.2s" }}>{lbl}</button>
                 ))
               : [["menu", "🍽 Menu"], ["cart", `🛒 Cart (${cart.items.length})`], ["checkout", "🧾 Checkout"]].map(([t, lbl]) => (
-                  <button key={t} onClick={() => setPosMobileTab(t)} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: posMobileTab === t ? C.bg4 : "transparent", color: posMobileTab === t ? C.amber2 : C.text3, fontSize: 13, fontWeight: posMobileTab === t ? 700 : 400, cursor: "pointer" }}>{lbl}</button>
+                  <button key={t} onClick={() => setPosMobileTab(t)} style={{ flex: 1, padding: "12px 0", borderRadius: 10, border: "none", background: posMobileTab === t ? "var(--cafe-accent)" : "transparent", color: posMobileTab === t ? "#1A1208" : "var(--cafe-text-secondary)", fontSize: 14, fontWeight: posMobileTab === t ? 800 : 600, cursor: "pointer", transition: "all 0.2s" }}>{lbl}</button>
                 ))}
           </div>
 
@@ -1450,52 +1765,52 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             />
 
             {/* Menu Grid */}
-            <div className="pos-menu-panel" style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 12, padding: 12, overflowY: "auto", display: isMobile && posMobileTab !== "menu" ? "none" : "flex", flexDirection: "column" }}>
+            <div className="pos-menu-panel" style={{ background: "var(--cafe-bg-hover)", border: `1px solid var(--cafe-border-light)`, borderRadius: 14, padding: 16, overflowY: "auto", display: isMobile && posMobileTab !== "menu" ? "none" : "flex", flexDirection: "column" }}>
               {/* ── Kitchen status widget ── */}
               {(() => {
                 const pending = orders.filter(o => ["NEW","ACCEPTED","PREPARING"].includes(o.status));
                 const ready   = orders.filter(o => o.status === "READY");
                 if (pending.length === 0 && ready.length === 0) return null;
                 return (
-                  <div style={{ marginBottom: 12, borderRadius: 12, overflow: "hidden", border: `1px solid ${C.amber3}` }}>
-                    <div onClick={() => setShowPosKitchenQueue(!showPosKitchenQueue)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.amberDim, cursor: "pointer" }}>
-                      <span style={{ fontSize: 16 }}>🔥</span>
+                  <div style={{ marginBottom: 16, borderRadius: 13, overflow: "hidden", border: `1px solid var(--cafe-accent-border)` }}>
+                    <div onClick={() => setShowPosKitchenQueue(!showPosKitchenQueue)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--cafe-accent-bg)", cursor: "pointer" }}>
+                      <span style={{ fontSize: 18 }}>🔥</span>
                       <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: C.amber2 }}>Kitchen Active</span>
-                        <span style={{ marginLeft: 10, fontSize: 11, color: C.text3 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "var(--cafe-accent)" }}>Kitchen Active</span>
+                        <span style={{ marginLeft: 12, fontSize: 12, color: "var(--cafe-text-secondary)" }}>
                           {pending.length > 0 && `${pending.length} cooking`}
                           {pending.length > 0 && ready.length > 0 && " · "}
-                          {ready.length > 0 && <span style={{ color: "#4ade80", fontWeight: 700 }}>{ready.length} ready 🔔</span>}
+                          {ready.length > 0 && <span style={{ color: "#22c55e", fontWeight: 700 }}>{ready.length} ready 🔔</span>}
                         </span>
                       </div>
-                      <button onClick={e => { e.stopPropagation(); setShowKitchenStatusPanel(true); }} style={{ fontSize: 11, color: C.amber2, background: "none", border: `1px solid ${C.amber3}`, borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>Full View</button>
-                      <span style={{ color: C.amber, fontSize: 11, marginLeft: 4 }}>{showPosKitchenQueue ? "▲" : "▼"}</span>
+                      <button onClick={e => { e.stopPropagation(); setShowKitchenStatusPanel(true); }} style={{ fontSize: 12, color: "var(--cafe-accent)", background: "none", border: `1px solid var(--cafe-accent)`, borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>Full View</button>
+                      <span style={{ color: "var(--cafe-accent)", fontSize: 12, marginLeft: 6 }}>{showPosKitchenQueue ? "▲" : "▼"}</span>
                     </div>
                     {showPosKitchenQueue && (
-                      <div style={{ background: C.bg3, padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6, maxHeight: 280, overflowY: "auto" }}>
+                      <div style={{ background: "var(--cafe-bg-surface)", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
                         {ready.map(o => (
-                          <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 9, background: "#052e16", border: "1px solid #16a34a" }}>
-                            <span style={{ fontSize: 16 }}>🔔</span>
+                          <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: "#052e16", border: "1px solid #16a34a" }}>
+                            <span style={{ fontSize: 18 }}>🔔</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 12, fontWeight: 800, color: "#4ade80" }}>{getOrderCustomerName(o)} — READY</div>
-                              <div style={{ fontSize: 11, color: C.text3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getOrderDisplayItems(o)}</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#4ade80" }}>{getOrderCustomerName(o)} — READY</div>
+                              <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getOrderDisplayItems(o)}</div>
                             </div>
-                            <button onClick={() => updateStatus(o.id, "COMPLETED")} style={{ padding: "5px 10px", borderRadius: 7, border: "none", background: "#16a34a", color: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✓ Done</button>
+                            <button onClick={() => updateStatus(o.id, "COMPLETED")} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✓ Done</button>
                           </div>
                         ))}
                         {pending.map(o => {
                           const mins = getMinutesElapsed(o.createdAt);
                           const isUrgent = mins > 15;
                           return (
-                            <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 9, background: isUrgent ? C.redBg : C.bg4, border: `1px solid ${isUrgent ? C.redBorder : C.border}` }}>
-                              <span style={{ fontSize: 14, flexShrink: 0 }}>👨‍🍳</span>
+                            <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: isUrgent ? "var(--cafe-danger-bg)" : "var(--cafe-bg-card)", border: `1px solid ${isUrgent ? "var(--cafe-danger-border)" : "var(--cafe-border-light)"}` }}>
+                              <span style={{ fontSize: 16, flexShrink: 0 }}>👨‍🍳</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: isUrgent ? C.red : C.text, marginBottom: 1 }}>{getOrderCustomerName(o)} <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 500, color: C.text3 }}>{{ NEW: "New", ACCEPTED: "Accepted", PREPARING: "Cooking" }[o.status]}</span></div>
-                                <div style={{ fontSize: 11, color: C.text3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getOrderDisplayItems(o)}</div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: isUrgent ? "var(--cafe-danger)" : "var(--cafe-text-primary)", marginBottom: 2 }}>{getOrderCustomerName(o)} <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 500, color: "var(--cafe-text-tertiary)" }}>{{ NEW: "New", ACCEPTED: "Accepted", PREPARING: "Cooking" }[o.status]}</span></div>
+                                <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getOrderDisplayItems(o)}</div>
                               </div>
                               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 800, color: isUrgent ? C.red : C.amber2, fontFamily: "monospace" }}>{mins}m</div>
-                                {isUrgent && <div style={{ fontSize: 9, color: C.red, fontWeight: 700 }}>LATE</div>}
+                                <div style={{ fontSize: 13, fontWeight: 800, color: isUrgent ? "var(--cafe-danger)" : "var(--cafe-accent)", fontFamily: "monospace" }}>{mins}m</div>
+                                {isUrgent && <div style={{ fontSize: 10, color: "var(--cafe-danger)", fontWeight: 700 }}>LATE</div>}
                               </div>
                             </div>
                           );
@@ -1506,7 +1821,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                 );
               })()}
 
-              <div style={{ marginBottom: 10 }}>
+              <div style={{ marginBottom: 14 }}>
                 <SearchBar value={menuQuery} onChange={setMenuQuery} menuItems={menuItems || []} onSelectItem={addToCart} placeholder="Search menu (name, category)…" />
               </div>
               <MenuGrid
@@ -1632,20 +1947,20 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
 
           {/* ── MOBILE CHECKOUT SCREEN — full-page overlay ── */}
           {isMobile && posMobileTab === "checkout" && (
-            <div className="pos-checkout-screen" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: C.bg1, zIndex: 100, display: "flex", flexDirection: "column" }}>
+            <div className="pos-checkout-screen">
               {/* Sticky header */}
-              <div className="pos-mobile-header" style={{ padding: "12px 16px", background: C.bg2, borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <button onClick={() => setPosMobileTab("cart")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: C.amber2, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>
-                    ← Back
-                  </button>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: C.text }}>Place Order</span>
-                  <div style={{ width: 60 }} />
-                </div>
+              <div className="pos-mobile-header">
+                <button onClick={() => setPosMobileTab("cart")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: C.amber2, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>
+                  ← Cart
+                </button>
+                <span style={{ fontSize: 15, fontWeight: 800, color: C.text }}>
+                  🧾 Checkout
+                </span>
+                <span style={{ width: 60 }} />
               </div>
 
               {/* Scrollable body */}
-              <div className="pos-checkout-scroll" style={{ flex: 1, overflowY: "auto", padding: 16, paddingBottom: 80 }}>
+              <div className="pos-checkout-scroll">
                 <CartContent
                   isMobile={true}
                   cart={cart}
@@ -1688,18 +2003,15 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               </div>
 
               {/* Sticky bottom action bar */}
-              <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: 12, background: C.bg2, borderTop: `1px solid ${C.border}`, display: "flex", gap: 8 }}>
-                <button onClick={() => setPosMobileTab("cart")} style={{ flex: 1, padding: "14px 0", borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                  Edit Cart
-                </button>
+              <div className="pos-place-order-bar">
                 <button 
                   onClick={placeOrder}
                   disabled={isPlacingOrder}
                   style={{
-                    flex: 2, padding: "14px 0", borderRadius: 10, border: "none",
+                    width: "100%", padding: "16px 0", borderRadius: 12, border: "none",
                     background: isPlacingOrder ? C.bg4 : `linear-gradient(135deg, ${C.amber} 0%, ${C.amber2} 100%)`,
                     color: isPlacingOrder ? C.text3 : "#1a0e00",
-                    fontSize: 14, fontWeight: 800, cursor: isPlacingOrder ? "not-allowed" : "pointer",
+                    fontSize: 15, fontWeight: 800, cursor: isPlacingOrder ? "not-allowed" : "pointer",
                     boxShadow: isPlacingOrder ? "none" : `0 4px 12px ${C.amberDim}`,
                   }}
                 >

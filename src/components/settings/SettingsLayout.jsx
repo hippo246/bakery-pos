@@ -6,8 +6,10 @@ const SETTINGS_CATEGORIES = [
   { key: "general", label: "General", icon: "⚙️", description: "Language, Timezone, Currency" },
   { key: "business", label: "Business Profile", icon: "🏢", description: "Cafe Information" },
   { key: "branding", label: "Branding", icon: "🎨", description: "Logo & Theme" },
+  { key: "theme", label: "Theme", icon: "🎭", description: "Appearance & Display" },
   { key: "taxes", label: "Taxes", icon: "📊", description: "GST & Service Charge" },
   { key: "payments", label: "Payments", icon: "💳", description: "Payment Methods" },
+  { key: "payment-gateways", label: "Payment Gateways", icon: "🔗", description: "Razorpay, Stripe, PhonePe" },
   { key: "orders", label: "Orders", icon: "🍽️", description: "Order Configuration" },
   { key: "hours", label: "Operating Hours", icon: "🕐", description: "Schedule & Templates" },
   { key: "kitchen", label: "Kitchen", icon: "👨‍🍳", description: "KDS Configuration" },
@@ -15,6 +17,7 @@ const SETTINGS_CATEGORIES = [
   { key: "receipts", label: "Receipts & Printing", icon: "🧾", description: "Layout & Routing" },
   { key: "delivery", label: "Delivery", icon: "🚚", description: "Delivery Configuration" },
   { key: "reservations", label: "Reservations", icon: "📅", description: "Reservation Rules" },
+  { key: "terminals", label: "Terminals", icon: "🖥️", description: "Multi-POS Configuration" },
   { key: "hardware", label: "Hardware & Devices", icon: "🖨️", description: "Printers & Displays" },
   { key: "staff", label: "Team & Permissions", icon: "👥", description: "Role Management" },
   { key: "integrations", label: "Integrations", icon: "🔌", description: "Third-Party Services" },
@@ -51,42 +54,45 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
     container: { 
       display: 'flex', 
       height: '100vh', 
-      background: '#f8f9fa' 
+      background: 'var(--cafe-bg)' 
     },
     sidebar: { 
-      width: isMobile ? '70px' : '280px', 
-      background: '#ffffff', 
-      borderRight: '1px solid #dee2e6',
+      width: isMobile ? '70px' : '300px', 
+      background: 'var(--cafe-bg-surface)', 
+      borderRight: '1px solid var(--cafe-border-light)',
       overflowY: 'auto',
-      padding: isMobile ? '12px 8px' : '24px 16px'
+      padding: isMobile ? '12px 8px' : '24px 20px'
     },
     searchContainer: {
       marginBottom: '20px'
     },
     searchInput: {
       width: '100%',
-      padding: '10px 12px',
-      fontSize: '14px',
-      border: '1px solid #ced4da',
-      borderRadius: '6px',
-      background: '#f8f9fa'
+      padding: '12px 16px',
+      fontSize: 13,
+      border: '1px solid var(--cafe-border-light)',
+      borderRadius: 12,
+      background: 'var(--cafe-bg)',
+      color: 'var(--cafe-text-primary)',
+      outline: 'none',
+      transition: 'all 0.2s'
     },
     categoryList: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px'
+      gap: '6px'
     },
     categoryButton: (isActive) => ({
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
       padding: isMobile ? '12px' : '12px 16px',
-      fontSize: '14px',
-      fontWeight: 600,
-      background: isActive ? '#0d6efd' : 'transparent',
-      color: isActive ? '#ffffff' : '#495057',
-      border: 'none',
-      borderRadius: '6px',
+      fontSize: 13,
+      fontWeight: isActive ? 700 : 600,
+      background: isActive ? 'var(--cafe-accent-bg)' : 'transparent',
+      color: isActive ? 'var(--cafe-accent)' : 'var(--cafe-text-secondary)',
+      border: isActive ? '1px solid var(--cafe-accent)' : '1px solid transparent',
+      borderRadius: 10,
       cursor: 'pointer',
       justifyContent: isMobile ? 'center' : 'flex-start',
       width: '100%',
@@ -103,21 +109,22 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
       display: isMobile ? 'none' : 'block'
     },
     categoryDescription: {
-      fontSize: '12px',
-      color: isMobile ? 'transparent' : '#6c757d',
-      marginTop: '2px'
+      fontSize: 11,
+      color: isMobile ? 'transparent' : 'var(--cafe-text-tertiary)',
+      marginTop: '2px',
+      fontWeight: 500
     },
     content: {
       flex: 1,
       overflow: 'auto',
-      background: '#f8f9fa'
+      background: 'var(--cafe-bg)'
     },
     mobileHeader: {
       display: 'flex',
       alignItems: 'center',
       padding: '16px',
-      background: '#ffffff',
-      borderBottom: '1px solid #dee2e6',
+      background: 'var(--cafe-bg-surface)',
+      borderBottom: '1px solid var(--cafe-border-light)',
       gap: '12px'
     },
     backButton: {
@@ -126,13 +133,14 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
       border: 'none',
       fontSize: '20px',
       cursor: 'pointer',
-      color: '#495057'
+      color: 'var(--cafe-text-secondary)'
     },
     mobileTitle: {
-      fontSize: '18px',
-      fontWeight: 600,
-      color: '#212529',
-      margin: 0
+      fontSize: 18,
+      fontWeight: 700,
+      color: 'var(--cafe-text-primary)',
+      margin: 0,
+      letterSpacing: '-0.01em'
     }
   };
 
@@ -149,6 +157,8 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
                 value={searchQuery}
                 onChange={handleSearch}
                 style={styles.searchInput}
+                onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+                onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
               />
             </div>
             <div style={styles.categoryList}>
@@ -158,6 +168,8 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
                   onClick={() => handleCategoryClick(cat.key)}
                   style={styles.categoryButton(activeCategory === cat.key)}
                   title={cat.description}
+                  onMouseOver={e => { if (activeCategory !== cat.key) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+                  onMouseOut={e => { if (activeCategory !== cat.key) { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent'; } }}
                 >
                   <span style={styles.categoryIcon}>{cat.icon}</span>
                 </button>
@@ -194,6 +206,8 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
             value={searchQuery}
             onChange={handleSearch}
             style={styles.searchInput}
+            onFocus={e => e.currentTarget.style.borderColor = 'var(--cafe-accent)'}
+            onBlur={e => e.currentTarget.style.borderColor = 'var(--cafe-border-light)'}
           />
         </div>
         <div style={styles.categoryList}>
@@ -202,10 +216,12 @@ export default function SettingsLayout({ activeCategory, onCategoryChange, child
               key={cat.key}
               onClick={() => handleCategoryClick(cat.key)}
               style={styles.categoryButton(activeCategory === cat.key)}
+              onMouseOver={e => { if (activeCategory !== cat.key) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
+              onMouseOut={e => { if (activeCategory !== cat.key) { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent'; } }}
             >
               <span style={styles.categoryIcon}>{cat.icon}</span>
               <div style={styles.categoryLabel}>
-                <div>{cat.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.01em' }}>{cat.label}</div>
                 <div style={styles.categoryDescription}>{cat.description}</div>
               </div>
             </button>

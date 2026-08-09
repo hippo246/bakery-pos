@@ -1264,40 +1264,45 @@ const splitAndAutoAssign = useCallback((groupId) => {
           <div style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)" }}>Live table management and seating</div>
         </div>
 
-        {/* Operational Stat Chips */}
-        <div style={{ display: "flex", gap: "var(--cafe-space-sm)", flexWrap: "wrap" }}>
+        {/* Premium Hero Stats */}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
           {[
-            { label: "Free Tables", count: availableCount, color: "var(--cafe-success)" },
-            { label: "Occupied", count: occupiedCount, color: occupiedCount > 0 ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)" },
-            { label: "Reserved", count: reservedCount, color: reservedCount > 0 ? "var(--cafe-info)" : "var(--cafe-text-tertiary)" },
-            { label: "Cleaning", count: statusCounts.cleaning || 0, color: (statusCounts.cleaning || 0) > 0 ? "var(--cafe-purple)" : "var(--cafe-text-tertiary)" },
-            { label: "Avg Turn Time", count: avgTurnMinutes != null ? `${avgTurnMinutes}m` : "—", color: "var(--cafe-text-secondary)" },
-            { label: "Waiting", count: waitlist.filter(w => w.status === "waiting").length, color: waitlist.filter(w => w.status === "waiting").length > 0 ? "var(--cafe-warning)" : "var(--cafe-text-tertiary)" },
+            { label: "Free",     count: availableCount,                                    color: "#22c55e",  bg: "rgba(34,197,94,0.08)"   },
+            { label: "Occupied", count: occupiedCount,                                    color: "var(--cafe-accent)", bg: "var(--cafe-accent-bg)" },
+            { label: "Reserved", count: reservedCount,                                    color: "#3b82f6",  bg: "rgba(59,130,246,0.08)"  },
+            { label: "Cleaning", count: statusCounts.cleaning || 0,                       color: "#a855f7",  bg: "rgba(168,85,247,0.08)"  },
+            { label: "Avg Turn", count: avgTurnMinutes != null ? `${avgTurnMinutes}m` : "—", color: "var(--cafe-text-secondary)", bg: "var(--cafe-bg-surface)" },
+            { label: "Waiting",  count: waitlist.filter(w => w.status === "waiting").length, color: "#f59e0b",  bg: "rgba(245,158,11,0.08)"   },
           ].map(chip => (
             <div key={chip.label} style={{
-              background: "var(--cafe-bg-surface)",
-              border: `1px solid var(--cafe-border-light)`,
-              borderRadius: "var(--cafe-radius-md)",
-              padding: "10px 14px",
+              background: chip.bg,
+              border: `1px solid ${chip.color}30`,
+              borderRadius: 14,
+              padding: "11px 16px",
               display: "flex",
-              alignItems: "center",
-              gap: 8,
+              flexDirection: "column",
+              gap: 3,
+              minWidth: 80,
+              position: "relative",
+              overflow: "hidden"
             }}>
-              <span style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                {chip.label}
-              </span>
-              <span style={{ fontSize: "var(--cafe-font-base)", fontWeight: 700, color: chip.color, fontFamily: "monospace" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: chip.color, borderRadius: "14px 14px 0 0", opacity: 0.9 }} />
+              <div style={{ fontSize: 24, fontWeight: 800, color: chip.color, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                 {chip.count}
-              </span>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--cafe-text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                {chip.label}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Floor Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--cafe-space-md)", marginBottom: "var(--cafe-space-md)", flexWrap: "wrap" }}>
+      {/* ── Controls: Row 1 — Search + View + Add ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+
         {/* Search */}
-        <div style={{ flex: 1, maxWidth: 400 }}>
+        <div style={{ flex: 1, minWidth: 220 }}>
           <TableSearch
             tables={tables}
             customers={[]}
@@ -1313,94 +1318,107 @@ const splitAndAutoAssign = useCallback((groupId) => {
             orders={tables.filter(t => t.currentOrder || t.currentOrderId).map(t => {
               const orderId = t.currentOrderId || t.currentOrder;
               const realOrder = orders?.find(o => o.id === orderId);
-              return {
-                id: orderId,
-                tableId: t.id,
-                status: t.status,
-                total: realOrder?.total || 0
-              };
+              return { id: orderId, tableId: t.id, status: t.status, total: realOrder?.total || 0 };
             })}
             onResultClick={(result) => {
-              if (result.type === 'table') {
-                setSelectedId(result.id);
-                setViewMode('grid');
-              } else if (result.type === 'waiter') {
-                // Filter to show tables assigned to this waiter
-                const waiterTables = tables.filter(t => t.waiter?.id === result.id);
-                if (waiterTables.length > 0) {
-                  setSelectedId(waiterTables[0].id);
-                }
-              } else if (result.type === 'reservation') {
-                setSelectedId(result.tableId);
-                setViewMode('grid');
-              } else if (result.type === 'order') {
-                const table = tables.find(t => t.currentOrderId === result.id || t.currentOrder === result.id);
-                if (table) {
-                  setSelectedId(table.id);
-                  setViewMode('grid');
-                }
-              }
+              if (result.type === 'table') { setSelectedId(result.id); setViewMode('grid'); }
+              else if (result.type === 'waiter') { const wt = tables.filter(t => t.waiter?.id === result.id); if (wt.length > 0) setSelectedId(wt[0].id); }
+              else if (result.type === 'reservation') { setSelectedId(result.tableId); setViewMode('grid'); }
+              else if (result.type === 'order') { const t = tables.find(t => t.currentOrderId === result.id || t.currentOrder === result.id); if (t) { setSelectedId(t.id); setViewMode('grid'); } }
             }}
           />
         </div>
 
-        {/* Status Filters */}
-        <div style={{ display: "flex", gap: "var(--cafe-space-sm)" }}>
+        {/* Grid / Floor Switcher */}
+        <div style={{ display: "flex", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 3, gap: 2 }}>
           {[
-            { key: "All", label: "All" },
-            { key: "available", label: "Free" },
-            { key: "occupied", label: "Occupied" },
-            { key: "reserved", label: "Reserved" },
-            { key: "cleaning", label: "Cleaning" },
-          ].map(s => (
-            <button key={s.key} onClick={() => setStatusFilter(s.key)} style={{
-              padding: "8px 14px",
-              borderRadius: "var(--cafe-radius-md)",
-              border: `1px solid ${statusFilter === s.key ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`,
-              background: statusFilter === s.key ? "var(--cafe-accent-bg)" : "transparent",
-              color: statusFilter === s.key ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
-              fontSize: "var(--cafe-font-sm)",
-              fontWeight: statusFilter === s.key ? 600 : 500,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              minHeight: 36,
-              transition: "all 0.15s ease"
-            }}>
-              {s.label}
-            </button>
-          ))}
+            { mode: "grid",  icon: "☰",  label: "Grid"  },
+            { mode: "floor", icon: "⊞", label: "Floor" },
+          ].map(opt => {
+            const active = viewMode === opt.mode;
+            return (
+              <button key={opt.mode} onClick={() => setViewMode(opt.mode)} style={{
+                padding: "7px 14px", borderRadius: 9, border: "none",
+                background: active ? "var(--cafe-bg-card)" : "transparent",
+                color: active ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+                fontSize: 13, fontWeight: active ? 700 : 500, cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 6,
+                boxShadow: active ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                transition: "all 0.15s",
+                whiteSpace: "nowrap",
+              }}>
+                <span style={{ fontSize: 15 }}>{opt.icon}</span>{opt.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "var(--cafe-space-sm)" }}>
-          <button
-            className="header-action-btn"
-            style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", borderColor: viewMode === "floor" ? "var(--cafe-accent-border)" : "var(--cafe-border-light)", color: viewMode === "floor" ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", background: viewMode === "floor" ? "var(--cafe-accent-bg)" : "transparent" }}
-            onClick={() => setViewMode(viewMode === "grid" ? "floor" : "grid")}
-          >{viewMode === "grid" ? "🗺️ Floor Plan" : "📋 Grid View"}</button>
-          {hasActiveFilters && (
-            <button className="header-action-btn" onClick={clearFilters} style={{ ...btn("ghost"), fontSize: "var(--cafe-font-xs)", padding: "8px 14px", color: "var(--cafe-warning)", borderColor: "var(--cafe-warning-border)", borderRadius: "var(--cafe-radius-sm)" }}>✕ Clear</button>
-          )}
-          <button className="header-action-btn" style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)" }} onClick={() => setModal("reservations")}>
-            Reservations {reservedCount > 0 && <span style={{ marginLeft: 5, background: "var(--cafe-accent-bg)", color: "var(--cafe-accent)", fontSize: 10, padding: "1px 7px", borderRadius: 20, fontWeight: 700 }}>{reservedCount}</span>}
-          </button>
-          <button className="header-action-btn" style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)" }} onClick={() => { setWaitlistForm({ name: "", phone: "", partySize: "", notes: "" }); setWaitlistErrors({}); setModal("waitlist"); }}>
-            Waitlist {waitlist.filter(w => w.status === "waiting").length > 0 && <span style={{ marginLeft: 5, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 10, padding: "1px 7px", borderRadius: 20, fontWeight: 700 }}>{waitlist.filter(w => w.status === "waiting").length}</span>}
-          </button>
-          <button
-            className="header-action-btn"
-            style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)", borderColor: mergeMode ? "var(--cafe-accent-border)" : "var(--cafe-border-light)", color: mergeMode ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", background: mergeMode ? "var(--cafe-accent-bg)" : "transparent" }}
-            onClick={toggleMergeMode}
-          >{mergeMode ? "Cancel Combine" : "Combine Tables"}</button>
-          <button className="header-action-btn" style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)" }} onClick={() => setModal("rotationStrategies")}>
-            📊 Rotation Tips
-          </button>
-          <button className="header-action-btn" style={{ ...btn("ghost"), fontSize: "var(--cafe-font-sm)", padding: "8px 14px", borderRadius: "var(--cafe-radius-sm)" }} onClick={() => setModal("floorAnalytics")}>
-            📈 Floor Analytics
-          </button>
-          <button className="header-action-btn" style={btn("primary")} onClick={openAdd}>+ Add Table</button>
+        <button style={{ ...btn("primary"), padding: "9px 18px", fontSize: 13, borderRadius: 10, whiteSpace: "nowrap" }} onClick={openAdd}>+ Add Table</button>
+      </div>
 
+      {/* ── Controls: Row 2 — Status Filters + Action Buttons ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+
+        {/* Status filter segmented pill */}
+        <div style={{ display: "flex", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 3, gap: 1 }}>
+          {[
+            { key: "All",       label: "All",      dot: "var(--cafe-text-tertiary)" },
+            { key: "available", label: "Available", dot: "#22c55e" },
+            { key: "occupied",  label: "Occupied",  dot: "var(--cafe-accent)" },
+            { key: "reserved",  label: "Reserved",  dot: "#3b82f6" },
+            { key: "cleaning",  label: "Cleaning",  dot: "#a855f7" },
+          ].map(s => {
+            const sel = statusFilter === s.key;
+            return (
+              <button key={s.key} onClick={() => setStatusFilter(s.key)} style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 13px", borderRadius: 9, border: "none",
+                background: sel ? "var(--cafe-bg-card)" : "transparent",
+                color: sel ? s.dot : "var(--cafe-text-secondary)",
+                fontSize: 13, fontWeight: sel ? 700 : 500,
+                cursor: "pointer", whiteSpace: "nowrap",
+                boxShadow: sel ? "0 1px 4px rgba(0,0,0,0.1)" : "none",
+                transition: "all 0.15s",
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
+                {s.label}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 28, background: "var(--cafe-border-light)", flexShrink: 0 }} />
+
+        {/* Secondary actions — compact icon+label buttons */}
+        {[
+          { label: `📅 Res${reservedCount > 0 ? ` (${reservedCount})` : ""}`, onClick: () => setModal("reservations") },
+          { label: `⏳ Waitlist${waitlist.filter(w => w.status === "waiting").length > 0 ? ` (${waitlist.filter(w => w.status === "waiting").length})` : ""}`, onClick: () => { setWaitlistForm({ name: "", phone: "", partySize: "", notes: "" }); setWaitlistErrors({}); setModal("waitlist"); } },
+          { label: mergeMode ? "🔗 Cancel Link" : "🔗 Link Tables", onClick: toggleMergeMode, active: mergeMode },
+          { label: "🔄 Rotation",  onClick: () => setModal("rotationStrategies") },
+          { label: "📊 Analytics", onClick: () => setModal("floorAnalytics") },
+        ].map(item => (
+          <button key={item.label} onClick={item.onClick} style={{
+            padding: "7px 13px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+            border: `1px solid ${item.active ? "var(--cafe-accent-border)" : "var(--cafe-border-light)"}`,
+            background: item.active ? "var(--cafe-accent-bg)" : "transparent",
+            color: item.active ? "var(--cafe-accent)" : "var(--cafe-text-secondary)",
+            cursor: "pointer", whiteSpace: "nowrap",
+            transition: "all 0.15s",
+          }}
+          onMouseOver={e => { if (!item.active) { e.currentTarget.style.borderColor = "var(--cafe-accent)"; e.currentTarget.style.color = "var(--cafe-text-primary)"; } }}
+          onMouseOut={e => { if (!item.active) { e.currentTarget.style.borderColor = "var(--cafe-border-light)"; e.currentTarget.style.color = "var(--cafe-text-secondary)"; } }}
+          >{item.label}</button>
+        ))}
+
+        {hasActiveFilters && (
+          <button onClick={clearFilters} style={{
+            padding: "7px 12px", borderRadius: 10, fontSize: 12, fontWeight: 700,
+            border: "1px solid rgba(245,158,11,0.4)",
+            background: "rgba(245,158,11,0.08)", color: "#f59e0b",
+            cursor: "pointer",
+          }}>✕ Clear filters</button>
+        )}
       </div>
 
       {/* Type & Area Filters — dropdowns keep this compact as the list of types/areas grows */}
@@ -1490,7 +1508,7 @@ const splitAndAutoAssign = useCallback((groupId) => {
         /* Table Grid */
         <div
           ref={gridRef}
-          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: "var(--cafe-space-md)" }}
+          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(340px,1fr))", gap: 24 }}
           className="tables-grid"
         >
         {filtered.filter(table => !table.groupId || table.groupHost === table.id).map(table => {
@@ -1516,7 +1534,17 @@ const splitAndAutoAssign = useCallback((groupId) => {
           const isMenuOpen = actionMenuOpen === table.id;
           const isMergeSelected = mergeMode && mergeSelection.includes(table.id);
 
-          return (
+          return (() => {
+            const STATUS_STYLE = {
+              available: { color: "#22c55e",  bg: "rgba(34,197,94,0.06)",  border: "rgba(34,197,94,0.2)",   label: "Available" },
+              occupied:  { color: "var(--cafe-accent)", bg: "var(--cafe-accent-bg)", border: "var(--cafe-accent-border)", label: "Occupied"  },
+              reserved:  { color: "#3b82f6",  bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.2)",  label: "Reserved"  },
+              cleaning:  { color: "#a855f7",  bg: "rgba(168,85,247,0.06)", border: "rgba(168,85,247,0.2)",  label: "Cleaning"  },
+            };
+            const ss = STATUS_STYLE[table.status] || STATUS_STYLE.available;
+            const tableNum = isMerged ? `${groupNumbers[0]}+${groupNumbers.length-1}` : table.number;
+
+            return (
             <div
               key={table.id}
               className="table-card-interactive"
@@ -1531,159 +1559,191 @@ const splitAndAutoAssign = useCallback((groupId) => {
               }}
               style={{
                 background: "var(--cafe-bg-card)",
-                border: `1px solid ${isMergeSelected ? "var(--cafe-purple)" : isSelected ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`,
                 borderRadius: 20,
-                padding: "20px",
+                border: `1px solid ${isMergeSelected ? "#a855f7" : isSelected ? "var(--cafe-accent)" : "var(--cafe-border-light)"}`,
                 cursor: mergeMode && !mergeEligible(table) ? "not-allowed" : "pointer",
-                transition: "all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)",
-                boxShadow: isMergeSelected ? "var(--cafe-shadow-lg)" : isSelected ? "var(--cafe-shadow-lg)" : "var(--cafe-shadow-sm)",
-                position: "relative",
+                transition: "box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease",
+                boxShadow: isSelected || isMergeSelected
+                  ? `0 0 0 3px ${ss.color}33, 0 12px 40px rgba(0,0,0,0.1)`
+                  : "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
+                transform: isSelected ? "translateY(-3px)" : "none",
                 display: "flex",
                 flexDirection: "column",
-                minHeight: "240px",
                 overflow: "hidden",
-                opacity: mergeMode && !mergeEligible(table) ? 0.5 : 1
+                opacity: mergeMode && !mergeEligible(table) ? 0.38 : 1,
               }}
             >
-              {/* Top Status Bar indicator */}
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: table.status === 'occupied' ? "var(--cafe-accent)" : table.status === 'reserved' ? "var(--cafe-info)" : table.status === 'cleaning' ? "var(--cafe-danger)" : "var(--cafe-success)" }} />
-              
-              {/* Top Row: Invoice, Amount, Menu */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", marginTop: 4 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase" }}>Invoice No.</div>
-                  <div style={{ fontSize: "var(--cafe-font-sm)", color: currentOrderObj ? "var(--cafe-accent)" : "var(--cafe-text-secondary)", fontWeight: 700 }}>{invoiceNo}</div>
-                </div>
-                
-                <div style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", fontWeight: 600, textTransform: "uppercase" }}>Total</div>
-                  <div style={{ fontSize: "var(--cafe-font-xl)", color: currentOrderObj ? "var(--cafe-text-primary)" : "var(--cafe-text-tertiary)", fontWeight: 800, letterSpacing: "-0.02em" }}>{amount}</div>
-                </div>
-                
-                <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", position: "relative" }}>
-                  <button 
-                    className="table-action-btn"
-                    onClick={(e) => { e.stopPropagation(); setActionMenuOpen(isMenuOpen ? null : table.id); }}
-                    style={{ background: "transparent", border: "none", color: "var(--cafe-text-tertiary)", fontSize: 20, cursor: "pointer", padding: "0 4px", lineHeight: 1 }}
-                  >
-                    ⋮
-                  </button>
-                  
-                  {/* Dropdown Menu */}
-                  {isMenuOpen && (
-                    <div style={{
-                      position: "absolute", top: "100%", right: 0, marginTop: 8,
-                      background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)", borderRadius: "var(--cafe-radius-md)",
-                      boxShadow: "var(--cafe-shadow-lg)", zIndex: 10, width: 140, overflow: "hidden"
-                    }}>
-                      {table.status === "available" && (
-                        <>
-                          <button onClick={(e) => { e.stopPropagation(); openReserve(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Reserve</button>
-                          <button onClick={(e) => { e.stopPropagation(); openAssign(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Seat Guest</button>
-                          <button onClick={(e) => { e.stopPropagation(); clearTableFn(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-purple)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Mark Clean</button>
-                        </>
-                      )}
-                      {table.status === "occupied" && (
-                        <>
-                          <button onClick={(e) => { e.stopPropagation(); clearTableFn(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-success)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Clear Table</button>
-                          <button onClick={(e) => { e.stopPropagation(); openTransfer(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Transfer</button>
-                          <button onClick={(e) => { e.stopPropagation(); openUpgrade(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Upgrade Table</button>
-                          <button onClick={(e) => { e.stopPropagation(); openSplitBill(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Split Bill</button>
-                          <button onClick={(e) => { e.stopPropagation(); openWaiter(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Assign Server</button>
-                        </>
-                      )}
-                      {table.status === "cleaning" && (
-                        <button onClick={(e) => { e.stopPropagation(); markAvailable(table.id); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-success)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Mark Available</button>
-                      )}
-                      {isMerged && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSplitMergedDialog({
-                              open: true,
-                              groupId: table.groupId,
-                              groupNumbers,
-                              onConfirm: () => {
-                                setSplitMergedDialog({ open: false, groupId: null, groupNumbers: [], onConfirm: null });
-                                splitMergedGroup(table.groupId);
-                              }
-                            });
-                            setActionMenuOpen(null);
-                          }}
-                          style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-purple)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}
-                        >Split Group</button>
-                      )}
-                      <div style={{ height: 1, background: "var(--cafe-border-light)" }} />
-                      <button onClick={(e) => { e.stopPropagation(); openEdit(table); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-text-secondary)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Edit</button>
-                      <button onClick={(e) => { e.stopPropagation(); confirmAndDelete(table); setActionMenuOpen(null); }} style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", color: "var(--cafe-danger)", fontSize: "var(--cafe-font-sm)", cursor: "pointer" }}>Delete</button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* ── Top accent stripe ── */}
+              <div style={{ height: 3, background: ss.color, opacity: 0.9 }} />
 
-              {/* Middle Row: Circle + Order Items preview */}
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", margin: "12px 0" }}>
-                <div 
-                  className="table-circle"
-                  style={{
-                  width: 68, height: 68, borderRadius: "50%",
-                  background: table.status === 'occupied' ? "var(--cafe-accent-bg)" : "var(--cafe-bg-surface)",
-                  border: `2px solid ${table.status === 'occupied' ? 'var(--cafe-accent)' : table.status === 'reserved' ? 'var(--cafe-info)' : 'var(--cafe-border)'}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 26, fontWeight: 800, color: "var(--cafe-text-primary)",
-                  boxShadow: table.status === 'occupied' ? `0 0 20px var(--cafe-accent-border)` : 'none'
-                }}>
-                  {isMerged ? `${groupNumbers[0]}+` : table.number}
+              {/* ── Header ── */}
+              <div style={{ padding: "20px 20px 16px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+
+                {/* Left: number + meta */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                    {/* Big number */}
+                    <div style={{
+                      fontSize: 44, fontWeight: 900, lineHeight: 1,
+                      color: "var(--cafe-text-primary)",
+                      letterSpacing: "-0.05em",
+                      fontVariantNumeric: "tabular-nums",
+                      flexShrink: 0,
+                    }}>{tableNum}</div>
+                    {/* Status pill */}
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      background: ss.bg,
+                      border: `1px solid ${ss.border}`,
+                      borderRadius: 100, padding: "4px 11px",
+                      alignSelf: "flex-start",
+                      marginTop: 4,
+                      flexShrink: 0,
+                    }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: ss.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: ss.color, textTransform: "uppercase", letterSpacing: "0.07em" }}>{ss.label}</span>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500, lineHeight: 1.4 }}>
+                    {(table.type || "indoor").charAt(0).toUpperCase() + (table.type||"indoor").slice(1)}
+                    {" · "}{partySize ? `${partySize}/${table.capacity}` : table.capacity} seats
+                    {" · "}{(table.area || "main").charAt(0).toUpperCase() + (table.area||"main").slice(1)}
+                  </div>
                 </div>
-                <div style={{ marginTop: 8, fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-secondary)", fontWeight: 700 }}>
-                  {partySize ? `${partySize} Guests` : `${table.capacity} Seats`}
-                </div>
-                
-                {/* Live order items preview */}
-                {orderItems.length > 0 && (
-                  <div style={{ marginTop: 12, width: "100%", display: "flex", flexDirection: "column", gap: 4 }}>
-                    {orderItems.map((item, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--cafe-text-primary)", background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border-light)`, borderRadius: 8, padding: "6px 10px" }}>
-                        <span style={{ fontWeight: 600 }}>{item.qty}× {item.name}</span>
-                        <span style={{ color: "var(--cafe-text-secondary)", fontWeight: 700 }}>₹{(item.price * item.qty).toFixed(0)}</span>
+
+                {/* Right: bill + menu */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10, marginLeft: 8 }}>
+                  {/* Bill amount */}
+                  {currentOrderObj ? (
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: ss.color, lineHeight: 1, letterSpacing: "-0.03em" }}>{amount}</div>
+                      <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", fontWeight: 600, marginTop: 2, fontFamily: "monospace" }}>{invoiceNo}</div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", fontWeight: 500, marginTop: 6 }}>No order</div>
+                  )}
+
+                  {/* Context menu button */}
+                  <div style={{ position: "relative" }}>
+                    <button
+                      className="table-action-btn"
+                      onClick={e => { e.stopPropagation(); setActionMenuOpen(isMenuOpen ? null : table.id); }}
+                      style={{
+                        background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border-light)",
+                        borderRadius: 10, color: "var(--cafe-text-tertiary)",
+                        fontSize: 18, fontWeight: 700, cursor: "pointer",
+                        padding: "4px 10px", lineHeight: 1,
+                        transition: "background 0.15s",
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = "var(--cafe-border-light)"}
+                      onMouseOut={e => e.currentTarget.style.background = "var(--cafe-bg-surface)"}
+                    >···</button>
+
+                    {isMenuOpen && (
+                      <div style={{
+                        position: "absolute", top: "calc(100% + 6px)", right: 0,
+                        background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border-light)",
+                        borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,0.16)",
+                        zIndex: 30, minWidth: 168, overflow: "hidden",
+                      }}>
+                        {table.status === "available" && (<>
+                          <button onClick={e => { e.stopPropagation(); openReserve(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>📅 Reserve</button>
+                          <button onClick={e => { e.stopPropagation(); openAssign(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>🪑 Seat Guest</button>
+                          <button onClick={e => { e.stopPropagation(); clearTableFn(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"#a855f7", fontSize:13, cursor:"pointer", fontWeight:600 }}>✦ Mark Clean</button>
+                        </>)}
+                        {table.status === "occupied" && (<>
+                          <button onClick={e => { e.stopPropagation(); clearTableFn(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"#22c55e", fontSize:13, cursor:"pointer", fontWeight:600 }}>✓ Clear Table</button>
+                          <button onClick={e => { e.stopPropagation(); openTransfer(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>↗ Transfer</button>
+                          <button onClick={e => { e.stopPropagation(); openUpgrade(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>⬆ Upgrade</button>
+                          <button onClick={e => { e.stopPropagation(); openSplitBill(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>✂ Split Bill</button>
+                          <button onClick={e => { e.stopPropagation(); openWaiter(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>👤 Assign Server</button>
+                        </>)}
+                        {table.status === "reserved" && (<>
+                          <button onClick={e => { e.stopPropagation(); openAssign(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>🪑 Seat Guest</button>
+                        </>)}
+                        {table.status === "cleaning" && (
+                          <button onClick={e => { e.stopPropagation(); markAvailable(table.id); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"#22c55e", fontSize:13, cursor:"pointer", fontWeight:600 }}>✓ Mark Available</button>
+                        )}
+                        {isMerged && (
+                          <button onClick={e => { e.stopPropagation(); setSplitMergedDialog({ open:true, groupId:table.groupId, groupNumbers, onConfirm:()=>{ setSplitMergedDialog({open:false,groupId:null,groupNumbers:[],onConfirm:null}); splitMergedGroup(table.groupId); } }); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"#a855f7", fontSize:13, cursor:"pointer", fontWeight:600 }}>⊞ Split Group</button>
+                        )}
+                        <div style={{ height:1, background:"var(--cafe-border-light)", margin:"4px 0" }} />
+                        <button onClick={e => { e.stopPropagation(); openEdit(table); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-text-secondary)", fontSize:13, cursor:"pointer", fontWeight:600 }}>✎ Edit</button>
+                        <button onClick={e => { e.stopPropagation(); confirmAndDelete(table); setActionMenuOpen(null); }} style={{ width:"100%", textAlign:"left", padding:"11px 16px", background:"transparent", border:"none", color:"var(--cafe-danger)", fontSize:13, cursor:"pointer", fontWeight:600 }}>⊘ Delete</button>
                       </div>
-                    ))}
-                    {orderItemCount > 3 && (
-                      <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", textAlign: "center", fontWeight: 600, marginTop: 4 }}>+{orderItemCount - 3} more items</div>
                     )}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Bottom Row: 3 Columns */}
-              <div style={{ display: "flex", borderTop: "1px solid var(--cafe-border-light)", paddingTop: 16, marginTop: "auto" }}>
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", borderRight: "1px solid var(--cafe-border-light)" }}>
-                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Waiter</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>👤</span>
-                    <span style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)", fontWeight: 700 }}>{waiterName}</span>
+              {/* ── Reservation info (if reserved) ── */}
+              {table.status === "reserved" && table.reservedFor && (
+                <div style={{
+                  margin: "0 20px 14px",
+                  background: "rgba(59,130,246,0.06)",
+                  border: "1px solid rgba(59,130,246,0.18)",
+                  borderRadius: 12, padding: "10px 14px",
+                  display: "flex", alignItems: "center", gap: 8
+                }}>
+                  <span style={{ fontSize: 16 }}>📅</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--cafe-text-primary)" }}>{table.reservedFor}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{table.reservedTime || ""} {table.reservedPartySize ? `· ${table.reservedPartySize} guests` : ""}</div>
                   </div>
                 </div>
-                
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", borderRight: "1px solid var(--cafe-border-light)" }}>
-                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>KOT</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>🧾</span>
-                    <span style={{ fontSize: "var(--cafe-font-sm)", color: kotCount > 0 ? "var(--cafe-accent)" : "var(--cafe-text-primary)", fontWeight: 800 }}>{kotCount || '-'}</span>
+              )}
+
+              {/* ── Order items preview ── */}
+              {orderItems.length > 0 && (
+                <div style={{ margin: "0 20px 14px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--cafe-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 7 }}>Active Order</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {orderItems.map((item, i) => (
+                      <div key={i} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "6px 10px",
+                        background: "var(--cafe-bg-surface)",
+                        borderRadius: 9,
+                        fontSize: 12.5,
+                      }}>
+                        <span style={{ color: "var(--cafe-text-primary)", fontWeight: 600 }}>{item.qty}× {item.name}</span>
+                        <span style={{ color: ss.color, fontWeight: 700 }}>₹{(item.price * item.qty).toFixed(0)}</span>
+                      </div>
+                    ))}
+                    {orderItemCount > 3 && <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)", textAlign: "center", paddingTop: 3 }}>+{orderItemCount - 3} more</div>}
                   </div>
                 </div>
-                
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <div style={{ fontSize: "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)", marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Duration</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>🕒</span>
-                    <span style={{ fontSize: "var(--cafe-font-sm)", color: "var(--cafe-text-primary)", fontWeight: 700 }}>{occupancyMinutes}{occupancyMinutes !== '-' ? ' Min' : ''}</span>
+              )}
+
+              {/* ── Footer: Server · KOT · Time ── */}
+              <div style={{
+                marginTop: "auto",
+                borderTop: "1px solid var(--cafe-border-light)",
+                display: "flex",
+              }}>
+                {[
+                  { label: "Server",  val: waiterName,  icon: "👤", accent: false },
+                  { label: "KOT",     val: kotCount || "—", icon: "🧾", accent: kotCount > 0 },
+                  { label: "Time",    val: occupancyMinutes !== "-" ? `${occupancyMinutes}m` : "—", icon: "⏱", accent: false },
+                ].map((col, i, arr) => (
+                  <div key={col.label} style={{
+                    flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
+                    padding: "13px 8px",
+                    borderRight: i < arr.length-1 ? "1px solid var(--cafe-border-light)" : "none",
+                    gap: 4,
+                  }}>
+                    <div style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>{col.label}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ fontSize: 14 }}>{col.icon}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: col.accent ? ss.color : "var(--cafe-text-primary)" }}>{col.val}</span>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
 
             </div>
-          );
+            );
+          })()
         })}
       </div>
       )}

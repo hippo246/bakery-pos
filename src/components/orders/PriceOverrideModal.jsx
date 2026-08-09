@@ -21,8 +21,11 @@ function PriceOverrideModal({
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(3px)' }}
       onClick={onClose}
     >
+      <style>{`
+        @keyframes priceOverrideScaleIn { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      `}</style>
       <div
-        style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 16, width: 400, maxWidth: '94vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,.3)' }}
+        style={{ background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 16, width: 400, maxWidth: '94vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,.3)', animation: 'priceOverrideScaleIn 0.18s ease' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -34,7 +37,13 @@ function PriceOverrideModal({
               <div style={{ fontSize: 11, color: C.text3 }}>Logged for audit · needs manager approval</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.text3, lineHeight: 1, padding: '2px 6px' }}>×</button>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{ background: 'none', border: 'none', borderRadius: 8, fontSize: 20, cursor: 'pointer', color: C.text3, lineHeight: 1, padding: '2px 6px', transition: 'background .15s, color .15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.bg3; e.currentTarget.style.color = C.text; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.text3; }}
+          >×</button>
         </div>
 
         <div style={{ padding: '16px 18px' }}>
@@ -88,6 +97,8 @@ function PriceOverrideModal({
                     textAlign: 'left',
                     transition: 'all .1s',
                   }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = C.amber3; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = C.border; }}
                 >
                   {r.label}
                 </button>
@@ -108,7 +119,12 @@ function PriceOverrideModal({
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            <button onClick={onClose} style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+            <button
+              onClick={onClose}
+              style={{ flex: 1, padding: '11px 0', borderRadius: 10, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'background .15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.bg4 || C.border; }}
+              onMouseLeave={e => { e.currentTarget.style.background = C.bg3; }}
+            >Cancel</button>
             <button
               onClick={onApply}
               disabled={!canApply}
@@ -117,7 +133,12 @@ function PriceOverrideModal({
                 background: canApply ? `linear-gradient(135deg, ${C.amber}, ${C.amber2})` : C.bg4,
                 color: canApply ? '#1a0e00' : C.text3,
                 fontSize: 13, fontWeight: 800, cursor: canApply ? 'pointer' : 'not-allowed',
+                transition: 'filter .15s, transform .1s',
               }}
+              onMouseEnter={e => { if (canApply) e.currentTarget.style.filter = 'brightness(1.06)'; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = ''; }}
+              onMouseDown={e => { if (canApply) e.currentTarget.style.transform = 'scale(0.98)'; }}
+              onMouseUp={e => { e.currentTarget.style.transform = ''; }}
             >
               ✓ Apply Override
             </button>

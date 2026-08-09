@@ -419,7 +419,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
                 top: "-8px",
                 right: "-8px",
                 backgroundColor: "#e74c3c",
-                color: "white",
+                color: "var(--cafe-text-primary)",
                 borderRadius: "50%",
                 width: 20,
                 height: 20,
@@ -500,7 +500,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
               fontSize: 14,
               borderRadius: 8,
               border: "1px solid #d4c4b0",
-              backgroundColor: "white",
+              backgroundColor: "var(--cafe-bg-card)",
               boxSizing: "border-box"
             }}
             placeholder="Search menu..."
@@ -560,7 +560,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
                   ...card,
                   flex: "0 0 auto",
                   width: 140,
-                  backgroundColor: "white",
+                  backgroundColor: "var(--cafe-bg-card)",
                   border: "1px solid #e8e4df",
                   borderRadius: 12,
                   overflow: "hidden",
@@ -658,7 +658,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
                 className="gm-card-hover"
                 style={{
                   ...card,
-                  backgroundColor: "white",
+                  backgroundColor: "var(--cafe-bg-card)",
                   border: "1px solid #e8e4df",
                   borderRadius: 12,
                   overflow: "hidden",
@@ -670,19 +670,19 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
                 <div style={{ position: "absolute", top: 10, left: 10, right: 10, zIndex: 2, display: "flex", justifyContent: "space-between", pointerEvents: "none" }}>
                   <div style={{ display: "flex", gap: 6 }}>
                     {isHotItem(item) && (
-                      <span style={{ backgroundColor: "#e74c3c", color: "white", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, boxShadow: "0 2px 6px rgba(231,76,60,0.4)" }}>
+                      <span style={{ backgroundColor: "#e74c3c", color: "var(--cafe-text-primary)", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, boxShadow: "0 2px 6px rgba(231,76,60,0.4)" }}>
                         🔥 Popular
                       </span>
                     )}
                     {isNewItem(item) && (
-                      <span style={{ backgroundColor: "#3498db", color: "white", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, boxShadow: "0 2px 6px rgba(52,152,219,0.4)" }}>
+                      <span style={{ backgroundColor: "#3498db", color: "var(--cafe-text-primary)", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 20, boxShadow: "0 2px 6px rgba(52,152,219,0.4)" }}>
                         ✨ New
                       </span>
                     )}
                   </div>
                   <span title={isVegItem(item) ? "Vegetarian" : "Non-vegetarian"} style={{
                     width: 16, height: 16, borderRadius: 3, border: `2px solid ${isVegItem(item) ? "#27ae60" : "#c0392b"}`,
-                    backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+                    backgroundColor: "var(--cafe-bg-card)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
                   }}>
                     <span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: isVegItem(item) ? "#27ae60" : "#c0392b" }} />
                   </span>
@@ -732,14 +732,14 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
                     {quickQty > 0 ? (
                       <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 8, backgroundColor: "#8b6914", borderRadius: 20, padding: "2px 4px" }}>
                         <button
-                          style={{ background: "transparent", border: "none", color: "white", width: 26, height: 26, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}
+                          style={{ background: "transparent", border: "none", color: "var(--cafe-text-primary)", width: 26, height: 26, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}
                           onClick={(e) => handleQuickDecrement(item, e)}
                         >
                           −
                         </button>
-                        <span style={{ color: "white", fontSize: 13, fontWeight: 700, minWidth: 14, textAlign: "center" }}>{quickQty}</span>
+                        <span style={{ color: "var(--cafe-text-primary)", fontSize: 13, fontWeight: 700, minWidth: 14, textAlign: "center" }}>{quickQty}</span>
                         <button
-                          style={{ background: "transparent", border: "none", color: "white", width: 26, height: 26, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}
+                          style={{ background: "transparent", border: "none", color: "var(--cafe-text-primary)", width: 26, height: 26, borderRadius: "50%", fontSize: 16, cursor: "pointer" }}
                           onClick={(e) => handleQuickIncrement(item, e)}
                         >
                           +
@@ -785,10 +785,10 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
         }}
         onClick={() => setShowCart(true)}
         >
-          <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>
+          <span style={{ color: "var(--cafe-text-primary)", fontSize: 14, fontWeight: 600 }}>
             🛒 {cartCount} item{cartCount === 1 ? "" : "s"}
           </span>
-          <span style={{ color: "white", fontSize: 15, fontWeight: 700 }}>
+          <span style={{ color: "var(--cafe-text-primary)", fontSize: 15, fontWeight: 700 }}>
             View Cart • {formatCurrency(cartTotal)}
           </span>
         </div>
@@ -819,7 +819,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
             }} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "white" }}>Waiter notified!</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--cafe-text-primary)" }}>Waiter notified!</div>
             <div style={{ fontSize: 12, color: "#7ec8a0" }}>{waiterCallSent.label} · staff will be with you shortly</div>
           </div>
           <button
@@ -877,7 +877,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: "white",
+        backgroundColor: "var(--cafe-bg-card)",
         borderTop: "1px solid #e8e4df",
         padding: "10px 16px",
         display: "flex",
@@ -958,7 +958,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
             ...card,
             width: "100%",
             maxHeight: "90vh",
-            backgroundColor: "white",
+            backgroundColor: "var(--cafe-bg-card)",
             borderRadius: "20px 20px 0 0",
             display: "flex",
             flexDirection: "column"
@@ -1095,7 +1095,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
             ...card,
             width: "100%",
             maxHeight: "90vh",
-            backgroundColor: "white",
+            backgroundColor: "var(--cafe-bg-card)",
             borderRadius: "20px 20px 0 0",
             display: "flex",
             flexDirection: "column"
@@ -1253,7 +1253,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
           <div style={{
             ...card,
             width: "100%",
-            backgroundColor: "white",
+            backgroundColor: "var(--cafe-bg-card)",
             borderRadius: "20px 20px 0 0",
             padding: 0,
             overflow: "hidden"
@@ -1421,7 +1421,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
             ...card,
             width: "100%",
             maxHeight: "85vh",
-            backgroundColor: "white",
+            backgroundColor: "var(--cafe-bg-card)",
             borderRadius: "20px 20px 0 0",
             display: "flex",
             flexDirection: "column",
@@ -1505,7 +1505,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
                       alignItems: "center"
                     }}>
                       <span style={{ fontSize: 14, color: "#c9a86a", fontWeight: 600 }}>Total across all orders</span>
-                      <span style={{ fontSize: 18, fontWeight: 700, color: "white" }}>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: "var(--cafe-text-primary)" }}>
                         {formatCurrency(placedOrders.reduce((s, o) => s + o.total, 0))}
                       </span>
                     </div>
@@ -1554,7 +1554,7 @@ export default function GuestMenu({ qrCode, tableId, menuItems = MENU_ITEMS, onA
           boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
           animation: "gm-slide-up 0.25s ease"
         }}>
-          <span style={{ color: "white", fontSize: 13 }}>
+          <span style={{ color: "var(--cafe-text-primary)", fontSize: 13 }}>
             Removed {undoSnack.item?.name}
           </span>
           <button

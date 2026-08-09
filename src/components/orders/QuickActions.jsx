@@ -52,7 +52,11 @@ function QuickActions({
           padding: "8px 16px",
           minWidth: 140,
           justifyContent: "space-between",
+          background: isOpen ? "var(--cafe-bg-hover)" : "",
+          transition: "background .15s",
         }}
+        onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; }}
+        onMouseLeave={e => { e.currentTarget.style.background = isOpen ? "var(--cafe-bg-hover)" : ""; }}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -82,10 +86,14 @@ function QuickActions({
             display: "grid",
             gridTemplateColumns: "repeat(2, 1fr)",
             gap: "var(--cafe-space-xs)",
+            animation: "quickActionsOpen 0.15s ease",
           }}
           role="menu"
           aria-label="Quick actions menu"
         >
+          <style>{`
+            @keyframes quickActionsOpen { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+          `}</style>
           {QUICK_ACTIONS.map((action) => {
             const isDisabled = disabledActions.includes(action.id);
             return (
@@ -105,7 +113,12 @@ function QuickActions({
                   opacity: isDisabled ? 0.5 : 1,
                   cursor: isDisabled ? "not-allowed" : "pointer",
                   minHeight: 72,
+                  transition: "background .15s, border-color .15s, transform .1s",
                 }}
+                onMouseEnter={e => { if (!isDisabled) { e.currentTarget.style.background = "var(--cafe-accent-dim)"; e.currentTarget.style.borderColor = "var(--cafe-accent)"; } }}
+                onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.borderColor = ""; }}
+                onMouseDown={e => { if (!isDisabled) e.currentTarget.style.transform = "scale(0.96)"; }}
+                onMouseUp={e => { e.currentTarget.style.transform = ""; }}
                 role="menuitem"
                 aria-disabled={isDisabled}
               >
