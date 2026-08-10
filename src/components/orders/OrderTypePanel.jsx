@@ -21,21 +21,21 @@ const ORDER_TYPE_OPTIONS = [
   { id: 'ZOMATO',           icon: '🔴', label: 'Zomato',     short: 'Zomato'   },
 ];
 
-// Status → display properties for table chips
+// Status → display properties for table chips (all theme-driven via CSS vars)
 const TABLE_STATUS_META = {
-  available:          { label: 'Free',    color: '#22c55e', bg: '#052e16', border: '#16a34a', priority: 0 },
-  reserved:           { label: 'Rsvd',   color: '#f59e0b', bg: '#1c0a00', border: '#92400e', priority: 1 },
-  occupied:           { label: 'In use', color: '#ef4444', bg: '#1c0606', border: '#991b1b', priority: 2 },
-  ordering:           { label: 'Order',  color: '#8b5cf6', bg: '#1e1030', border: '#6d28d9', priority: 2 },
-  dining:             { label: 'Dining', color: '#64748b', bg: '#0f172a', border: '#334155', priority: 2 },
-  bill_requested:     { label: 'Bill!',  color: '#ec4899', bg: '#1c0614', border: '#9d174d', priority: 1 },
-  cleaning:           { label: 'Clean',  color: '#6366f1', bg: '#10102a', border: '#4338ca', priority: 1 },
-  billed:             { label: 'Billed', color: '#3b82f6', bg: '#0c1929', border: '#1d4ed8', priority: 1 },
+  available: { label: 'Free',    color: 'var(--table-available-color, #22c55e)', bg: 'var(--table-available-bg, #052e16)',    border: 'var(--table-available-border, #16a34a)', priority: 0 },
+  reserved:  { label: 'Rsvd',    color: 'var(--table-reserved-color, #f59e0b)',  bg: 'var(--table-reserved-bg, #1c0a00)',      border: 'var(--table-reserved-border, #92400e)',  priority: 1 },
+  occupied:  { label: 'In use',  color: 'var(--table-occupied-color, #ef4444)',  bg: 'var(--table-occupied-bg, #1c0606)',      border: 'var(--table-occupied-border, #991b1b)',  priority: 2 },
+  ordering:  { label: 'Order',   color: 'var(--table-ordering-color, #8b5cf6)',   bg: 'var(--table-ordering-bg, #1e1030)',      border: 'var(--table-ordering-border, #6d28d9)',  priority: 2 },
+  dining:    { label: 'Dining',  color: 'var(--table-dining-color, #64748b)',     bg: 'var(--table-dining-bg, #0f172a)',        border: 'var(--table-dining-border, #334155)',    priority: 2 },
+  bill_requested: { label: 'Bill!', color: 'var(--table-billreq-color, #ec4899)', bg: 'var(--table-billreq-bg, #1c0614)',       border: 'var(--table-billreq-border, #9d174d)',   priority: 1 },
+  cleaning:  { label: 'Clean',   color: 'var(--table-cleaning-color, #6366f1)',   bg: 'var(--table-cleaning-bg, #10102a)',      border: 'var(--table-cleaning-border, #4338ca)',  priority: 1 },
+  billed:    { label: 'Billed',  color: 'var(--table-billed-color, #3b82f6)',     bg: 'var(--table-billed-bg, #0c1929)',        border: 'var(--table-billed-border, #1d4ed8)',    priority: 1 },
 };
 
 function getTableMeta(status = '') {
   const key = status.toLowerCase().replace(/ /g, '_');
-  return TABLE_STATUS_META[key] || { label: status || '?', color: '#94a3b8', bg: '#0f172a', border: '#334155', priority: 3 };
+  return TABLE_STATUS_META[key] || { label: status || '?', color: 'var(--table-default-color, #94a3b8)', bg: 'var(--table-default-bg, #0f172a)', border: 'var(--table-default-border, #334155)', priority: 3 };
 }
 
 const OrderTypePanel = ({
@@ -78,9 +78,9 @@ const OrderTypePanel = ({
               style={{
                 padding: '12px 6px',
                 borderRadius: 12,
-                border: `2px solid ${active ? 'var(--cafe-accent)' : 'var(--cafe-border-light)'}`,
-                background: active ? 'var(--cafe-accent-bg)' : 'var(--cafe-bg-surface)',
-                color: active ? 'var(--cafe-accent)' : 'var(--cafe-text-secondary)',
+                border: `2px solid ${active ? 'var(--ordertype-active-border, var(--cafe-accent))' : 'var(--ordertype-inactive-border, var(--cafe-border-light))'}`,
+                background: active ? 'var(--ordertype-active-bg, var(--cafe-accent-bg))' : 'var(--ordertype-inactive-bg, var(--cafe-bg-surface))',
+                color: active ? 'var(--ordertype-active-color, var(--cafe-accent))' : 'var(--ordertype-inactive-color, var(--cafe-text-secondary))',
                 fontSize: 12,
                 fontWeight: active ? 800 : 600,
                 cursor: 'pointer',
@@ -89,10 +89,10 @@ const OrderTypePanel = ({
                 alignItems: 'center',
                 gap: 6,
                 transition: 'all .2s',
-                boxShadow: active ? `0 4px 16px rgba(99,102,241,0.3)` : 'none',
+                boxShadow: active ? `0 4px 16px var(--ordertype-active-glow, rgba(99,102,241,0.3))` : 'none',
               }}
-              onMouseOver={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--cafe-accent)'; e.currentTarget.style.background = 'var(--cafe-bg-hover)'; } }}
-              onMouseOut={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--cafe-border-light)'; e.currentTarget.style.background = 'var(--cafe-bg-surface)'; } }}
+              onMouseOver={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--ordertype-hover-border, var(--cafe-accent))'; e.currentTarget.style.background = 'var(--ordertype-hover-bg, var(--cafe-bg-hover))'; } }}
+              onMouseOut={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--ordertype-inactive-border, var(--cafe-border-light))'; e.currentTarget.style.background = 'var(--ordertype-inactive-bg, var(--cafe-bg-surface))'; } }}
             >
               <span className="pos-order-type-icon" style={{ fontSize: 20 }}>{icon}</span>
               <span>{label}</span>
@@ -108,7 +108,7 @@ const OrderTypePanel = ({
             <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--cafe-text-tertiary)' }}>
               Select Table
             </span>
-            <span style={{ fontSize: 12, color: freeCount > 0 ? '#22c55e' : 'var(--cafe-text-tertiary)', fontWeight: 700 }}>
+            <span style={{ fontSize: 12, color: freeCount > 0 ? 'var(--table-available-color, #22c55e)' : 'var(--cafe-text-tertiary)', fontWeight: 700 }}>
               {freeCount} free
             </span>
           </div>

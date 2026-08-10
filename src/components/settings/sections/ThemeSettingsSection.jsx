@@ -5,17 +5,17 @@
  * Allows instant theme switching without reload.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../../theme/useTheme';
 
 export default function ThemeSettingsSection({ settings, onSettingChange }) {
   const { theme, setTheme } = useTheme();
-  const [selectedTheme, setSelectedTheme] = useState(theme?.id || 'modern');
+  const [selectedTheme, setSelectedTheme] = useState((theme?.id || 'modern').replace(/-light$|-dark$/, ''));
 
   // Sync with current theme from ThemeProvider
   useEffect(() => {
     if (theme?.id) {
-      setSelectedTheme(theme.id);
+      setSelectedTheme(theme.id.replace(/-light$|-dark$/, ''));
     }
   }, [theme?.id]);
 

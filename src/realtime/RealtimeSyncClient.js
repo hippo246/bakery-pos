@@ -2,7 +2,6 @@
 // Client-side WebSocket connection for POS terminals
 
 import { getTerminalManager } from '../terminal/TerminalManager.js';
-import { getWebSocketManager } from '../operations/WebSocketManager.js';
 
 export class RealtimeSyncClient {
   constructor(options = {}) {

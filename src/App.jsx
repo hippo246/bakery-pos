@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ThemeProvider } from "./theme";
 import BrewCRM from "./components/BrewCRM";
 import GuestOrder from "./pages/GuestOrder";
 import { TerminalProvider } from "./terminal/TerminalContext.jsx";
+import { THEME_CSS } from "./styles/theme";
 
 // Add smooth transitions for theme switching
 if (typeof document !== "undefined" && !document.getElementById("brew-theme-transitions")) {
@@ -20,6 +21,17 @@ if (typeof document !== "undefined" && !document.getElementById("brew-theme-tran
 }
 
 export default function App() {
+  // Inject theme CSS variables
+  useEffect(() => {
+    if (typeof document !== "undefined" && !document.getElementById("cafe-theme-css")) {
+      const el = document.createElement("style");
+      el.id = "cafe-theme-css";
+      el.textContent = THEME_CSS;
+      document.head.appendChild(el);
+      return () => el.remove();
+    }
+  }, []);
+
   // Detect /guest/<code> path — render customer-facing ordering page
   const isGuestPage = typeof window !== "undefined" && window.location.pathname.startsWith('/guest/');
   if (isGuestPage) {

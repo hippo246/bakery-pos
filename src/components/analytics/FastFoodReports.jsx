@@ -4,7 +4,7 @@
  * Vibrant touch-friendly reports with fast food styling.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import FunctionKeyPanel from '../fastfood-pos/FunctionKeyPanel';
 import ActionButtons from '../fastfood-pos/ActionButtons';
 import TopChrome from '../fastfood-pos/TopChrome';
@@ -15,6 +15,28 @@ export default function FastFoodReports(props) {
   const [selectedCategory, setSelectedCategory] = useState('Sales');
   const [selectedRow, setSelectedRow] = useState(null);
   const [_categoryPage, _setCategoryPage] = useState(0);
+  const [realOrders, setRealOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // Load real orders from localStorage
+  useEffect(() => {
+    setIsLoading(true);
+    setLoadError(null);
+    
+    try {
+      const storedOrders = localStorage.getItem('cafeos_orders');
+      if (storedOrders) {
+        const orders = JSON.parse(storedOrders);
+        setRealOrders(orders);
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error('[FastFoodReports] Failed to load orders:', error);
+      setLoadError('Failed to load orders data');
+      setIsLoading(false);
+    }
+  }, []);
 
   const reportCategories = ['Sales', 'Items', 'Payment', 'Staff', 'Hourly'];
 
@@ -47,13 +69,34 @@ export default function FastFoodReports(props) {
     { id: 'dashboard', label: 'DASHBOARD', style: 'teal' },
   ];
 
-  const reportData = [
-    { id: 1, item: 'Burger Combo', quantity: 45, amount: 6750 },
-    { id: 2, item: 'Pizza Slice', quantity: 32, amount: 1920 },
-    { id: 3, item: 'Fries', quantity: 78, amount: 2340 },
-    { id: 4, item: 'Soft Drink', quantity: 120, amount: 3600 },
-    { id: 5, item: 'Coffee', quantity: 56, amount: 1680 },
-  ];
+  // Transform real orders to report format
+  const reportData = useMemo(() => {
+    if (realOrders.length > 0) {
+      const itemMap = {};
+      realOrders.forEach(order => {
+        order.items?.forEach(item => {
+          const name = item.name || 'Unknown';
+          const quantity = item.quantity || 1;
+          const price = item.price || 0;
+          itemMap[name] = {
+            id: name,
+            item: name,
+            quantity: (itemMap[name]?.quantity || 0) + quantity,
+            amount: (itemMap[name]?.amount || 0) + (price * quantity),
+          };
+        });
+      });
+      return Object.values(itemMap).slice(0, 10);
+    }
+    // Fallback to sample data if no real orders
+    return [
+      { id: 1, item: 'Burger Combo', quantity: 45, amount: 6750 },
+      { id: 2, item: 'Pizza Slice', quantity: 32, amount: 1920 },
+      { id: 3, item: 'Fries', quantity: 78, amount: 2340 },
+      { id: 4, item: 'Soft Drink', quantity: 120, amount: 3600 },
+      { id: 5, item: 'Coffee', quantity: 56, amount: 1680 },
+    ];
+  }, [realOrders]);
 
   const rowStyle = (isSelected) => ({
     padding: '12px',

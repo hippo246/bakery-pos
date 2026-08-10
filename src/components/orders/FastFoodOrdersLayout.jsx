@@ -23,12 +23,12 @@ import PaymentModal from '../payment/PaymentModal';
 import CustomerModal from '../classic-pos/CustomerModal';
 import HeldOrdersModal from '../classic-pos/HeldOrdersModal';
 
-const SURFACE   = '#111116';
-const SURFACE2  = '#18181f';
-const BORDER    = 'rgba(255,255,255,0.07)';
-const ACCENT    = '#E63946';
-const TEXT      = '#f1f1f3';
-const MUTED     = 'rgba(255,255,255,0.38)';
+const SURFACE   = 'var(--pos-surface, #111116)';
+const SURFACE2  = 'var(--pos-surface-2, #18181f)';
+const BORDER    = 'var(--pos-border, rgba(255,255,255,0.07))';
+const ACCENT    = 'var(--ff-cat-active-border, #E63946)';
+const TEXT      = 'var(--pos-text, #f1f1f3)';
+const MUTED     = 'var(--pos-text-muted, rgba(255,255,255,0.38))';
 const CATEGORIES = ['All', 'Coffee', 'Food', 'Special', 'Popular', 'Drinks', 'Snacks', 'Dessert'];
 
 export default function FastFoodOrdersLayout({ menuItems = [], onNavigate }) {

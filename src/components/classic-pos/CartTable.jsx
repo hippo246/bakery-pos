@@ -1,14 +1,7 @@
-/**
- * Classic POS Cart Table
- * 
- * Table displaying cart items with columns: Code | Description | Qty | Price | Disc | Amount | Action (Delete)
- * Supports row highlighting for selected items with teal selection banner.
- */
-
 export default function CartTable({ cartItems, selectedItemId, onSelectItem, onDeleteItem, onQuantityChange }) {
   const containerStyle = {
-    background: '#1E1E1E',
-    border: '1px solid #333333',
+    background: 'var(--classic-pos-panel-bg)',
+    border: '1px solid var(--classic-pos-panel-border)',
     borderRadius: '6px',
     overflow: 'hidden',
     display: 'flex',
@@ -20,11 +13,11 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
     gridTemplateColumns: '80px 1fr 60px 80px 60px 90px 60px',
     gap: '8px',
     padding: '10px 12px',
-    background: '#2A2A2A',
-    borderBottom: '2px solid #444444',
+    background: 'var(--classic-pos-header-bg)',
+    borderBottom: '2px solid var(--classic-pos-header-border)',
     fontSize: '11px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
     textTransform: 'uppercase',
   };
 
@@ -33,10 +26,10 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
     gridTemplateColumns: '80px 1fr 60px 80px 60px 90px 60px',
     gap: '8px',
     padding: '8px 12px',
-    background: isSelected ? '#0D9488' : '#252525',
-    borderBottom: '1px solid #333333',
+    background: isSelected ? 'var(--classic-pos-row-selected-bg)' : 'var(--classic-pos-row-bg)',
+    borderBottom: '1px solid var(--classic-pos-row-border)',
     fontSize: '12px',
-    color: '#ffffff',
+    color: isSelected ? '#ffffff' : 'var(--classic-pos-name-color)',
     alignItems: 'center',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
@@ -49,12 +42,12 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
   };
 
   const priceStyle = {
-    color: '#38EF7D',
+    color: 'var(--classic-pos-price-color)',
     fontWeight: '600',
   };
 
   const deleteButtonStyle = {
-    background: '#DC2626',
+    background: 'var(--classic-pos-delete-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -69,9 +62,9 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
     width: '50px',
     padding: '4px 6px',
     borderRadius: '4px',
-    border: '1px solid #444444',
-    background: '#1E1E1E',
-    color: '#ffffff',
+    border: '1px solid var(--classic-pos-input-border)',
+    background: 'var(--classic-pos-input-bg)',
+    color: 'var(--classic-pos-name-color)',
     fontSize: '12px',
     fontWeight: '600',
     textAlign: 'center',
@@ -100,7 +93,6 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
 
   return (
     <div style={containerStyle}>
-      {/* Header */}
       <div style={headerStyle}>
         <div style={cellStyle}>Code</div>
         <div style={cellStyle}>Description</div>
@@ -111,13 +103,12 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
         <div style={cellStyle}>Action</div>
       </div>
 
-      {/* Rows */}
       <div style={{ overflowY: 'auto', maxHeight: '200px' }}>
         {cartItems.length === 0 ? (
           <div style={{ 
             padding: '40px', 
             textAlign: 'center', 
-            color: '#666666', 
+            color: 'var(--classic-pos-empty-color)', 
             fontSize: '13px',
             fontWeight: '600' 
           }}>
@@ -131,12 +122,12 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
               onClick={() => handleRowClick(item)}
               onMouseEnter={(e) => {
                 if (selectedItemId !== item.id) {
-                  e.currentTarget.style.background = '#2A2A2A';
+                  e.currentTarget.style.background = 'var(--classic-pos-row-bg-hover)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (selectedItemId !== item.id) {
-                  e.currentTarget.style.background = '#252525';
+                  e.currentTarget.style.background = 'var(--classic-pos-row-bg)';
                 }
               }}
             >
@@ -159,10 +150,10 @@ export default function CartTable({ cartItems, selectedItemId, onSelectItem, onD
                   style={deleteButtonStyle}
                   onClick={(e) => handleDeleteClick(e, item.id)}
                   onMouseEnter={(e) => {
-                    e.target.style.background = '#EF4444';
+                    e.target.style.background = 'var(--classic-pos-delete-btn-hover)';
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = '#DC2626';
+                    e.target.style.background = 'var(--classic-pos-delete-btn-bg)';
                   }}
                 >
                   Delete

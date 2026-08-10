@@ -7,8 +7,10 @@ import { getSetupState, completeSetupStep, skipSetupStep, getSetupProgress, SETU
 import { createSecurityAuditLog } from "../../domain/auditLogModel.js";
 import { getCurrentUserId } from "../../utils/authService.js";
 import { validateSettings, getFirstErrorSection } from "../../utils/setupValidation.js";
-import { saveSetupProgress, loadSetupProgress, clearSetupProgress, isOnboardingCompleted, markOnboardingCompleted } from "../../utils/setupSecurity.js";
 import ConfirmDialog from "../common/ConfirmDialog";
+
+// Load setupSecurity dynamically to avoid ineffective dynamic import warning
+const loadSetupSecurity = () => import("../../utils/setupSecurity.js");
 
 // Animation keyframes
 const fadeIn = `
@@ -85,6 +87,22 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
   const [confirmDialog, setConfirmDialog] = useState({ open: false, onConfirm: null });
   const [goLiveDialog, setGoLiveDialog] = useState({ open: false });
   const [isMobile, setIsMobile] = useState(false);
+  const [setupSecurityFunctions, setSetupSecurityFunctions] = useState(null);
+
+  // Load setupSecurity functions dynamically
+  useEffect(() => {
+    loadSetupSecurity().then(module => {
+      setSetupSecurityFunctions({
+        saveSetupProgress: module.saveSetupProgress,
+        loadSetupProgress: module.loadSetupProgress,
+        clearSetupProgress: module.clearSetupProgress,
+        isOnboardingCompleted: module.isOnboardingCompleted,
+        markOnboardingCompleted: module.markOnboardingCompleted,
+      });
+    }).catch(err => {
+      console.error('Failed to load setupSecurity:', err);
+    });
+  }, []);
   const [isTablet, setIsTablet] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
@@ -244,11 +262,11 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
 
   // Auto-save effect with visual feedback using secure storage
   useEffect(() => {
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && setupSecurityFunctions) {
       const saveTimeout = setTimeout(() => {
         setSaveStatus('saving');
         // Save to secure storage
-        saveSetupProgress(currentStep, localSettings);
+        setupSecurityFunctions.saveSetupProgress(currentStep, localSettings);
         if (isMountedRef.current) {
           setLastSaved(new Date().toISOString());
           setHasUnsavedChanges(false);
@@ -262,7 +280,7 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
       }, 1000);
       return () => clearTimeout(saveTimeout);
     }
-  }, [hasUnsavedChanges, currentStep, localSettings]);
+  }, [hasUnsavedChanges, currentStep, localSettings, setupSecurityFunctions]);
 
   // Exit protection on beforeunload
   useEffect(() => {
@@ -396,22 +414,30 @@ export default function SetupWizard({ settings, onSetupComplete, onCancel, onSet
   }, [hasUnsavedChanges, onCancel]);
 
   const handleExitAnyway = useCallback(() => {
-    setShowExitDialog(false);
-    if (onCancel) onCancel();
-  }, [onCancel]);
+    if (setupSecurityFunctions) {
+      setupSecurityFunctions.saveSetupProgress(currentStep, localSettings);
+      setLastSaved(new Date().toISOString());
+      setHasUnsavedChanges(false);
+      setShowExitDialog(false);
+      onCancel?.();
+    }
+  }, [currentStep, localSettings, setupSecurityFunctions, onCancel]);
 
   const handleSaveAndExit = useCallback(() => {
-    saveSetupProgress(currentStep, localSettings);
-    setLastSaved(new Date().toISOString());
-    setHasUnsavedChanges(false);
-    setShowExitDialog(false);
-    if (onCancel) onCancel();
-  }, [currentStep, localSettings, onCancel]);
+    if (setupSecurityFunctions) {
+      setupSecurityFunctions.saveSetupProgress(currentStep, localSettings);
+      setLastSaved(new Date().toISOString());
+      setHasUnsavedChanges(false);
+      setShowExitDialog(false);
+      onCancel?.();
+    }
+  }, [currentStep, localSettings, setupSecurityFunctions, onCancel]);
 
   const handleGoLive = useCallback(() => {
     setGoLiveDialog({ open: true });
   }, []);
 
+// ... (rest of the code remains the same)
   const confirmGoLive = useCallback(() => {
     // Validate all settings before completion
     const validation = validateSettings(localSettings);

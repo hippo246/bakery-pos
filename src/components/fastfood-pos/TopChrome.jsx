@@ -63,63 +63,63 @@ export default function TopChrome({
 
   return (
     <div style={{
-      background: 'linear-gradient(90deg, #0f0f12 0%, #1a1a22 50%, #0f0f12 100%)',
-      borderBottom: '2px solid #E63946',
+      background: 'var(--cafe-bg-elevated)',
+      borderBottom: '1px solid var(--cafe-border)',
       padding: '0 20px',
       height: 54,
       display: 'flex',
       alignItems: 'center',
       gap: 20,
       flexShrink: 0,
-      boxShadow: '0 2px 20px rgba(230,57,70,0.2)',
+      boxShadow: 'var(--cafe-shadow-sm)',
     }}>
       {/* Brand */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <div style={{
           width: 30, height: 30, borderRadius: 8,
-          background: 'linear-gradient(135deg, #E63946, #C1121F)',
+          background: 'var(--cafe-accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16, boxShadow: '0 0 10px rgba(230,57,70,0.5)',
+          fontSize: 16, boxShadow: 'var(--cafe-shadow-glow)',
         }}>🍔</div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: '#fff', letterSpacing: 1, lineHeight: 1 }}>
+          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--cafe-text-primary)', letterSpacing: 1, lineHeight: 1 }}>
             {licenseInfo}
           </div>
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5 }}>{version}</div>
+          <div style={{ fontSize: 9, color: 'var(--cafe-text-tertiary)', letterSpacing: 0.5 }}>{version}</div>
         </div>
       </div>
 
-      <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ width: 1, height: 30, background: 'var(--cafe-border)' }} />
 
       {/* Order counter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <div style={{
-          background: '#E63946', color: '#fff', borderRadius: 6,
+          background: 'var(--cafe-accent)', color: '#fff', borderRadius: 'var(--cafe-radius-sm)',
           fontSize: 10, fontWeight: 800, padding: '2px 8px', letterSpacing: 0.5,
         }}>ORDERS</div>
-        <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', minWidth: 30, textAlign: 'center' }}>
+        <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--cafe-text-primary)', minWidth: 30, textAlign: 'center' }}>
           {orderCount}
         </div>
       </div>
 
-      <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ width: 1, height: 30, background: 'var(--cafe-border)' }} />
 
       {/* Terminal */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>Terminal</span>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--cafe-success)', boxShadow: '0 0 6px var(--cafe-success)' }} />
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--cafe-text-tertiary)' }}>Terminal</span>
         <span style={{
-          fontSize: 11, fontWeight: 800, color: '#fff',
-          background: 'rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.1)',
+          fontSize: 11, fontWeight: 800, color: 'var(--cafe-text-primary)',
+          background: 'var(--cafe-bg-surface)', padding: '3px 8px', borderRadius: 'var(--cafe-radius-sm)',
+          border: '1px solid var(--cafe-border-light)',
         }}>{terminalId}</span>
       </div>
 
-      <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ width: 1, height: 30, background: 'var(--cafe-border)' }} />
 
       {/* Customer name */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--cafe-text-tertiary)', whiteSpace: 'nowrap' }}>
           👤 Customer
         </span>
         <input
@@ -129,13 +129,13 @@ export default function TopChrome({
           placeholder="Name / Token"
           style={{
             padding: '5px 12px',
-            background: 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 6, color: '#fff', fontSize: 13, fontWeight: 600,
+            background: 'var(--cafe-bg-surface)',
+            border: '1px solid var(--cafe-border-light)',
+            borderRadius: 'var(--cafe-radius-sm)', color: 'var(--cafe-text-primary)', fontSize: 13, fontWeight: 600,
             width: 150, outline: 'none', transition: 'border-color 0.2s',
           }}
-          onFocus={(e) => { e.target.style.borderColor = '#E63946'; e.target.style.boxShadow = '0 0 0 2px rgba(230,57,70,0.2)'; }}
-          onBlur={(e)  => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none'; }}
+          onFocus={(e) => { e.target.style.borderColor = 'var(--cafe-accent)'; e.target.style.boxShadow = '0 0 0 2px var(--cafe-accent-bg)'; }}
+          onBlur={(e)  => { e.target.style.borderColor = 'var(--cafe-border-light)'; e.target.style.boxShadow = 'none'; }}
         />
       </div>
 
@@ -143,9 +143,9 @@ export default function TopChrome({
 
       {/* Toggles */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-        <Toggle label="Speech"  checked={speechEnabled}      onChange={onSpeechToggle}      color="#3b82f6" />
-        <Toggle label="Receipt" checked={receiptPrintEnabled} onChange={onReceiptPrintToggle} color="#10b981" />
-        <Toggle label="Wholesale" checked={wholeSaleEnabled}  onChange={onWholeSaleToggle}   color="#f59e0b" />
+        <Toggle label="Speech"  checked={speechEnabled}      onChange={onSpeechToggle}      color="var(--cafe-info)" />
+        <Toggle label="Receipt" checked={receiptPrintEnabled} onChange={onReceiptPrintToggle} color="var(--cafe-success)" />
+        <Toggle label="Wholesale" checked={wholeSaleEnabled}  onChange={onWholeSaleToggle}   color="var(--cafe-warning)" />
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -155,28 +155,28 @@ export default function TopChrome({
           }}
           style={{
             padding: '6px 14px',
-            background: '#E63946',
+            background: 'var(--cafe-accent)',
             color: '#ffffff',
             border: 'none',
-            borderRadius: '6px',
+            borderRadius: 'var(--cafe-radius-sm)',
             fontSize: '11px',
             fontWeight: '700',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(230,57,70,0.3)',
+            boxShadow: 'var(--cafe-shadow-glow)',
           }}
         >
           Razorpay Config
         </button>
       </div>
 
-      <div style={{ width: 1, height: 30, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ width: 1, height: 30, background: 'var(--cafe-border)' }} />
 
       {/* Clock */}
       <div style={{ flexShrink: 0, textAlign: 'right' }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums', letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--cafe-text-primary)', fontVariantNumeric: 'tabular-nums', letterSpacing: 0.5 }}>
           {fmt(time)}
         </div>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 9, color: 'var(--cafe-text-tertiary)', letterSpacing: 0.5 }}>
           {time.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
         </div>
       </div>
@@ -189,7 +189,7 @@ export default function TopChrome({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.8)',
+          background: 'rgba(0, 0, 0, 0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -200,19 +200,19 @@ export default function TopChrome({
           setShowRazorpayConfig(false);
         }}>
           <div style={{
-            background: '#1a1a22',
-            border: '2px solid #E63946',
-            borderRadius: '12px',
+            background: 'var(--cafe-bg-card)',
+            border: '1px solid var(--cafe-border)',
+            borderRadius: 'var(--cafe-radius-lg)',
             padding: '28px',
             width: '420px',
             maxWidth: '90%',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--cafe-shadow-lg)',
           }}
           onClick={(e) => {
             e.stopPropagation();
           }}>
             <h3 style={{
-              color: '#ffffff',
+              color: 'var(--cafe-text-primary)',
               fontSize: '20px',
               fontWeight: '800',
               margin: '0 0 24px',
@@ -224,7 +224,7 @@ export default function TopChrome({
             <div style={{ marginBottom: '18px' }}>
               <label style={{
                 display: 'block',
-                color: 'rgba(255,255,255,0.7)',
+                color: 'var(--cafe-text-secondary)',
                 fontSize: '12px',
                 fontWeight: '700',
                 marginBottom: '8px',
@@ -240,23 +240,23 @@ export default function TopChrome({
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
+                  background: 'var(--cafe-bg-surface)',
+                  border: '1px solid var(--cafe-border)',
+                  borderRadius: 'var(--cafe-radius-sm)',
+                  color: 'var(--cafe-text-primary)',
                   fontSize: '14px',
                   fontWeight: '600',
                   outline: 'none',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#E63946'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.15)'}
+                onFocus={(e) => e.target.style.borderColor = 'var(--cafe-accent)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--cafe-border)'}
               />
             </div>
             
             <div style={{ marginBottom: '24px' }}>
               <label style={{
                 display: 'block',
-                color: 'rgba(255,255,255,0.7)',
+                color: 'var(--cafe-text-secondary)',
                 fontSize: '12px',
                 fontWeight: '700',
                 marginBottom: '8px',
@@ -272,16 +272,16 @@ export default function TopChrome({
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: 'rgba(255,255,255,0.08)',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
+                  background: 'var(--cafe-bg-surface)',
+                  border: '1px solid var(--cafe-border)',
+                  borderRadius: 'var(--cafe-radius-sm)',
+                  color: 'var(--cafe-text-primary)',
                   fontSize: '14px',
                   fontWeight: '600',
                   outline: 'none',
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#E63946'}
-                onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.15)'}
+                onFocus={(e) => e.target.style.borderColor = 'var(--cafe-accent)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--cafe-border)'}
               />
             </div>
             
@@ -290,10 +290,10 @@ export default function TopChrome({
                 onClick={() => setShowRazorpayConfig(false)}
                 style={{
                   padding: '12px 24px',
-                  background: 'rgba(255,255,255,0.1)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '8px',
+                  background: 'var(--cafe-bg-surface)',
+                  color: 'var(--cafe-text-secondary)',
+                  border: '1px solid var(--cafe-border)',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   fontSize: '13px',
                   fontWeight: '700',
                   cursor: 'pointer',
@@ -331,14 +331,14 @@ export default function TopChrome({
                 }}
                 style={{
                   padding: '12px 24px',
-                  background: '#E63946',
+                  background: 'var(--cafe-accent)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   fontSize: '13px',
                   fontWeight: '700',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(230,57,70,0.4)',
+                  boxShadow: 'var(--cafe-shadow-glow)',
                 }}
               >
                 Save

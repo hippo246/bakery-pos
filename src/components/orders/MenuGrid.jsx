@@ -78,23 +78,23 @@ const MenuGrid = ({
             onMouseEnter={(e) => {
               if (!unavailable) {
                 e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.12)";
-                if (qty === 0) e.currentTarget.style.borderColor = colors.primary;
+                e.currentTarget.style.boxShadow = "var(--cafe-shadow-lg)";
+                if (qty === 0) e.currentTarget.style.borderColor = "var(--cafe-accent)";
               }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-              if (qty === 0) e.currentTarget.style.borderColor = colors.borderLight;
+              e.currentTarget.style.boxShadow = "var(--cafe-shadow-sm)";
+              if (qty === 0) e.currentTarget.style.borderColor = "var(--cafe-border-light)";
             }}
             onFocus={(e) => {
               if (unavailable) return;
-              e.currentTarget.style.boxShadow = `0 0 0 3px ${colors.primary}55, 0 12px 32px rgba(0,0,0,0.12)`;
-              e.currentTarget.style.borderColor = colors.primary;
+              e.currentTarget.style.boxShadow = `0 0 0 3px var(--cafe-accent-border), var(--cafe-shadow-lg)`;
+              e.currentTarget.style.borderColor = "var(--cafe-accent)";
             }}
             onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
-              if (qty === 0) e.currentTarget.style.borderColor = colors.borderLight;
+              e.currentTarget.style.boxShadow = "var(--cafe-shadow-sm)";
+              if (qty === 0) e.currentTarget.style.borderColor = "var(--cafe-border-light)";
             }}
           >
             {/* In-cart qty badge */}
@@ -124,16 +124,16 @@ const MenuGrid = ({
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => onUpdateQuantity(item.id, -1)}
-                    style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${colors.borderLight}`, background: colors.backgroundSurface, color: colors.textSecondary, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontWeight: 700, transition: "background .15s, transform .1s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = colors.backgroundHover; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = colors.backgroundSurface; }}
+                    style={{ width: 32, height: 32, borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border-light)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontWeight: 700, transition: "background .15s, transform .1s" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-surface)"; }}
                     onMouseDown={e => { e.currentTarget.style.transform = "scale(0.92)"; }}
                     onMouseUp={e => { e.currentTarget.style.transform = ""; }}
                     aria-label={`Decrease quantity of ${item.name}`}
                   >−</button>
                   <button
                     onClick={() => onAddItem(item)}
-                    style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${colors.primary}`, background: colors.primary, color: "#1A1208", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontWeight: 800, transition: "filter .15s, transform .1s" }}
+                    style={{ width: 32, height: 32, borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-accent)`, background: "var(--cafe-accent)", color: "#1A1208", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, fontWeight: 800, transition: "filter .15s, transform .1s" }}
                     onMouseEnter={e => { e.currentTarget.style.filter = "brightness(1.08)"; }}
                     onMouseLeave={e => { e.currentTarget.style.filter = ""; }}
                     onMouseDown={e => { e.currentTarget.style.transform = "scale(0.92)"; }}

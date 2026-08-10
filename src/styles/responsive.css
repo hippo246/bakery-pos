@@ -93,6 +93,46 @@
   .tables-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  /* Compact sidebar for tablet portrait */
+  .sidebar-compact {
+    width: 130px !important;
+  }
+
+  .sidebar-compact .nav-item-label {
+    font-size: 10px;
+  }
+
+  .sidebar-compact .nav-group-title {
+    font-size: 8px;
+    padding: 4px 8px;
+  }
+
+  .sidebar-compact .nav-item {
+    padding: 4px 8px;
+    height: 30px;
+  }
+
+  /* Reduce padding in main content areas */
+  .main-content {
+    padding: 10px !important;
+  }
+
+  /* Compact card padding */
+  .card {
+    padding: 10px !important;
+  }
+
+  /* Reduce gap in grids */
+  .grid-4,
+  .grid-6,
+  .kitchen-grid,
+  .menu-grid,
+  .inventory-grid,
+  .staff-grid,
+  .tables-grid {
+    gap: 6px !important;
+  }
 }
 
 /* ── Tablet Landscape (901px – 1024px) ───────────────────────── */
@@ -127,20 +167,42 @@
 
   /* Extra compact sidebar for smaller laptop screens */
   .sidebar-compact {
-    width: 160px !important;
+    width: 140px !important;
   }
 
   .sidebar-compact .nav-item-label {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .sidebar-compact .nav-group-title {
-    font-size: 10px;
-    padding: 8px 12px;
+    font-size: 9px;
+    padding: 6px 10px;
   }
 
   .sidebar-compact .nav-item {
-    padding: 8px 12px;
+    padding: 6px 10px;
+    height: 32px;
+  }
+
+  /* Reduce padding in main content areas */
+  .main-content {
+    padding: 12px !important;
+  }
+
+  /* Compact card padding */
+  .card {
+    padding: 12px !important;
+  }
+
+  /* Reduce gap in grids */
+  .grid-4,
+  .grid-6,
+  .kitchen-grid,
+  .menu-grid,
+  .inventory-grid,
+  .staff-grid,
+  .tables-grid {
+    gap: 8px !important;
   }
 }
 
@@ -176,15 +238,46 @@
 
   /* Compact sidebar for laptop screens */
   .sidebar-compact {
-    width: 180px !important;
+    width: 160px !important;
   }
 
   .sidebar-compact .nav-item-label {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .sidebar-compact .nav-group-title {
-    font-size: 11px;
+    font-size: 10px;
+  }
+
+  /* Reduce padding in main content areas */
+  .main-content {
+    padding: 16px !important;
+  }
+
+  /* Compact card padding */
+  .card {
+    padding: 14px !important;
+  }
+
+  /* Reduce gap in grids */
+  .grid-4,
+  .grid-6,
+  .kitchen-grid,
+  .menu-grid,
+  .inventory-grid,
+  .staff-grid,
+  .tables-grid {
+    gap: 10px !important;
+  }
+
+  /* Reduce header heights */
+  header {
+    min-height: 56px !important;
+  }
+
+  /* Compact modal padding */
+  .modal-content {
+    padding: 16px !important;
   }
 }
 
@@ -216,6 +309,25 @@
 
   .tables-grid {
     grid-template-columns: repeat(5, 1fr);
+  }
+
+  /* Slightly compact for large desktop laptops */
+  .main-content {
+    padding: 20px !important;
+  }
+
+  .card {
+    padding: 16px !important;
+  }
+
+  .grid-4,
+  .grid-6,
+  .kitchen-grid,
+  .menu-grid,
+  .inventory-grid,
+  .staff-grid,
+  .tables-grid {
+    gap: 12px !important;
   }
 }
 

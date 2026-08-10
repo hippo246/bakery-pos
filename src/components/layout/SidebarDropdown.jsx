@@ -4,7 +4,7 @@
  * Collapsible dropdown for sidebar footer with role, theme, search, and other settings
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import NotificationBell from '../notifications/NotificationBell';
 
 export default function SidebarDropdown({
@@ -13,6 +13,7 @@ export default function SidebarDropdown({
   isOpen,
   setIsOpen,
   theme,
+  setTheme,
   toggleTheme,
   setCommandPaletteOpen,
   notifications,
@@ -23,13 +24,17 @@ export default function SidebarDropdown({
   safeSetTab,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const baseThemeId = String(theme?.id || 'modern').replace(/-light$|-dark$/, '');
 
   const handleThemeChange = (e) => {
-    localStorage.setItem('cafeos-pos-theme', e.target.value);
-    window.location.reload();
+    if (typeof setTheme === 'function') {
+      setTheme(e.target.value);
+    } else {
+      localStorage.setItem('cafeos-pos-theme', e.target.value);
+      window.location.reload();
+    }
   };
 
-  const currentTheme = localStorage.getItem('cafeos-pos-theme') || 'modern';
   const currentMode = theme?.mode || 'light';
 
   return (
@@ -125,8 +130,8 @@ export default function SidebarDropdown({
             }}>
               Theme
             </div>
-            <select
-              value={currentTheme}
+             <select
+              value={theme?.id || 'modern'}
               onChange={handleThemeChange}
               style={{
                 width: '100%', fontSize: 12,
@@ -239,8 +244,8 @@ export default function SidebarDropdown({
               fontWeight: 500, letterSpacing: '0.02em', transition: 'all 0.15s ease', height: 40,
             }}
           >
-            <span style={{ fontSize: 13 }}>{currentMode === 'dark' ? '◐' : '◑'}</span>
-            {currentMode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            <span style={{ fontSize: 13 }}>{currentMode === 'dark' ? '◑' : '◐'}</span>
+            {currentMode === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </button>
         </div>
       )}

@@ -185,24 +185,24 @@ export default function CafeOrdersLayout(props) {
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
-      background: '#faf5f0',
+      background: 'var(--cafe-bg, #faf5f0)',
       fontFamily: 'Georgia, serif',
       overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{
         padding: '20px 24px',
-        background: '#ffffff',
-        borderBottom: '2px solid #8b5a2b',
+        background: 'var(--cafe-bg-card, #ffffff)',
+        borderBottom: '2px solid var(--cafe-accent, #8b5a2b)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: '#3d2914', margin: 0 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--cafe-text-primary, #3d2914)', margin: 0 }}>
             ☕ Cafe Orders
           </h1>
-          <p style={{ fontSize: 14, color: '#8b7355', margin: '4px 0 0' }}>
+          <p style={{ fontSize: 14, color: 'var(--cafe-text-secondary, #8b7355)', margin: '4px 0 0' }}>
             Warm & Cozy Ordering
           </p>
         </div>
@@ -211,7 +211,7 @@ export default function CafeOrdersLayout(props) {
             onClick={() => setShowOrderHistory(true)}
             style={{
               padding: '8px 16px',
-              background: '#8b5a2b',
+              background: 'var(--cafe-accent, #8b5a2b)',
               color: '#ffffff',
               border: 'none',
               borderRadius: 8,
@@ -226,7 +226,7 @@ export default function CafeOrdersLayout(props) {
             onClick={() => setShowHeldOrdersModal(true)}
             style={{
               padding: '8px 16px',
-              background: heldOrders.length > 0 ? '#8b5a2b' : '#ccc',
+              background: heldOrders.length > 0 ? 'var(--cafe-accent, #8b5a2b)' : 'var(--cafe-border, #ccc)',
               color: '#ffffff',
               border: 'none',
               borderRadius: 8,

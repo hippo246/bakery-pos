@@ -1,17 +1,9 @@
-/**
- * Classic POS Order History Modal
- * 
- * Popup to display and search completed orders
- * Search by receipt number or order number
- */
-
 import { useState, useEffect } from 'react';
 
 export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintOrder, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [realOrders, setRealOrders] = useState([]);
 
-  // Load real orders from localStorage if not provided via props
   useEffect(() => {
     if (orders.length === 0) {
       try {
@@ -26,7 +18,6 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
     }
   }, [orders]);
 
-  // Use provided orders or loaded orders
   const displayOrders = orders.length > 0 ? orders : realOrders;
 
   const modalOverlayStyle = {
@@ -43,8 +34,8 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   };
 
   const modalStyle = {
-    background: '#1E1E1E',
-    border: '2px solid #333333',
+    background: 'var(--classic-pos-modal-bg)',
+    border: '2px solid var(--classic-pos-modal-border)',
     borderRadius: '8px',
     width: '700px',
     maxHeight: '80vh',
@@ -54,9 +45,9 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   };
 
   const headerStyle = {
-    background: '#252525',
+    background: 'var(--classic-pos-modal-header-bg)',
     padding: '16px 20px',
-    borderBottom: '2px solid #333333',
+    borderBottom: '2px solid var(--classic-pos-modal-header-border)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -65,11 +56,11 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   const titleStyle = {
     fontSize: '18px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
   };
 
   const closeButtonStyle = {
-    background: '#DC2626',
+    background: 'var(--classic-pos-close-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -96,18 +87,18 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
     flex: 1,
     padding: '10px 12px',
     borderRadius: '4px',
-    border: '1px solid #444444',
-    background: '#252525',
-    color: '#ffffff',
+    border: '1px solid var(--classic-pos-input-border)',
+    background: 'var(--classic-pos-input-bg)',
+    color: 'var(--classic-pos-name-color)',
     fontSize: '14px',
     outline: 'none',
   };
 
   const orderCardStyle = {
-    background: '#2A2A2A',
+    background: 'var(--classic-pos-card-bg)',
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: '#3A3A3A',
+    borderColor: 'var(--classic-pos-card-border)',
     borderRadius: '6px',
     padding: '12px',
     marginBottom: '12px',
@@ -124,24 +115,24 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   const orderTitleStyle = {
     fontSize: '14px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
   };
 
   const orderTimestampStyle = {
     fontSize: '12px',
-    color: '#888888',
+    color: 'var(--classic-pos-code-color)',
   };
 
   const orderDetailsStyle = {
     fontSize: '12px',
-    color: '#cccccc',
+    color: 'var(--classic-pos-detail-text)',
     marginBottom: '8px',
   };
 
   const orderSummaryStyle = {
     fontSize: '13px',
     fontWeight: '700',
-    color: '#38EF7D',
+    color: 'var(--classic-pos-price-color)',
   };
 
   const buttonContainerStyle = {
@@ -151,7 +142,7 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   };
 
   const printButtonStyle = {
-    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+    background: 'var(--classic-pos-print-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -163,7 +154,7 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   };
 
   const recallButtonStyle = {
-    background: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
+    background: 'var(--classic-pos-recall-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -177,11 +168,10 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
   const emptyStateStyle = {
     textAlign: 'center',
     padding: '40px 20px',
-    color: '#888888',
+    color: 'var(--classic-pos-code-color)',
     fontSize: '14px',
   };
 
-  // Filter orders based on search query (receipt number or order number)
   const filteredOrders = displayOrders.filter(order => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -198,7 +188,14 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <span style={titleStyle}>Order History ({filteredOrders.length})</span>
-          <button style={closeButtonStyle} onClick={onClose}>Close</button>
+          <button
+            style={closeButtonStyle}
+            onClick={onClose}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-hover)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-bg)'; }}
+          >
+            Close
+          </button>
         </div>
         <div style={contentStyle}>
           <div style={searchContainerStyle}>
@@ -221,12 +218,12 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
                 key={order.id}
                 style={orderCardStyle}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#3A3A3A';
-                  e.currentTarget.style.borderColor = '#4A4A4A';
+                  e.currentTarget.style.background = 'var(--classic-pos-card-bg-hover)';
+                  e.currentTarget.style.borderColor = 'var(--classic-pos-card-border-hover)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#2A2A2A';
-                  e.currentTarget.style.borderColor = '#3A3A3A';
+                  e.currentTarget.style.background = 'var(--classic-pos-card-bg)';
+                  e.currentTarget.style.borderColor = 'var(--classic-pos-card-border)';
                 }}
               >
                 <div style={orderHeaderStyle}>
@@ -243,7 +240,7 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
                 </div>
                 <div style={orderDetailsStyle}>
                   Payment: {order.paymentMethod || 'N/A'} | 
-                  Status: <span style={{ color: order.status === 'completed' ? '#38EF7D' : '#F59E0B' }}>
+                  Status: <span style={{ color: order.status === 'completed' ? 'var(--classic-pos-price-color)' : 'var(--classic-pos-status-pending)' }}>
                     {order.status || 'Pending'}
                   </span>
                 </div>
@@ -254,24 +251,16 @@ export default function OrderHistoryModal({ orders = [], onRecallOrder, onPrintO
                   <button
                     style={printButtonStyle}
                     onClick={() => onPrintOrder?.(order)}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)';
-                    }}
+                    onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-print-btn-hover)'; }}
+                    onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-print-btn-bg)'; }}
                   >
                     Print
                   </button>
                   <button
                     style={recallButtonStyle}
                     onClick={() => onRecallOrder?.(order)}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = 'linear-gradient(135deg, #14B8A6 0%, #2DD4BF 100%)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)';
-                    }}
+                    onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-recall-btn-hover)'; }}
+                    onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-recall-btn-bg)'; }}
                   >
                     Recall
                   </button>

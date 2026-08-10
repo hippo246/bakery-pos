@@ -1,10 +1,3 @@
-/**
- * Classic POS Held Orders Modal
- * 
- * Popup to display and manage held orders
- * Shows order details with ability to recall or delete
- */
-
 export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrder, onClose }) {
   const modalOverlayStyle = {
     position: 'fixed',
@@ -20,8 +13,8 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   };
 
   const modalStyle = {
-    background: '#1E1E1E',
-    border: '2px solid #333333',
+    background: 'var(--classic-pos-modal-bg)',
+    border: '2px solid var(--classic-pos-modal-border)',
     borderRadius: '8px',
     width: '600px',
     maxHeight: '80vh',
@@ -31,9 +24,9 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   };
 
   const headerStyle = {
-    background: '#252525',
+    background: 'var(--classic-pos-modal-header-bg)',
     padding: '16px 20px',
-    borderBottom: '2px solid #333333',
+    borderBottom: '2px solid var(--classic-pos-modal-header-border)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -42,11 +35,11 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   const titleStyle = {
     fontSize: '18px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
   };
 
   const closeButtonStyle = {
-    background: '#DC2626',
+    background: 'var(--classic-pos-close-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -64,10 +57,10 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   };
 
   const orderCardStyle = {
-    background: '#2A2A2A',
+    background: 'var(--classic-pos-card-bg)',
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: '#3A3A3A',
+    borderColor: 'var(--classic-pos-card-border)',
     borderRadius: '6px',
     padding: '12px',
     marginBottom: '12px',
@@ -84,24 +77,24 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   const orderTitleStyle = {
     fontSize: '14px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
   };
 
   const orderTimestampStyle = {
     fontSize: '12px',
-    color: '#888888',
+    color: 'var(--classic-pos-code-color)',
   };
 
   const orderDetailsStyle = {
     fontSize: '12px',
-    color: '#cccccc',
+    color: 'var(--classic-pos-detail-text)',
     marginBottom: '8px',
   };
 
   const orderSummaryStyle = {
     fontSize: '13px',
     fontWeight: '700',
-    color: '#38EF7D',
+    color: 'var(--classic-pos-price-color)',
   };
 
   const buttonContainerStyle = {
@@ -112,7 +105,7 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
 
   const recallButtonStyle = {
     flex: 1,
-    background: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
+    background: 'var(--classic-pos-recall-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -124,7 +117,7 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   };
 
   const deleteButtonStyle = {
-    background: '#DC2626',
+    background: 'var(--classic-pos-delete-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -138,7 +131,7 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
   const emptyStateStyle = {
     textAlign: 'center',
     padding: '40px 20px',
-    color: '#888888',
+    color: 'var(--classic-pos-code-color)',
     fontSize: '14px',
   };
 
@@ -148,7 +141,14 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
         <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
           <div style={headerStyle}>
             <span style={titleStyle}>Held Orders</span>
-            <button style={closeButtonStyle} onClick={onClose}>Close</button>
+            <button
+              style={closeButtonStyle}
+              onClick={onClose}
+              onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-hover)'; }}
+              onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-bg)'; }}
+            >
+              Close
+            </button>
           </div>
           <div style={contentStyle}>
             <div style={emptyStateStyle}>No held orders</div>
@@ -163,7 +163,14 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <span style={titleStyle}>Held Orders ({heldOrders.length})</span>
-          <button style={closeButtonStyle} onClick={onClose}>Close</button>
+          <button
+            style={closeButtonStyle}
+            onClick={onClose}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-hover)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-bg)'; }}
+          >
+            Close
+          </button>
         </div>
         <div style={contentStyle}>
           {heldOrders.map((order, index) => (
@@ -171,12 +178,12 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
               key={order.id}
               style={orderCardStyle}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#3A3A3A';
-                e.currentTarget.style.borderColor = '#4A4A4A';
+                e.currentTarget.style.background = 'var(--classic-pos-card-bg-hover)';
+                e.currentTarget.style.borderColor = 'var(--classic-pos-card-border-hover)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#2A2A2A';
-                e.currentTarget.style.borderColor = '#3A3A3A';
+                e.currentTarget.style.background = 'var(--classic-pos-card-bg)';
+                e.currentTarget.style.borderColor = 'var(--classic-pos-card-border)';
               }}
             >
               <div style={orderHeaderStyle}>
@@ -195,24 +202,16 @@ export default function HeldOrdersModal({ heldOrders, onRecallOrder, onDeleteOrd
                 <button
                   style={recallButtonStyle}
                   onClick={() => onRecallOrder(order)}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'linear-gradient(135deg, #14B8A6 0%, #2DD4BF 100%)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)';
-                  }}
+                  onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-recall-btn-hover)'; }}
+                  onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-recall-btn-bg)'; }}
                 >
                   Recall
                 </button>
                 <button
                   style={deleteButtonStyle}
                   onClick={() => onDeleteOrder(order.id)}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#EF4444';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = '#DC2626';
-                  }}
+                  onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-delete-btn-hover)'; }}
+                  onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-delete-btn-bg)'; }}
                 >
                   Delete
                 </button>

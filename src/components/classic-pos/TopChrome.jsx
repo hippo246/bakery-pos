@@ -45,11 +45,11 @@ export default function TopChrome({
   onDietary,
   onDeposits,
   onCancelOrder,
+  onEditPrice,
 }) {
   const [showRazorpayConfig, setShowRazorpayConfig] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [razorpayKey, setRazorpayKey] = useState('');
-  const [razorpaySecret, setRazorpaySecret] = useState('');
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -62,14 +62,14 @@ export default function TopChrome({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMoreMenu]);
   const chromeStyle = {
-    background: '#1E1E1E',
-    borderBottom: '2px solid #333333',
+    background: 'var(--cafe-bg-elevated)',
+    borderBottom: '1px solid var(--cafe-border)',
     padding: '8px 16px',
     display: 'flex',
     alignItems: 'center',
     gap: '20px',
     fontSize: '12px',
-    color: '#ffffff',
+    color: 'var(--cafe-text-primary)',
     height: '45px',
   };
 
@@ -80,47 +80,48 @@ export default function TopChrome({
     fontSize: '11px',
     fontWeight: '600',
     cursor: 'pointer',
-    color: '#cccccc',
+    color: 'var(--cafe-text-secondary)',
   };
 
   const checkboxStyle = {
     width: '16px',
     height: '16px',
     cursor: 'pointer',
-    accentColor: '#0D9488',
+    accentColor: 'var(--cafe-accent)',
   };
 
   const tickerStyle = {
-    background: '#2A2A2A',
+    background: 'var(--cafe-bg-surface)',
     padding: '6px 12px',
-    borderRadius: '4px',
+    borderRadius: 'var(--cafe-radius-sm)',
     fontSize: '11px',
     fontWeight: '600',
-    color: '#ffffff',
+    color: 'var(--cafe-text-primary)',
     whiteSpace: 'nowrap',
+    border: '1px solid var(--cafe-border-light)',
   };
 
   return (
     <div style={chromeStyle}>
       {/* Terminal ID */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontWeight: '700', color: '#0D9488' }}>TERMINAL:</span>
-        <span style={{ fontWeight: '700', color: '#ffffff', fontSize: '13px' }}>{terminalId}</span>
+        <span style={{ fontWeight: '700', color: 'var(--cafe-accent)' }}>TERMINAL:</span>
+        <span style={{ fontWeight: '700', color: 'var(--cafe-text-primary)', fontSize: '13px' }}>{terminalId}</span>
       </div>
 
-      <div style={{ width: 1, height: 24, background: '#444444' }} />
+      <div style={{ width: 1, height: 24, background: 'var(--cafe-border)' }} />
 
       {/* Order Type Selector */}
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', fontWeight: '600', color: '#888888' }}>ORDER TYPE:</span>
+        <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--cafe-text-tertiary)' }}>ORDER TYPE:</span>
         <button
           onClick={() => onOrderTypeChange?.('walk-in')}
           style={{
             padding: '4px 12px',
-            background: orderType === 'walk-in' ? '#0D9488' : '#2A2A2A',
-            color: '#ffffff',
-            border: orderType === 'walk-in' ? '1px solid #0D9488' : '1px solid #444444',
-            borderRadius: '4px',
+            background: orderType === 'walk-in' ? 'var(--cafe-accent)' : 'var(--cafe-bg-surface)',
+            color: orderType === 'walk-in' ? '#fff' : 'var(--cafe-text-secondary)',
+            border: orderType === 'walk-in' ? '1px solid var(--cafe-accent)' : '1px solid var(--cafe-border)',
+            borderRadius: 'var(--cafe-radius-sm)',
             fontSize: '11px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -128,12 +129,12 @@ export default function TopChrome({
           }}
           onMouseEnter={(e) => {
             if (orderType !== 'walk-in') {
-              e.target.style.background = '#3A3A3A';
+              e.target.style.background = 'var(--cafe-bg-hover)';
             }
           }}
           onMouseLeave={(e) => {
             if (orderType !== 'walk-in') {
-              e.target.style.background = '#2A2A2A';
+              e.target.style.background = 'var(--cafe-bg-surface)';
             }
           }}
         >
@@ -143,10 +144,10 @@ export default function TopChrome({
           onClick={() => onOrderTypeChange?.('table')}
           style={{
             padding: '4px 12px',
-            background: orderType === 'table' ? '#0D9488' : '#2A2A2A',
-            color: '#ffffff',
-            border: orderType === 'table' ? '1px solid #0D9488' : '1px solid #444444',
-            borderRadius: '4px',
+            background: orderType === 'table' ? 'var(--cafe-accent)' : 'var(--cafe-bg-surface)',
+            color: orderType === 'table' ? '#fff' : 'var(--cafe-text-secondary)',
+            border: orderType === 'table' ? '1px solid var(--cafe-accent)' : '1px solid var(--cafe-border)',
+            borderRadius: 'var(--cafe-radius-sm)',
             fontSize: '11px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -154,12 +155,12 @@ export default function TopChrome({
           }}
           onMouseEnter={(e) => {
             if (orderType !== 'table') {
-              e.target.style.background = '#3A3A3A';
+              e.target.style.background = 'var(--cafe-bg-hover)';
             }
           }}
           onMouseLeave={(e) => {
             if (orderType !== 'table') {
-              e.target.style.background = '#2A2A2A';
+              e.target.style.background = 'var(--cafe-bg-surface)';
             }
           }}
         >
@@ -167,7 +168,7 @@ export default function TopChrome({
         </button>
       </div>
 
-      <div style={{ width: 1, height: 24, background: '#444444' }} />
+      <div style={{ width: 1, height: 24, background: 'var(--cafe-border)' }} />
 
       {/* Toggles */}
       <div style={{ display: 'flex', gap: '16px' }}>
@@ -220,15 +221,35 @@ export default function TopChrome({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            onEditPrice?.();
+          }}
+          style={{
+            padding: '6px 12px',
+            background: 'var(--cafe-info)',
+            color: '#FFF',
+            border: 'none',
+            borderRadius: 'var(--cafe-radius-sm)',
+            cursor: 'pointer',
+            fontSize: '11px',
+            fontWeight: '600',
+            marginLeft: '8px',
+          }}
+        >
+          Edit Price
+        </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             console.log('Razorpay config button clicked');
             setShowRazorpayConfig(true);
           }}
           style={{
             padding: '4px 12px',
-            background: '#0D9488',
+            background: 'var(--cafe-success)',
             color: '#ffffff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: 'var(--cafe-radius-sm)',
             fontSize: '11px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -246,10 +267,10 @@ export default function TopChrome({
           onClick={() => setShowMoreMenu(!showMoreMenu)}
           style={{
             padding: '6px 16px',
-            background: '#0D9488',
-            color: '#ffffff',
+            background: 'var(--cafe-accent)',
+            color: '#fff',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: 'var(--cafe-radius-sm)',
             fontSize: '11px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -267,23 +288,23 @@ export default function TopChrome({
               top: '100%',
               right: 0,
               marginTop: '8px',
-              background: '#2A2A2A',
-              border: '1px solid #444',
-              borderRadius: '8px',
+              background: 'var(--cafe-bg-card)',
+              border: '1px solid var(--cafe-border)',
+              borderRadius: 'var(--cafe-radius-md)',
               padding: '8px',
               minWidth: '200px',
               zIndex: 1000,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+              boxShadow: 'var(--cafe-shadow-lg)'
             }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px' }}>
               <button
                 onClick={() => { onSplitBill?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#4A90E2',
+                  background: 'var(--cafe-info)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -295,10 +316,10 @@ export default function TopChrome({
                 onClick={() => { onOrderQueue?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#9B59B6',
+                  background: 'var(--cafe-purple)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -310,10 +331,10 @@ export default function TopChrome({
                 onClick={() => { onVoidReason?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#E74C3C',
+                  background: 'var(--cafe-danger)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -325,10 +346,10 @@ export default function TopChrome({
                 onClick={() => { onManagerOverride?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#F39C12',
+                  background: 'var(--cafe-warning)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -340,10 +361,10 @@ export default function TopChrome({
                 onClick={() => { onInventory?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#27AE60',
+                  background: 'var(--cafe-success)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -355,10 +376,10 @@ export default function TopChrome({
                 onClick={() => { onWasteTracking?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#16A085',
+                  background: 'var(--classic-pos-menu-btn-1)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -370,10 +391,10 @@ export default function TopChrome({
                 onClick={() => { onTableMap?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#3498DB',
+                  background: 'var(--cafe-info)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -385,10 +406,10 @@ export default function TopChrome({
                 onClick={() => { onReservations?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#8E44AD',
+                  background: 'var(--cafe-purple)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -400,10 +421,10 @@ export default function TopChrome({
                 onClick={() => { onWaitlist?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#D35400',
+                  background: 'var(--classic-pos-menu-btn-2)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -415,10 +436,10 @@ export default function TopChrome({
                 onClick={() => { onSalesDashboard?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#1ABC9C',
+                  background: 'var(--classic-pos-menu-btn-3)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -430,10 +451,10 @@ export default function TopChrome({
                 onClick={() => { onAnalytics?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#2ECC71',
+                  background: 'var(--cafe-success)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -445,10 +466,10 @@ export default function TopChrome({
                 onClick={() => { onDelayedFiring?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#E67E22',
+                  background: 'var(--classic-pos-menu-btn-4)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -460,10 +481,10 @@ export default function TopChrome({
                 onClick={() => { onStaff?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#34495E',
+                  background: 'var(--classic-pos-menu-btn-5)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -475,10 +496,10 @@ export default function TopChrome({
                 onClick={() => { onShifts?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#7F8C8D',
+                  background: 'var(--classic-pos-menu-btn-6)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -490,10 +511,10 @@ export default function TopChrome({
                 onClick={() => { onDietary?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#C0392B',
+                  background: 'var(--cafe-danger)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -505,10 +526,10 @@ export default function TopChrome({
                 onClick={() => { onDeposits?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#9B59B6',
+                  background: 'var(--cafe-purple)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold'
@@ -520,10 +541,10 @@ export default function TopChrome({
                 onClick={() => { onCancelOrder?.(); setShowMoreMenu(false); }}
                 style={{
                   padding: '8px',
-                  background: '#C0392B',
+                  background: 'var(--cafe-danger)',
                   color: '#FFF',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   cursor: 'pointer',
                   fontSize: '10px',
                   fontWeight: 'bold',
@@ -537,20 +558,20 @@ export default function TopChrome({
         )}
       </div>
 
-      <div style={{ width: 1, height: 24, background: '#444444' }} />
+      <div style={{ width: 1, height: 24, background: 'var(--cafe-border)' }} />
 
       {/* Customer & Table Info */}
       <div style={{ ...tickerStyle, marginRight: '8px' }}>
         {customer && <span style={{ marginRight: '12px' }}>CUST: {customer}</span>}
         {table && <span style={{ marginRight: '12px' }}>TABLE: {table}</span>}
         {server && <span style={{ marginRight: '12px' }}>SERVER: {server}</span>}
-        {!table && orderType === 'table' && <span style={{ color: '#DC2626' }}>NO TABLE SELECTED</span>}
+        {!table && orderType === 'table' && <span style={{ color: 'var(--cafe-danger)' }}>NO TABLE SELECTED</span>}
       </div>
 
       {/* Held Orders Count */}
       {heldOrdersCount > 0 && (
         <div
-          style={{ ...tickerStyle, background: '#DC2626', marginRight: '8px', cursor: 'pointer', userSelect: 'none' }}
+          style={{ ...tickerStyle, background: 'var(--cafe-danger-bg)', color: 'var(--cafe-danger)', border: '1px solid var(--cafe-danger-border)', marginRight: '8px', cursor: 'pointer', userSelect: 'none' }}
           onClick={onHeldClick}
           title="Click to view held orders"
         >
@@ -573,7 +594,7 @@ export default function TopChrome({
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
+          background: 'rgba(0, 0, 0, 0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -584,18 +605,19 @@ export default function TopChrome({
           setShowRazorpayConfig(false);
         }}>
           <div style={{
-            background: '#2A2A2A',
-            border: '2px solid #0D9488',
-            borderRadius: '8px',
+            background: 'var(--cafe-bg-card)',
+            border: '1px solid var(--cafe-border)',
+            borderRadius: 'var(--cafe-radius-lg)',
             padding: '24px',
             width: '400px',
             maxWidth: '90%',
+            boxShadow: 'var(--cafe-shadow-lg)',
           }}
           onClick={(e) => {
             e.stopPropagation();
           }}>
             <h3 style={{
-              color: '#ffffff',
+              color: 'var(--cafe-text-primary)',
               fontSize: '18px',
               fontWeight: '700',
               margin: '0 0 20px',
@@ -606,7 +628,7 @@ export default function TopChrome({
             <div style={{ marginBottom: '16px' }}>
               <label style={{
                 display: 'block',
-                color: '#cccccc',
+                color: 'var(--cafe-text-secondary)',
                 fontSize: '12px',
                 fontWeight: '600',
                 marginBottom: '8px',
@@ -621,51 +643,25 @@ export default function TopChrome({
                 style={{
                   width: '100%',
                   padding: '10px',
-                  background: '#1E1E1E',
-                  border: '1px solid #444444',
-                  borderRadius: '4px',
-                  color: '#ffffff',
+                  background: 'var(--cafe-bg-surface)',
+                  border: '1px solid var(--cafe-border)',
+                  borderRadius: 'var(--cafe-radius-sm)',
+                  color: 'var(--cafe-text-primary)',
                   fontSize: '13px',
                 }}
               />
             </div>
             
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                color: '#cccccc',
-                fontSize: '12px',
-                fontWeight: '600',
-                marginBottom: '8px',
-              }}>
-                API Secret
-              </label>
-              <input
-                type="password"
-                value={razorpaySecret}
-                onChange={(e) => setRazorpaySecret(e.target.value)}
-                placeholder="Enter API secret"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  background: '#1E1E1E',
-                  border: '1px solid #444444',
-                  borderRadius: '4px',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                }}
-              />
-            </div>
             
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowRazorpayConfig(false)}
                 style={{
                   padding: '10px 20px',
-                  background: '#444444',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
+                  background: 'var(--cafe-bg-surface)',
+                  color: 'var(--cafe-text-secondary)',
+                  border: '1px solid var(--cafe-border)',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   fontSize: '13px',
                   fontWeight: '600',
                   cursor: 'pointer',
@@ -679,21 +675,15 @@ export default function TopChrome({
                     alert('Please enter API Key');
                     return;
                   }
-                  if (!razorpaySecret || !razorpaySecret.trim()) {
-                    alert('Please enter API Secret');
-                    return;
-                  }
                   
                   try {
                     const existingConfigs = JSON.parse(localStorage.getItem('cafeos_gateway_configs') || '{}');
                     existingConfigs.razorpay = {
                       enabled: true,
                       testMode: true,
-                      apiKey: razorpayKey.trim(),
-                      apiSecret: razorpaySecret.trim()
+                      apiKey: razorpayKey.trim()
                     };
                     localStorage.setItem('cafeos_gateway_configs', JSON.stringify(existingConfigs));
-                    console.log('[TopChrome] Razorpay config saved:', existingConfigs.razorpay);
                     setShowRazorpayConfig(false);
                     alert('Razorpay configuration saved successfully!');
                   } catch (error) {
@@ -703,10 +693,10 @@ export default function TopChrome({
                 }}
                 style={{
                   padding: '10px 20px',
-                  background: '#0D9488',
+                  background: 'var(--cafe-success)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: 'var(--cafe-radius-sm)',
                   fontSize: '13px',
                   fontWeight: '600',
                   cursor: 'pointer',

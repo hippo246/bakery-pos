@@ -2,7 +2,6 @@
 // Premium operational workspace for security management
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getCredentialVault } from '../../security/CredentialVault.js';
 import { getPermissionEngine } from '../../security/PermissionEngine.js';
 import { getSessionManager } from '../../security/SessionManager.js';
 import { getOwnerVerification } from '../../security/OwnerVerification.js';
@@ -14,7 +13,8 @@ import { SecurityStatus, SecurityLevel, RiskLevel } from '../../security/Securit
 
 export default function SecurityCenter() {
   // Memoize singletons — getter functions must not be called on every render
-  const credentialVault = useMemo(() => getCredentialVault(), []);
+  // Use dynamic import for CredentialVault to avoid ineffective dynamic import warning
+  const [credentialVault, setCredentialVault] = useState(null);
   const permissionEngine = useMemo(() => getPermissionEngine(), []);
   const sessionManager = useMemo(() => getSessionManager(), []);
   const ownerVerification = useMemo(() => getOwnerVerification(), []);
@@ -22,6 +22,15 @@ export default function SecurityCenter() {
   const integrityVerifier = useMemo(() => getIntegrityVerifier(), []);
   const securityMonitor = useMemo(() => getSecurityMonitor(), []);
   const securityEventManager = useMemo(() => getSecurityEventManager(), []);
+
+  // Load CredentialVault dynamically
+  useEffect(() => {
+    import('../../security/CredentialVault.js').then(module => {
+      setCredentialVault(module.getCredentialVault());
+    }).catch(err => {
+      console.error('Failed to load CredentialVault:', err);
+    });
+  }, []);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [overallScore, setOverallScore] = useState(null);

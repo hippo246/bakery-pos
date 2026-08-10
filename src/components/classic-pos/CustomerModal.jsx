@@ -1,9 +1,3 @@
-/**
- * Classic POS Customer Modal
- * 
- * Popup to select or create a customer
- */
-
 import { useState } from 'react';
 
 export default function CustomerModal({ customers, onSelectCustomer, onClose }) {
@@ -23,8 +17,8 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
   };
 
   const modalStyle = {
-    background: '#1E1E1E',
-    border: '2px solid #333333',
+    background: 'var(--classic-pos-modal-bg)',
+    border: '2px solid var(--classic-pos-modal-border)',
     borderRadius: '8px',
     width: '500px',
     maxHeight: '80vh',
@@ -34,9 +28,9 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
   };
 
   const headerStyle = {
-    background: '#252525',
+    background: 'var(--classic-pos-modal-header-bg)',
     padding: '16px 20px',
-    borderBottom: '2px solid #333333',
+    borderBottom: '2px solid var(--classic-pos-modal-header-border)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -45,11 +39,11 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
   const titleStyle = {
     fontSize: '18px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
   };
 
   const closeButtonStyle = {
-    background: '#DC2626',
+    background: 'var(--classic-pos-close-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -62,16 +56,16 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
 
   const searchStyle = {
     padding: '12px 20px',
-    borderBottom: '1px solid #333333',
+    borderBottom: '1px solid var(--classic-pos-modal-header-border)',
   };
 
   const inputStyle = {
     width: '100%',
     padding: '10px 12px',
     borderRadius: '4px',
-    border: '1px solid #444444',
-    background: '#252525',
-    color: '#ffffff',
+    border: '1px solid var(--classic-pos-input-border)',
+    background: 'var(--classic-pos-input-bg)',
+    color: 'var(--classic-pos-name-color)',
     fontSize: '14px',
     outline: 'none',
   };
@@ -83,10 +77,10 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
   };
 
   const customerCardStyle = {
-    background: '#2A2A2A',
+    background: 'var(--classic-pos-card-bg)',
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: '#3A3A3A',
+    borderColor: 'var(--classic-pos-card-border)',
     borderRadius: '6px',
     padding: '12px',
     marginBottom: '8px',
@@ -97,24 +91,24 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
   const customerNameStyle = {
     fontSize: '14px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
     marginBottom: '4px',
   };
 
   const customerPhoneStyle = {
     fontSize: '12px',
-    color: '#888888',
+    color: 'var(--classic-pos-code-color)',
     marginBottom: '4px',
   };
 
   const customerEmailStyle = {
     fontSize: '11px',
-    color: '#666666',
+    color: 'var(--classic-pos-empty-color)',
   };
 
   const walkInButtonStyle = {
     width: '100%',
-    background: 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)',
+    background: 'var(--classic-pos-walkin-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '6px',
@@ -126,7 +120,6 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
     transition: 'all 0.15s ease',
   };
 
-  // Generate sample customers if none provided
   const sampleCustomers = customers || [
     { id: 1, name: 'John Doe', phone: '9876543210', email: 'john@example.com' },
     { id: 2, name: 'Jane Smith', phone: '9876543211', email: 'jane@example.com' },
@@ -147,7 +140,14 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <span style={titleStyle}>Select Customer</span>
-          <button style={closeButtonStyle} onClick={onClose}>Close</button>
+          <button
+            style={closeButtonStyle}
+            onClick={onClose}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-hover)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-bg)'; }}
+          >
+            Close
+          </button>
         </div>
         <div style={searchStyle}>
           <input
@@ -165,12 +165,12 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
               style={customerCardStyle}
               onClick={() => onSelectCustomer(customer)}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#3A3A3A';
-                e.currentTarget.style.borderColor = '#4A4A4A';
+                e.currentTarget.style.background = 'var(--classic-pos-card-bg-hover)';
+                e.currentTarget.style.borderColor = 'var(--classic-pos-card-border-hover)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#2A2A2A';
-                e.currentTarget.style.borderColor = '#3A3A3A';
+                e.currentTarget.style.background = 'var(--classic-pos-card-bg)';
+                e.currentTarget.style.borderColor = 'var(--classic-pos-card-border)';
               }}
             >
               <div style={customerNameStyle}>{customer.name}</div>
@@ -181,12 +181,8 @@ export default function CustomerModal({ customers, onSelectCustomer, onClose }) 
           <button
             style={walkInButtonStyle}
             onClick={() => onSelectCustomer({ name: 'Walk-in Customer' })}
-            onMouseEnter={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #14B8A6 0%, #2DD4BF 100%)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #0D9488 0%, #14B8A6 100%)';
-            }}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-walkin-btn-hover)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-walkin-btn-bg)'; }}
           >
             Walk-in Customer
           </button>

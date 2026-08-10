@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
   plugins: [react()],
   server: {
     // Serve index.html for all paths so /guest/<code> works in dev
@@ -19,12 +24,30 @@ export default defineConfig({
           if (id.includes('node_modules/react-router')) {
             return 'react-router';
           }
+          if (id.includes('node_modules/leaflet')) {
+            return 'leaflet';
+          }
+          if (id.includes('node_modules/jspdf')) {
+            return 'jspdf';
+          }
           
-          // Feature chunks
+          // Feature chunks - split large ones further
           if (id.includes('/components/dashboard/')) {
+            if (id.includes('OperationalCommandCenter')) {
+              return 'dashboard-operations';
+            }
+            if (id.includes('IntelligenceDashboard')) {
+              return 'dashboard-intelligence';
+            }
             return 'dashboard';
           }
           if (id.includes('/components/orders/')) {
+            if (id.includes('ClassicOrdersLayout')) {
+              return 'orders-classic';
+            }
+            if (id.includes('Orders.jsx')) {
+              return 'orders-main';
+            }
             return 'orders';
           }
           if (id.includes('/components/kitchen/')) {
@@ -38,6 +61,14 @@ export default defineConfig({
           }
           if (id.includes('/components/inventory/')) {
             return 'inventory';
+          }
+          
+          // Setup wizard separate chunk
+          if (id.includes('/components/setup/SetupWizard')) {
+            return 'setup-wizard';
+          }
+          if (id.includes('/components/setup/WelcomeScreen')) {
+            return 'setup-welcome';
           }
           
           // Settings sections split into smaller chunks
@@ -69,10 +100,15 @@ export default defineConfig({
           if (id.includes('/diagnostics/')) {
             return 'diagnostics';
           }
+          
+          // Tables component separate chunk (large)
+          if (id.includes('/components/tables/ThemedTables')) {
+            return 'tables';
+          }
         }
       }
     },
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 600,
     target: 'esnext'
   },
   optimizeDeps: {

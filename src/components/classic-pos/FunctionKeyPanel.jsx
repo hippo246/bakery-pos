@@ -1,10 +1,3 @@
-/**
- * Classic POS Function Key Panel
- * 
- * Tabbed panel with MENU and MORE tabs, each showing a 3x3 grid of function buttons.
- * Buttons are large rounded-rectangle tiles with gradient dark reddish-maroon background.
- */
-
 import { useState } from 'react';
 
 export default function FunctionKeyPanel({ onKeyPress }) {
@@ -62,7 +55,7 @@ export default function FunctionKeyPanel({ onKeyPress }) {
     height: '85px',
     borderRadius: '8px',
     border: 'none',
-    background: 'linear-gradient(135deg, #5B2020 0%, #3D1414 100%)',
+    background: 'var(--classic-pos-func-btn-bg)',
     color: '#ffffff',
     fontSize: '13px',
     fontWeight: '700',
@@ -82,13 +75,13 @@ export default function FunctionKeyPanel({ onKeyPress }) {
     padding: '10px 28px',
     borderRadius: '8px 8px 0 0',
     border: 'none',
-    background: activeTab === tab ? '#5B2020' : '#2A2A2A',
-    color: '#ffffff',
+    background: activeTab === tab ? 'var(--classic-pos-func-tab-active)' : 'var(--classic-pos-func-tab-inactive)',
+    color: activeTab === tab ? '#ffffff' : 'var(--classic-pos-name-color)',
     fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
     marginRight: '4px',
-    boxShadow: activeTab === tab ? '0 2px 8px rgba(91, 32, 32, 0.4)' : 'none',
+    boxShadow: activeTab === tab ? '0 2px 8px rgba(0, 0, 0, 0.2)' : 'none',
   });
 
   const containerStyle = {
@@ -103,7 +96,7 @@ export default function FunctionKeyPanel({ onKeyPress }) {
     gridTemplateRows: activeTab === 'MENU' ? 'repeat(3, 85px)' : 'repeat(6, 70px)',
     gap: '6px',
     padding: '8px',
-    background: '#1E1E1E',
+    background: 'var(--classic-pos-func-grid-bg)',
     borderRadius: '0 8px 8px 8px',
     maxHeight: activeTab === 'MENU' ? 'auto' : '450px',
     overflowY: 'auto',
@@ -111,7 +104,6 @@ export default function FunctionKeyPanel({ onKeyPress }) {
 
   return (
     <div style={containerStyle}>
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: '4px', paddingLeft: '8px' }}>
         <button
           style={getTabStyle('MENU')}
@@ -127,7 +119,6 @@ export default function FunctionKeyPanel({ onKeyPress }) {
         </button>
       </div>
 
-      {/* 3x3 Grid */}
       <div style={gridStyle}>
         {buttons.map((button, index) => (
           <button
@@ -135,12 +126,12 @@ export default function FunctionKeyPanel({ onKeyPress }) {
             style={buttonStyle}
             onClick={() => handleButtonClick(button)}
             onMouseEnter={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #7B3030 0%, #5B2020 100%)';
+              e.target.style.background = 'var(--classic-pos-func-btn-bg-hover)';
               e.target.style.transform = 'translateY(-2px)';
               e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #5B2020 0%, #3D1414 100%)';
+              e.target.style.background = 'var(--classic-pos-func-btn-bg)';
               e.target.style.transform = 'translateY(0)';
               e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)';
             }}

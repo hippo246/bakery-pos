@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { card, btn } from "../../styles/theme";
 import { createRemoteSessionAuditLog, createPermissionDeniedAuditLog } from "../../domain/auditLogModel.js";
 import { getCurrentUserId } from "../../utils/authService.js";
+import { sanitizeString } from "../../utils/sanitize.js";
 import PermissionDeniedDialog from "../common/PermissionDeniedDialog";
 import ConfirmDialog from "../common/ConfirmDialog";
 
@@ -59,6 +60,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
   const [sessionStartTime, setSessionStartTime] = useState(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [iframeError, setIframeError] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const [permissionDialog, setPermissionDialog] = useState({ open: false, action: "", requiredPermission: "" });
   // title/description/confirmLabel travel with the dialog request itself,
   // rather than being inferred from remoteEnabled at render time - that
@@ -87,6 +89,21 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
   const maxDurationTimeoutRef = useRef(null);
   const maxDurationWarningTimeoutRef = useRef(null);
   const codeCopiedTimeoutRef = useRef(null);
+
+  // Better iframe error detection using timeout
+  useEffect(() => {
+    if (sessionStatus === SESSION_STATUS.ACTIVE && !iframeLoaded) {
+      // If iframe doesn't load within 5 seconds, show error
+      iframeTimeoutRef.current = setTimeout(() => {
+        if (!iframeLoaded) {
+          setIframeError(true);
+        }
+      }, 5000);
+    }
+    return () => {
+      if (iframeTimeoutRef.current) clearTimeout(iframeTimeoutRef.current);
+    };
+  }, [sessionStatus, iframeLoaded]);
   // Request/Approve each mint a fresh single-use code and arm a new set of
   // safety timers. A rapid double-click (or Enter key repeat) shouldn't be
   // able to fire the handler twice and leave a stray code/timer pair behind.
@@ -135,14 +152,17 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Load settings from localStorage
+  // Load settings from localStorage with validation
   useEffect(() => {
     try {
       const settings = localStorage.getItem('cafeos_remote_assistance');
       if (settings) {
         const parsed = JSON.parse(settings);
-        setRemoteEnabled(parsed.enabled || false);
-        setSessionHistory(parsed.history || []);
+        // Validate settings structure
+        if (parsed && typeof parsed === 'object') {
+          setRemoteEnabled(typeof parsed.enabled === 'boolean' ? parsed.enabled : false);
+          setSessionHistory(Array.isArray(parsed.history) ? parsed.history : []);
+        }
       }
     } catch (e) {
       console.warn('Failed to load remote assistance settings:', e);
@@ -222,6 +242,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
     setSessionStatus(SESSION_STATUS.ENDED);
     setSessionDuration(duration);
     setIframeError(false);
+    setIframeLoaded(false);
 
     const newHistory = [{
       id: generateHistoryEntryId(),
@@ -265,6 +286,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
       setSessionStartTime(null);
       setSessionDuration(0);
       setIframeError(false);
+      setIframeLoaded(false);
       resetTimeoutRef.current = null;
     }, 3000);
   }, [rustDeskId, sessionStartTime, sessionHistory, remoteEnabled, saveSettings, showMessage, persistAuditLog]);
@@ -362,6 +384,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
           setSessionStartTime(null);
           setSessionDuration(0);
           setIframeError(false);
+          setIframeLoaded(false);
           saveSettings(false, newHistory);
           showMessage("info", wasInProgress
             ? "Remote assistance disabled. The in-progress session was terminated."
@@ -392,7 +415,8 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
       return;
     }
     
-    const validatedId = validateRustDeskId(rustDeskId);
+    const sanitizedId = sanitizeString(rustDeskId);
+    const validatedId = validateRustDeskId(sanitizedId);
     if (!validatedId) {
       showMessage("error", "Please enter a valid 10-digit RustDesk ID.");
       return;
@@ -407,7 +431,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
     setSessionStatus(SESSION_STATUS.REQUESTED);
     setSessionStartTime(requestTime);
 
-    showMessage("info", `Session requested for RustDesk ID: ${validatedId}. Waiting for approval.`);
+    showMessage("info", `Session requested for RustDesk ID: ${redactSessionCode(validatedId)}. Waiting for approval.`);
     
     // Audit log
     const auditLog = createRemoteSessionAuditLog({
@@ -603,7 +627,20 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
     }
   }, [sessionStatus, handleCancelRequest, onCancel]);
 
-  // Update session duration - also ticks while REQUESTED so the UI can
+  // Copy session code to clipboard
+  const handleCopyCode = useCallback(() => {
+    const validatedId = validateRustDeskId(rustDeskId);
+    if (validatedId) {
+      navigator.clipboard.writeText(validatedId).then(() => {
+        setCodeCopied(true);
+        if (codeCopiedTimeoutRef.current) clearTimeout(codeCopiedTimeoutRef.current);
+        codeCopiedTimeoutRef.current = setTimeout(() => setCodeCopied(false), 2000);
+        showMessage("success", "Session code copied to clipboard");
+      }).catch(() => {
+        showMessage("error", "Failed to copy session code");
+      });
+    }
+  }, [rustDeskId, showMessage]);
   // show a live countdown to the request-expiry timeout, not just elapsed
   // time on an active session.
   useEffect(() => {
@@ -812,6 +849,8 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                     onChange={(e) => setRustDeskId(e.target.value)}
                     placeholder="Enter client's RustDesk ID"
                     maxLength={12}
+                    aria-label="Client's RustDesk ID"
+                    aria-describedby="rustdesk-help"
                     style={{
                       padding: "12px 16px",
                       fontSize: 16,
@@ -823,10 +862,14 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                       letterSpacing: 2
                     }}
                   />
+                  <div id="rustdesk-help" style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 8, textAlign: "center" }}>
+                    Enter the 10-digit RustDesk ID from the client's RustDesk app
+                  </div>
                 </div>
                 <button
                   onClick={handleRequestSession}
                   disabled={actionPending || !rustDeskId}
+                  aria-busy={actionPending}
                   style={{ 
                     ...btn("primary"), 
                     fontSize: 14, 
@@ -835,7 +878,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                     cursor: (actionPending || !rustDeskId) ? "default" : "pointer" 
                   }}
                 >
-                  Connect to Client
+                  {actionPending ? "Connecting..." : "Connect to Client"}
                 </button>
                 <div style={{
                   marginTop: 16,
@@ -858,7 +901,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
             )}
 
             {sessionStatus === SESSION_STATUS.REQUESTED && (
-              <div style={{ textAlign: "center", padding: "24px" }}>
+              <div style={{ textAlign: "center", padding: "24px" }} role="status" aria-live="polite">
                 <div aria-hidden="true" style={{ fontSize: 48, marginBottom: 16 }}>📡</div>
                 <p style={{ fontSize: 14, color: "var(--cafe-text-secondary)", marginBottom: 8 }}>
                   Connecting to Client
@@ -876,11 +919,29 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                   <span
                     style={{ fontSize: 24, fontWeight: 700, color: "var(--cafe-accent)", letterSpacing: 2 }}
                   >
-                    {rustDeskId}
+                    {redactSessionCode(rustDeskId)}
                   </span>
+                  <button
+                    onClick={handleCopyCode}
+                    aria-label="Copy session code"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--cafe-accent)",
+                      fontSize: 16,
+                      padding: 4,
+                      opacity: 0.7,
+                      transition: "opacity 0.2s"
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = 0.7}
+                  >
+                    {codeCopied ? "✓" : "📋"}
+                  </button>
                 </div>
                 <p style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginBottom: 4, marginTop: 8 }}>
-                  Client ID: {rustDeskId}
+                  Client ID: {redactSessionCode(rustDeskId)}
                 </p>
                 <p style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginBottom: 16 }}>
                   Opening RustDesk web client to connect...
@@ -889,9 +950,10 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                   <button
                     onClick={handleApproveSession}
                     disabled={actionPending}
+                    aria-busy={actionPending}
                     style={{ ...btn("primary"), fontSize: 14, padding: "12px 24px", opacity: actionPending ? 0.6 : 1, cursor: actionPending ? "default" : "pointer" }}
                   >
-                    Open Connection
+                    {actionPending ? "Opening..." : "Open Connection"}
                   </button>
                   <button
                     onClick={handleCancelRequest}
@@ -904,7 +966,7 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
             )}
 
             {sessionStatus === SESSION_STATUS.ACTIVE && (
-              <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+              <div style={{ display: "flex", flexDirection: "column", height: "100%" }} role="region" aria-label="Active remote session">
                 {!iframeError ? (
                   <div style={{ 
                     flex: 1, 
@@ -924,8 +986,10 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                       title="RustDesk Web Client - Remote Desktop Connection"
                       allow="camera; microphone; display-capture"
                       referrerPolicy="no-referrer"
-                      onError={() => setIframeError(true)}
-                      onLoad={() => setIframeError(false)}
+                      onLoad={() => {
+                        setIframeError(false);
+                        setIframeLoaded(true);
+                      }}
                     />
                   </div>
                 ) : (
@@ -967,13 +1031,25 @@ export default function RemoteAssistance({ onCancel = () => {}, canManageRemoteA
                 }}>
                   <div>
                     <p style={{ fontSize: 14, color: "var(--cafe-success)", fontWeight: 600, margin: 0 }}>
-                      Connected to Client: {rustDeskId}
+                      Connected to Client: {redactSessionCode(rustDeskId)}
                     </p>
                     <p style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", margin: "4px 0 0" }}>
                       Session Duration: {formatDuration(sessionDuration)}
                     </p>
                   </div>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <button
+                      onClick={handleCopyCode}
+                      aria-label="Copy session code"
+                      style={{
+                        ...btn("ghost"),
+                        fontSize: 13,
+                        padding: "8px 16px",
+                        opacity: codeCopied ? 0.8 : 1
+                      }}
+                    >
+                      {codeCopied ? "✓ Copied" : "📋 Copy Code"}
+                    </button>
                     {!iframeError && (
                       <button
                         onClick={() => window.open("https://web.rustdesk.com/", '_blank')}

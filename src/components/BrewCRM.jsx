@@ -25,43 +25,66 @@ import { getDeliveryPlatformFactory } from "../delivery/DeliveryPlatformFactory.
 import { useTerminal } from "../terminal/TerminalContext.jsx";
 import TerminalSelector from "./terminal/TerminalSelector.jsx";
 
-// Lazy-loaded components
-const WelcomeScreen = lazy(() => import("./setup/WelcomeScreen"));
-const SetupWizard = lazy(() => import("./setup/SetupWizard"));
-const Dashboard = lazy(() => import("./dashboard/ThemedDashboard"));
-const Orders = lazy(() => import("./orders/ThemedOrders"));
-const Kitchen = lazy(() => import("./kitchen/ThemedKitchen"));
-const CRM = lazy(() => import("./crm/CRM"));
-const AnalyticsReports = lazy(() => import("./analytics/ThemedReports"));
-const Menu = lazy(() => import("./menu/ThemedMenu"));
-const Inventory = lazy(() => import("./inventory/ThemedInventory"));
-const Staff = lazy(() => import("./staff/ThemedStaff"));
-const Tables = lazy(() => import("./tables/ThemedTables"));
-const Settings = lazy(() => import("./settings/ThemedSettings"));
-const Delivery = lazy(() => import("./delivery/Delivery"));
-const Expenses = lazy(() => import("./expenses/Expenses"));
-const QROrdering = lazy(() => import("./qr/QROrdering"));
-const Production = lazy(() => import("./production/Production"));
-const RouteTracking = lazy(() => import("./tracking/RouteTracking"));
-const PurchasingDesk = lazy(() => import("./purchasing/PurchasingDesk"));
-const Documents = lazy(() => import("./documents/Documents"));
-const BackupCenter = lazy(() => import("./backup/BackupCenter"));
-const OperationsDashboard = lazy(() => import("./operations/OperationsDashboard"));
-const Workflows = lazy(() => import("./workflows/Workflows"));
-const OperationalInbox = lazy(() => import("./notifications/OperationalInbox"));
-const IntelligenceDashboard = lazy(() => import("./intelligence/IntelligenceDashboard"));
-const SystemHealthDashboard = lazy(() => import("./health/SystemHealthDashboard"));
-const SecurityCenter = lazy(() => import("./security/SecurityCenter"));
-const ActivityFeed = lazy(() => import("./notifications/ActivityFeed"));
+// Lazy-loaded components with better code splitting
+const WelcomeScreen = lazy(() => import(/* webpackChunkName: "welcome" */ "./setup/WelcomeScreen"));
+const SetupWizard = lazy(() => import(/* webpackChunkName: "setup" */ "./setup/SetupWizard"));
+const Dashboard = lazy(() => import(/* webpackChunkName: "dashboard" */ "./dashboard/ThemedDashboard"));
+const Orders = lazy(() => import(/* webpackChunkName: "orders" */ "./orders/ThemedOrders"));
+const Kitchen = lazy(() => import(/* webpackChunkName: "kitchen" */ "./kitchen/ThemedKitchen"));
+const CRM = lazy(() => import(/* webpackChunkName: "crm" */ "./crm/CRM"));
+const AnalyticsReports = lazy(() => import(/* webpackChunkName: "analytics" */ "./analytics/ThemedReports"));
+const Menu = lazy(() => import(/* webpackChunkName: "menu" */ "./menu/ThemedMenu"));
+const Inventory = lazy(() => import(/* webpackChunkName: "inventory" */ "./inventory/ThemedInventory"));
+const Staff = lazy(() => import(/* webpackChunkName: "staff" */ "./staff/ThemedStaff"));
+const Tables = lazy(() => import(/* webpackChunkName: "tables" */ "./tables/ThemedTables"));
+const Settings = lazy(() => import(/* webpackChunkName: "settings" */ "./settings/ThemedSettings"));
+const Delivery = lazy(() => import(/* webpackChunkName: "delivery" */ "./delivery/Delivery"));
+const Expenses = lazy(() => import(/* webpackChunkName: "expenses" */ "./expenses/Expenses"));
+const QROrdering = lazy(() => import(/* webpackChunkName: "qr" */ "./qr/QROrdering"));
+const Production = lazy(() => import(/* webpackChunkName: "production" */ "./production/Production"));
+const RouteTracking = lazy(() => import(/* webpackChunkName: "tracking" */ "./tracking/RouteTracking"));
+const PurchasingDesk = lazy(() => import(/* webpackChunkName: "purchasing" */ "./purchasing/PurchasingDesk"));
+const Documents = lazy(() => import(/* webpackChunkName: "documents" */ "./documents/Documents"));
+const BackupCenter = lazy(() => import(/* webpackChunkName: "backup" */ "./backup/BackupCenter"));
+const OperationsDashboard = lazy(() => import(/* webpackChunkName: "operations" */ "./operations/OperationsDashboard"));
+const Workflows = lazy(() => import(/* webpackChunkName: "workflows" */ "./workflows/Workflows"));
+const OperationalInbox = lazy(() => import(/* webpackChunkName: "notifications" */ "./notifications/OperationalInbox"));
+const IntelligenceDashboard = lazy(() => import(/* webpackChunkName: "intelligence" */ "./intelligence/IntelligenceDashboard"));
+const SystemHealthDashboard = lazy(() => import(/* webpackChunkName: "health" */ "./health/SystemHealthDashboard"));
+const SecurityCenter = lazy(() => import(/* webpackChunkName: "security" */ "./security/SecurityCenter"));
+const ActivityFeed = lazy(() => import(/* webpackChunkName: "activity" */ "./notifications/ActivityFeed"));
 
 // --- Domain normalizers ---
 // Each model exposes a normalizeX function that validates/coerces a single record.
 // normalizeArray falls back to identity pass-through for any null normalizer entry.
-import { normalizeOrder }     from "../domain/orderModel";
+import { normalizeOrder, autoTransitionOrders }     from "../domain/orderModel";
 import { normalizeKdsTicket } from "../domain/kdsModel";
 import { normalizeCustomer }  from "../domain/normalize";
 import { normalizeStaff }    from "../domain/staffModel";
 import { normalizeTable }    from "../domain/tableModel";
+import { 
+  normalizeOperationLog, 
+  createOperationLog, 
+  completeOperation,
+  failOperation 
+} from "../domain/operationLogModel.js";
+import { 
+  normalizeLock, 
+  acquireLock, 
+  releaseLock,
+  expireStaleLocks 
+} from "../domain/lockModel.js";
+import { 
+  normalizeHeartbeat, 
+  createHeartbeat,
+  getCrashedTerminals,
+  cleanupOldHeartbeats 
+} from "../domain/heartbeatModel.js";
+import { 
+  performCrashRecovery,
+  canModifyEntity 
+} from "../domain/crashRecoveryModel.js";
+import { now } from "../domain/dates.js";
 
 // --- Data mode boundary ---
 // demo mode: state seeded from in-file demo constants, never persisted.
@@ -129,7 +152,7 @@ function resetLocalCollection(key) {
   }
 }
 
-const LOCAL_COLLECTION_KEYS = ["orders", "customers", "kdsCards", "menuItems", "tables", "staff", "deliveryOrders", "inventory", "expenses", "qrCodes", "productionBatches", "drivers", "routes", "guestSessions", "waiterCalls", "suppliers", "purchaseOrders", "documents", "notifications", "workflows", "workflowExecutions", "workflowTemplates", "workflowVersions", "incidents", "approvals", "timelineEvents", "automationRules"];
+const LOCAL_COLLECTION_KEYS = ["orders", "customers", "kdsCards", "menuItems", "tables", "staff", "deliveryOrders", "inventory", "expenses", "qrCodes", "productionBatches", "drivers", "routes", "guestSessions", "waiterCalls", "suppliers", "purchaseOrders", "documents", "notifications", "workflows", "workflowExecutions", "workflowTemplates", "workflowVersions", "incidents", "approvals", "timelineEvents", "automationRules", "operationLogs", "locks", "heartbeats"];
 
 const normalizeArray = (items, normalizer, collectionName) => {
   if (!Array.isArray(items)) return [];
@@ -275,6 +298,17 @@ export default function BrewCRM() {
   const [automationRules, setAutomationRules] = useState(() => isLocalMode
     ? loadLocalCollection("automationRules", [])
     : []);
+  // Crash recovery state
+  const [operationLogs, setOperationLogs] = useState(() => isLocalMode
+    ? normalizeArray(loadLocalCollection("operationLogs", []), normalizeOperationLog, "operationLogs")
+    : []);
+  const [locks, setLocks] = useState(() => isLocalMode
+    ? normalizeArray(loadLocalCollection("locks", []), normalizeLock, "locks")
+    : []);
+  const [heartbeats, setHeartbeats] = useState(() => isLocalMode
+    ? normalizeArray(loadLocalCollection("heartbeats", []), normalizeHeartbeat, "heartbeats")
+    : []);
+  const [recoveryReport, setRecoveryReport] = useState(null);
   const [theme, setTheme] = useState(() => getTheme());
   const [storageError, setStorageError] = useState(null);
   const [settings, setSettings] = useState(() => {
@@ -509,6 +543,117 @@ export default function BrewCRM() {
     };
   }, []);
 
+  // ── Auto-transition order status based on KDS completion (Self-healing) ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const kdsState = {
+        tickets: kdsCards,
+        completedOrderIds: kdsCards.filter(c => c.completed).map(c => c.orderId)
+      };
+      
+      const updatedOrders = autoTransitionOrders(orders, kdsState);
+      if (updatedOrders.length > 0) {
+        setOrders(prevOrders => {
+          const updatedMap = new Map(updatedOrders.map(o => [o.id, o]));
+          return prevOrders.map(o => updatedMap.get(o.id) || o);
+        });
+      }
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [orders, kdsCards]);
+
+  // ── Initial Crash Recovery on Mount ──
+  useEffect(() => {
+    const terminalId = currentTerminal?.id || 'unknown';
+    
+    const recoveryResult = performCrashRecovery({
+      orders,
+      kdsCards,
+      operationLogs,
+      locks,
+      heartbeats,
+      currentTerminalId: terminalId
+    });
+
+    if (recoveryResult.recovered) {
+      console.log('[BrewCRM] Crash recovery performed:', recoveryResult.report);
+      setRecoveryReport(recoveryResult.report);
+      
+      // Apply recovered state
+      setOrders(recoveryResult.state.orders);
+      setKdsCards(recoveryResult.state.kdsCards);
+      setOperationLogs(recoveryResult.state.operationLogs);
+      setLocks(recoveryResult.state.locks);
+      setHeartbeats(recoveryResult.state.heartbeats);
+    }
+  }, []); // Run once on mount
+
+  // ── Heartbeat Mechanism (Crash Detection) ──
+  useEffect(() => {
+    const terminalId = currentTerminal?.id || 'unknown';
+    
+    const heartbeatInterval = setInterval(() => {
+      const newHeartbeat = createHeartbeat({
+        terminalId,
+        status: 'ONLINE',
+        metadata: { tab, timestamp: now() }
+      });
+      
+      setHeartbeats(prev => {
+        const cleaned = cleanupOldHeartbeats(prev, 300000); // Keep 5 minutes
+        return [...cleaned, newHeartbeat];
+      });
+    }, 5000); // Send heartbeat every 5 seconds
+    
+    return () => clearInterval(heartbeatInterval);
+  }, [currentTerminal, tab]);
+
+  // ── Periodic Crash Detection and Lock Expiration ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const terminalId = currentTerminal?.id || 'unknown';
+      
+      // Check for crashed terminals
+      const crashedTerminals = getCrashedTerminals(heartbeats);
+      
+      if (crashedTerminals.length > 0) {
+        console.log('[BrewCRM] Detected crashed terminals:', crashedTerminals);
+        
+        // Perform crash recovery
+        const recoveryResult = performCrashRecovery({
+          orders,
+          kdsCards,
+          operationLogs,
+          locks,
+          heartbeats,
+          currentTerminalId: terminalId
+        });
+
+        if (recoveryResult.recovered) {
+          console.log('[BrewCRM] Periodic crash recovery performed:', recoveryResult.report);
+          setRecoveryReport(recoveryResult.report);
+          
+          // Apply recovered state
+          setOrders(recoveryResult.state.orders);
+          setKdsCards(recoveryResult.state.kdsCards);
+          setOperationLogs(recoveryResult.state.operationLogs);
+          setLocks(recoveryResult.state.locks);
+          setHeartbeats(recoveryResult.state.heartbeats);
+        }
+      }
+      
+      // Expire stale locks
+      setLocks(prev => expireStaleLocks(prev));
+      
+      // Cleanup old heartbeats
+      setHeartbeats(prev => cleanupOldHeartbeats(prev, 300000));
+      
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [orders, kdsCards, operationLogs, locks, heartbeats, currentTerminal]);
+
   // PERFORMANCE: Debounce localStorage saves to prevent rapid writes during high-frequency updates
   const saveTimeoutRef = useRef({});
   const debouncedSave = useCallback((key, value) => {
@@ -550,6 +695,10 @@ export default function BrewCRM() {
   useEffect(() => { debouncedSave("approvals", approvals); }, [approvals, debouncedSave]);
   useEffect(() => { debouncedSave("timelineEvents", timelineEvents); }, [timelineEvents, debouncedSave]);
   useEffect(() => { debouncedSave("automationRules", automationRules); }, [automationRules, debouncedSave]);
+  // Crash recovery state persistence
+  useEffect(() => { debouncedSave("operationLogs", operationLogs); }, [operationLogs, debouncedSave]);
+  useEffect(() => { debouncedSave("locks", locks); }, [locks, debouncedSave]);
+  useEffect(() => { debouncedSave("heartbeats", heartbeats); }, [heartbeats, debouncedSave]);
 
   const toggleTheme = useCallback(() => {
     applyTheme();
@@ -888,8 +1037,8 @@ export default function BrewCRM() {
           <ErrorBoundary>
             <Suspense fallback={<div style={{ padding: 24, textAlign: 'center' }}>Loading...</div>}>
               {canSeeTab("dashboard") && tab === "dashboard" && isFeatureEnabled('dashboard') && <Dashboard orders={orders} customers={customers} inventory={inventory} kdsCards={kdsCards} tables={tables} staff={staff} waitlist={waitlist} onNavigate={setTab} />}
-              {canSeeTab("orders") && tab === "orders" && isFeatureEnabled('orders') && <Orders orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} tables={tables} setTables={setTables} staff={staff} discounts={[]} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} documents={documents} setDocuments={setDocuments} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} currentShift={null} />}
-              {canSeeTab("kitchen") && tab === "kitchen" && isFeatureEnabled('kitchen') && <Kitchen kdsCards={kdsCards} setKdsCards={setKdsCards} orders={orders} setOrders={setOrders} tables={tables} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} staff={staff} />}
+              {canSeeTab("orders") && tab === "orders" && isFeatureEnabled('orders') && <Orders orders={orders} setOrders={setOrders} kdsCards={kdsCards} setKdsCards={setKdsCards} menuItems={menuItems} tables={tables} setTables={setTables} staff={staff} discounts={[]} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} documents={documents} setDocuments={setDocuments} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} currentShift={null} operationLogs={operationLogs} setOperationLogs={setOperationLogs} locks={locks} setLocks={setLocks} />}
+              {canSeeTab("kitchen") && tab === "kitchen" && isFeatureEnabled('kitchen') && <Kitchen kdsCards={kdsCards} setKdsCards={setKdsCards} orders={orders} setOrders={setOrders} tables={tables} notifications={notifications} setNotifications={setNotifications} shifts={[]} setShifts={() => {}} staff={staff} operationLogs={operationLogs} setOperationLogs={setOperationLogs} locks={locks} setLocks={setLocks} />}
               {canSeeTab("crm") && tab === "crm" && isFeatureEnabled('crm') && <CRM customers={customers} setCustomers={setCustomers} orders={orders} kdsCards={kdsCards} tables={tables} documents={documents} setDocuments={setDocuments} notifications={notifications} setNotifications={setNotifications} />}
               {canSeeTab("analytics") && tab === "analytics" && isFeatureEnabled('analytics') && <AnalyticsReports orders={orders} customers={customers} staff={staff} inventory={inventory} tables={tables} deliveryOrders={deliveryOrders} drivers={drivers} suppliers={suppliers} purchaseOrders={purchaseOrders} productionBatches={productionBatches} documents={documents} />}
               {canSeeTab("menu") && tab === "menu" && isFeatureEnabled('menu') && <Menu menuItems={menuItems} setMenuItems={setMenuItems} />}

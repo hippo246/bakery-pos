@@ -1,11 +1,3 @@
-/**
- * Classic POS Numeric Keypad
- * 
- * 3-column × 5-row grid: 7 8 9 / 4 5 6 / 1 2 3 / . 0 Clear / * % Enter
- * Vibrant bright blue (#2B6CB0 / #3182CE) with high-contrast bold white numbers.
- * Improved usability with better visual feedback and responsive sizing.
- */
-
 export default function NumericKeypad({ onValueChange, onEnter, onClear }) {
   const keys = [
     { value: '7', label: '7' },
@@ -41,7 +33,7 @@ export default function NumericKeypad({ onValueChange, onEnter, onClear }) {
       height: '60px',
       borderRadius: '8px',
       border: 'none',
-      color: '#ffffff',
+      color: 'var(--classic-pos-keypad-text)',
       fontSize: key.action ? '14px' : '24px',
       fontWeight: '800',
       cursor: 'pointer',
@@ -57,13 +49,13 @@ export default function NumericKeypad({ onValueChange, onEnter, onClear }) {
     };
 
     if (key.style === 'danger') {
-      baseStyle.background = 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)';
+      baseStyle.background = 'var(--classic-pos-keypad-danger-bg)';
     } else if (key.style === 'success') {
-      baseStyle.background = 'linear-gradient(135deg, #059669 0%, #10B981 100%)';
+      baseStyle.background = 'var(--classic-pos-keypad-success-bg)';
     } else if (key.action) {
-      baseStyle.background = 'linear-gradient(135deg, #4B5563 0%, #6B7280 100%)';
+      baseStyle.background = 'var(--classic-pos-keypad-action-bg)';
     } else {
-      baseStyle.background = 'linear-gradient(135deg, #2B6CB0 0%, #3182CE 100%)';
+      baseStyle.background = 'var(--classic-pos-keypad-num-bg)';
     }
 
     return baseStyle;
@@ -75,7 +67,7 @@ export default function NumericKeypad({ onValueChange, onEnter, onClear }) {
     gridTemplateRows: 'repeat(5, 60px)',
     gap: '6px',
     padding: '8px',
-    background: '#1E1E1E',
+    background: 'var(--classic-pos-keypad-bg)',
     borderRadius: '8px',
   };
 

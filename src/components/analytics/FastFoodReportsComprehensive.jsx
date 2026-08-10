@@ -3,7 +3,7 @@
  * Comprehensive Reports with sales analytics
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import AlertDialog from '../common/AlertDialog.jsx';
 import {
   AccessibleReports,
@@ -15,41 +15,136 @@ import {
 export default function FastFoodReportsComprehensive() {
   const [selectedReport, setSelectedReport] = useState('SALES_BY_CATEGORY');
   const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [realOrders, setRealOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // Load real orders from localStorage
+  useEffect(() => {
+    setIsLoading(true);
+    setLoadError(null);
+    
+    try {
+      const storedOrders = localStorage.getItem('cafeos_orders');
+      if (storedOrders) {
+        const orders = JSON.parse(storedOrders);
+        setRealOrders(orders);
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error('[FastFoodReportsComprehensive] Failed to load orders:', error);
+      setLoadError('Failed to load orders data');
+      setIsLoading(false);
+    }
+  }, []);
 
   // Sales by category data
-  const salesByCategory = useMemo(() => [
-    { category: 'BURGERS', icon: '🍔', percentage: 45, amount: 20555 },
-    { category: 'CHICKEN', icon: '🍗', percentage: 30, amount: 13703 },
-    { category: 'DRINKS', icon: '🥤', percentage: 18, amount: 8222 },
-    { category: 'SIDES', icon: '🍟', percentage: 7, amount: 3197 },
-  ], []);
+  const salesByCategory = useMemo(() => {
+    if (realOrders.length > 0) {
+      const categoryMap = {};
+      realOrders.forEach(order => {
+        order.items?.forEach(item => {
+          const category = item.category || 'OTHER';
+          const amount = (item.price || 0) * (item.quantity || 1);
+          categoryMap[category] = (categoryMap[category] || 0) + amount;
+        });
+      });
+      const total = Object.values(categoryMap).reduce((sum, val) => sum + val, 0);
+      return Object.entries(categoryMap).map(([category, amount]) => ({
+        category: category.toUpperCase(),
+        icon: '📊',
+        percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
+        amount: Math.round(amount),
+      }));
+    }
+    // Fallback to sample data
+    return [
+      { category: 'BURGERS', icon: '🍔', percentage: 45, amount: 20555 },
+      { category: 'CHICKEN', icon: '🍗', percentage: 30, amount: 13703 },
+      { category: 'DRINKS', icon: '🥤', percentage: 18, amount: 8222 },
+      { category: 'SIDES', icon: '🍟', percentage: 7, amount: 3197 },
+    ];
+  }, [realOrders]);
 
   // Drive-thru vs dine-in data
-  const channelComparison = useMemo(() => [
-    { channel: 'Drive-Thru', icon: '🚗', percentage: 65, amount: 29690 },
-    { channel: 'Dine-In', icon: '🍽️', percentage: 35, amount: 15988 },
-  ], []);
+  const channelComparison = useMemo(() => {
+    if (realOrders.length > 0) {
+      const channelMap = {};
+      realOrders.forEach(order => {
+        const channel = order.orderType === 'DINE_IN' ? 'Dine-In' : 
+                        order.orderType === 'TAKEAWAY' ? 'Drive-Thru' : 'Other';
+        const amount = order.total || order.netAmount || 0;
+        channelMap[channel] = (channelMap[channel] || 0) + amount;
+      });
+      const total = Object.values(channelMap).reduce((sum, val) => sum + val, 0);
+      return Object.entries(channelMap).map(([channel, amount]) => ({
+        channel: channel,
+        icon: channel === 'Drive-Thru' ? '🚗' : '🍽️',
+        percentage: total > 0 ? Math.round((amount / total) * 100) : 0,
+        amount: Math.round(amount),
+      }));
+    }
+    // Fallback to sample data
+    return [
+      { channel: 'Drive-Thru', icon: '🚗', percentage: 65, amount: 29690 },
+      { channel: 'Dine-In', icon: '🍽️', percentage: 35, amount: 15988 },
+    ];
+  }, [realOrders]);
 
   // Time-based sales data
-  const hourlySales = useMemo(() => [
-    { hour: '10AM', sales: 4500 },
-    { hour: '11AM', sales: 8900 },
-    { hour: '12PM', sales: 12500 },
-    { hour: '1PM', sales: 15000 },
-    { hour: '2PM', sales: 11000 },
-    { hour: '3PM', sales: 7500 },
-    { hour: '4PM', sales: 5000 },
-    { hour: '5PM', sales: 6200 },
-  ], []);
+  const hourlySales = useMemo(() => {
+    if (realOrders.length > 0) {
+      const hourMap = {};
+      realOrders.forEach(order => {
+        const hour = new Date(order.createdAt || Date.now()).getHours();
+        const hourLabel = `${hour}${hour < 12 ? 'AM' : 'PM'}`;
+        const amount = order.total || order.netAmount || 0;
+        hourMap[hourLabel] = (hourMap[hourLabel] || 0) + amount;
+      });
+      return Object.entries(hourMap).map(([hour, sales]) => ({ hour, sales: Math.round(sales) }));
+    }
+    // Fallback to sample data
+    return [
+      { hour: '10AM', sales: 4500 },
+      { hour: '11AM', sales: 8900 },
+      { hour: '12PM', sales: 12500 },
+      { hour: '1PM', sales: 15000 },
+      { hour: '2PM', sales: 11000 },
+      { hour: '3PM', sales: 7500 },
+      { hour: '4PM', sales: 5000 },
+      { hour: '5PM', sales: 6200 },
+    ];
+  }, [realOrders]);
 
   // Top selling items
-  const topItems = useMemo(() => [
-    { name: 'Big Mac Meal', sales: 45, revenue: 40455 },
-    { name: 'Zinger Burger', sales: 38, revenue: 22762 },
-    { name: 'Pan Pizza', sales: 32, revenue: 41568 },
-    { name: 'McFlurry', sales: 28, revenue: 13972 },
-    { name: 'Buffalo Wings', sales: 25, revenue: 22475 },
-  ], []);
+  const topItems = useMemo(() => {
+    if (realOrders.length > 0) {
+      const itemMap = {};
+      realOrders.forEach(order => {
+        order.items?.forEach(item => {
+          const name = item.name || 'Unknown';
+          const quantity = item.quantity || 1;
+          const price = item.price || 0;
+          itemMap[name] = {
+            name,
+            sales: (itemMap[name]?.sales || 0) + quantity,
+            revenue: (itemMap[name]?.revenue || 0) + (price * quantity),
+          };
+        });
+      });
+      return Object.values(itemMap)
+        .sort((a, b) => b.sales - a.sales)
+        .slice(0, 5);
+    }
+    // Fallback to sample data
+    return [
+      { name: 'Big Mac Meal', sales: 45, revenue: 40455 },
+      { name: 'Zinger Burger', sales: 38, revenue: 22762 },
+      { name: 'Pan Pizza', sales: 32, revenue: 41568 },
+      { name: 'McFlurry', sales: 28, revenue: 13972 },
+      { name: 'Buffalo Wings', sales: 25, revenue: 22475 },
+    ];
+  }, [realOrders]);
 
   // Get bar width based on percentage
   const getBarWidth = (percentage) => `${percentage}%`;

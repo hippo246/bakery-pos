@@ -600,6 +600,86 @@ export function isOrderCancelled(order) {
 }
 
 /**
+ * Automatically transition order status based on KDS completion
+ * This enables "self-healing" order status progression
+ * @param {Order} order - Order object
+ * @param {Object} kdsState - KDS state { tickets: [], completedOrderIds: [] }
+ * @returns {Order|null} Updated order if transition occurred, null otherwise
+ */
+export function autoTransitionOrderStatus(order, kdsState = {}) {
+  if (!order || typeof order !== 'object') return null;
+  
+  const currentStatus = order.status;
+  const tickets = Array.isArray(kdsState.tickets) ? kdsState.tickets : [];
+  const completedOrderIds = Array.isArray(kdsState.completedOrderIds) ? kdsState.completedOrderIds : [];
+  
+  // Don't auto-transition from terminal states
+  if (['COMPLETED', 'CANCELLED'].includes(currentStatus)) return null;
+  
+  // NEW -> ACCEPTED: Auto-accept after 30 seconds if not cancelled
+  if (currentStatus === 'NEW') {
+    const elapsed = (now() - (order.createdAt || now())) / 1000;
+    if (elapsed >= 30) {
+      return { ...order, status: 'ACCEPTED', updatedAt: now() };
+    }
+  }
+  
+  // ACCEPTED -> PREPARING: Auto-start when KDS tickets are created and started
+  if (currentStatus === 'ACCEPTED') {
+    const orderTickets = tickets.filter(t => t.orderId === order.id);
+    const hasStartedTickets = orderTickets.some(t => t.startedAt && !t.completed);
+    if (hasStartedTickets) {
+      return { ...order, status: 'PREPARING', updatedAt: now() };
+    }
+  }
+  
+  // PREPARING -> READY: When all KDS tickets for this order are completed
+  if (currentStatus === 'PREPARING') {
+    const orderTickets = tickets.filter(t => t.orderId === order.id);
+    if (orderTickets.length > 0 && orderTickets.every(t => t.completed)) {
+      return { ...order, status: 'READY', updatedAt: now() };
+    }
+  }
+  
+  // READY -> COMPLETED: Auto-complete after 5 minutes in READY state
+  // or if explicitly marked in completedOrderIds
+  if (currentStatus === 'READY') {
+    if (completedOrderIds.includes(order.id)) {
+      return { ...order, status: 'COMPLETED', completedAt: now(), updatedAt: now() };
+    }
+    // Auto-complete after 5 minutes to prevent stuck orders
+    const readyTime = order.updatedAt || order.createdAt || now();
+    const elapsed = (now() - readyTime) / 1000;
+    if (elapsed >= 300) { // 5 minutes
+      return { ...order, status: 'COMPLETED', completedAt: now(), updatedAt: now() };
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Batch auto-transition multiple orders
+ * @param {Order[]} orders - Array of orders
+ * @param {Object} kdsState - KDS state
+ * @returns {Order[]} Updated orders (only those that changed)
+ */
+export function autoTransitionOrders(orders, kdsState = {}) {
+  if (!Array.isArray(orders)) return [];
+  const safeOrders = orders.filter(o => o && typeof o === 'object');
+  
+  const updatedOrders = [];
+  safeOrders.forEach(order => {
+    const updated = autoTransitionOrderStatus(order, kdsState);
+    if (updated) {
+      updatedOrders.push(updated);
+    }
+  });
+  
+  return updatedOrders;
+}
+
+/**
  * Check if order is completed
  * @param {Order} order - Order object
  * @returns {boolean} True if completed

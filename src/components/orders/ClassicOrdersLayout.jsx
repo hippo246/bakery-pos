@@ -194,6 +194,8 @@ export default function ClassicOrdersLayout(props) {
   const [substitutions, setSubstitutions] = useState([]);
   const [dietaryRestrictions, setDietaryRestrictions] = useState([]);
   const [showDietaryModal, setShowDietaryModal] = useState(false);
+  const [showEditPriceModal, setShowEditPriceModal] = useState(false);
+  const [editPriceValue, setEditPriceValue] = useState('');
   
   // Payment Restrictions
   const [paymentRestrictions, setPaymentRestrictions] = useState({
@@ -614,7 +616,34 @@ export default function ClassicOrdersLayout(props) {
 
   const handleCartItemSelect = useCallback((itemId) => {
     setSelectedCartItem(itemId);
-  }, []);
+    // Pre-fill edit price when selecting an item
+    const item = cart.items.find(i => i.id === itemId);
+    if (item) {
+      setEditPriceValue(item.price?.toString() || '0');
+    }
+  }, [cart.items]);
+
+  const handleEditPriceSave = useCallback(() => {
+    if (!selectedCartItem) return;
+    
+    const newPrice = parseFloat(editPriceValue);
+    if (isNaN(newPrice) || newPrice < 0) {
+      setAlertDialog({ isOpen: true, title: 'Invalid Price', message: 'Please enter a valid price.', type: 'warning' });
+      return;
+    }
+    
+    setCart(prev => {
+      const items = prev.items.map(item => {
+        if (item.id === selectedCartItem) {
+          return { ...item, price: newPrice, amount: newPrice * item.qty };
+        }
+        return item;
+      });
+      return { items };
+    });
+    
+    setShowEditPriceModal(false);
+  }, [selectedCartItem, editPriceValue]);
 
   const handleCartItemUpdate = useCallback((itemId, updates) => {
     setCart(prev => {
@@ -697,6 +726,7 @@ export default function ClassicOrdersLayout(props) {
   }, []);
 
   const handleQuickBarEnter = useCallback(() => {
+    console.log('[ClassicOrdersLayout] handleQuickBarEnter called:', quickBarInputs);
     if (quickBarInputs.itemCode || quickBarInputs.description) {
       const newItem = {
         id: quickBarInputs.itemCode || Date.now().toString(),
@@ -708,12 +738,12 @@ export default function ClassicOrdersLayout(props) {
         discount: 0,
       };
       
+      console.log('[ClassicOrdersLayout] Adding item to cart:', newItem);
+      
       setCart(prev => {
-        const existing = prev.items.find(i => i.id === newItem.id);
-        if (existing) {
-          return { items: prev.items.map(i => i.id === newItem.id ? { ...i, qty: i.qty + newItem.qty, amount: i.price * (i.qty + newItem.qty) } : i) };
-        }
-        return { items: [...prev.items, newItem] };
+        const items = [...prev.items, { ...newItem, amount: newItem.qty * newItem.price }];
+        console.log('[ClassicOrdersLayout] Updated cart items:', items);
+        return { items };
       });
 
       // Reset inputs
@@ -725,6 +755,8 @@ export default function ClassicOrdersLayout(props) {
         amount: '0.00',
         salesmanId: quickBarInputs.salesmanId,
       });
+    } else {
+      console.log('[ClassicOrdersLayout] No item code or description, skipping');
     }
   }, [quickBarInputs]);
 
@@ -1993,7 +2025,7 @@ export default function ClassicOrdersLayout(props) {
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
-      background: '#1A1A1A',
+      background: 'var(--classic-pos-grid-bg)',
       fontFamily: 'Arial, sans-serif',
       overflow: 'hidden',
     }}>
@@ -2035,6 +2067,7 @@ export default function ClassicOrdersLayout(props) {
         onDietary={() => setShowDietaryModal(true)}
         onDeposits={() => setShowDepositModal(true)}
         onCancelOrder={() => setShowOrderCancellationModal(true)}
+        onEditPrice={() => selectedCartItem ? setShowEditPriceModal(true) : setAlertDialog({ isOpen: true, title: 'No Item Selected', message: 'Please select an item from the cart to edit its price.', type: 'warning' })}
       />
 
       {/* Main Content - Split Layout */}
@@ -2062,6 +2095,8 @@ export default function ClassicOrdersLayout(props) {
             salesmanId={quickBarInputs.salesmanId}
             menuItems={menuItems}
             onInputChange={handleQuickBarInputChange}
+            onEnter={handleQuickBarEnter}
+            onFocus={setFocusedInput}
           />
 
           {/* Order Notes Input */}
@@ -2074,10 +2109,10 @@ export default function ClassicOrdersLayout(props) {
               style={{
                 flex: 1,
                 padding: '8px 12px',
-                background: '#2A2A2A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-input-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 fontSize: '12px'
               }}
             />
@@ -2085,8 +2120,8 @@ export default function ClassicOrdersLayout(props) {
               onClick={() => setShowItemModificationsModal(true)}
               style={{
                 padding: '8px 16px',
-                background: '#4A90E2',
-                color: '#FFFFFF',
+                background: 'var(--classic-pos-keypad-num-bg)',
+                color: 'var(--classic-pos-name-color)',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '11px',
@@ -2100,17 +2135,17 @@ export default function ClassicOrdersLayout(props) {
 
           {/* Server Selection */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ color: '#888', fontSize: '11px', minWidth: '60px' }}>Server:</label>
+            <label style={{ color: 'var(--classic-pos-code-color)', fontSize: '11px', minWidth: '60px' }}>Server:</label>
             <select
               value={selectedServer || ''}
               onChange={(e) => setSelectedServer(e.target.value)}
               style={{
                 flex: 1,
                 padding: '8px 12px',
-                background: '#2A2A2A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-input-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 fontSize: '12px'
               }}
             >
@@ -2123,17 +2158,17 @@ export default function ClassicOrdersLayout(props) {
 
           {/* Kitchen Station Selection */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ color: '#888', fontSize: '11px', minWidth: '60px' }}>Station:</label>
+            <label style={{ color: 'var(--classic-pos-code-color)', fontSize: '11px', minWidth: '60px' }}>Station:</label>
             <select
               value={kitchenStation}
               onChange={(e) => setKitchenStation(e.target.value)}
               style={{
                 flex: 1,
                 padding: '8px 12px',
-                background: '#2A2A2A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-input-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 fontSize: '12px'
               }}
             >
@@ -2159,7 +2194,7 @@ export default function ClassicOrdersLayout(props) {
           <div style={{ flex: 1, overflow: 'auto' }}>
             <ProductGrid
               items={menuItems
-                .map(m => ({ id: m.id || m.name, name: m.name, price: m.price || 0, category: m.category || 'All' }))
+                .map(m => ({ id: m.id || m.name, name: m.name, price: m.price || 0, category: m.category || 'All', code: m.code || '' }))
                 .filter(item => {
                   const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
                   const matchesSearch = searchQuery === '' || 
@@ -2175,7 +2210,7 @@ export default function ClassicOrdersLayout(props) {
         </div>
 
         {/* Right Panel (38%) - Function Keys, Numpad+Summary, Payment */}
-        <div style={{ width: '38%', display: 'flex', flexDirection: 'column', padding: '8px', gap: '8px', background: '#252525', borderLeft: '1px solid #333333', overflow: 'auto' }}>
+        <div style={{ width: '38%', display: 'flex', flexDirection: 'column', padding: '8px', gap: '8px', background: 'var(--classic-pos-panel-bg)', borderLeft: '1px solid var(--classic-pos-panel-border)', overflow: 'auto' }}>
 
           {/* Function Key Panel */}
           <FunctionKeyPanel onKeyPress={handleFunctionKeyPress} />
@@ -2285,22 +2320,22 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '500px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Split Payment</h3>
-            <p style={{ color: '#888', marginBottom: '16px' }}>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Split Payment</h3>
+            <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
               Total: ₹{cartSummary.netAmount.toFixed(2)} | Remaining: ₹{(cartSummary.netAmount - splitPayments.reduce((sum, p) => sum + p.amount, 0)).toFixed(2)}
             </p>
             
             {splitPayments.length > 0 && (
-              <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                <h4 style={{ color: '#888', marginBottom: '8px', fontSize: '12px' }}>Payments Made:</h4>
+              <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                <h4 style={{ color: 'var(--classic-pos-code-color)', marginBottom: '8px', fontSize: '12px' }}>Payments Made:</h4>
                 {splitPayments.map((payment, index) => (
-                  <div key={index} style={{ color: '#FFFFFF', fontSize: '12px', marginBottom: '4px' }}>
+                  <div key={index} style={{ color: 'var(--classic-pos-name-color)', fontSize: '12px', marginBottom: '4px' }}>
                     {payment.method}: ₹{payment.amount.toFixed(2)}
                   </div>
                 ))}
@@ -2308,15 +2343,15 @@ export default function ClassicOrdersLayout(props) {
             )}
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Payment Method:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Payment Method:</label>
               <select
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF',
+                  color: 'var(--classic-pos-name-color)',
                   marginBottom: '12px'
                 }}
                 id="splitPaymentMethod"
@@ -2329,17 +2364,17 @@ export default function ClassicOrdersLayout(props) {
                 <option value="paytm">Paytm</option>
               </select>
               
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Amount:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Amount:</label>
               <input
                 type="number"
                 placeholder="Enter amount"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
                 id="splitPaymentAmount"
                 defaultValue={(cartSummary.netAmount - splitPayments.reduce((sum, p) => sum + p.amount, 0)).toFixed(2)}
@@ -2354,8 +2389,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2375,8 +2410,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2404,7 +2439,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '500px',
@@ -2412,22 +2447,22 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Split Bill</h3>
-            <p style={{ color: '#888', marginBottom: '16px' }}>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Split Bill</h3>
+            <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
               Total: ₹{cartSummary.netAmount.toFixed(2)}
             </p>
             
             {/* Split Method Selection */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Split Method:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Split Method:</label>
               <select
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
                 id="splitMethod"
                 onChange={(e) => {
@@ -2451,15 +2486,15 @@ export default function ClassicOrdersLayout(props) {
 
             {/* Split by Count */}
             <div id="splitByCount" style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Number of ways to split:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Number of ways to split:</label>
               <select
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
                 id="splitCount"
               >
@@ -2475,7 +2510,7 @@ export default function ClassicOrdersLayout(props) {
 
             {/* Split by Amount */}
             <div id="splitByAmount" style={{ marginBottom: '16px', display: 'none' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Custom Amounts (comma-separated):</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Custom Amounts (comma-separated):</label>
               <input
                 type="text"
                 id="splitAmounts"
@@ -2483,27 +2518,27 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
 
             {/* Split by Item */}
             <div id="splitByItem" style={{ marginBottom: '16px', display: 'none' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Assign items to people:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Assign items to people:</label>
               {cart.items.map((item, idx) => (
-                <div key={item.id} style={{ marginBottom: '8px', padding: '8px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <span style={{ color: '#FFF', marginRight: '8px' }}>{item.name} (₹{item.amount.toFixed(2)})</span>
+                <div key={item.id} style={{ marginBottom: '8px', padding: '8px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <span style={{ color: 'var(--classic-pos-keypad-text)', marginRight: '8px' }}>{item.name} (₹{item.amount.toFixed(2)})</span>
                   <select
                     style={{
                       padding: '4px',
-                      background: '#2A2A2A',
-                      border: '1px solid #3A3A3A',
+                      background: 'var(--classic-pos-panel-bg)',
+                      border: '1px solid var(--classic-pos-input-border)',
                       borderRadius: '4px',
-                      color: '#FFFFFF'
+                      color: 'var(--classic-pos-name-color)'
                     }}
                     id={`itemAssign_${idx}`}
                   >
@@ -2518,7 +2553,7 @@ export default function ClassicOrdersLayout(props) {
 
             {/* Split by Person */}
             <div id="splitByPerson" style={{ marginBottom: '16px', display: 'none' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Number of people:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Number of people:</label>
               <input
                 type="number"
                 id="splitPersonCount"
@@ -2528,10 +2563,10 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
@@ -2541,8 +2576,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowSplitBillModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2584,8 +2619,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2613,23 +2648,23 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Item Modifications</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Item Modifications</h3>
             <textarea
               placeholder="Special requests, allergies, preparation notes..."
               style={{
                 width: '100%',
                 height: '100px',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="itemModificationsText"
@@ -2639,8 +2674,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowItemModificationsModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2659,8 +2694,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2688,21 +2723,21 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Void Order</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Void Order</h3>
             <select
               style={{
                 width: '100%',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="voidOrderSelect"
@@ -2719,10 +2754,10 @@ export default function ClassicOrdersLayout(props) {
                 width: '100%',
                 height: '80px',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="voidReasonText"
@@ -2732,8 +2767,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowVoidOrderModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2753,8 +2788,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#E74C3C',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-delete-btn-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2782,21 +2817,21 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Process Refund</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Process Refund</h3>
             <select
               style={{
                 width: '100%',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="refundOrderSelect"
@@ -2813,10 +2848,10 @@ export default function ClassicOrdersLayout(props) {
               style={{
                 width: '100%',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="refundAmount"
@@ -2827,10 +2862,10 @@ export default function ClassicOrdersLayout(props) {
                 width: '100%',
                 height: '80px',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="refundReasonText"
@@ -2840,8 +2875,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowRefundModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2862,8 +2897,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#E67E22',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-menu-btn-4)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2891,24 +2926,24 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Exchange Items</h3>
-            <p style={{ color: '#888', marginBottom: '16px' }}>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Exchange Items</h3>
+            <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
               Current cart items will be exchanged. Select original order:
             </p>
             <select
               style={{
                 width: '100%',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="exchangeOrderSelect"
@@ -2924,8 +2959,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowExchangeModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2944,8 +2979,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -2973,24 +3008,24 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Transfer Table</h3>
-            <p style={{ color: '#888', marginBottom: '16px' }}>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Transfer Table</h3>
+            <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
               Transfer order from {selectedTable} to:
             </p>
             <select
               style={{
                 width: '100%',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="transferTableSelect"
@@ -3007,8 +3042,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowTableTransferModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3027,8 +3062,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3056,24 +3091,24 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Merge Order</h3>
-            <p style={{ color: '#888', marginBottom: '16px' }}>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Merge Order</h3>
+            <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
               Merge current cart with existing order:
             </p>
             <select
               style={{
                 width: '100%',
                 padding: '8px',
-                background: '#1A1A1A',
-                border: '1px solid #3A3A3A',
+                background: 'var(--classic-pos-grid-bg)',
+                border: '1px solid var(--classic-pos-input-border)',
                 borderRadius: '4px',
-                color: '#FFFFFF',
+                color: 'var(--classic-pos-name-color)',
                 marginBottom: '16px'
               }}
               id="mergeOrderSelect"
@@ -3089,8 +3124,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowOrderMergeModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3109,8 +3144,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3138,7 +3173,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '500px',
@@ -3146,10 +3181,10 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Receipt Customization</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Receipt Customization</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showLogo}
@@ -3158,7 +3193,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Show Logo
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showCustomer}
@@ -3167,7 +3202,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Show Customer Info
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showTable}
@@ -3176,7 +3211,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Show Table Info
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showServer}
@@ -3185,7 +3220,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Show Server Info
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showGST}
@@ -3194,7 +3229,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Show GST
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showDiscount}
@@ -3203,7 +3238,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Show Discount
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   checked={receiptOptions.showTimestamp}
@@ -3215,7 +3250,7 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Custom Footer Text:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Custom Footer Text:</label>
               <input
                 type="text"
                 value={receiptOptions.customFooter}
@@ -3223,10 +3258,10 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
@@ -3236,8 +3271,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowReceiptOptionsModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3249,8 +3284,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowReceiptOptionsModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3278,7 +3313,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '600px',
@@ -3286,44 +3321,44 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Day End Report</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Day End Report</h3>
             
             {dayEndReport ? (
               <div>
-                <p style={{ color: '#888', marginBottom: '16px' }}>
+                <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
                   Date: {dayEndReport.date}
                 </p>
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Summary</h4>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Total Sales: ₹{dayEndReport.totalSales.toFixed(2)}</p>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Total Orders: {dayEndReport.totalOrders}</p>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Summary</h4>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Total Sales: ₹{dayEndReport.totalSales.toFixed(2)}</p>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Total Orders: {dayEndReport.totalOrders}</p>
                 </div>
                 
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Payment Methods</h4>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Payment Methods</h4>
                   {Object.entries(dayEndReport.paymentMethods).map(([method, amount]) => (
-                    <p key={method} style={{ color: '#888', marginBottom: '4px' }}>
+                    <p key={method} style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>
                       {method.toUpperCase()}: ₹{amount.toFixed(2)}
                     </p>
                   ))}
                 </div>
                 
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Recent Orders ({dayEndReport.orders.length})</h4>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Recent Orders ({dayEndReport.orders.length})</h4>
                   {dayEndReport.orders.slice(0, 10).map(order => (
-                    <div key={order.id} style={{ color: '#888', fontSize: '12px', marginBottom: '4px', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
+                    <div key={order.id} style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginBottom: '4px', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
                       {order.orderNumber} - ₹{(order.total || 0).toFixed(2)} - {order.paymentMethod?.toUpperCase() || 'CASH'}
                     </div>
                   ))}
                   {dayEndReport.orders.length > 10 && (
-                    <p style={{ color: '#888', fontSize: '11px', marginTop: '8px' }}>
+                    <p style={{ color: 'var(--classic-pos-code-color)', fontSize: '11px', marginTop: '8px' }}>
                       ... and {dayEndReport.orders.length - 10} more orders
                     </p>
                   )}
                 </div>
               </div>
             ) : (
-              <p style={{ color: '#888', marginBottom: '16px' }}>
+              <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
                 Generate report for today's orders?
               </p>
             )}
@@ -3333,8 +3368,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowDayEndReportModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3347,8 +3382,8 @@ export default function ClassicOrdersLayout(props) {
                   onClick={handleDayEndReport}
                   style={{
                     padding: '8px 16px',
-                    background: '#4A90E2',
-                    color: '#FFF',
+                    background: 'var(--classic-pos-keypad-num-bg)',
+                    color: 'var(--classic-pos-keypad-text)',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer'
@@ -3377,7 +3412,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '700px',
@@ -3385,28 +3420,28 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Inventory Management</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Inventory Management</h3>
             
-            <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Low Stock Threshold: {inventory.lowStockThreshold}</h4>
+            <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Low Stock Threshold: {inventory.lowStockThreshold}</h4>
               <input
                 type="number"
                 defaultValue={inventory.lowStockThreshold}
                 onChange={(e) => setInventory(prev => ({ ...prev, lowStockThreshold: parseInt(e.target.value) }))}
                 style={{
                   padding: '4px 8px',
-                  background: '#2A2A2A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-panel-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Stock Levels</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Stock Levels</h4>
               {Object.entries(inventory.items).length === 0 ? (
-                <p style={{ color: '#888' }}>No inventory data available</p>
+                <p style={{ color: 'var(--classic-pos-code-color)' }}>No inventory data available</p>
               ) : (
                 Object.entries(inventory.items).map(([itemId, data]) => (
                   <div key={itemId} style={{ 
@@ -3417,7 +3452,7 @@ export default function ClassicOrdersLayout(props) {
                     border: data.quantity <= inventory.lowStockThreshold ? '1px solid #DC2626' : '1px solid #333'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#FFFFFF' }}>{itemId}</span>
+                      <span style={{ color: 'var(--classic-pos-name-color)' }}>{itemId}</span>
                       <span style={{ color: data.quantity <= inventory.lowStockThreshold ? '#DC2626' : '#888' }}>
                         Qty: {data.quantity} {data.quantity <= inventory.lowStockThreshold && '(LOW STOCK)'}
                       </span>
@@ -3432,8 +3467,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowInventoryModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3461,16 +3496,16 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Waste Tracking</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Waste Tracking</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Item ID:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Item ID:</label>
               <input
                 type="text"
                 id="wasteItemId"
@@ -3478,16 +3513,16 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Quantity:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Quantity:</label>
               <input
                 type="number"
                 id="wasteQuantity"
@@ -3495,25 +3530,25 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Reason:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Reason:</label>
               <select
                 id="wasteReason"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               >
                 <option value="expired">Expired</option>
@@ -3529,8 +3564,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowWasteTrackingModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3552,7 +3587,7 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   padding: '8px 16px',
                   background: '#DC2626',
-                  color: '#FFF',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3580,20 +3615,20 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Deposit Payment</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Deposit Payment</h3>
             
-            <p style={{ color: '#888', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '16px' }}>
               Total: ₹{cartSummary.netAmount.toFixed(2)}
             </p>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Deposit Amount:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Deposit Amount:</label>
               <input
                 type="number"
                 id="depositAmount"
@@ -3602,10 +3637,10 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
@@ -3615,8 +3650,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowDepositModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3635,8 +3670,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3664,7 +3699,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '800px',
@@ -3672,11 +3707,11 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Real-Time Sales Dashboard</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Real-Time Sales Dashboard</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
-              <div style={{ padding: '16px', background: '#1A1A1A', borderRadius: '4px' }}>
-                <h4 style={{ color: '#888', fontSize: '12px', marginBottom: '8px' }}>Today's Sales</h4>
+              <div style={{ padding: '16px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                <h4 style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginBottom: '8px' }}>Today's Sales</h4>
                 <p style={{ color: '#4ADE80', fontSize: '24px', fontWeight: 'bold' }}>
                   ₹{orderHistory.reduce((sum, o) => {
                     const orderDate = new Date(o.timestamp);
@@ -3685,9 +3720,9 @@ export default function ClassicOrdersLayout(props) {
                   }, 0).toFixed(2)}
                 </p>
               </div>
-              <div style={{ padding: '16px', background: '#1A1A1A', borderRadius: '4px' }}>
-                <h4 style={{ color: '#888', fontSize: '12px', marginBottom: '8px' }}>Orders Today</h4>
-                <p style={{ color: '#60A5FA', fontSize: '24px', fontWeight: 'bold' }}>
+              <div style={{ padding: '16px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                <h4 style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginBottom: '8px' }}>Orders Today</h4>
+                <p style={{ color: 'var(--classic-pos-keypad-num-bg)', fontSize: '24px', fontWeight: 'bold' }}>
                   {orderHistory.filter(o => {
                     const orderDate = new Date(o.timestamp);
                     const today = new Date();
@@ -3695,8 +3730,8 @@ export default function ClassicOrdersLayout(props) {
                   }).length}
                 </p>
               </div>
-              <div style={{ padding: '16px', background: '#1A1A1A', borderRadius: '4px' }}>
-                <h4 style={{ color: '#888', fontSize: '12px', marginBottom: '8px' }}>Avg Order Value</h4>
+              <div style={{ padding: '16px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                <h4 style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginBottom: '8px' }}>Avg Order Value</h4>
                 <p style={{ color: '#F472B6', fontSize: '24px', fontWeight: 'bold' }}>
                   ₹{(orderHistory.reduce((sum, o) => {
                     const orderDate = new Date(o.timestamp);
@@ -3712,18 +3747,18 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Recent Orders</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Recent Orders</h4>
               {orderHistory.slice(0, 5).map(order => (
                 <div key={order.id} style={{ 
                   padding: '8px', 
-                  background: '#1A1A1A', 
+                  background: 'var(--classic-pos-grid-bg)', 
                   borderRadius: '4px', 
                   marginBottom: '8px',
                   display: 'flex',
                   justifyContent: 'space-between'
                 }}>
-                  <span style={{ color: '#888' }}>{order.orderNumber}</span>
-                  <span style={{ color: '#FFFFFF' }}>₹{(order.total || 0).toFixed(2)}</span>
+                  <span style={{ color: 'var(--classic-pos-code-color)' }}>{order.orderNumber}</span>
+                  <span style={{ color: 'var(--classic-pos-name-color)' }}>₹{(order.total || 0).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -3733,8 +3768,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowSalesDashboard(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3762,7 +3797,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '800px',
@@ -3770,7 +3805,7 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Analytics & Reports</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Analytics & Reports</h3>
             
             {!analyticsData ? (
               <div style={{ marginBottom: '16px' }}>
@@ -3778,8 +3813,8 @@ export default function ClassicOrdersLayout(props) {
                   onClick={handleGenerateAnalytics}
                   style={{
                     padding: '12px 24px',
-                    background: '#4A90E2',
-                    color: '#FFF',
+                    background: 'var(--classic-pos-keypad-num-bg)',
+                    color: 'var(--classic-pos-keypad-text)',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer'
@@ -3790,46 +3825,46 @@ export default function ClassicOrdersLayout(props) {
               </div>
             ) : (
               <>
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Summary</h4>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Total Revenue: ₹{analyticsData.totalRevenue.toFixed(2)}</p>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Total Cost: ₹{analyticsData.totalCost.toFixed(2)}</p>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Profit Margin: {analyticsData.profitMargin.toFixed(2)}%</p>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Total Tax: ₹{analyticsData.totalTax.toFixed(2)}</p>
-                  <p style={{ color: '#888', marginBottom: '4px' }}>Total Orders: {analyticsData.totalOrders}</p>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Summary</h4>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Total Revenue: ₹{analyticsData.totalRevenue.toFixed(2)}</p>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Total Cost: ₹{analyticsData.totalCost.toFixed(2)}</p>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Profit Margin: {analyticsData.profitMargin.toFixed(2)}%</p>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Total Tax: ₹{analyticsData.totalTax.toFixed(2)}</p>
+                  <p style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>Total Orders: {analyticsData.totalOrders}</p>
                 </div>
                 
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Staff Performance</h4>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Staff Performance</h4>
                   {Object.entries(analyticsData.staffPerformance).length === 0 ? (
-                    <p style={{ color: '#888' }}>No staff data available</p>
+                    <p style={{ color: 'var(--classic-pos-code-color)' }}>No staff data available</p>
                   ) : (
                     Object.entries(analyticsData.staffPerformance).map(([staffName, data]) => (
-                      <div key={staffName} style={{ color: '#888', marginBottom: '4px' }}>
+                      <div key={staffName} style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>
                         {staffName}: {data.orders} orders - ₹{data.revenue.toFixed(2)}
                       </div>
                     ))
                   )}
                 </div>
                 
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Top Items</h4>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Top Items</h4>
                   {Object.entries(analyticsData.itemPerformance)
                     .sort((a, b) => b[1].revenue - a[1].revenue)
                     .slice(0, 5)
                     .map(([name, data]) => (
-                      <div key={name} style={{ color: '#888', marginBottom: '4px' }}>
+                      <div key={name} style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>
                         {name}: {data.quantity} sold - ₹{data.revenue.toFixed(2)}
                       </div>
                     ))}
                 </div>
                 
-                <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-                  <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Hourly Sales</h4>
+                <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+                  <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Hourly Sales</h4>
                   {Object.entries(analyticsData.hourlySales)
                     .sort((a, b) => a[0] - b[0])
                     .map(([hour, amount]) => (
-                      <div key={hour} style={{ color: '#888', marginBottom: '4px' }}>
+                      <div key={hour} style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>
                         {hour}:00 - ₹{amount.toFixed(2)}
                       </div>
                     ))}
@@ -3845,8 +3880,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3874,16 +3909,16 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Delayed Order Firing</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Delayed Order Firing</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Delay (minutes):</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Delay (minutes):</label>
               <input
                 type="number"
                 id="delayMinutes"
@@ -3892,10 +3927,10 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
@@ -3905,8 +3940,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowDelayedFiringModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3926,7 +3961,7 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   padding: '8px 16px',
                   background: '#F59E0B',
-                  color: '#FFF',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -3954,7 +3989,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '700px',
@@ -3962,7 +3997,7 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Table Map</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Table Map</h3>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '16px' }}>
               {tableMap.tables.map(table => (
@@ -3987,8 +4022,8 @@ export default function ClassicOrdersLayout(props) {
                     textAlign: 'center'
                   }}
                 >
-                  <div style={{ color: '#FFFFFF', fontWeight: 'bold', marginBottom: '8px' }}>{table.id}</div>
-                  <div style={{ color: '#888', fontSize: '12px', marginBottom: '4px' }}>Capacity: {table.capacity}</div>
+                  <div style={{ color: 'var(--classic-pos-name-color)', fontWeight: 'bold', marginBottom: '8px' }}>{table.id}</div>
+                  <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginBottom: '4px' }}>Capacity: {table.capacity}</div>
                   <div style={{ 
                     color: table.status === 'available' ? '#4ADE80' : 
                           table.status === 'occupied' ? '#60A5FA' : '#F59E0B', 
@@ -3998,12 +4033,12 @@ export default function ClassicOrdersLayout(props) {
                     {table.status}
                   </div>
                   {table.reservation && (
-                    <div style={{ color: '#888', fontSize: '11px', marginTop: '4px' }}>
+                    <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '11px', marginTop: '4px' }}>
                       Reserved: {table.reservation}
                     </div>
                   )}
                   {table.server && (
-                    <div style={{ color: '#888', fontSize: '11px', marginTop: '4px' }}>
+                    <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '11px', marginTop: '4px' }}>
                       Server: {table.server}
                     </div>
                   )}
@@ -4016,8 +4051,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowTableMapModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4045,25 +4080,25 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Table Reservation</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Table Reservation</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Table:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Table:</label>
               <select
                 id="reservationTable"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               >
                 {tableMap.tables.filter(t => t.status === 'available').map(table => (
@@ -4073,7 +4108,7 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Customer Name:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Customer Name:</label>
               <input
                 type="text"
                 id="reservationCustomer"
@@ -4081,32 +4116,32 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Time:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Time:</label>
               <input
                 type="time"
                 id="reservationTime"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Party Size:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Party Size:</label>
               <input
                 type="number"
                 id="reservationPartySize"
@@ -4115,10 +4150,10 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
@@ -4128,8 +4163,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowReservationModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4151,8 +4186,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4180,7 +4215,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '500px',
@@ -4188,10 +4223,10 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Waitlist Management</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Waitlist Management</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Add to Waitlist</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Add to Waitlist</h4>
               <div style={{ marginBottom: '8px' }}>
                 <input
                   type="text"
@@ -4200,10 +4235,10 @@ export default function ClassicOrdersLayout(props) {
                   style={{
                     width: '100%',
                     padding: '8px',
-                    background: '#1A1A1A',
-                    border: '1px solid #3A3A3A',
+                    background: 'var(--classic-pos-grid-bg)',
+                    border: '1px solid var(--classic-pos-input-border)',
                     borderRadius: '4px',
-                    color: '#FFFFFF',
+                    color: 'var(--classic-pos-name-color)',
                     marginBottom: '8px'
                   }}
                 />
@@ -4214,10 +4249,10 @@ export default function ClassicOrdersLayout(props) {
                   style={{
                     width: '100%',
                     padding: '8px',
-                    background: '#1A1A1A',
-                    border: '1px solid #3A3A3A',
+                    background: 'var(--classic-pos-grid-bg)',
+                    border: '1px solid var(--classic-pos-input-border)',
                     borderRadius: '4px',
-                    color: '#FFFFFF',
+                    color: 'var(--classic-pos-name-color)',
                     marginBottom: '8px'
                   }}
                 />
@@ -4228,10 +4263,10 @@ export default function ClassicOrdersLayout(props) {
                   style={{
                     width: '100%',
                     padding: '8px',
-                    background: '#1A1A1A',
-                    border: '1px solid #3A3A3A',
+                    background: 'var(--classic-pos-grid-bg)',
+                    border: '1px solid var(--classic-pos-input-border)',
                     borderRadius: '4px',
-                    color: '#FFFFFF'
+                    color: 'var(--classic-pos-name-color)'
                   }}
                 />
               </div>
@@ -4248,8 +4283,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4260,22 +4295,22 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Current Waitlist</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Current Waitlist</h4>
               {waitlist.length === 0 ? (
-                <p style={{ color: '#888' }}>No parties on waitlist</p>
+                <p style={{ color: 'var(--classic-pos-code-color)' }}>No parties on waitlist</p>
               ) : (
                 waitlist.map((entry, index) => (
                   <div key={entry.id} style={{ 
                     padding: '8px', 
-                    background: '#1A1A1A', 
+                    background: 'var(--classic-pos-grid-bg)', 
                     borderRadius: '4px', 
                     marginBottom: '8px',
                     display: 'flex',
                     justifyContent: 'space-between'
                   }}>
                     <div>
-                      <div style={{ color: '#FFFFFF' }}>{index + 1}. {entry.customerName}</div>
-                      <div style={{ color: '#888', fontSize: '12px' }}>
+                      <div style={{ color: 'var(--classic-pos-name-color)' }}>{index + 1}. {entry.customerName}</div>
+                      <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px' }}>
                         Party: {entry.partySize} | Phone: {entry.phone || 'N/A'}
                       </div>
                     </div>
@@ -4284,7 +4319,7 @@ export default function ClassicOrdersLayout(props) {
                       style={{
                         padding: '4px 8px',
                         background: '#DC2626',
-                        color: '#FFF',
+                        color: 'var(--classic-pos-keypad-text)',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer'
@@ -4302,8 +4337,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowWaitlistModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4331,7 +4366,7 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '500px',
@@ -4339,22 +4374,22 @@ export default function ClassicOrdersLayout(props) {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Staff Management</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Staff Management</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Current Staff: {currentStaff?.name || 'Not logged in'}</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Current Staff: {currentStaff?.name || 'Not logged in'}</h4>
               {!currentStaff && (
                 <div style={{ marginBottom: '8px' }}>
-                  <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Login:</label>
+                  <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Login:</label>
                   <select
                     id="staffLogin"
                     style={{
                       width: '100%',
                       padding: '8px',
-                      background: '#1A1A1A',
-                      border: '1px solid #3A3A3A',
+                      background: 'var(--classic-pos-grid-bg)',
+                      border: '1px solid var(--classic-pos-input-border)',
                       borderRadius: '4px',
-                      color: '#FFFFFF'
+                      color: 'var(--classic-pos-name-color)'
                     }}
                   >
                     {staff.filter(s => s.active).map(s => (
@@ -4373,8 +4408,8 @@ export default function ClassicOrdersLayout(props) {
                     style={{
                       marginTop: '8px',
                       padding: '8px 16px',
-                      background: '#4A90E2',
-                      color: '#FFF',
+                      background: 'var(--classic-pos-keypad-num-bg)',
+                      color: 'var(--classic-pos-keypad-text)',
                       border: 'none',
                       borderRadius: '4px',
                       cursor: 'pointer'
@@ -4390,7 +4425,7 @@ export default function ClassicOrdersLayout(props) {
                   style={{
                     padding: '8px 16px',
                     background: '#DC2626',
-                    color: '#FFF',
+                    color: 'var(--classic-pos-keypad-text)',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer'
@@ -4402,11 +4437,11 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Staff List</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Staff List</h4>
               {staff.map(s => (
                 <div key={s.id} style={{ 
                   padding: '8px', 
-                  background: '#1A1A1A', 
+                  background: 'var(--classic-pos-grid-bg)', 
                   borderRadius: '4px', 
                   marginBottom: '8px',
                   display: 'flex',
@@ -4414,8 +4449,8 @@ export default function ClassicOrdersLayout(props) {
                   alignItems: 'center'
                 }}>
                   <div>
-                    <div style={{ color: '#FFFFFF' }}>{s.name}</div>
-                    <div style={{ color: '#888', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--classic-pos-name-color)' }}>{s.name}</div>
+                    <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px' }}>
                       {s.role} | {s.permissions.join(', ')}
                     </div>
                   </div>
@@ -4434,8 +4469,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowStaffModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4463,27 +4498,27 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '500px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Shift Management</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Shift Management</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Time Clock</h4>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Time Clock</h4>
               {Object.entries(timeClock).map(([staffId, clockData]) => {
                 const staffMember = staff.find(s => s.id === staffId);
                 return (
                   <div key={staffId} style={{ 
                     padding: '8px', 
-                    background: '#1A1A1A', 
+                    background: 'var(--classic-pos-grid-bg)', 
                     borderRadius: '4px', 
                     marginBottom: '8px'
                   }}>
-                    <div style={{ color: '#FFFFFF' }}>{staffMember?.name || staffId}</div>
-                    <div style={{ color: '#888', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--classic-pos-name-color)' }}>{staffMember?.name || staffId}</div>
+                    <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px' }}>
                       In: {clockData.loginTime ? new Date(clockData.loginTime).toLocaleTimeString() : 'N/A'}
                       {clockData.logoutTime && ` | Out: ${new Date(clockData.logoutTime).toLocaleTimeString()}`}
                     </div>
@@ -4497,8 +4532,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowShiftModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4526,25 +4561,25 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Void Reason</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Void Reason</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Reason for void:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Reason for void:</label>
               <select
                 id="voidReason"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               >
                 <option value="customer_request">Customer Request</option>
@@ -4556,17 +4591,17 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Additional notes:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Additional notes:</label>
               <textarea
                 id="voidNotes"
                 placeholder="Enter additional details"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF',
+                  color: 'var(--classic-pos-name-color)',
                   minHeight: '80px'
                 }}
               />
@@ -4577,8 +4612,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowVoidReasonModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4601,7 +4636,7 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   padding: '8px 16px',
                   background: '#DC2626',
-                  color: '#FFF',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4629,25 +4664,25 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Order Sequencing</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Order Sequencing</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Priority Level:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Priority Level:</label>
               <select
                 id="orderPriority"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               >
                 <option value="low">Low Priority</option>
@@ -4657,13 +4692,13 @@ export default function ClassicOrdersLayout(props) {
               </select>
             </div>
 
-            <div style={{ marginBottom: '16px', padding: '12px', background: '#1A1A1A', borderRadius: '4px' }}>
-              <h4 style={{ color: '#FFFFFF', marginBottom: '8px' }}>Current Queue</h4>
+            <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--classic-pos-grid-bg)', borderRadius: '4px' }}>
+              <h4 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '8px' }}>Current Queue</h4>
               {orderSequence.length === 0 ? (
-                <p style={{ color: '#888' }}>No orders in queue</p>
+                <p style={{ color: 'var(--classic-pos-code-color)' }}>No orders in queue</p>
               ) : (
                 orderSequence.map((seq, idx) => (
-                  <div key={idx} style={{ color: '#888', marginBottom: '4px' }}>
+                  <div key={idx} style={{ color: 'var(--classic-pos-code-color)', marginBottom: '4px' }}>
                     #{seq.sequenceNumber} - {seq.orderId} ({seq.priority})
                   </div>
                 ))
@@ -4675,8 +4710,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowOrderSequenceModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4696,8 +4731,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4725,25 +4760,25 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Cancel Order</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Cancel Order</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Select Order to Cancel:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Select Order to Cancel:</label>
               <select
                 id="cancelOrderId"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               >
                 {orderHistory.map(order => (
@@ -4753,17 +4788,17 @@ export default function ClassicOrdersLayout(props) {
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Cancellation Reason:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Cancellation Reason:</label>
               <textarea
                 id="cancelReason"
                 placeholder="Enter reason for cancellation"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF',
+                  color: 'var(--classic-pos-name-color)',
                   minHeight: '80px'
                 }}
               />
@@ -4774,8 +4809,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowOrderCancellationModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4796,8 +4831,8 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#E74C3C',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-delete-btn-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4825,42 +4860,42 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Manager Override Required</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Manager Override Required</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Reason for override:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Reason for override:</label>
               <textarea
                 id="overrideReason"
                 placeholder="Enter reason for manager override"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF',
+                  color: 'var(--classic-pos-name-color)',
                   minHeight: '80px'
                 }}
               />
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Manager ID:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Manager ID:</label>
               <select
                 id="overrideManager"
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               >
                 {staff.filter(s => s.role === 'manager').map(m => (
@@ -4874,8 +4909,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowManagerOverrideModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4892,7 +4927,7 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   padding: '8px 16px',
                   background: '#F59E0B',
-                  color: '#FFF',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -4920,16 +4955,16 @@ export default function ClassicOrdersLayout(props) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#2A2A2A',
+            background: 'var(--classic-pos-panel-bg)',
             padding: '24px',
             borderRadius: '8px',
             width: '400px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ color: '#FFFFFF', marginBottom: '16px' }}>Dietary Restrictions</h3>
+            <h3 style={{ color: 'var(--classic-pos-name-color)', marginBottom: '16px' }}>Dietary Restrictions</h3>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   id="dietaryVegan"
@@ -4937,7 +4972,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Vegan
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   id="dietaryVegetarian"
@@ -4945,7 +4980,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Vegetarian
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   id="dietaryGlutenFree"
@@ -4953,7 +4988,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Gluten-Free
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   id="dietaryDairyFree"
@@ -4961,7 +4996,7 @@ export default function ClassicOrdersLayout(props) {
                 />
                 Dairy-Free
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', marginBottom: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--classic-pos-code-color)', marginBottom: '8px' }}>
                 <input
                   type="checkbox"
                   id="dietaryNutFree"
@@ -4972,7 +5007,7 @@ export default function ClassicOrdersLayout(props) {
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ color: '#888', display: 'block', marginBottom: '8px' }}>Allergies:</label>
+              <label style={{ color: 'var(--classic-pos-code-color)', display: 'block', marginBottom: '8px' }}>Allergies:</label>
               <input
                 type="text"
                 id="dietaryAllergies"
@@ -4980,10 +5015,10 @@ export default function ClassicOrdersLayout(props) {
                 style={{
                   width: '100%',
                   padding: '8px',
-                  background: '#1A1A1A',
-                  border: '1px solid #3A3A3A',
+                  background: 'var(--classic-pos-grid-bg)',
+                  border: '1px solid var(--classic-pos-input-border)',
                   borderRadius: '4px',
-                  color: '#FFFFFF'
+                  color: 'var(--classic-pos-name-color)'
                 }}
               />
             </div>
@@ -4993,8 +5028,8 @@ export default function ClassicOrdersLayout(props) {
                 onClick={() => setShowDietaryModal(false)}
                 style={{
                   padding: '8px 16px',
-                  background: '#444',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -5025,14 +5060,128 @@ export default function ClassicOrdersLayout(props) {
                 }}
                 style={{
                   padding: '8px 16px',
-                  background: '#4A90E2',
-                  color: '#FFF',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
                 }}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Price Modal */}
+      {showEditPriceModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+        }}>
+          <div style={{
+            background: 'var(--classic-pos-panel-bg)',
+            border: '1px solid #444',
+            borderRadius: '8px',
+            padding: '24px',
+            minWidth: '400px',
+            maxWidth: '500px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+          }}>
+            <h3 style={{
+              color: 'var(--classic-pos-name-color)',
+              fontSize: '18px',
+              fontWeight: '700',
+              marginBottom: '20px',
+              marginTop: 0,
+            }}>
+              Edit Item Price
+            </h3>
+            
+            {selectedCartItem && (() => {
+              const item = cart.items.find(i => i.id === selectedCartItem);
+              return item ? (
+                <div style={{
+                  background: 'var(--classic-pos-func-grid-bg)',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  marginBottom: '16px',
+                }}>
+                  <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginBottom: '4px' }}>Item</div>
+                  <div style={{ color: 'var(--classic-pos-name-color)', fontSize: '14px', fontWeight: '600' }}>{item.name}</div>
+                  <div style={{ color: 'var(--classic-pos-code-color)', fontSize: '12px', marginTop: '8px', marginBottom: '4px' }}>Current Price</div>
+                  <div style={{ color: '#38EF7D', fontSize: '16px', fontWeight: '700' }}>₹{item.price?.toFixed(2)}</div>
+                </div>
+              ) : null;
+            })()}
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{
+                display: 'block',
+                color: 'var(--classic-pos-detail-text)',
+                fontSize: '12px',
+                fontWeight: '600',
+                marginBottom: '8px',
+              }}>
+                New Price
+              </label>
+              <input
+                type="number"
+                value={editPriceValue}
+                onChange={(e) => setEditPriceValue(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: 'var(--classic-pos-func-grid-bg)',
+                  border: '1px solid #444444',
+                  borderRadius: '4px',
+                  color: 'var(--classic-pos-name-color)',
+                  fontSize: '14px',
+                }}
+                placeholder="Enter new price"
+                min="0"
+                step="0.01"
+                autoFocus
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowEditPriceModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--classic-pos-keypad-action-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditPriceSave}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--classic-pos-keypad-num-bg)',
+                  color: 'var(--classic-pos-keypad-text)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                }}
+              >
+                Save Price
               </button>
             </div>
           </div>

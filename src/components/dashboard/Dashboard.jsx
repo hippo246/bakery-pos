@@ -41,24 +41,24 @@ const AnimatedNumber = memo(({ value, format = (v) => v, duration = 900 }) => {
 
 // ── STATUS COLORS (TableEngine-compatible) ────────────────────────────────────
 const TABLE_STATUS_COLOR = {
-  available:         { bg: '#22c55e', text: '#fff' },
-  reserved:          { bg: '#f59e0b', text: '#fff' },
-  occupied:          { bg: '#ef4444', text: '#fff' },
-  ordering:          { bg: '#8b5cf6', text: '#fff' },
-  order_confirmed:   { bg: '#3b82f6', text: '#fff' },
-  kitchen:           { bg: '#f97316', text: '#fff' },
-  ready_for_pickup:  { bg: '#06b6d4', text: '#fff' },
-  serving:           { bg: '#78716c', text: '#fff' },
-  dining:            { bg: '#64748b', text: '#fff' },
-  bill_requested:    { bg: '#ec4899', text: '#fff' },
-  payment_processing:{ bg: '#eab308', text: '#fff' },
-  cleaning:          { bg: '#6366f1', text: '#fff' },
-  maintenance:       { bg: '#9ca3af', text: '#fff' },
-  disabled:          { bg: '#1f2937', text: '#fff' },
+  available:         { bg: '#22c55e', text: 'var(--cafe-text-primary)' },
+  reserved:          { bg: '#f59e0b', text: 'var(--cafe-text-primary)' },
+  occupied:          { bg: '#ef4444', text: 'var(--cafe-text-primary)' },
+  ordering:          { bg: '#8b5cf6', text: 'var(--cafe-text-primary)' },
+  order_confirmed:   { bg: '#3b82f6', text: 'var(--cafe-text-primary)' },
+  kitchen:           { bg: '#f97316', text: 'var(--cafe-text-primary)' },
+  ready_for_pickup:  { bg: '#06b6d4', text: 'var(--cafe-text-primary)' },
+  serving:           { bg: '#78716c', text: 'var(--cafe-text-primary)' },
+  dining:            { bg: '#64748b', text: 'var(--cafe-text-primary)' },
+  bill_requested:    { bg: '#ec4899', text: 'var(--cafe-text-primary)' },
+  payment_processing:{ bg: '#eab308', text: 'var(--cafe-text-primary)' },
+  cleaning:          { bg: '#6366f1', text: 'var(--cafe-text-primary)' },
+  maintenance:       { bg: '#9ca3af', text: 'var(--cafe-text-primary)' },
+  disabled:          { bg: '#1f2937', text: 'var(--cafe-text-primary)' },
 };
 const getTableColor = (status = '') => {
   const s = status.toLowerCase().replace(/ /g, '_');
-  return TABLE_STATUS_COLOR[s] || { bg: '#94a3b8', text: '#fff' };
+  return TABLE_STATUS_COLOR[s] || { bg: '#94a3b8', text: 'var(--cafe-text-primary)' };
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -650,47 +650,629 @@ const WidgetInventory = ({ inventory, onNavigate }) => {
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
+// WIDGET — Staff Performance (Bangalore Cafe Owners Love This)
+// ══════════════════════════════════════════════════════════════════════════════
+const WidgetStaffPerf = ({ orders, staff }) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const staffPerf = useMemo(() => {
+    const todayOrders = safeArray(orders).filter(o => o.createdAt && new Date(o.createdAt) >= today);
+    const staffData = {};
+    
+    todayOrders.forEach(order => {
+      const serverId = order.serverId || order.staffId || 'unassigned';
+      if (!staffData[serverId]) {
+        staffData[serverId] = { orders: 0, revenue: 0, items: 0 };
+      }
+      staffData[serverId].orders++;
+      staffData[serverId].revenue += getOrderAmount(order);
+      staffData[serverId].items += (order.items?.length || 0);
+    });
+    
+    return Object.entries(staffData)
+      .map(([id, data]) => {
+        const staffMember = safeArray(staff).find(s => s.id === id);
+        return {
+          id,
+          name: staffMember?.name || id,
+          role: staffMember?.role || 'Staff',
+          ...data,
+          avgOrderValue: data.orders > 0 ? data.revenue / data.orders : 0
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  }, [orders, staff]);
+  
+  if (!staff || staff.length === 0) {
+    return (
+      <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+          🏆 Staff Performance Today
+        </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No staff members configured
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+        🏆 Staff Performance Today
+      </div>
+      {staffPerf.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No orders today yet
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {staffPerf.map((s, i) => (
+            <div key={s.id} style={{ 
+              padding: '14px 16px', 
+              background: 'var(--cafe-bg-hover)', 
+              border: '1px solid var(--cafe-border-light)', 
+              borderRadius: 12,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
+                  {i === 0 && '🥇 '}{i === 1 && '🥈 '}{i === 2 && '🥉 '}{s.name}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>
+                  {s.orders} orders • {s.items} items
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-accent)', fontFamily: 'monospace' }}>
+                  ₹{formatMoney(s.revenue)}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--cafe-text-tertiary)' }}>
+                  Avg: ₹{s.avgOrderValue.toFixed(0)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET — Daily Sales Target (Motivational for Staff)
+// ══════════════════════════════════════════════════════════════════════════════
+const WidgetSalesTarget = ({ orders }) => {
+  const [target, setTarget] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cafeos_daily_sales_target');
+      return saved ? Number(saved) : 25000; // Default ₹25,000 target
+    } catch { return 25000; }
+  });
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const todayRevenue = useMemo(() => {
+    const todayOrders = safeArray(orders).filter(o => 
+      o.createdAt && new Date(o.createdAt) >= today && 
+      ['COMPLETED', 'READY'].includes(o.status)
+    );
+    return todayOrders.reduce((sum, o) => sum + getOrderAmount(o), 0);
+  }, [orders]);
+  
+  const progress = Math.min(100, (todayRevenue / target) * 100);
+  const remaining = Math.max(0, target - todayRevenue);
+  const hoursLeft = Math.max(0, 24 - new Date().getHours());
+  
+  const handleSetTarget = () => {
+    const newTarget = prompt('Set daily sales target (₹):', target);
+    if (newTarget && !isNaN(Number(newTarget))) {
+      setTarget(Number(newTarget));
+      try { localStorage.setItem('cafeos_daily_sales_target', String(newTarget)); } catch {}
+    }
+  };
+  
+  return (
+    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)' }}>
+          🎯 Daily Sales Target
+        </div>
+        <button onClick={handleSetTarget} style={{ fontSize: 11, color: 'var(--cafe-accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>
+          Set Target
+        </button>
+      </div>
+      
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 13, color: 'var(--cafe-text-secondary)' }}>Progress</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: progress >= 100 ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)' }}>
+            {progress.toFixed(1)}%
+          </span>
+        </div>
+        <div style={{ width: '100%', height: 12, background: 'var(--cafe-bg-surface)', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ 
+            width: `${progress}%`, 
+            height: '100%', 
+            background: progress >= 100 ? 'var(--cafe-accent)' : `linear-gradient(90deg, var(--cafe-accent), ${progress > 50 ? '#22c55e' : '#f59e0b'})`, 
+            borderRadius: 6,
+            transition: 'width 0.5s ease'
+          }} />
+        </div>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ padding: 16, background: 'var(--cafe-bg-hover)', borderRadius: 12 }}>
+          <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginBottom: 4 }}>Current Sales</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--cafe-text-primary)', fontFamily: 'monospace' }}>
+            ₹{formatMoney(todayRevenue)}
+          </div>
+        </div>
+        <div style={{ padding: 16, background: 'var(--cafe-bg-hover)', borderRadius: 12 }}>
+          <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginBottom: 4 }}>Target</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--cafe-text-primary)', fontFamily: 'monospace' }}>
+            ₹{formatMoney(target)}
+          </div>
+        </div>
+      </div>
+      
+      <div style={{ marginTop: 16, padding: 12, background: remaining === 0 ? '#dcfce7' : '#fef3c7', borderRadius: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: remaining === 0 ? '#166534' : '#92400e' }}>
+          {remaining === 0 ? '🎉 Target Achieved!' : `₹${formatMoney(remaining)} to reach target`}
+        </div>
+        <div style={{ fontSize: 11, color: remaining === 0 ? '#166534' : '#92400e', marginTop: 2 }}>
+          {hoursLeft} hours remaining today
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET — Peak Hours Analysis (Helps with Staffing)
+// ══════════════════════════════════════════════════════════════════════════════
+const WidgetPeakHours = ({ orders }) => {
+  const peakData = useMemo(() => {
+    const hourCounts = {};
+    const hourRevenue = {};
+    
+    // Last 7 days data
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    safeArray(orders).forEach(order => {
+      if (!order.createdAt) return;
+      const orderDate = new Date(order.createdAt);
+      if (orderDate < weekAgo) return;
+      
+      const hour = orderDate.getHours();
+      if (!hourCounts[hour]) hourCounts[hour] = 0;
+      if (!hourRevenue[hour]) hourRevenue[hour] = 0;
+      
+      hourCounts[hour]++;
+      hourRevenue[hour] += getOrderAmount(order);
+    });
+    
+    return Object.entries(hourCounts)
+      .map(([hour, count]) => ({
+        hour: Number(hour),
+        count,
+        revenue: hourRevenue[hour] || 0,
+        label: hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [orders]);
+  
+  return (
+    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+        ⏰ Peak Hours (Last 7 Days)
+      </div>
+      {peakData.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No data available
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {peakData.map((p, i) => {
+            const maxCount = peakData[0].count;
+            const barWidth = (p.count / maxCount) * 100;
+            return (
+              <div key={p.hour}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>
+                    {p.label}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)' }}>
+                    {p.count} orders
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 8, background: 'var(--cafe-bg-surface)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ 
+                    width: `${barWidth}%`, 
+                    height: '100%', 
+                    background: i === 0 ? 'var(--cafe-accent)' : `hsl(${200 + i * 20}, 70%, 50%)`, 
+                    borderRadius: 4 
+                  }} />
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>
+                  ₹{formatMoney(p.revenue)} revenue
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET — Table Turnover Rate (Bangalore Cafe Owners Love This)
+// ══════════════════════════════════════════════════════════════════════════════
+const WidgetTableTurnover = ({ orders, tables }) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const turnoverData = useMemo(() => {
+    const todayOrders = safeArray(orders).filter(o => o.createdAt && new Date(o.createdAt) >= today);
+    const tableStats = {};
+    
+    todayOrders.forEach(order => {
+      const tableId = order.tableId;
+      if (!tableId) return;
+      
+      if (!tableStats[tableId]) {
+        tableStats[tableId] = { orders: 0, revenue: 0, turns: 0 };
+      }
+      tableStats[tableId].orders++;
+      tableStats[tableId].revenue += getOrderAmount(order);
+      tableStats[tableId].turns++;
+    });
+    
+    return Object.entries(tableStats)
+      .map(([tableId, data]) => {
+        const table = safeArray(tables).find(t => t.id === tableId);
+        return {
+          id: tableId,
+          name: table?.name || tableId,
+          capacity: table?.capacity || 4,
+          ...data,
+          avgRevenue: data.orders > 0 ? data.revenue / data.orders : 0
+        };
+      })
+      .sort((a, b) => b.turns - a.turns)
+      .slice(0, 6);
+  }, [orders, tables]);
+  
+  if (!tables || tables.length === 0) {
+    return (
+      <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+          🔄 Table Turnover Today
+        </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No tables configured
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+        🔄 Table Turnover Today
+      </div>
+      {turnoverData.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No table orders today
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {turnoverData.map((t, i) => (
+            <div key={t.id} style={{ 
+              padding: '12px 14px', 
+              background: 'var(--cafe-bg-hover)', 
+              border: '1px solid var(--cafe-border-light)', 
+              borderRadius: 10,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
+                  {t.name} <span style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', fontWeight: 400 }}>({t.capacity} seats)</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>
+                  {t.turns} turnover{t.turns !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-accent)', fontFamily: 'monospace' }}>
+                  ₹{formatMoney(t.revenue)}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--cafe-text-tertiary)' }}>
+                  Avg: ₹{t.avgRevenue.toFixed(0)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET — Customer Wait Time Tracking (Bangalore Cafe Owners Love This)
+// ══════════════════════════════════════════════════════════════════════════════
+const WidgetWaitTime = ({ orders }) => {
+  const waitTimeData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayOrders = safeArray(orders).filter(o => o.createdAt && new Date(o.createdAt) >= today);
+    const completedOrders = todayOrders.filter(o => ['COMPLETED', 'READY'].includes(o.status));
+    
+    const waitTimes = completedOrders.map(order => {
+      const created = new Date(order.createdAt);
+      const completed = new Date(order.updatedAt || order.completedAt || Date.now());
+      const waitMinutes = Math.round((completed - created) / 60000);
+      return {
+        id: order.id,
+        waitMinutes: Math.max(0, waitMinutes),
+        orderType: order.orderType || 'DINE_IN'
+      };
+    });
+    
+    if (waitTimes.length === 0) return null;
+    
+    const avgWait = waitTimes.reduce((sum, w) => sum + w.waitMinutes, 0) / waitTimes.length;
+    const maxWait = Math.max(...waitTimes.map(w => w.waitMinutes));
+    const minWait = Math.min(...waitTimes.map(w => w.waitMinutes));
+    
+    const byType = {};
+    waitTimes.forEach(w => {
+      if (!byType[w.orderType]) byType[w.orderType] = [];
+      byType[w.orderType].push(w.waitMinutes);
+    });
+    
+    const avgByType = Object.entries(byType).map(([type, times]) => ({
+      type,
+      avg: times.reduce((a, b) => a + b, 0) / times.length,
+      count: times.length
+    }));
+    
+    return { avgWait, maxWait, minWait, avgByType, totalOrders: waitTimes.length };
+  }, [orders]);
+  
+  if (!waitTimeData) {
+    return (
+      <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+          ⏱️ Wait Times Today
+        </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No completed orders today
+        </div>
+      </div>
+    );
+  }
+  
+  const { avgWait, maxWait, minWait, avgByType, totalOrders } = waitTimeData;
+  
+  return (
+    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+        ⏱️ Wait Times Today
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
+        <div style={{ padding: 12, background: 'var(--cafe-bg-hover)', borderRadius: 10, textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--cafe-text-tertiary)', marginBottom: 4 }}>Average</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: avgWait > 15 ? '#ef4444' : 'var(--cafe-accent)' }}>
+            {avgWait.toFixed(0)}m
+          </div>
+        </div>
+        <div style={{ padding: 12, background: 'var(--cafe-bg-hover)', borderRadius: 10, textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--cafe-text-tertiary)', marginBottom: 4 }}>Min</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--cafe-text-primary)' }}>
+            {minWait}m
+          </div>
+        </div>
+        <div style={{ padding: 12, background: 'var(--cafe-bg-hover)', borderRadius: 10, textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--cafe-text-tertiary)', marginBottom: 4 }}>Max</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--cafe-text-primary)' }}>
+            {maxWait}m
+          </div>
+        </div>
+      </div>
+      
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--cafe-text-secondary)', marginBottom: 8 }}>
+          By Order Type ({totalOrders} orders)
+        </div>
+        {avgByType.map((t, i) => (
+          <div key={t.type} style={{ 
+            padding: '10px 12px', 
+            background: 'var(--cafe-bg-hover)', 
+            borderRadius: 8,
+            marginBottom: 8,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>
+              {t.type.replace('_', ' ')}
+            </span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: t.avg > 15 ? '#ef4444' : 'var(--cafe-accent)' }}>
+                {t.avg.toFixed(0)}m
+              </span>
+              <span style={{ fontSize: 10, color: 'var(--cafe-text-tertiary)', marginLeft: 6 }}>
+                ({t.count})
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET — Revenue by Category Breakdown (Bangalore Cafe Owners Love This)
+// ══════════════════════════════════════════════════════════════════════════════
+const WidgetCategoryRevenue = ({ orders, menuItems }) => {
+  const categoryData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayOrders = safeArray(orders).filter(o => o.createdAt && new Date(o.createdAt) >= today);
+    const categoryRevenue = {};
+    
+    todayOrders.forEach(order => {
+      if (!order.items) return;
+      order.items.forEach(item => {
+        const menuItem = safeArray(menuItems).find(m => m.id === item.id);
+        const category = menuItem?.category || menuItem?.cat || 'Other';
+        if (!categoryRevenue[category]) {
+          categoryRevenue[category] = { revenue: 0, count: 0 };
+        }
+        categoryRevenue[category].revenue += (item.price || 0) * (item.qty || 1);
+        categoryRevenue[category].count += (item.qty || 1);
+      });
+    });
+    
+    return Object.entries(categoryRevenue)
+      .map(([category, data]) => ({ category, ...data }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [orders, menuItems]);
+  
+  if (!menuItems || menuItems.length === 0) {
+    return (
+      <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+          📊 Revenue by Category
+        </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No menu items configured
+        </div>
+      </div>
+    );
+  }
+  
+  const totalRevenue = categoryData.reduce((sum, c) => sum + c.revenue, 0);
+  
+  return (
+    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--cafe-text-primary)', marginBottom: 16 }}>
+        📊 Revenue by Category
+      </div>
+      {categoryData.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cafe-text-tertiary)', fontSize: 14 }}>
+          No sales today
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {categoryData.map((c, i) => {
+            const percentage = totalRevenue > 0 ? (c.revenue / totalRevenue) * 100 : 0;
+            return (
+              <div key={c.category}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>
+                    {c.category}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)' }}>
+                    {percentage.toFixed(1)}%
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 10, background: 'var(--cafe-bg-surface)', borderRadius: 5, overflow: 'hidden', marginBottom: 6 }}>
+                  <div style={{ 
+                    width: `${percentage}%`, 
+                    height: '100%', 
+                    background: `hsl(${200 + i * 25}, 70%, 50%)`, 
+                    borderRadius: 5 
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--cafe-text-tertiary)' }}>
+                  <span>{c.count} items</span>
+                  <span style={{ fontWeight: 600, color: 'var(--cafe-accent)' }}>₹{formatMoney(c.revenue)}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════════════════════════
 // WIDGET REGISTRY & DRAG ENGINE
 // ══════════════════════════════════════════════════════════════════════════════
 const WIDGET_REGISTRY = {
-  HERO_STATS:     { title: 'Key Metrics',      component: WidgetKPIs,         defaultColSpan: 3 },
-  REVENUE_CHART:  { title: 'Sales Trend',       component: WidgetRevenueChart, defaultColSpan: 2 },
-  MINI_FLOOR:     { title: 'Live Floor Map',    component: WidgetMiniFloor,    defaultColSpan: 1 },
-  KDS_KITCHEN:    { title: 'Kitchen KDS',       component: WidgetKitchen,      defaultColSpan: 1 },
-  ACTIVITY_FEED:  { title: 'Live Orders',       component: WidgetActivity,     defaultColSpan: 1 },
-  TOP_SELLERS:    { title: 'Top Sellers',       component: WidgetTopSellers,   defaultColSpan: 1 },
-  STAFF_SHIFT:    { title: 'Staff Shift',       component: WidgetStaff,        defaultColSpan: 1 },
-  WAITLIST_QUEUE: { title: 'Live Waitlist',     component: WidgetWaitlist,     defaultColSpan: 1 },
-  INVENTORY:      { title: 'Stock Alerts',      component: WidgetInventory,    defaultColSpan: 1 },
+  HERO_STATS:       { title: 'Key Metrics',        component: WidgetKPIs,         defaultColSpan: 3 },
+  REVENUE_CHART:    { title: 'Sales Trend',         component: WidgetRevenueChart, defaultColSpan: 2 },
+  MINI_FLOOR:       { title: 'Live Floor Map',      component: WidgetMiniFloor,    defaultColSpan: 1 },
+  KDS_KITCHEN:      { title: 'Kitchen KDS',         component: WidgetKitchen,      defaultColSpan: 1 },
+  ACTIVITY_FEED:    { title: 'Live Orders',         component: WidgetActivity,     defaultColSpan: 1 },
+  TOP_SELLERS:      { title: 'Top Sellers',         component: WidgetTopSellers,   defaultColSpan: 1 },
+  STAFF_SHIFT:      { title: 'Staff Shift',         component: WidgetStaff,        defaultColSpan: 1 },
+  STAFF_PERF:       { title: 'Staff Performance',   component: WidgetStaffPerf,     defaultColSpan: 2 },
+  TABLE_TURNOVER:   { title: 'Table Turnover',      component: WidgetTableTurnover, defaultColSpan: 1 },
+  WAIT_TIME:        { title: 'Wait Times',          component: WidgetWaitTime,      defaultColSpan: 1 },
+  CATEGORY_REVENUE: { title: 'Revenue by Category', component: WidgetCategoryRevenue, defaultColSpan: 2 },
+  WAITLIST_QUEUE:   { title: 'Live Waitlist',       component: WidgetWaitlist,     defaultColSpan: 1 },
+  INVENTORY:        { title: 'Stock Alerts',        component: WidgetInventory,    defaultColSpan: 1 },
+  SALES_TARGET:     { title: 'Daily Sales Target',  component: WidgetSalesTarget, defaultColSpan: 2 },
+  PEAK_HOURS:       { title: 'Peak Hours',          component: WidgetPeakHours,    defaultColSpan: 2 },
 };
 
 // ── Widget-level RBAC ─────────────────────────────────────────────────────────
 // Which roles are BLOCKED from each widget. Omission = all roles can see it.
 // 'owner' is always unrestricted.
 const WIDGET_BLOCKED_ROLES = {
-  REVENUE_CHART:  ['kitchen'],                    // Kitchen staff don't need revenue charts
-  HERO_STATS:     ['kitchen'],                    // KPIs like revenue hidden from kitchen
-  TOP_SELLERS:    ['kitchen'],                    // Top sellers = business intel, not for kitchen
-  STAFF_SHIFT:    ['cashier', 'kitchen'],         // Staff scheduling = manager+ only
-  INVENTORY:      ['cashier'],                    // Stock alerts not for cashiers
+  REVENUE_CHART:    ['kitchen'],                    // Kitchen staff don't need revenue charts
+  HERO_STATS:       ['kitchen'],                    // KPIs like revenue hidden from kitchen
+  TOP_SELLERS:      ['kitchen'],                    // Top sellers = business intel, not for kitchen
+  STAFF_SHIFT:      ['cashier', 'kitchen'],         // Staff scheduling = manager+ only
+  STAFF_PERF:       ['cashier', 'kitchen'],         // Staff performance = manager+ only
+  TABLE_TURNOVER:   ['cashier', 'kitchen'],         // Table turnover = manager+ only
+  WAIT_TIME:        ['cashier', 'kitchen'],         // Wait times = manager+ only
+  CATEGORY_REVENUE: ['kitchen'],                    // Category revenue hidden from kitchen
+  SALES_TARGET:     ['kitchen'],                    // Sales targets hidden from kitchen
+  INVENTORY:        ['cashier'],                    // Stock alerts not for cashiers
 };
 
 const DEFAULT_LAYOUT = [
-  { id: 'uid-1', type: 'HERO_STATS',    colSpan: 3 },
-  { id: 'uid-2', type: 'REVENUE_CHART', colSpan: 2 },
-  { id: 'uid-3', type: 'MINI_FLOOR',   colSpan: 1 },
-  { id: 'uid-4', type: 'KDS_KITCHEN',  colSpan: 1 },
-  { id: 'uid-5', type: 'ACTIVITY_FEED',colSpan: 1 },
-  { id: 'uid-6', type: 'TOP_SELLERS',  colSpan: 1 },
-  { id: 'uid-7', type: 'STAFF_SHIFT',  colSpan: 1 },
-  { id: 'uid-8', type: 'WAITLIST_QUEUE',colSpan: 1 },
-  { id: 'uid-9', type: 'INVENTORY',    colSpan: 1 },
+  { id: 'uid-1', type: 'HERO_STATS',       colSpan: 3 },
+  { id: 'uid-2', type: 'REVENUE_CHART',    colSpan: 2 },
+  { id: 'uid-3', type: 'SALES_TARGET',     colSpan: 2 },
+  { id: 'uid-4', type: 'MINI_FLOOR',      colSpan: 1 },
+  { id: 'uid-5', type: 'KDS_KITCHEN',     colSpan: 1 },
+  { id: 'uid-6', type: 'ACTIVITY_FEED',   colSpan: 1 },
+  { id: 'uid-7', type: 'TOP_SELLERS',     colSpan: 1 },
+  { id: 'uid-8', type: 'STAFF_PERF',      colSpan: 2 },
+  { id: 'uid-9', type: 'TABLE_TURNOVER',  colSpan: 1 },
+  { id: 'uid-10', type: 'WAIT_TIME',      colSpan: 1 },
+  { id: 'uid-11', type: 'CATEGORY_REVENUE',colSpan: 2 },
+  { id: 'uid-12', type: 'PEAK_HOURS',     colSpan: 2 },
+  { id: 'uid-13', type: 'STAFF_SHIFT',    colSpan: 1 },
+  { id: 'uid-14', type: 'WAITLIST_QUEUE', colSpan: 1 },
+  { id: 'uid-15', type: 'INVENTORY',      colSpan: 1 },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN DASHBOARD
 // ══════════════════════════════════════════════════════════════════════════════
-function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables, staff, waitlist, onNavigate }) {
+function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables, staff, waitlist, menuItems, onNavigate }) {
   const { role, isOwner } = useSecurity();
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 800);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -724,6 +1306,7 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
       tables: safeArray(tables),
       staff: safeArray(staff),
       waitlist: safeArray(waitlist),
+      menuItems: safeArray(menuItems || []),
       recentOrders: safeOrders.filter(o => o.createdAt).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10),
       metrics: {
         totalRevenue: rev,
@@ -733,7 +1316,7 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
       },
       onNavigate,
     };
-  }, [safeOrders, inventory, safeKds, tables, staff, waitlist, onNavigate]);
+  }, [safeOrders, inventory, safeKds, tables, staff, waitlist, menuItems, onNavigate]);
 
   const saveLayout = (l) => {
     setLayout(l);
@@ -789,11 +1372,12 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingBottom: 24 }}>
       <style>{`
         .dash-widget { background: var(--cafe-bg-card); border: 1px solid var(--cafe-border-light); border-radius: 16px; overflow: hidden; position: relative; transition: transform 0.25s, box-shadow 0.25s; }
-        .dash-widget:not(.edit-active):hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.1); }
+        .dash-widget:not(.edit-active):hover { transform: translateY(-4px); box-shadow: var(--cafe-shadow-lg); border-color: var(--cafe-accent); }
         .dash-widget.edit-active { border: 2px dashed var(--cafe-accent); animation: dashWiggle 1.8s infinite ease-in-out; cursor: grab; }
         .dash-widget.edit-active:active { cursor: grabbing; }
         @keyframes dashWiggle { 0%,100% { transform:rotate(0deg); } 25% { transform:rotate(-0.5deg); } 75% { transform:rotate(0.5deg); } }
-        .edit-overlay-btn { padding: 6px 12px; border-radius: 7px; border: none; cursor: pointer; font-size: 12px; font-weight: 700; }
+        .edit-overlay-btn { padding: 6px 12px; border-radius: 7px; border: none; cursor: pointer; font-size: 12px; font-weight: 700; transition: all 0.15s ease; }
+        .edit-overlay-btn:hover { transform: scale(1.05); }
         .add-widget-row:hover { background: var(--cafe-bg-hover); }
       `}</style>
 
@@ -810,12 +1394,12 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
             <>
               <button onClick={() => setShowAddWidget(true)} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-bg-hover)', color: 'var(--cafe-accent)', border: '1.5px solid var(--cafe-accent)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>+ Add Widget</button>
               <button onClick={() => { saveLayout(DEFAULT_LAYOUT); }} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-bg-hover)', color: 'var(--cafe-text-secondary)', border: '1px solid var(--cafe-border)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Reset</button>
-              <button onClick={() => setIsEditMode(false)} style={{ padding: '10px 20px', borderRadius: 12, background: '#22c55e', color: 'var(--cafe-text-primary)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Done ✓</button>
+              <button onClick={() => setIsEditMode(false)} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-success)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Done ✓</button>
             </>
           ) : (
             <>
               <button onClick={() => setIsEditMode(true)} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-bg-hover)', color: 'var(--cafe-text-primary)', border: '1px solid var(--cafe-border)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Edit Layout</button>
-              <button onClick={() => onNavigate?.('orders')} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-accent)', color: 'var(--cafe-text-primary)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}>+ New Order</button>
+              <button onClick={() => onNavigate?.('orders')} style={{ padding: '10px 20px', borderRadius: 12, background: 'var(--cafe-accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, boxShadow: 'var(--cafe-shadow-glow)' }}>+ New Order</button>
             </>
           )}
         </div>
@@ -843,18 +1427,18 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
               onDragEnd={handleDragEnd}
             >
               {isEditMode && (
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <div style={{ position: 'absolute', inset: 0, background: 'var(--cafe-bg-card)', backdropFilter: 'blur(4px)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>{reg.title}</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button className="edit-overlay-btn" onClick={() => resizeWidget(item.id)} style={{ background: 'var(--cafe-bg-surface)', border: '1px solid var(--cafe-border)', color: 'var(--cafe-text-primary)' }}>
                       Width: {item.colSpan}×
                     </button>
-                    <button className="edit-overlay-btn" onClick={() => removeWidget(item.id)} style={{ background: '#fee2e2', color: '#ef4444', border: 'none' }}>Remove</button>
+                    <button className="edit-overlay-btn" onClick={() => removeWidget(item.id)} style={{ background: 'var(--cafe-danger-bg)', color: 'var(--cafe-danger)', border: '1px solid var(--cafe-danger-border)' }}>Remove</button>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)' }}>Drag to reorder</div>
                 </div>
               )}
-              <WidgetComp {...widgetProps} />
+              <WidgetComp {...widgetProps} key={item.id} />
             </div>
           );
         })}
@@ -862,8 +1446,8 @@ function Dashboard({ orders, customers: _customers, inventory, kdsCards, tables,
 
       {/* Add Widget Modal */}
       {showAddWidget && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAddWidget(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--cafe-bg-card)', width: 460, maxHeight: '80vh', borderRadius: 20, overflow: 'hidden', boxShadow: '0 32px 64px rgba(0,0,0,0.25)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowAddWidget(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--cafe-bg-card)', width: 460, maxHeight: '80vh', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--cafe-shadow-lg)', border: '1px solid var(--cafe-border)' }}>
             <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--cafe-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 800 }}>Widget Library</div>
               <button onClick={() => setShowAddWidget(false)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--cafe-text-secondary)', lineHeight: 1 }}>×</button>

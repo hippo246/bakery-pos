@@ -1,14 +1,6 @@
-/**
- * Classic POS Product Grid
- * 
- * Dark background with item cards using dark charcoal fill and green accent price text.
- * Price at top left, item title in all caps white bold font in center.
- * Responsive multi-column grid (4 to 6 columns).
- */
-
 export default function ProductGrid({ items, onItemClick }) {
   const gridContainerStyle = {
-    background: '#121212',
+    background: 'var(--classic-pos-grid-bg)',
     padding: '8px',
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
@@ -17,11 +9,11 @@ export default function ProductGrid({ items, onItemClick }) {
   };
 
   const tileStyle = {
-    background: '#2A2A2A',
+    background: 'var(--classic-pos-tile-bg)',
     borderRadius: '6px',
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: '#3A3A3A',
+    borderColor: 'var(--classic-pos-tile-border)',
     padding: '10px',
     display: 'flex',
     flexDirection: 'column',
@@ -36,14 +28,22 @@ export default function ProductGrid({ items, onItemClick }) {
   const priceStyle = {
     fontSize: '16px',
     fontWeight: '700',
-    color: '#38EF7D',
+    color: 'var(--classic-pos-price-color)',
     marginBottom: '8px',
+  };
+
+  const codeStyle = {
+    fontSize: '10px',
+    fontWeight: '600',
+    color: 'var(--classic-pos-code-color)',
+    marginBottom: '4px',
+    textTransform: 'uppercase',
   };
 
   const nameStyle = {
     fontSize: '12px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
     textAlign: 'left',
     textTransform: 'uppercase',
     lineHeight: '1.3',
@@ -62,19 +62,20 @@ export default function ProductGrid({ items, onItemClick }) {
           style={tileStyle}
           onClick={() => onItemClick?.(item)}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#3A3A3A';
+            e.currentTarget.style.background = 'var(--classic-pos-tile-bg-hover)';
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.4)';
-            e.currentTarget.style.borderColor = '#4A4A4A';
+            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+            e.currentTarget.style.borderColor = 'var(--classic-pos-tile-border-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#2A2A2A';
+            e.currentTarget.style.background = 'var(--classic-pos-tile-bg)';
             e.currentTarget.style.transform = 'translateY(0)';
             e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.borderColor = '#3A3A3A';
+            e.currentTarget.style.borderColor = 'var(--classic-pos-tile-border)';
           }}
         >
           <div style={priceStyle}>₹{Number(item.price || 0).toFixed(2)}</div>
+          {item.code && <div style={codeStyle}>{item.code}</div>}
           <div style={nameStyle}>{item.name}</div>
         </div>
       ))}

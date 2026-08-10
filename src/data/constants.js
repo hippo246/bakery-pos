@@ -275,28 +275,28 @@ export const PEAK_SOP = [
 ];
 
 export const TIER_COLORS = {
-  BRONZE: { bg: "#2a1a08", color: "#CD7F32", glow: "rgba(205,127,50,0.3)" },
-  SILVER: { bg: "#1e1e1e", color: "#C0C0C0", glow: "rgba(192,192,192,0.2)" },
-  GOLD: { bg: "#2a2008", color: "#E8A020", glow: "rgba(232,160,32,0.3)" },
-  PLATINUM: { bg: "#0a1a1a", color: "#4AD9D9", glow: "rgba(74,217,217,0.3)" },
+  BRONZE: { bg: "var(--tier-bronze-bg)", color: "var(--tier-bronze-color)", glow: "var(--tier-bronze-glow)" },
+  SILVER: { bg: "var(--tier-silver-bg)", color: "var(--tier-silver-color)", glow: "var(--tier-silver-glow)" },
+  GOLD: { bg: "var(--tier-gold-bg)", color: "var(--tier-gold-color)", glow: "var(--tier-gold-glow)" },
+  PLATINUM: { bg: "var(--tier-platinum-bg)", color: "var(--tier-platinum-color)", glow: "var(--tier-platinum-glow)" },
 };
 
 export const STATUS_COLORS = {
-  NEW: { bg: "#0d1528", border: "#1a2a4a", color: "#5B9BD5", label: "New" },
-  ACCEPTED: { bg: "#1a0d28", border: "#2e1a44", color: "#9B72CF", label: "Accepted" },
-  PREPARING: { bg: "#281f00", border: "#4a3800", color: "#E8A020", label: "Preparing" },
-  READY: { bg: "#0d2218", border: "#1a4030", color: "#4CAF72", label: "Ready" },
-  COMPLETED: { bg: "#0d1a10", border: "#1a3020", color: "#6AAF80", label: "Completed" },
-  CANCELLED: { bg: "#280d0d", border: "#441a1a", color: "#E05252", label: "Cancelled" },
-  OUT_FOR_DELIVERY: { bg: "#001a1a", border: "#003333", color: "#3DD5C8", label: "Out for Delivery" },
+  NEW: { bg: "var(--status-new-bg)", border: "var(--status-new-border)", color: "var(--status-new-color)", label: "New" },
+  ACCEPTED: { bg: "var(--status-accepted-bg)", border: "var(--status-accepted-border)", color: "var(--status-accepted-color)", label: "Accepted" },
+  PREPARING: { bg: "var(--status-preparing-bg)", border: "var(--status-preparing-border)", color: "var(--status-preparing-color)", label: "Preparing" },
+  READY: { bg: "var(--status-ready-bg)", border: "var(--status-ready-border)", color: "var(--status-ready-color)", label: "Ready" },
+  COMPLETED: { bg: "var(--status-completed-bg)", border: "var(--status-completed-border)", color: "var(--status-completed-color)", label: "Completed" },
+  CANCELLED: { bg: "var(--status-cancelled-bg)", border: "var(--status-cancelled-border)", color: "var(--status-cancelled-color)", label: "Cancelled" },
+  OUT_FOR_DELIVERY: { bg: "var(--status-delivery-bg)", border: "var(--status-delivery-border)", color: "var(--status-delivery-color)", label: "Out for Delivery" },
 };
 
 export const SRC_COLORS = {
-  WALK_IN:          { bg: "#0d2218", color: "#4CAF72" },
-  SWIGGY:           { bg: "#281408", color: "#FF6B35" },
-  ZOMATO:           { bg: "#280808", color: "#E8344E" },
-  DIRECT_DELIVERY:  { bg: "#0d1528", color: "#5B9BD5" },
-  QR_ORDERING:      { bg: "#1a0d2e", color: "#a78bfa" },
+  WALK_IN:          { bg: "var(--src-walkin-bg)", color: "var(--src-walkin-color)" },
+  SWIGGY:           { bg: "var(--src-swiggy-bg)", color: "var(--src-swiggy-color)" },
+  ZOMATO:           { bg: "var(--src-zomato-bg)", color: "var(--src-zomato-color)" },
+  DIRECT_DELIVERY:  { bg: "var(--src-delivery-bg)", color: "var(--src-delivery-color)" },
+  QR_ORDERING:      { bg: "var(--src-qr-bg)", color: "var(--src-qr-color)" },
 };
 
 export const ANALYTICS_DATA = {

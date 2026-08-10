@@ -253,7 +253,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
         left: 0,
         right: 0,
         bottom: 0,
-        background: "rgba(0, 0, 0, 0.5)",
+        background: "rgba(0, 0, 0, 0.6)",
         backdropFilter: "blur(8px)",
         display: "flex",
         alignItems: isMobile ? "flex-start" : "center",
@@ -271,8 +271,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
           maxHeight: isMobile ? "100vh" : "80vh",
           background: "var(--cafe-bg-card)",
           border: isMobile ? "none" : "1px solid var(--cafe-border)",
-          borderRadius: isMobile ? 0 : 16,
-          boxShadow: isMobile ? "none" : "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+          borderRadius: isMobile ? 0 : "var(--cafe-radius-lg)",
+          boxShadow: "var(--cafe-shadow-lg)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
@@ -288,7 +288,12 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
           <div style={{
             display: "flex",
             alignItems: "center",
-            gap: 12
+            gap: 12,
+            background: "var(--cafe-bg-surface)",
+            padding: "12px 16px",
+            borderRadius: "var(--cafe-radius-md)",
+            border: "2px solid var(--cafe-border)",
+            transition: "all 0.2s ease",
           }}>
             <span style={{ fontSize: isMobile ? 28 : 20 }}>🔍</span>
             <input
@@ -305,16 +310,25 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                 outline: "none",
                 fontSize: isMobile ? 18 : 16,
                 color: "var(--cafe-text-primary)",
-                padding: isMobile ? "12px 0" : 0
+                padding: 0
+              }}
+              onFocus={(e) => {
+                e.currentTarget.parentElement.style.borderColor = "var(--cafe-accent)";
+                e.currentTarget.parentElement.style.boxShadow = "0 0 0 3px var(--cafe-accent-bg)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.parentElement.style.borderColor = "var(--cafe-border)";
+                e.currentTarget.parentElement.style.boxShadow = "none";
               }}
             />
             <kbd style={{
               padding: isMobile ? "8px 12px" : "4px 8px",
-              background: "var(--cafe-bg-surface)",
-              border: "1px solid var(--cafe-border)",
-              borderRadius: 4,
+              background: "var(--cafe-bg-card)",
+              border: "1px solid var(--cafe-border-light)",
+              borderRadius: "var(--cafe-radius-sm)",
               fontSize: isMobile ? 12 : 11,
-              color: "var(--cafe-text-tertiary)"
+              color: "var(--cafe-text-tertiary)",
+              fontWeight: 600
             }}>
               ESC
             </kbd>
@@ -325,7 +339,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
         <div style={{
           flex: 1,
           overflowY: "auto",
-          padding: 8
+          padding: 12
         }}>
           {results.length === 0 ? (
             <div style={{
@@ -333,8 +347,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
               textAlign: "center",
               color: "var(--cafe-text-tertiary)"
             }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-              <div style={{ fontSize: 14, marginBottom: 8 }}>No results found</div>
+              <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>🔍</div>
+              <div style={{ fontSize: 14, marginBottom: 8, fontWeight: 600, color: "var(--cafe-text-secondary)" }}>No results found</div>
               <div style={{ fontSize: 12, marginBottom: 24 }}>Try a different search term</div>
               <div style={{
                 display: "flex",
@@ -349,13 +363,23 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                     onClose();
                   }}
                   style={{
-                    padding: "8px 16px",
+                    padding: "10px 20px",
                     background: "var(--cafe-bg-surface)",
                     border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    borderRadius: "var(--cafe-radius-md)",
                     color: "var(--cafe-text-secondary)",
                     cursor: "pointer",
-                    fontSize: 12
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-accent)";
+                    e.currentTarget.style.background = "var(--cafe-accent-bg)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-border)";
+                    e.currentTarget.style.background = "var(--cafe-bg-surface)";
                   }}
                 >
                   Open Settings
@@ -367,13 +391,23 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                     onClose();
                   }}
                   style={{
-                    padding: "8px 16px",
+                    padding: "10px 20px",
                     background: "var(--cafe-bg-surface)",
                     border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    borderRadius: "var(--cafe-radius-md)",
                     color: "var(--cafe-text-secondary)",
                     cursor: "pointer",
-                    fontSize: 12
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-accent)";
+                    e.currentTarget.style.background = "var(--cafe-accent-bg)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-border)";
+                    e.currentTarget.style.background = "var(--cafe-bg-surface)";
                   }}
                 >
                   Create New Order
@@ -385,13 +419,23 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                     onClose();
                   }}
                   style={{
-                    padding: "8px 16px",
+                    padding: "10px 20px",
                     background: "var(--cafe-bg-surface)",
                     border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    borderRadius: "var(--cafe-radius-md)",
                     color: "var(--cafe-text-secondary)",
                     cursor: "pointer",
-                    fontSize: 12
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-accent)";
+                    e.currentTarget.style.background = "var(--cafe-accent-bg)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-border)";
+                    e.currentTarget.style.background = "var(--cafe-bg-surface)";
                   }}
                 >
                   Add Guest
@@ -402,13 +446,23 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                     onClose();
                   }}
                   style={{
-                    padding: "8px 16px",
+                    padding: "10px 20px",
                     background: "var(--cafe-bg-surface)",
                     border: "1px solid var(--cafe-border)",
-                    borderRadius: 8,
+                    borderRadius: "var(--cafe-radius-md)",
                     color: "var(--cafe-text-secondary)",
                     cursor: "pointer",
-                    fontSize: 12
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-accent)";
+                    e.currentTarget.style.background = "var(--cafe-accent-bg)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--cafe-border)";
+                    e.currentTarget.style.background = "var(--cafe-bg-surface)";
                   }}
                 >
                   Clear Search
@@ -422,7 +476,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                 <div style={{
                   padding: "8px 12px",
                   fontSize: 11,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   color: "var(--cafe-text-tertiary)",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px"
@@ -436,8 +490,12 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                       border: "none",
                       color: "var(--cafe-accent)",
                       cursor: "pointer",
-                      fontSize: 10
+                      fontSize: 10,
+                      fontWeight: 600,
+                      transition: "opacity 0.2s ease",
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.opacity = 0.7}
+                    onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
                   >
                     Clear all
                   </button>
@@ -451,22 +509,32 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                   onClick={() => handleSelect(item)}
                   style={{
                     padding: isMobile ? "16px 20px" : "12px 16px",
-                    borderRadius: 8,
+                    borderRadius: "var(--cafe-radius-md)",
                     cursor: "pointer",
                     background: index === selectedIndex ? "var(--cafe-accent-bg)" : "transparent",
                     border: index === selectedIndex ? "1px solid var(--cafe-accent-border)" : "1px solid transparent",
                     display: "flex",
                     alignItems: "center",
                     gap: isMobile ? 16 : 12,
-                    transition: "all 0.15s"
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (index !== selectedIndex) {
+                      e.currentTarget.style.background = "var(--cafe-bg-hover)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (index !== selectedIndex) {
+                      e.currentTarget.style.background = "transparent";
+                    }
                   }}
                 >
                   <span style={{ fontSize: isMobile ? 28 : 20 }}>{item.icon}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{
                       fontSize: isMobile ? 16 : 13,
-                      fontWeight: 500,
-                      color: "var(--cafe-text-primary)",
+                      fontWeight: 600,
+                      color: index === selectedIndex ? "var(--cafe-accent)" : "var(--cafe-text-primary)",
                       marginBottom: 2
                     }}>
                       {item.title}
@@ -487,9 +555,10 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                       fontSize: isMobile ? 12 : 10,
                       padding: isMobile ? "4px 8px" : "2px 6px",
                       background: "var(--cafe-bg-surface)",
-                      borderRadius: 4,
+                      borderRadius: "var(--cafe-radius-sm)",
                       color: "var(--cafe-text-tertiary)",
-                      border: "1px solid var(--cafe-border-light)"
+                      border: "1px solid var(--cafe-border-light)",
+                      fontWeight: 600
                     }}>
                       {item.module}
                     </span>
@@ -498,9 +567,10 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                         padding: isMobile ? "4px 8px" : "2px 6px",
                         background: "var(--cafe-bg-surface)",
                         border: "1px solid var(--cafe-border)",
-                        borderRadius: 4,
+                        borderRadius: "var(--cafe-radius-sm)",
                         fontSize: isMobile ? 12 : 10,
-                        color: "var(--cafe-text-tertiary)"
+                        color: "var(--cafe-text-tertiary)",
+                        fontWeight: 600
                       }}>
                         {item.shortcut}
                       </kbd>
@@ -513,7 +583,16 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
                         border: "none",
                         cursor: "pointer",
                         fontSize: isMobile ? 20 : 14,
-                        opacity: favorites.includes(item.id) ? 1 : 0.3
+                        opacity: favorites.includes(item.id) ? 1 : 0.3,
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = "scale(1.2)";
+                        e.currentTarget.style.opacity = 1;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = "scale(1)";
+                        e.currentTarget.style.opacity = favorites.includes(item.id) ? 1 : 0.3;
                       }}
                     >
                       {favorites.includes(item.id) ? "⭐" : "☆"}
@@ -533,15 +612,19 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
           alignItems: "center",
           justifyContent: "space-between",
           fontSize: 11,
-          color: "var(--cafe-text-tertiary)"
+          color: "var(--cafe-text-tertiary)",
+          background: "var(--cafe-bg-surface)"
         }}>
-          <div style={{ display: "flex", gap: 16 }}>
-            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border)", borderRadius: 4 }}>↑↓</kbd> Navigate</span>
-            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border)", borderRadius: 4 }}>Enter</kbd> Select</span>
-            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border)", borderRadius: 4 }}>Esc</kbd> Close</span>
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border)", borderRadius: "var(--cafe-radius-sm)", fontWeight: 600 }}>↑↓</kbd> Navigate</span>
+            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border)", borderRadius: "var(--cafe-radius-sm)", fontWeight: 600 }}>Enter</kbd> Select</span>
+            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border)", borderRadius: "var(--cafe-radius-sm)", fontWeight: 600 }}>Esc</kbd> Close</span>
+            <span><kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border)", borderRadius: "var(--cafe-radius-sm)", fontWeight: 600 }}>Tab</kbd> Navigate</span>
           </div>
-          <div>
-            Type <kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-surface)", border: "1px solid var(--cafe-border)", borderRadius: 4 }}>&gt;</kbd> for commands
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span>Type</span>
+            <kbd style={{ padding: "2px 6px", background: "var(--cafe-bg-card)", border: "1px solid var(--cafe-border)", borderRadius: "var(--cafe-radius-sm)", fontWeight: 600 }}>&gt;</kbd>
+            <span>for commands</span>
           </div>
         </div>
       </div>

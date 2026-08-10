@@ -12,30 +12,30 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
     gap: '8px',
     alignItems: 'center',
     padding: '8px 12px',
-    background: '#1E1E1E',
+    background: 'var(--pos-catbar-bg, #1E1E1E)',
     overflowX: 'auto',
   };
 
   const getCategoryStyle = (isSelected) => ({
     padding: '10px 18px',
-    borderRadius: '20px',
+    borderRadius: 'var(--pos-cat-border-radius, 20px)',
     border: 'none',
-    background: isSelected ? '#0D9488' : '#2A2A2A',
-    color: '#ffffff',
+    background: isSelected ? 'var(--pos-cat-active-bg, #0D9488)' : 'var(--pos-cat-inactive-bg, #2A2A2A)',
+    color: isSelected ? 'var(--pos-cat-active-color, #ffffff)' : 'var(--pos-cat-inactive-color, #ffffff)',
     fontSize: '12px',
     fontWeight: '700',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
-    boxShadow: isSelected ? '0 2px 8px rgba(13, 148, 136, 0.4)' : '0 2px 4px rgba(0,0,0,0.2)',
+    boxShadow: isSelected ? '0 2px 8px var(--pos-cat-active-glow, rgba(13, 148, 136, 0.4))' : '0 2px 4px rgba(0,0,0,0.2)',
     transition: 'all 0.15s ease',
   });
 
   const navButtonStyle = {
     padding: '10px 16px',
-    borderRadius: '20px',
+    borderRadius: 'var(--pos-cat-border-radius, 20px)',
     border: 'none',
-    background: '#3B82F6',
-    color: '#ffffff',
+    background: 'var(--pos-cat-nav-next-bg, #3B82F6)',
+    color: 'var(--pos-cat-nav-color, #ffffff)',
     fontSize: '11px',
     fontWeight: '700',
     cursor: 'pointer',
@@ -46,7 +46,7 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
 
   const prevButtonStyle = {
     ...navButtonStyle,
-    background: '#6B7280',
+    background: 'var(--pos-cat-nav-prev-bg, #6B7280)',
   };
 
   return (
@@ -56,10 +56,10 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
           style={prevButtonStyle}
           onClick={() => onPageChange(currentPage - 1)}
           onMouseEnter={(e) => {
-            e.target.style.background = '#4B5563';
+            e.target.style.background = 'var(--pos-cat-nav-prev-bg-hover, #4B5563)';
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = '#6B7280';
+            e.target.style.background = 'var(--pos-cat-nav-prev-bg, #6B7280)';
           }}
         >
           &lt;&lt; Previous
@@ -73,12 +73,12 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
           onClick={() => onSelectCategory(category)}
           onMouseEnter={(e) => {
             if (selectedCategory !== category) {
-              e.target.style.background = '#3A3A3A';
+              e.target.style.background = 'var(--pos-cat-inactive-bg-hover, #3A3A3A)';
             }
           }}
           onMouseLeave={(e) => {
             if (selectedCategory !== category) {
-              e.target.style.background = '#2A2A2A';
+              e.target.style.background = 'var(--pos-cat-inactive-bg, #2A2A2A)';
             }
           }}
         >
@@ -91,10 +91,10 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
           style={navButtonStyle}
           onClick={() => onPageChange(currentPage + 1)}
           onMouseEnter={(e) => {
-            e.target.style.background = '#2563EB';
+            e.target.style.background = 'var(--pos-cat-nav-next-bg-hover, #2563EB)';
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = '#3B82F6';
+            e.target.style.background = 'var(--pos-cat-nav-next-bg, #3B82F6)';
           }}
         >
           Next &gt;&gt;

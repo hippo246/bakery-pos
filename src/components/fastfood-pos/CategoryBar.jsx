@@ -27,9 +27,9 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
       alignItems: 'center',
       padding: '8px 12px',
       overflowX: 'auto',
-      background: '#111116',
+      background: 'var(--ff-catbar-bg, #111116)',
       borderRadius: 12,
-      border: '1px solid rgba(255,255,255,0.05)',
+      border: '1px solid var(--ff-catbar-border, rgba(255,255,255,0.05))',
       boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
       scrollbarWidth: 'none',
       flexShrink: 0,
@@ -38,8 +38,10 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
         <button
           onClick={() => onPageChange(currentPage - 1)}
           style={{
-            padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+            padding: '6px 12px', borderRadius: 20,
+            border: '1px solid var(--ff-cat-nav-border, rgba(255,255,255,0.1))',
+            background: 'var(--ff-cat-nav-bg, rgba(255,255,255,0.05))',
+            color: 'var(--ff-cat-nav-color, rgba(255,255,255,0.5))',
             fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
           }}
         >← Prev</button>
@@ -55,29 +57,29 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '7px 16px', borderRadius: 20, flexShrink: 0,
-              border: active ? '1px solid #E63946' : '1px solid rgba(255,255,255,0.08)',
+              border: active ? '1px solid var(--ff-cat-active-border, #E63946)' : '1px solid var(--ff-cat-inactive-border, rgba(255,255,255,0.08))',
               background: active
-                ? 'linear-gradient(135deg, #E63946 0%, #C1121F 100%)'
-                : 'rgba(255,255,255,0.04)',
-              color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+                ? 'var(--ff-cat-active-bg, linear-gradient(135deg, #E63946 0%, #C1121F 100%))'
+                : 'var(--ff-cat-inactive-bg, rgba(255,255,255,0.04))',
+              color: active ? 'var(--ff-cat-active-color, #fff)' : 'var(--ff-cat-inactive-color, rgba(255,255,255,0.5))',
               fontSize: 12, fontWeight: 800, cursor: 'pointer',
               letterSpacing: 0.5, whiteSpace: 'nowrap',
-              boxShadow: active ? '0 3px 12px rgba(230,57,70,0.35)' : 'none',
+              boxShadow: active ? '0 3px 12px var(--ff-cat-active-glow, rgba(230,57,70,0.35))' : 'none',
               transition: 'all 0.15s ease',
               transform: active ? 'translateY(-1px)' : 'translateY(0)',
             }}
             onMouseEnter={(e) => {
               if (!active) {
-                e.currentTarget.style.background = 'rgba(230,57,70,0.1)';
-                e.currentTarget.style.borderColor = 'rgba(230,57,70,0.3)';
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.background = 'var(--ff-cat-inactive-bg-hover, rgba(230,57,70,0.1))';
+                e.currentTarget.style.borderColor = 'var(--ff-cat-inactive-border-hover, rgba(230,57,70,0.3))';
+                e.currentTarget.style.color = 'var(--ff-cat-active-color, #fff)';
               }
             }}
             onMouseLeave={(e) => {
               if (!active) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-                e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                e.currentTarget.style.background = 'var(--ff-cat-inactive-bg, rgba(255,255,255,0.04))';
+                e.currentTarget.style.borderColor = 'var(--ff-cat-inactive-border, rgba(255,255,255,0.08))';
+                e.currentTarget.style.color = 'var(--ff-cat-inactive-color, rgba(255,255,255,0.5))';
               }
             }}
           >
@@ -91,8 +93,10 @@ export default function CategoryBar({ categories, selectedCategory, onSelectCate
         <button
           onClick={() => onPageChange(currentPage + 1)}
           style={{
-            padding: '6px 12px', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+            padding: '6px 12px', borderRadius: 20,
+            border: '1px solid var(--ff-cat-nav-border, rgba(255,255,255,0.1))',
+            background: 'var(--ff-cat-nav-bg, rgba(255,255,255,0.05))',
+            color: 'var(--ff-cat-nav-color, rgba(255,255,255,0.5))',
             fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
           }}
         >Next →</button>

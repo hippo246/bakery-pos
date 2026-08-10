@@ -10,17 +10,25 @@ export default function ClassicPosReports({ _orders = [], _staff = [] }) {
   const [activeTab, setActiveTab] = useState('daily_sales');
   const [dateRange, setDateRange] = useState('TODAY');
   const [realOrders, setRealOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   // Load real orders from localStorage
   useEffect(() => {
+    setIsLoading(true);
+    setLoadError(null);
+    
     try {
       const storedOrders = localStorage.getItem('cafeos_orders');
       if (storedOrders) {
         const orders = JSON.parse(storedOrders);
         setRealOrders(orders);
       }
+      setIsLoading(false);
     } catch (error) {
       console.error('[ClassicPosReports] Failed to load orders:', error);
+      setLoadError('Failed to load orders data');
+      setIsLoading(false);
     }
   }, []);
 
@@ -208,6 +216,37 @@ export default function ClassicPosReports({ _orders = [], _staff = [] }) {
 
   // Render table content based on active tab
   const renderTableContent = () => {
+    if (isLoading) {
+      return (
+        <tr>
+          <td colSpan={getTableHeaders().length} style={{...cellStyle, textAlign: 'center', padding: '40px'}}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '32px', height: '32px', border: '3px solid #3F3F46', borderTopColor: '#22C55E', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ color: '#A1A1AA', fontSize: '14px' }}>Loading reports...</span>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    if (loadError) {
+      return (
+        <tr>
+          <td colSpan={getTableHeaders().length} style={{...cellStyle, textAlign: 'center', padding: '40px'}}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <span style={{ color: '#EF4444', fontSize: '14px' }}>{loadError}</span>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{ padding: '8px 16px', background: '#22C55E', color: '#000', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
+              >
+                Retry
+              </button>
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
     switch (activeTab) {
       case 'daily_sales':
         return salesData.map((row, idx) => (

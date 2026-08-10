@@ -111,26 +111,27 @@ const TITLES = {
 };
 
 export default function Layout({ tab, setTab, children, newOrderCount, urgentKds, notificationCount, notifications, setNotifications, appMode, role, setRole, canSeeTab, currentTerminal, isConnected, onShowTerminalSelector }) {
-  const { theme, toggleThemeMode } = useTheme();
+  const { theme, themeId, setTheme, toggleThemeMode } = useTheme();
   const [isOpen,       setIsOpen]       = useState(true);
   const [showMoreTray, setShowMoreTray] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Check if classic-pos theme is active
   const isClassicPos = theme?.layout?.structure === 'classic-pos' || theme?.id === 'classic';
 
-  // Classic POS theme styles
+  // Classic POS theme styles - updated with warm coffee theme
   const classicPosStyles = {
-    sidebarBg: '#000000',
-    sidebarBorder: '3px solid #FFFFFF',
-    headerBg: '#1A1A1A',
-    headerBorder: '3px solid #FFFFFF',
-    activeBg: '#22C55E',
-    activeColor: '#000000',
-    activeBorder: '#FFFFFF',
-    textPrimary: '#FFFFFF',
-    textSecondary: '#888888',
-    groupTitle: '#888888',
+    sidebarBg: 'var(--cafe-bg-elevated)',
+    sidebarBorder: '1px solid var(--cafe-border)',
+    headerBg: 'var(--cafe-bg-elevated)',
+    headerBorder: '1px solid var(--cafe-border)',
+    activeBg: 'var(--cafe-accent)',
+    activeColor: '#fff',
+    activeBorder: 'var(--cafe-accent)',
+    textPrimary: 'var(--cafe-text-primary)',
+    textSecondary: 'var(--cafe-text-secondary)',
+    groupTitle: 'var(--cafe-text-tertiary)',
   };
 
   // Get appropriate styles based on theme
@@ -318,7 +319,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
         {/* Sidebar — desktop only */}
         {!isMobile && (
         <div className={isSmallDesktop || isTablet ? "sidebar-compact" : ""} style={{
-          width: isSmallDesktop || isTablet ? (isTablet ? 160 : 180) : 220, 
+          width: sidebarCollapsed ? 60 : (isSmallDesktop || isTablet ? (isTablet ? 160 : 180) : 220), 
           background: getStyle('sidebarBg', "var(--cafe-bg-elevated)"), 
           borderRight: getStyle('sidebarBorder', `1px solid var(--cafe-border)`),
           display: "flex", flexDirection: "column", flexShrink: 0,
@@ -326,25 +327,26 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
           transition: "width 0.2s ease"
         }}>
           {/* Brand lockup */}
-          <div style={{ padding: isSmallDesktop || isTablet ? "16px 12px 14px" : "20px 16px 18px", borderBottom: getStyle('sidebarBorder', `1px solid var(--cafe-border)`), flexShrink: 0 }}>
+          <div style={{ padding: isSmallDesktop || isTablet ? "16px 12px 14px" : "20px 16px 18px", borderBottom: getStyle('sidebarBorder', `1px solid var(--cafe-border)`), flexShrink: 0, display: "flex", alignItems: "center", justifyContent: sidebarCollapsed ? "center" : "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: isSmallDesktop || isTablet ? 8 : 10 }}>
-              <svg width={isSmallDesktop || isTablet ? 28 : 32} height={isSmallDesktop || isTablet ? 28 : 32} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-                <rect width="32" height="32" rx={isClassicPos ? 4 : 8} fill={isClassicPos ? "#22C55E" : "var(--cafe-accent)"}/>
-                <rect x="8" y="10" width="16" height="2" rx="1" fill={isClassicPos ? "#000000" : "rgba(26,18,8,0.6)"}/>
-                <rect x="10" y="14" width="12" height="10" rx="2" fill={isClassicPos ? "#000000" : "rgba(26,18,8,0.6)"}/>
+              <svg width={isSmallDesktop || isTablet ? 28 : 32} height={isSmallDesktop || isTablet ? 28 : 32} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, cursor: 'pointer' }}>
+                <rect width="32" height="32" rx={isClassicPos ? 4 : 8} fill={isClassicPos ? "var(--cafe-accent)" : "var(--cafe-accent)"}/>
+                <rect x="8" y="10" width="16" height="2" rx="1" fill={isClassicPos ? "#fff" : "rgba(26,18,8,0.6)"}/>
+                <rect x="10" y="14" width="12" height="10" rx="2" fill={isClassicPos ? "#fff" : "rgba(26,18,8,0.6)"}/>
               </svg>
+              {!sidebarCollapsed && (
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <div style={{ fontSize: isSmallDesktop || isTablet ? 13 : 15, fontWeight: 800, color: getStyle('textPrimary', "var(--cafe-text-primary)"), letterSpacing: "-0.5px", lineHeight: 1.1 }}>
-                    Cafe<span style={{ color: isClassicPos ? "#22C55E" : "var(--cafe-accent)" }}>OS</span>
+                    Cafe<span style={{ color: isClassicPos ? "#fff" : "var(--cafe-accent)" }}>OS</span>
                   </div>
                   {appMode === "demo" && (
                     <span style={{
                       fontSize: 9,
                       fontWeight: 700,
                       color: getStyle('textSecondary', "var(--cafe-text-tertiary)"),
-                      background: isClassicPos ? "#333333" : "var(--cafe-bg-surface)",
-                      border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)",
+                      background: isClassicPos ? "var(--cafe-bg-surface)" : "var(--cafe-bg-surface)",
+                      border: isClassicPos ? "1px solid var(--cafe-border)" : "1px solid var(--cafe-border-light)",
                       padding: "2px 6px",
                       borderRadius: 4,
                       textTransform: "uppercase",
@@ -356,8 +358,73 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                 </div>
                 <div style={{ fontSize: isSmallDesktop || isTablet ? 9 : 10, color: getStyle('textSecondary', "var(--cafe-text-tertiary)"), marginTop: 4, letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>Operating System</div>
               </div>
+              )}
             </div>
+            {!sidebarCollapsed && (
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: getStyle('textSecondary', "var(--cafe-text-secondary)"),
+                  cursor: "pointer",
+                  padding: 4,
+                  borderRadius: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = getStyle('textSecondary', "var(--cafe-bg-surface)");
+                  e.currentTarget.style.transform = "scale(1.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+                title="Collapse Sidebar"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+            )}
           </div>
+
+          {/* Expand button when collapsed */}
+          {sidebarCollapsed && (
+            <div style={{ padding: "12px", display: "flex", justifyContent: "center" }}>
+              <button
+                onClick={() => setSidebarCollapsed(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: getStyle('textSecondary', "var(--cafe-text-secondary)"),
+                  cursor: "pointer",
+                  padding: 4,
+                  borderRadius: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = getStyle('textSecondary', "var(--cafe-bg-surface)");
+                  e.currentTarget.style.transform = "scale(1.1)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+                title="Expand Sidebar"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
+            </div>
+          )}
 
           <nav style={{ flex: 1, padding: isSmallDesktop || isTablet ? "8px 8px" : "10px 10px", overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {NAV_GROUPS.map((group) => {
@@ -370,6 +437,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
 
               return (
                 <div key={group.title} style={{ marginBottom: isSmallDesktop || isTablet ? 12 : 16 }}>
+                  {!sidebarCollapsed && (
                   <div className="nav-group-title" style={{ 
                     fontSize: isSmallDesktop || isTablet ? 9 : 10, 
                     fontWeight: 700, 
@@ -380,6 +448,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                   }}>
                     {group.title}
                   </div>
+                  )}
                   {visibleItems.map((n) => {
                     const active = tab === n.id;
                     const b = badge(n.id);
@@ -388,30 +457,46 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                         aria-label={n.label} aria-current={active ? "page" : undefined}
                         className="nav-item"
                         style={{
-                          display: "flex", alignItems: "center", gap: isSmallDesktop || isTablet ? 8 : 10, padding: isSmallDesktop || isTablet ? "0 10px" : "0 12px",
+                          display: "flex", alignItems: "center", gap: sidebarCollapsed ? 0 : (isSmallDesktop || isTablet ? 8 : 10), padding: sidebarCollapsed ? "8px" : (isSmallDesktop || isTablet ? "0 10px" : "0 12px"),
                           borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)", cursor: "pointer",
                           fontWeight: active ? 800 : 700,
                           color: active ? getStyle('activeColor', "var(--cafe-accent)") : getStyle('textSecondary', "var(--cafe-text-secondary)"),
                           background: active ? getStyle('activeBg', "var(--cafe-accent-dim)") : "transparent",
-                          border: isClassicPos ? (active ? "2px solid #FFFFFF" : "none") : "none",
+                          border: isClassicPos ? (active ? "2px solid var(--cafe-accent)" : "none") : "none",
                           marginBottom: isClassicPos ? 0 : 2, transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                           height: isSmallDesktop || isTablet ? 34 : 38, width: "100%", textAlign: "left",
                           boxSizing: "border-box", position: "relative",
                           boxShadow: active ? (isClassicPos ? "none" : "inset 0 0 0 1px var(--cafe-accent-border)") : "none",
-                          borderLeft: active && isClassicPos ? "4px solid #FFFFFF" : "none",
-                        }}>
-                        <Icon name={n.id} size={isSmallDesktop || isTablet ? 14 : 16} color={active ? (isClassicPos ? "#000000" : "var(--cafe-accent)") : getStyle('textSecondary', "var(--cafe-text-tertiary)")} />
+                          borderLeft: active && isClassicPos ? "4px solid var(--cafe-accent)" : "none",
+                          justifyContent: sidebarCollapsed ? "center" : "flex-start",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) {
+                            e.currentTarget.style.background = getStyle('textSecondary', "var(--cafe-bg-hover)");
+                            e.currentTarget.style.transform = "translateX(2px)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.transform = "translateX(0)";
+                          }
+                        }}
+                      >
+                        <Icon name={n.id} size={isSmallDesktop || isTablet ? 14 : 16} color={active ? (isClassicPos ? "#fff" : "var(--cafe-accent)") : getStyle('textSecondary', "var(--cafe-text-tertiary)")} />
+                        {!sidebarCollapsed && (
                         <span className="nav-item-label" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, fontSize: isSmallDesktop || isTablet ? 12 : 13, letterSpacing: "-0.01em" }}>{n.label}</span>
-                        {b > 0 && (
+                        )}
+                        {!sidebarCollapsed && b > 0 && (
                           <span style={{
                             marginLeft: "auto", flexShrink: 0,
-                            background: n.id === "kitchen" ? "var(--cafe-danger)" : (active ? (isClassicPos ? "#000000" : "var(--cafe-accent)") : (isClassicPos ? "#333333" : "var(--cafe-bg-card)")),
-                            color: active ? "#fff" : (isClassicPos ? "#FFFFFF" : "var(--cafe-text-secondary)"),
+                            background: n.id === "kitchen" ? "var(--cafe-danger)" : (active ? (isClassicPos ? "#fff" : "var(--cafe-accent)") : (isClassicPos ? "var(--cafe-bg-surface)" : "var(--cafe-bg-card)")),
+                            color: active ? "#fff" : (isClassicPos ? "var(--cafe-text-primary)" : "var(--cafe-text-secondary)"),
                             fontSize: 10, fontWeight: 800,
                             padding: "4px 8px", borderRadius: isClassicPos ? 0 : "var(--cafe-radius-sm)",
                             letterSpacing: "0.03em",
                             minWidth: 18, textAlign: "center",
-                            border: isClassicPos ? "2px solid #FFFFFF" : (active ? "none" : "1px solid var(--cafe-border)"),
+                            border: isClassicPos ? "1px solid var(--cafe-border)" : (active ? "none" : "1px solid var(--cafe-border)"),
                           }}>{badgeLabel(n.id)}</span>
                         )}
                       </button>
@@ -430,6 +515,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
               isOpen={isOpen}
               setIsOpen={setIsOpen}
               theme={theme}
+              setTheme={setTheme}
               toggleTheme={toggleThemeMode}
               setCommandPaletteOpen={setCommandPaletteOpen}
               notifications={notifications}
@@ -450,7 +536,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
             <div style={{
               height: 64, background: getStyle('headerBg', "var(--cafe-bg-elevated)"), borderBottom: getStyle('headerBorder', `1px solid var(--cafe-border)`),
               display: "flex", alignItems: "center", padding: "0 24px", gap: 20, flexShrink: 0,
-              boxShadow: isClassicPos ? "none" : "0 1px 3px rgba(0,0,0,0.1)",
+              boxShadow: isClassicPos ? "none" : "var(--cafe-shadow-sm)",
             }}>
               {/* Breadcrumbs & Title */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
@@ -459,7 +545,7 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                     {NAV_GROUPS.find(g => g.items.some(i => i.id === tab))?.title || "CafeOS"}
                   </span>
                   <span style={{ fontSize: 10, color: getStyle('textSecondary', "var(--cafe-text-muted)") }}>/</span>
-                  <span style={{ fontSize: 10, color: isClassicPos ? "#22C55E" : "var(--cafe-accent)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <span style={{ fontSize: 10, color: isClassicPos ? "#fff" : "var(--cafe-accent)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {NAV.find(n => n.id === tab)?.short || safeTitle}
                   </span>
                 </div>
@@ -474,18 +560,26 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
               <button
                 onClick={() => setCommandPaletteOpen(true)}
                 style={{
-                  width: 280, height: 36, background: isClassicPos ? "#000000" : "var(--cafe-bg-surface)",
-                  border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)", borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)",
+                  width: 280, height: 36, background: isClassicPos ? "var(--cafe-bg-surface)" : "var(--cafe-bg-surface)",
+                  border: isClassicPos ? "1px solid var(--cafe-border)" : "1px solid var(--cafe-border-light)", borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)",
                   padding: "0 12px", display: "flex", alignItems: "center", gap: 10,
                   cursor: "pointer", transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = isClassicPos ? "var(--cafe-accent)" : "var(--cafe-accent)";
+                  e.currentTarget.style.boxShadow = "0 0 0 2px var(--cafe-accent-bg)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = isClassicPos ? "var(--cafe-border)" : "var(--cafe-border-light)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 <span style={{ fontSize: 14 }}>🔍</span>
                 <span style={{ fontSize: 13, color: getStyle('textSecondary', "var(--cafe-text-tertiary)"), flex: 1, textAlign: "left" }}>Search everything...</span>
-                <kbd style={{ fontSize: 10, color: getStyle('textSecondary', "var(--cafe-text-muted)"), background: isClassicPos ? "#333333" : "var(--cafe-bg-card)", padding: "2px 6px", borderRadius: isClassicPos ? 0 : 4, border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)" }}>⌘K</kbd>
+                <kbd style={{ fontSize: 10, color: getStyle('textSecondary', "var(--cafe-text-muted)"), background: isClassicPos ? "var(--cafe-bg-card)" : "var(--cafe-bg-card)", padding: "2px 6px", borderRadius: isClassicPos ? 0 : 4, border: isClassicPos ? "1px solid var(--cafe-border)" : "1px solid var(--cafe-border-light)" }}>⌘K</kbd>
               </button>
 
-              <div style={{ height: 24, width: 1, background: isClassicPos ? "#FFFFFF" : "var(--cafe-border-light)" }} />
+              <div style={{ height: 24, width: 1, background: isClassicPos ? "var(--cafe-border)" : "var(--cafe-border-light)" }} />
 
               {/* Terminal Status Indicator */}
               {currentTerminal && (
@@ -493,18 +587,24 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                   onClick={onShowTerminalSelector}
                   style={{
                     display: "flex", alignItems: "center", gap: 8,
-                    background: isClassicPos ? "#000000" : "var(--cafe-bg-surface)",
-                    border: isClassicPos ? "2px solid #FFFFFF" : "1px solid var(--cafe-border-light)",
+                    background: isClassicPos ? "var(--cafe-bg-surface)" : "var(--cafe-bg-surface)",
+                    border: isClassicPos ? "1px solid var(--cafe-border)" : "1px solid var(--cafe-border-light)",
                     borderRadius: isClassicPos ? 0 : "var(--cafe-radius-md)",
                     padding: "6px 12px",
                     cursor: "pointer", transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = isClassicPos ? "var(--cafe-accent)" : "var(--cafe-accent)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = isClassicPos ? "var(--cafe-border)" : "var(--cafe-border-light)";
                   }}
                   title={`Terminal: ${currentTerminal.name} (${currentTerminal.type.toUpperCase()})`}
                 >
                   <span style={{
                     width: 8, height: 8, borderRadius: "50%",
-                    background: isConnected ? (isClassicPos ? "#22C55E" : "var(--cafe-success)") : (isClassicPos ? "#EF4444" : "var(--cafe-danger)"),
-                    boxShadow: `0 0 6px ${isConnected ? (isClassicPos ? "#22C55E" : "var(--cafe-success)") : (isClassicPos ? "#EF4444" : "var(--cafe-danger)")}`,
+                    background: isConnected ? (isClassicPos ? "var(--cafe-success)" : "var(--cafe-success)") : (isClassicPos ? "var(--cafe-danger)" : "var(--cafe-danger)"),
+                    boxShadow: `0 0 6px ${isConnected ? (isClassicPos ? "var(--cafe-success)" : "var(--cafe-success)") : (isClassicPos ? "var(--cafe-danger)" : "var(--cafe-danger)")}`,
                     flexShrink: 0
                   }} />
                   <span style={{ fontSize: 11, color: getStyle('textPrimary', "var(--cafe-text-secondary)"), fontWeight: 700, letterSpacing: "0.02em" }}>
@@ -517,10 +617,9 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
 
               {/* Theme Switcher Desktop */}
               <select
-                value={localStorage.getItem('cafeos-pos-theme') || 'modern'}
+                value={String(themeId || 'modern').replace(/-light$|-dark$/, '')}
                 onChange={(e) => {
-                  localStorage.setItem('cafeos-pos-theme', e.target.value);
-                  window.location.reload();
+                  setTheme(e.target.value);
                 }}
                 style={{
                   fontSize: 12, fontWeight: 800,
@@ -727,10 +826,9 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
                     }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: "var(--cafe-text-secondary)" }}>Theme</span>
                       <select
-                        value={localStorage.getItem('cafeos-pos-theme') || 'modern'}
+                        value={String(themeId || 'modern').replace(/-light$|-dark$/, '')}
                         onChange={(e) => {
-                          localStorage.setItem('cafeos-pos-theme', e.target.value);
-                          window.location.reload();
+                          setTheme(e.target.value);
                         }}
                         style={{
                           background: "transparent", border: "none", color: "var(--cafe-accent)",
@@ -781,12 +879,12 @@ export default function Layout({ tab, setTab, children, newOrderCount, urgentKds
           <div style={{
             position: "fixed", bottom: 0, left: 0, right: 0,
             height: "calc(64px + env(safe-area-inset-bottom))",
-            background: "var(--cafe-bg-elevated)", 
-            borderTop: `1px solid var(--cafe-border)`,
+            background: "var(--mobile-nav-bg, var(--cafe-bg-elevated))", 
+            borderTop: `1px solid var(--mobile-nav-border, var(--cafe-border))`,
             display: "flex", alignItems: "flex-start",
             zIndex: 160, paddingBottom: "env(safe-area-inset-bottom)",
             backdropFilter: "blur(12px)",
-            backgroundColor: "rgba(18, 18, 20, 0.85)"
+            backgroundColor: "var(--mobile-nav-backdrop, rgba(18, 18, 20, 0.85))"
           }}>
             {NAV_PRIMARY.map(n => {
               const active = tab === n.id;

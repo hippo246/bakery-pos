@@ -22,25 +22,42 @@ import { fineDiningTheme } from './themes/finedining';
 import { barTheme } from './themes/bar';
 import { bakeryTheme } from './themes/bakery';
 import { accessibilityTheme } from './themes/accessibility';
+import { createThemeModeVariant, getThemeBaseId } from './themeColorUtils';
 
 class ThemeRegistry {
   constructor() {
     this.themes = new Map();
     this.listeners = new Set();
-    
-    // Register built-in themes
-    this.register(modernTheme);
-    this.register(modernLightTheme);
-    this.register(classicTheme);
-    this.register(classicDarkTheme);
-    this.register(fastFoodTheme);
-    this.register(fastFoodComprehensiveTheme);
-    this.register(fastFoodSimpleTheme);
-    this.register(cafeTheme);
-    this.register(fineDiningTheme);
-    this.register(barTheme);
-    this.register(bakeryTheme);
-    this.register(accessibilityTheme);
+
+    const builtInThemes = [
+      modernTheme,
+      modernLightTheme,
+      classicTheme,
+      classicDarkTheme,
+      fastFoodTheme,
+      fastFoodComprehensiveTheme,
+      fastFoodSimpleTheme,
+      cafeTheme,
+      fineDiningTheme,
+      barTheme,
+      bakeryTheme,
+      accessibilityTheme,
+    ];
+
+    const explicitThemeIds = new Set(builtInThemes.map((theme) => theme.id));
+
+    builtInThemes.forEach((theme) => this.register(theme));
+
+    builtInThemes
+      .filter((theme) => theme.id === getThemeBaseId(theme.id))
+      .forEach((theme) => {
+        const oppositeMode = theme.mode === 'dark' ? 'light' : 'dark';
+        const variantId = `${theme.id}-${oppositeMode}`;
+
+        if (!explicitThemeIds.has(variantId)) {
+          this.register(createThemeModeVariant(theme, oppositeMode));
+        }
+      });
   }
 
   /**

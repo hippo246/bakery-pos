@@ -5,6 +5,7 @@ import React from 'react';
 import { useState, useCallback, useEffect, useRef } from "react";
 import { renderReceipt } from "../../print/receiptLayout.js";
 import printEngine from "../../print/printEngine.js";
+import DOMPurify from 'dompurify';
 
 export default function PrintPreview({ document, documentType, onClose, onPrint, onDownload, isMobile }) {
   const [previewHTML, setPreviewHTML] = useState("");
@@ -37,7 +38,8 @@ export default function PrintPreview({ document, documentType, onClose, onPrint,
     try {
       const layout = renderReceipt(document, paperSize, "normal", "medium");
       const html = layout.toHTML();
-      setPreviewHTML(html);
+      const sanitizedHTML = DOMPurify.sanitize(html);
+      setPreviewHTML(sanitizedHTML);
     } catch (error) {
       console.error("Failed to generate preview:", error);
     }

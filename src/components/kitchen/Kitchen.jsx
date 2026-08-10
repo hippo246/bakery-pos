@@ -28,6 +28,8 @@ import printEngine, { DOCUMENT_TYPES } from "../../print/printEngine.js";
 import { getActiveShift } from "../../domain/shiftModel.js";
 import moduleEventPublisher from "../../dashboard/liveEngine/ModuleEventPublisher.js";
 import { useTerminal } from "../../terminal/TerminalContext.jsx";
+import { useCrashRecovery } from "../../hooks/useCrashRecovery.js";
+import { ENTITY_TYPES, OPERATION_TYPES } from "../../domain/operationLogModel.js";
 
 // Prep time estimates for menu items (in minutes)
 const PREP_TIMES = {
@@ -47,12 +49,19 @@ const PREP_TIMES = {
   "Blueberry Muffin": 3,
 };
 
-function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notifications, setNotifications, shifts, setShifts }) {
+function Kitchen({ kdsCards, setKdsCards, orders, setOrders, tables, notifications, setNotifications, shifts, setShifts, operationLogs, setOperationLogs, locks, setLocks }) {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 700);
   useEffect(() => { const fn = () => setIsMobile(window.innerWidth <= 700); window.addEventListener("resize", fn); return () => window.removeEventListener("resize", fn); }, []);
   
   // ── Multi-Terminal Integration ─────────────────────────────────────────────
   const { currentTerminal, syncClient } = useTerminal();
+  
+  // ── Crash Recovery Integration ─────────────────────────────────────────────
+  const { withRecovery, canModify, renewLock, terminalId } = useCrashRecovery({
+    setOperationLogs,
+    setLocks,
+    currentUserId: currentTerminal?.id || 'unknown'
+  });
 
   const [isFullScreen, setIsFullScreen] = useState(true);
   const [view, setView] = useState("cards");

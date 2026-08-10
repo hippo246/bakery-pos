@@ -16,6 +16,8 @@ import { getDeliveryOrderStorage, DeliveryOrderStatus } from "../../delivery/Del
 import { useTerminal } from "../../terminal/TerminalContext.jsx";
 import { getOrderRouter } from "../../terminal/OrderRouter.js";
 import { getMultiTerminalConflictResolver } from "../../terminal/MultiTerminalConflictResolver.js";
+import { useCrashRecovery } from "../../hooks/useCrashRecovery.js";
+import { ENTITY_TYPES, OPERATION_TYPES } from "../../domain/operationLogModel.js";
 
 // ── Devin's extracted components ──────────────────────────────────────────────
 import CategorySidebar from "./CategorySidebar";
@@ -82,8 +84,8 @@ function CartContent({
   else if ((orderType === "SWIGGY" || orderType === "ZOMATO") && !platformOrderId.trim()) block.push(`Enter ${orderType} order ID`);
   const isBlocked = isPlacingOrder || block.length > 0 || !isPaymentComplete;
 
-  const sectionLabel = { fontSize: isMobile ? 13 : 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: C.text3, marginBottom: isMobile ? 12 : 10 };
-  const cardStyle   = { background: C.bg2, border: `1px solid ${C.border}`, borderRadius: 8, padding: isMobile ? "16px" : "14px", marginBottom: isMobile ? 12 : 10 };
+  const sectionLabel = { fontSize: isMobile ? 13 : 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--cafe-text-tertiary)", marginBottom: isMobile ? 12 : 10 };
+  const cardStyle   = { background: "var(--cafe-bg-card)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-md)", padding: isMobile ? "16px" : "14px", marginBottom: isMobile ? 12 : 10 };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 0 : 8, height: isMobile ? "auto" : "100%", overflow: isMobile ? "visible" : "hidden" }}>
@@ -91,28 +93,28 @@ function CartContent({
       {/* ── Held orders ── */}
       {heldOrders.length > 0 && (
         <div style={{ ...cardStyle, overflow: "hidden", flexShrink: 0 }}>
-          <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${C.border}`, margin: isMobile ? "-16px -16px 12px" : "-14px -14px 12px" }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.text2 }}>⏸ Held Orders ({heldOrders.length})</span>
-            <span style={{ fontSize: 11, color: C.text3 }}>Tap to resume</span>
+          <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid var(--cafe-border)`, margin: isMobile ? "-16px -16px 12px" : "-14px -14px 12px" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--cafe-text-secondary)" }}>⏸ Held Orders ({heldOrders.length})</span>
+            <span style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>Tap to resume</span>
           </div>
           {heldOrders.map(h => {
             const mins = Math.max(0, Math.round((Date.now() - h.savedAt) / 60000));
             const itemCount = h.cart.reduce((n, it) => n + (Number(it.qty) || 0), 0);
-            const typeIcon = { DINE_IN: "🪑", TAKEAWAY: "🥡", DIRECT_DELIVERY: "��", SWIGGY: "🟠", ZOMATO: "🔴" }[h.orderType] || "🧾";
+            const typeIcon = { DINE_IN: "🪑", TAKEAWAY: "🥡", DIRECT_DELIVERY: "🚚", SWIGGY: "🟠", ZOMATO: "🔴" }[h.orderType] || "🧾";
             const who = h.orderType === "DINE_IN"
               ? (() => { const t = availableTables.find(t => t.id === h.selectedTable); return t ? `T${t.number}` : "Dine In"; })()
               : h.orderType === "TAKEAWAY" ? "Takeaway"
               : h.orderType === "DIRECT_DELIVERY" ? (h.customerPhone || "Delivery")
               : h.platformOrderId || h.orderType;
             return (
-              <div key={h.id} className="pos-held-row" style={{ padding: "10px 0", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${C.border}` }}>
+              <div key={h.id} className="pos-held-row" style={{ padding: "10px 0", display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid var(--cafe-border)` }}>
                 <span style={{ fontSize: 16 }}>{typeIcon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: isMobile ? 13 : 12, fontWeight: 500, color: C.text }}>{who} · {itemCount} items <span style={{ color: C.text3, fontWeight: 400 }}>{mins}m ago</span></div>
-                  <div style={{ fontSize: isMobile ? 12 : 11, color: C.text3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.cart.slice(0,2).map(i=>i.name).join(", ")}{h.cart.length>2?` +${h.cart.length-2}`:""}</div>
+                  <div style={{ fontSize: isMobile ? 13 : 12, fontWeight: 500, color: "var(--cafe-text-primary)" }}>{who} · {itemCount} items <span style={{ color: "var(--cafe-text-tertiary)", fontWeight: 400 }}>{mins}m ago</span></div>
+                  <div style={{ fontSize: isMobile ? 12 : 11, color: "var(--cafe-text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.cart.slice(0,2).map(i=>i.name).join(", ")}{h.cart.length>2?` +${h.cart.length-2}`:""}</div>
                 </div>
-                <button className="pos-held-resume-btn" onClick={() => resumeHeldBill(h.id)} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text, fontSize: isMobile ? 13 : 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}>↩ Resume</button>
-                <button onClick={() => discardHeldBill(h.id)} style={{ padding: isMobile ? "8px 10px" : "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text3, fontSize: 14, cursor: "pointer", flexShrink: 0 }}>✕</button>
+                <button className="pos-held-resume-btn" onClick={() => resumeHeldBill(h.id)} style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-primary)", fontSize: isMobile ? 13 : 12, fontWeight: 500, cursor: "pointer", flexShrink: 0 }}>↩ Resume</button>
+                <button onClick={() => discardHeldBill(h.id)} style={{ padding: isMobile ? "8px 10px" : "6px 8px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", fontSize: 14, cursor: "pointer", flexShrink: 0 }}>✕</button>
               </div>
             );
           })}
@@ -122,25 +124,25 @@ function CartContent({
       {/* ── Order Slip ── */}
       <div style={{ ...cardStyle, flexShrink: 0 }}>
         {!isMobile && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, borderBottom: `1px solid ${C.border}`, paddingBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, borderBottom: `1px solid var(--cafe-border)`, paddingBottom: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span>🧾</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>Order Slip</span>
-              {cart.items.length > 0 && <span style={{ background: C.bg3, color: C.text2, fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6 }}>{cart.items.length}</span>}
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--cafe-text-primary)" }}>Order Slip</span>
+              {cart.items.length > 0 && <span style={{ background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: "var(--cafe-radius-sm)" }}>{cart.items.length}</span>}
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              {cart.items.length > 0 && <button onClick={holdBill} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 11, fontWeight: 500, cursor: "pointer" }}>⏸ Hold</button>}
-              {cart.items.length > 0 && <button onClick={clearCart} style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text3, fontSize: 11, fontWeight: 500, cursor: "pointer" }}>🗑 Clear</button>}
+              {cart.items.length > 0 && <button onClick={holdBill} style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 11, fontWeight: 500, cursor: "pointer" }}>⏸ Hold</button>}
+              {cart.items.length > 0 && <button onClick={clearCart} style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", fontSize: 11, fontWeight: 500, cursor: "pointer" }}>🗑 Clear</button>}
             </div>
           </div>
         )}
 
         {cart.items.length === 0 ? (
-          <div style={{ padding: isMobile ? "32px 16px" : "16px", textAlign: "center", color: C.text3, fontSize: isMobile ? 14 : 11 }}>
+          <div style={{ padding: isMobile ? "32px 16px" : "16px", textAlign: "center", color: "var(--cafe-text-tertiary)", fontSize: isMobile ? 14 : 11 }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🛒</div>
             <div>Empty — tap menu items to add</div>
             {isMobile && (
-              <button onClick={() => setPosMobileTab("menu")} style={{ marginTop: 16, padding: "12px 24px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+              <button onClick={() => setPosMobileTab("menu")} style={{ marginTop: 16, padding: "12px 24px", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                 ← Browse Menu
               </button>
             )}
@@ -150,34 +152,48 @@ function CartContent({
             {/* Hold button on mobile — inside cart section */}
             {isMobile && (
               <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                <button onClick={holdBill} style={{ flex: 1, padding: "10px 0", borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>⏸ Hold Order</button>
+                <button onClick={holdBill} style={{ flex: 1, padding: "10px 0", borderRadius: "var(--cafe-radius-md)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>⏸ Hold Order</button>
               </div>
             )}
             {cart.items.map(item => {
               const modsTotal = (item.modifiers||[]).reduce((s,m)=>s+(Number(m.price)||0),0);
               const unitPrice = (item.overridePrice ?? item.price) + modsTotal;
               return (
-                <div key={item.id} className="pos-cart-item" style={{ background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px", marginBottom: 8 }}>
+                <div key={item.id} className="pos-cart-item" style={{ background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-sm)", padding: "12px", marginBottom: 8, transition: "all 0.15s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-surface)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: isMobile ? 15 : 13, fontWeight: 500, color: C.text }}>{item.name}</div>
-                      {item.notes && <div style={{ fontSize: isMobile ? 12 : 11, color: C.text3, marginTop: 4 }}>📝 {item.notes}</div>}
+                      <div style={{ fontSize: isMobile ? 15 : 13, fontWeight: 500, color: "var(--cafe-text-primary)" }}>{item.name}</div>
+                      {item.notes && <div style={{ fontSize: isMobile ? 12 : 11, color: "var(--cafe-text-tertiary)", marginTop: 4 }}>📝 {item.notes}</div>}
                     </div>
-                    <button className="pos-cart-remove-btn" onClick={() => removeFromCart(item.id)} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg3, color: C.text3, fontSize: 12, fontWeight: 500, cursor: "pointer", marginLeft: 8, flexShrink: 0 }}>✕</button>
+                    <button className="pos-cart-remove-btn" onClick={() => removeFromCart(item.id)} style={{ padding: "4px 8px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-tertiary)", fontSize: 12, fontWeight: 500, cursor: "pointer", marginLeft: 8, flexShrink: 0, transition: "all 0.15s ease" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-danger-bg)"; e.currentTarget.style.borderColor = "var(--cafe-danger-border)"; e.currentTarget.style.color = "var(--cafe-danger)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-surface)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; e.currentTarget.style.color = "var(--cafe-text-tertiary)"; }}>✕</button>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     {/* Qty stepper */}
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, -1)} style={{ width: 28, height: 28, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, color: C.text, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500 }}>−</button>
-                      <span className="pos-cart-qty-val" style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 500, color: C.text, width: 24, textAlign: "center" }}>{item.qty}</span>
-                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, 1)} style={{ width: 28, height: 28, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, color: C.text, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500 }}>+</button>
+                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, -1)} style={{ width: 28, height: 28, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-card)", color: "var(--cafe-text-primary)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500, transition: "all 0.15s ease" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-card)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>−</button>
+                      <span className="pos-cart-qty-val" style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 500, color: "var(--cafe-text-primary)", width: 24, textAlign: "center" }}>{item.qty}</span>
+                      <button className="pos-cart-qty-btn" onClick={() => updateCartQty(item.id, 1)} style={{ width: 28, height: 28, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-card)", color: "var(--cafe-text-primary)", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 500, transition: "all 0.15s ease" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-card)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>+</button>
                     </div>
                     {/* Price + action buttons */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontFamily: "monospace", fontSize: isMobile ? 15 : 13, fontWeight: 500, color: C.text }}>₹{(unitPrice*item.qty).toFixed(0)}</span>
-                      <button className="pos-cart-action-btn" onClick={() => setModifierModal({ open: true, item })} title="Customise" style={{ width: 26, height: 26, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 12, cursor: "pointer" }}>⚙️</button>
-                      <button className="pos-cart-action-btn" onClick={() => openItemNotesModal(item)} title="Notes" style={{ width: 26, height: 26, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 12, cursor: "pointer" }}>📝</button>
-                      <button className="pos-cart-action-btn" onClick={() => openPriceOverrideModal(item)} title="Price" style={{ width: 26, height: 26, borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg4, fontSize: 12, cursor: "pointer" }}>💰</button>
+                      <span style={{ fontFamily: "monospace", fontSize: isMobile ? 15 : 13, fontWeight: 500, color: "var(--cafe-text-primary)" }}>₹{(unitPrice*item.qty).toFixed(0)}</span>
+                      <button className="pos-cart-action-btn" onClick={() => setModifierModal({ open: true, item })} title="Customise" style={{ width: 26, height: 26, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-card)", fontSize: 12, cursor: "pointer", transition: "all 0.15s ease" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-card)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>⚙️</button>
+                      <button className="pos-cart-action-btn" onClick={() => openItemNotesModal(item)} title="Notes" style={{ width: 26, height: 26, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-card)", fontSize: 12, cursor: "pointer", transition: "all 0.15s ease" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-card)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>📝</button>
+                      <button className="pos-cart-action-btn" onClick={() => openPriceOverrideModal(item)} title="Price" style={{ width: 26, height: 26, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-card)", fontSize: 12, cursor: "pointer", transition: "all 0.15s ease" }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-card)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>💰</button>
                     </div>
                   </div>
                 </div>
@@ -219,47 +235,59 @@ function CartContent({
               <div style={sectionLabel}>Covers (Pax)</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {[1,2,3,4,5,6,7,8].map(n => (
-                  <button key={n} onClick={() => setPax(n)} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 6, border: `1px solid ${pax===n?C.amber:C.border}`, background: pax===n?C.amberDim:C.bg3, color: pax===n?C.text:C.text2, fontWeight: pax===n?600:400, fontSize: isMobile ? 15 : 13, cursor: "pointer" }}>{n}</button>
+                  <button key={n} onClick={() => setPax(n)} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: "var(--cafe-radius-sm)", border: `1px solid ${pax===n?"var(--cafe-accent)":"var(--cafe-border)"}`, background: pax===n?"var(--cafe-accent-dim)":"var(--cafe-bg-surface)", color: pax===n?"var(--cafe-text-primary)":"var(--cafe-text-secondary)", fontWeight: pax===n?600:400, fontSize: isMobile ? 15 : 13, cursor: "pointer", transition: "all 0.15s ease" }}
+                    onMouseEnter={e => { if (pax !== n) { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; } }}
+                    onMouseLeave={e => { if (pax !== n) { e.currentTarget.style.background = "var(--cafe-bg-surface)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; } }}>{n}</button>
                 ))}
-                <button onClick={() => setPax(p=>Math.max(1,p-1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 16, cursor: "pointer" }}>−</button>
-                <button onClick={() => setPax(p=>Math.min(40,p+1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: 6, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 16, cursor: "pointer" }}>+</button>
-                {pax > 8 && <span style={{ alignSelf: "center", fontSize: 13, fontWeight: 500, color: C.text }}>{pax} guests</span>}
+                <button onClick={() => setPax(p=>Math.max(1,p-1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 16, cursor: "pointer", transition: "all 0.15s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-surface)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>−</button>
+                <button onClick={() => setPax(p=>Math.min(40,p+1))} style={{ width: isMobile ? 44 : 36, height: isMobile ? 44 : 36, borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 16, cursor: "pointer", transition: "all 0.15s ease" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "var(--cafe-bg-surface)"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>+</button>
+                {pax > 8 && <span style={{ alignSelf: "center", fontSize: 13, fontWeight: 500, color: "var(--cafe-text-primary)" }}>{pax} guests</span>}
               </div>
             </div>
           )}
 
-          <div style={{ height: 1, background: C.border, margin: "10px 0" }} />
+          <div style={{ height: 1, background: "var(--cafe-border)", margin: "10px 0" }} />
 
           <DiscountPanel discountInput={discountInput} discountMode={discountMode} cartSubtotal={cartSubtotal} onDiscountModeChange={setDiscountMode} onDiscountInputChange={setDiscountInput} />
 
-          <button onClick={() => { setOrderNotesDraft(orderNotes); setOrderNotesModal(true); }} style={{ width: "100%", padding: isMobile ? "12px 14px" : "10px 12px", borderRadius: 6, border: `1px dashed ${orderNotes?C.border:C.border}`, background: orderNotes?C.bg3:"transparent", color: orderNotes?C.text:C.text3, fontSize: isMobile ? 14 : 12, fontWeight: 400, cursor: "pointer", textAlign: "left", marginBottom: 12 }}>
+          <button onClick={() => { setOrderNotesDraft(orderNotes); setOrderNotesModal(true); }} style={{ width: "100%", padding: isMobile ? "12px 14px" : "10px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px dashed var(--cafe-border)`, background: orderNotes?"var(--cafe-bg-surface)":"transparent", color: orderNotes?"var(--cafe-text-primary)":"var(--cafe-text-tertiary)", fontSize: isMobile ? 14 : 12, fontWeight: 400, cursor: "pointer", textAlign: "left", marginBottom: 12, transition: "all 0.15s ease" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--cafe-bg-hover)"; e.currentTarget.style.borderColor = "var(--cafe-accent-border)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = orderNotes?"var(--cafe-bg-surface)":"transparent"; e.currentTarget.style.borderColor = "var(--cafe-border)"; }}>
             {orderNotes ? `📝 ${orderNotes.slice(0,40)}${orderNotes.length>40?"…":""}` : "+ Add kitchen notes / allergy info"}
           </button>
 
-          <div style={{ height: 1, background: C.border, margin: "0 0 10px" }} />
+          <div style={{ height: 1, background: "var(--cafe-border)", margin: "0 0 10px" }} />
 
           <TotalsPanel cartSubtotal={cartSubtotal} cartCgst={cartCgst} cartSgst={cartSgst} cartPackaging={cartPackaging} cartDiscount={cartDiscount} cartTotal={cartTotal} discountMode={discountMode} discountInput={discountInput} packagingCharge={packagingCharge} onPackagingChargeChange={setPackagingCharge} />
 
-          <div style={{ height: 1, background: C.border, margin: "10px 0" }} />
+          <div style={{ height: 1, background: "var(--cafe-border)", margin: "10px 0" }} />
 
           {/* Split bill */}
           <div style={{ marginBottom: 14 }}>
             <div style={sectionLabel}>Split Bill</div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 14 : 12, color: C.text, cursor: "pointer" }}>
-                <input type="checkbox" checked={splitBillMode} onChange={(e) => { setSplitBillMode(e.target.checked); if (!e.target.checked) setCartItemSplits({}); }} style={{ accentColor: C.amber, width: isMobile ? 18 : 14, height: isMobile ? 18 : 14 }} /> Enable Split
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: isMobile ? 14 : 12, color: "var(--cafe-text-primary)", cursor: "pointer" }}>
+                <input type="checkbox" checked={splitBillMode} onChange={(e) => { setSplitBillMode(e.target.checked); if (!e.target.checked) setCartItemSplits({}); }} style={{ accentColor: "var(--cafe-accent)", width: isMobile ? 18 : 14, height: isMobile ? 18 : 14 }} /> Enable Split
               </label>
               {splitBillMode && (
-                <div style={{ display: "flex", alignItems: "center", gap: 4, background: C.bg3, border: `1px solid ${C.border}`, borderRadius: 8 }}>
-                  <button onClick={() => setSplitBillCount(Math.max(2,splitBillCount-1))} style={{ padding: isMobile ? "8px 12px" : "4px 8px", background: "transparent", border: "none", color: C.text, cursor: "pointer", fontSize: isMobile ? 18 : 14 }}>-</button>
-                  <span style={{ fontSize: isMobile ? 15 : 12, fontWeight: 700, color: C.text, width: 24, textAlign: "center" }}>{splitBillCount}</span>
-                  <button onClick={() => setSplitBillCount(Math.min(10,splitBillCount+1))} style={{ padding: isMobile ? "8px 12px" : "4px 8px", background: "transparent", border: "none", color: C.text, cursor: "pointer", fontSize: isMobile ? 18 : 14 }}>+</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-sm)" }}>
+                  <button onClick={() => setSplitBillCount(Math.max(2,splitBillCount-1))} style={{ padding: isMobile ? "8px 12px" : "4px 8px", background: "transparent", border: "none", color: "var(--cafe-text-primary)", cursor: "pointer", fontSize: isMobile ? 18 : 14, transition: "all 0.15s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "var(--cafe-accent)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "var(--cafe-text-primary)"; }}>-</button>
+                  <span style={{ fontSize: isMobile ? 15 : 12, fontWeight: 700, color: "var(--cafe-text-primary)", width: 24, textAlign: "center" }}>{splitBillCount}</span>
+                  <button onClick={() => setSplitBillCount(Math.min(10,splitBillCount+1))} style={{ padding: isMobile ? "8px 12px" : "4px 8px", background: "transparent", border: "none", color: "var(--cafe-text-primary)", cursor: "pointer", fontSize: isMobile ? 18 : 14, transition: "all 0.15s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.color = "var(--cafe-accent)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = "var(--cafe-text-primary)"; }}>+</button>
                 </div>
               )}
             </div>
           </div>
 
-          <div style={{ height: 1, background: C.border, margin: "0 0 12px" }} />
+          <div style={{ height: 1, background: "var(--cafe-border)", margin: "0 0 12px" }} />
 
           <PaymentPanel 
             cartTotal={activeCartTotal} 
@@ -279,9 +307,9 @@ function CartContent({
           {/* Place order — inline for desktop, sticky bar for mobile */}
           <div className="pos-place-order-bar">
             {block.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "10px 14px" : "8px 12px", borderRadius: 6, background: C.bg3, border: `1px solid ${C.border}`, marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: isMobile ? "10px 14px" : "8px 12px", borderRadius: "var(--cafe-radius-sm)", background: "var(--cafe-bg-surface)", border: `1px solid var(--cafe-border)`, marginBottom: 10 }}>
                 <span>⚠️</span>
-                <span style={{ fontSize: isMobile ? 13 : 12, color: C.text, fontWeight: 400 }}>{block[0]}</span>
+                <span style={{ fontSize: isMobile ? 13 : 12, color: "var(--cafe-text-primary)", fontWeight: 400 }}>{block[0]}</span>
               </div>
             )}
             <button
@@ -290,12 +318,17 @@ function CartContent({
               disabled={isBlocked}
               style={{
                 width: "100%", padding: "14px 0", fontSize: isMobile ? 15 : 14, fontWeight: 500, border: "none",
-                borderRadius: 6, cursor: isBlocked ? "not-allowed" : "pointer",
-                background: isBlocked ? C.bg3 : C.amber,
-                color: isBlocked ? C.text3 : "#000",
-                boxShadow: isBlocked ? "none" : `0 2px 8px ${C.amberDim}`,
+                borderRadius: "var(--cafe-radius-md)", cursor: isBlocked ? "not-allowed" : "pointer",
+                background: isBlocked ? "var(--cafe-bg-surface)" : "var(--cafe-accent)",
+                color: isBlocked ? "var(--cafe-text-tertiary)" : "#000",
+                boxShadow: isBlocked ? "none" : "var(--cafe-shadow-md)",
                 marginTop: isMobile ? 0 : 12,
+                transition: "all 0.2s ease",
               }}
+              onMouseEnter={e => { if (!isBlocked) { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--cafe-shadow-lg)"; } }}
+              onMouseLeave={e => { if (!isBlocked) { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "var(--cafe-shadow-md)"; } }}
+              onMouseDown={e => { if (!isBlocked) { e.currentTarget.style.transform = "translateY(0)"; } }}
+              onMouseUp={e => { if (!isBlocked) { e.currentTarget.style.transform = "translateY(-2px)"; } }}
             >
               {isPlacingOrder ? "⏳ Placing…" : splitBillMode ? `🍳 Send to Kitchen (1/${splitBillCount}) · ₹${activeCartTotal}` : `🍳 Send to Kitchen · ₹${activeCartTotal}`}
             </button>
@@ -306,7 +339,7 @@ function CartContent({
   );
 }
 
-function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, setTables, staff, discounts, inventory, setInventory, customers, setCustomers }) {
+function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, setTables, staff, discounts, inventory, setInventory, customers, setCustomers, operationLogs, setOperationLogs, locks, setLocks }) {
   const { isMobile } = useMobile();
   
   // ── Toast notification ─────────────────────────────────────────────────────
@@ -320,6 +353,13 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
   const { currentTerminal, syncClient, terminalManager } = useTerminal();
   const orderRouter = getOrderRouter();
   const conflictResolver = getMultiTerminalConflictResolver();
+  
+  // ── Crash Recovery Integration ─────────────────────────────────────────────
+  const { withRecovery, canModify, renewLock, terminalId } = useCrashRecovery({
+    setOperationLogs,
+    setLocks,
+    currentUserId: currentTerminal?.id || 'unknown'
+  });
 
   // ── Delivery Platform Integration ─────────────────────────────────────────────
   const deliveryFactory = getDeliveryPlatformFactory();
@@ -1138,9 +1178,9 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: "fixed", bottom: 28, right: 24, background: C.bg2, border: `1px solid ${toast.type === "error" ? C.red : C.green}`, borderRadius: 40, padding: "12px 20px 12px 16px", color: C.text, fontSize: 13, fontWeight: 600, zIndex: 9999, display: "flex", alignItems: "center", gap: 10, boxShadow: `0 8px 32px rgba(0,0,0,.15), 0 0 0 1px ${toast.type === "error" ? C.redBorder : C.greenBorder}`, animation: "toastUp 0.22s cubic-bezier(.22,.68,0,1.3)", maxWidth: 340 }}>
-          <span style={{ fontSize: 16, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: toast.type === "error" ? C.redBg : C.greenBg, color: toast.type === "error" ? C.red : C.green }}>{toast.type === "error" ? "✕" : "✓"}</span>
-          <span style={{ color: toast.type === "error" ? C.red : C.green }}>{toast.message}</span>
+        <div style={{ position: "fixed", bottom: 28, right: 24, background: "var(--cafe-bg-card)", border: `1px solid ${toast.type === "error" ? "var(--cafe-danger)" : "var(--cafe-success)"}`, borderRadius: 40, padding: "12px 20px 12px 16px", color: "var(--cafe-text-primary)", fontSize: 13, fontWeight: 600, zIndex: 9999, display: "flex", alignItems: "center", gap: 10, boxShadow: `0 8px 32px rgba(0,0,0,.15), 0 0 0 1px ${toast.type === "error" ? "var(--cafe-danger-border)" : "var(--cafe-success-border)"}`, animation: "toastUp 0.22s cubic-bezier(.22,.68,0,1.3)", maxWidth: 340 }}>
+          <span style={{ fontSize: 16, width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: toast.type === "error" ? "var(--cafe-danger-bg)" : "var(--cafe-success-bg)", color: toast.type === "error" ? "var(--cafe-danger)" : "var(--cafe-success)" }}>{toast.type === "error" ? "✕" : "✓"}</span>
+          <span style={{ color: toast.type === "error" ? "var(--cafe-danger)" : "var(--cafe-success)" }}>{toast.message}</span>
         </div>
       )}
 
@@ -1186,13 +1226,13 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             return (
               <div style={{ marginBottom: 18, display: "flex", flexDirection: "column", gap: 8 }}>
                 {sops.map(s => (
-                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 6, background: s.level === "alert" ? C.redBg : C.warningBg, border: "1px solid " + (s.level === "alert" ? C.redBorder : C.warningBorder) }}>
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--cafe-radius-sm)", background: s.level === "alert" ? "var(--cafe-danger-bg)" : "var(--cafe-warning-bg)", border: "1px solid " + (s.level === "alert" ? "var(--cafe-danger-border)" : "var(--cafe-warning-border)") }}>
                     <span style={{ fontSize: 16 }}>{s.level === "alert" ? "🔴" : "🟡"}</span>
                     <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: s.level === "alert" ? C.red : C.warning, marginRight: 10 }}>{s.label}</span>
-                      <span style={{ fontSize: 13, color: C.text2 }}>{s.msg}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: s.level === "alert" ? "var(--cafe-danger)" : "var(--cafe-warning)", marginRight: 10 }}>{s.label}</span>
+                      <span style={{ fontSize: 13, color: "var(--cafe-text-secondary)" }}>{s.msg}</span>
                     </div>
-                    <span style={{ fontFamily: "monospace", fontSize: 12, color: C.text3, fontWeight: 500 }}>{counts[s.stat]} / {s.threshold}</span>
+                    <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>{counts[s.stat]} / {s.threshold}</span>
                   </div>
                 ))}
               </div>
@@ -1271,11 +1311,11 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
           </div>
 
           {selected.size > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, background: C.amberDim, border: `1px solid ${C.border}`, borderRadius: 6, padding: "10px 14px", marginBottom: 16, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, color: C.text, fontFamily: "monospace", fontWeight: 400 }}>{selected.size} order{selected.size !== 1 && "s"} selected</span>
-              <button style={{ padding: "6px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 12, fontWeight: 400, cursor: "pointer" }} onClick={advanceSelected}>Advance all</button>
-              <button style={{ padding: "6px 12px", borderRadius: 4, border: `1px solid ${C.border}`, background: C.bg3, color: C.text2, fontSize: 12, fontWeight: 400, cursor: "pointer" }} onClick={cancelSelected}>Cancel all</button>
-              <button style={{ padding: "6px 12px", borderRadius: 4, border: "none", background: "transparent", color: C.text3, fontSize: 12, fontWeight: 400, cursor: "pointer", marginLeft: "auto" }} onClick={() => setSelected(new Set())}>Deselect</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--cafe-accent-dim)", border: `1px solid var(--cafe-border)`, borderRadius: "var(--cafe-radius-sm)", padding: "10px 14px", marginBottom: 16, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "var(--cafe-text-primary)", fontFamily: "monospace", fontWeight: 400 }}>{selected.size} order{selected.size !== 1 && "s"} selected</span>
+              <button style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 12, fontWeight: 400, cursor: "pointer" }} onClick={advanceSelected}>Advance all</button>
+              <button style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: `1px solid var(--cafe-border)`, background: "var(--cafe-bg-surface)", color: "var(--cafe-text-secondary)", fontSize: 12, fontWeight: 400, cursor: "pointer" }} onClick={cancelSelected}>Cancel all</button>
+              <button style={{ padding: "6px 12px", borderRadius: "var(--cafe-radius-sm)", border: "none", background: "transparent", color: "var(--cafe-text-tertiary)", fontSize: 12, fontWeight: 400, cursor: "pointer", marginLeft: "auto" }} onClick={() => setSelected(new Set())}>Deselect</button>
             </div>
           )}
 
@@ -1287,16 +1327,16 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             gap: viewMode === "cards" ? 12 : 6 
           }}>
             {filtered.length === 0 && (
-              <div style={{ textAlign: "center", padding: "64px 32px", borderRadius: 8, background: C.bg2, border: "1px dashed " + C.border }}>
+              <div style={{ textAlign: "center", padding: "64px 32px", borderRadius: "var(--cafe-radius-md)", background: "var(--cafe-bg-card)", border: "1px dashed var(--cafe-border)" }}>
                 <div style={{ fontSize: 42, marginBottom: 14, opacity: 0.3 }}>🍽</div>
-                <div style={{ fontSize: 15, fontWeight: 500, color: C.text2, marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 500, color: "var(--cafe-text-secondary)", marginBottom: 8 }}>
                   {search.trim() ? `No orders matching "${search}"` : filter !== "ALL" ? `No ${filter.toLowerCase().replace(/_/g, " ")} orders` : "All quiet right now"}
                 </div>
-                <div style={{ fontSize: 13, color: C.text3, marginBottom: 24 }}>
+                <div style={{ fontSize: 13, color: "var(--cafe-text-tertiary)", marginBottom: 24 }}>
                   {search.trim() ? "Try a different search" : filter !== "ALL" ? "Switch to All to see everything" : "Ready to take the first order?"}
                 </div>
                 {!search.trim() && filter === "ALL" && (
-                  <button onClick={() => setMode("pos")} style={{ padding: "12px 24px", borderRadius: 6, border: "none", background: C.amber, color: "#000", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                  <button onClick={() => setMode("pos")} style={{ padding: "12px 24px", borderRadius: "var(--cafe-radius-md)", border: "none", background: "var(--cafe-accent)", color: "#000", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
                     ➕ Take New Order
                   </button>
                 )}
@@ -1318,7 +1358,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               // Progress Logic
               const maxTime = 20; // 20 mins max expected
               const progressPct = Math.min(100, (timeElapsed / maxTime) * 100);
-              const progressColor = timeElapsed > 15 ? C.red : timeElapsed > 10 ? C.amber : "#10b981";
+              const progressColor = timeElapsed > 15 ? "var(--cafe-danger)" : timeElapsed > 10 ? "var(--cafe-accent)" : "#10b981";
 
               if (viewMode === "cards") {
                 return (
@@ -1701,7 +1741,7 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               .pos-cart-screen {
                 position: fixed; inset: 0; z-index: 200;
                 display: flex; flex-direction: column;
-                background: #111; overflow: hidden;
+                background: var(--cafe-bg); overflow: hidden;
               }
               .pos-cart-scroll {
                 flex: 1; overflow-y: auto; padding: 12px 14px 100px;
@@ -1710,14 +1750,14 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
               .pos-mobile-header {
                 display: flex; align-items: center; justify-content: space-between;
                 padding: 14px 16px;
-                background: #1a1a1a; border-bottom: 1px solid #2a2a2a;
+                background: var(--cafe-bg-elevated); border-bottom: 1px solid var(--cafe-border);
                 flex-shrink: 0; position: sticky; top: 0; z-index: 10;
               }
               /* Sticky bottom bar */
               .pos-place-order-bar {
                 position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
                 padding: 12px 16px 24px;
-                background: #1a1a1a; border-top: 2px solid #2a2a2a;
+                background: var(--cafe-bg-elevated); border-top: 2px solid var(--cafe-border);
               }
               /* Cart items */
               .pos-cart-item     { padding: 14px !important; }
@@ -1789,13 +1829,13 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
                     {showPosKitchenQueue && (
                       <div style={{ background: "var(--cafe-bg-surface)", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 300, overflowY: "auto" }}>
                         {ready.map(o => (
-                          <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: "#052e16", border: "1px solid #16a34a" }}>
+                          <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, background: "var(--cafe-success-bg)", border: "1px solid var(--cafe-success-border)" }}>
                             <span style={{ fontSize: 18 }}>🔔</span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, fontWeight: 800, color: "#4ade80" }}>{getOrderCustomerName(o)} — READY</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--cafe-success)" }}>{getOrderCustomerName(o)} — READY</div>
                               <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{getOrderDisplayItems(o)}</div>
                             </div>
-                            <button onClick={() => updateStatus(o.id, "COMPLETED")} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "#16a34a", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✓ Done</button>
+                            <button onClick={() => updateStatus(o.id, "COMPLETED")} style={{ padding: "6px 12px", borderRadius: 8, border: "none", background: "var(--cafe-success)", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0 }}>✓ Done</button>
                           </div>
                         ))}
                         {pending.map(o => {
@@ -1887,14 +1927,14 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
             <div className="pos-cart-screen">
               {/* Sticky header */}
               <div className="pos-mobile-header">
-                <button onClick={() => setPosMobileTab("menu")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: C.amber2, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>
+                <button onClick={() => setPosMobileTab("menu")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--cafe-accent)", fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>
                   ← Menu
                 </button>
-                <span style={{ fontSize: 15, fontWeight: 800, color: C.text }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "var(--cafe-text-primary)" }}>
                   🧾 {cart.items.length > 0 ? `Order (${cart.items.length} items)` : "New Order"}
                 </span>
                 {cart.items.length > 0 ? (
-                  <button onClick={clearCart} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${C.redBorder}`, background: C.redBg, color: C.red, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  <button onClick={clearCart} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid var(--cafe-danger-border)`, background: "var(--cafe-danger-bg)", color: "var(--cafe-danger)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                     🗑 Clear
                   </button>
                 ) : <span style={{ width: 60 }} />}
@@ -1947,20 +1987,20 @@ function Orders({ orders, setOrders, kdsCards, setKdsCards, menuItems, tables, s
 
           {/* ── MOBILE CHECKOUT SCREEN — full-page overlay ── */}
           {isMobile && posMobileTab === "checkout" && (
-            <div className="pos-checkout-screen">
+            <div className="pos-checkout-screen" style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", flexDirection: "column", background: "var(--cafe-bg)", overflow: "hidden" }}>
               {/* Sticky header */}
               <div className="pos-mobile-header">
-                <button onClick={() => setPosMobileTab("cart")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: C.amber2, fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>
+                <button onClick={() => setPosMobileTab("cart")} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--cafe-accent)", fontSize: 15, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>
                   ← Cart
                 </button>
-                <span style={{ fontSize: 15, fontWeight: 800, color: C.text }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "var(--cafe-text-primary)" }}>
                   🧾 Checkout
                 </span>
                 <span style={{ width: 60 }} />
               </div>
 
               {/* Scrollable body */}
-              <div className="pos-checkout-scroll">
+              <div className="pos-checkout-scroll" style={{ flex: 1, overflowY: "auto", padding: "12px 14px 100px" }}>
                 <CartContent
                   isMobile={true}
                   cart={cart}

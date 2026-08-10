@@ -1,15 +1,8 @@
-/**
- * Classic POS Tables Modal
- * 
- * Popup to display and manage tables with active/inactive status
- */
-
 import { useMemo, useEffect, useState } from 'react';
 
 export default function TablesModal({ tables, onSelectTable, onClose }) {
   const [realTables, setRealTables] = useState([]);
 
-  // Load real tables from localStorage if not provided via props
   useEffect(() => {
     if (!tables || tables.length === 0) {
       try {
@@ -24,15 +17,12 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
     }
   }, [tables]);
 
-  // Use provided tables or loaded tables
   const displayTables = tables && tables.length > 0 ? tables : realTables;
 
-  // Generate sample tables if no data available
   const tableData = useMemo(() => {
     if (displayTables.length > 0) {
       return displayTables;
     }
-    // Fallback to sample tables
     return Array.from({ length: 20 }, (_, i) => ({
       id: i + 1,
       number: `T${i + 1}`,
@@ -57,8 +47,8 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
   };
 
   const modalStyle = {
-    background: '#1E1E1E',
-    border: '2px solid #333333',
+    background: 'var(--classic-pos-modal-bg)',
+    border: '2px solid var(--classic-pos-modal-border)',
     borderRadius: '8px',
     width: '700px',
     maxHeight: '80vh',
@@ -68,9 +58,9 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
   };
 
   const headerStyle = {
-    background: '#252525',
+    background: 'var(--classic-pos-modal-header-bg)',
     padding: '16px 20px',
-    borderBottom: '2px solid #333333',
+    borderBottom: '2px solid var(--classic-pos-modal-header-border)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -79,11 +69,11 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
   const titleStyle = {
     fontSize: '18px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
   };
 
   const closeButtonStyle = {
-    background: '#DC2626',
+    background: 'var(--classic-pos-close-btn-bg)',
     color: '#ffffff',
     border: 'none',
     borderRadius: '4px',
@@ -107,10 +97,10 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
   };
 
   const tableCardStyle = {
-    background: '#2A2A2A',
+    background: 'var(--classic-pos-table-avail-bg)',
     borderWidth: '2px',
     borderStyle: 'solid',
-    borderColor: '#3A3A3A',
+    borderColor: 'var(--classic-pos-card-border)',
     borderRadius: '8px',
     padding: '16px',
     display: 'flex',
@@ -125,7 +115,7 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
   const tableNumberStyle = {
     fontSize: '24px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--classic-pos-name-color)',
     marginBottom: '8px',
   };
 
@@ -138,26 +128,26 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
 
   const tableInfoStyle = {
     fontSize: '11px',
-    color: '#888888',
+    color: 'var(--classic-pos-code-color)',
     marginTop: '8px',
   };
 
   const activeStyle = {
     ...tableCardStyle,
-    background: '#1A2E25',
-    borderColor: '#38EF7D',
+    background: 'var(--classic-pos-table-active-bg)',
+    borderColor: 'var(--classic-pos-table-active-border)',
   };
 
   const activeStatusStyle = {
     ...tableStatusStyle,
-    background: '#38EF7D',
-    color: '#000000',
+    background: 'var(--classic-pos-status-active-bg)',
+    color: 'var(--classic-pos-status-active-text)',
   };
 
   const inactiveStatusStyle = {
     ...tableStatusStyle,
-    background: '#6B7280',
-    color: '#ffffff',
+    background: 'var(--classic-pos-status-inactive-bg)',
+    color: 'var(--classic-pos-status-inactive-text)',
   };
 
   return (
@@ -165,7 +155,14 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <span style={titleStyle}>Tables</span>
-          <button style={closeButtonStyle} onClick={onClose}>Close</button>
+          <button
+            style={closeButtonStyle}
+            onClick={onClose}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-hover)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'var(--classic-pos-close-btn-bg)'; }}
+          >
+            Close
+          </button>
         </div>
         <div style={contentStyle}>
           <div style={gridStyle}>
@@ -176,7 +173,7 @@ export default function TablesModal({ tables, onSelectTable, onClose }) {
                 onClick={() => onSelectTable(table)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.2)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
