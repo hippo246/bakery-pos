@@ -1,6 +1,13 @@
 // Initial table data for BrewCRM
+// PRODUCTION SAFETY: This is demo data, forbidden in production
 
-export const INIT_TABLES = [
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
+
+export const INIT_TABLES = () => {
+  if (!isDatasetAllowed('INIT_TABLES')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   { id: "tbl-001", number: 1, capacity: 2, status: "available", type: "indoor", area: "main", currentOrder: null, shape: "rect", rotation: 0, dimensions: { width: 80, height: 60 }, position: { x: 50, y: 50 }, layer: 0, visible: true },
   { id: "tbl-002", number: 2, capacity: 4, status: "occupied", type: "indoor", area: "main", currentOrder: "ORD-001", shape: "rect", rotation: 0, dimensions: { width: 100, height: 80 }, position: { x: 150, y: 50 }, layer: 0, visible: true },
   { id: "tbl-003", number: 3, capacity: 4, status: "available", type: "indoor", area: "main", currentOrder: null, shape: "square", rotation: 0, dimensions: { width: 80, height: 80 }, position: { x: 270, y: 50 }, layer: 0, visible: true },
@@ -13,7 +20,8 @@ export const INIT_TABLES = [
   { id: "tbl-010", number: 10, capacity: 2, status: "available", type: "indoor", area: "quiet", currentOrder: null, shape: "rect", rotation: 0, dimensions: { width: 70, height: 60 }, position: { x: 50, y: 280 }, layer: 0, visible: true },
   { id: "tbl-011", number: 11, capacity: 4, status: "occupied", type: "indoor", area: "quiet", currentOrder: "ORD-004", shape: "rect", rotation: 0, dimensions: { width: 100, height: 80 }, position: { x: 150, y: 280 }, layer: 0, visible: true },
   { id: "tbl-012", number: 12, capacity: 2, status: "available", type: "indoor", area: "quiet", currentOrder: null, shape: "circle", rotation: 0, dimensions: { width: 60, height: 60 }, position: { x: 270, y: 280 }, layer: 0, visible: true },
-];
+  ];
+};
 
 export const TABLE_TYPES = ["All", "indoor", "outdoor"];
 export const TABLE_AREAS = ["All", "main", "terrace", "quiet"];

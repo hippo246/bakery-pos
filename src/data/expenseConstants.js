@@ -1,12 +1,18 @@
 // Expense constants and seed data for Cost Control module
 
 import { createExpense } from '../domain/expenseModel.js';
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
 
 /**
  * Initial seed expenses for new installations
  * These represent common cafe expenses
+ * PRODUCTION SAFETY: This is demo data, forbidden in production
  */
-export const INIT_EXPENSES = [
+export const INIT_EXPENSES = () => {
+  if (!isDatasetAllowed('INIT_EXPENSES')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: 'EXP-001',
     title: 'Monthly Rent',
@@ -161,6 +167,7 @@ export const INIT_EXPENSES = [
     notes: 'Cups, lids, and takeaway containers'
   }
 ];
+}
 
 /**
  * Category display names and colors for UI
@@ -202,5 +209,10 @@ export const RECURRENCE_CONFIG = {
  * Get normalized seed expenses
  */
 export function getSeedExpenses() {
-  return INIT_EXPENSES.map(exp => createExpense(exp));
+  try {
+    return INIT_EXPENSES().map(exp => createExpense(exp));
+  } catch (error) {
+    console.warn('[expenseConstants] Demo data not available:', error.message);
+    return [];
+  }
 }

@@ -2,7 +2,7 @@
 // Continuous security monitoring and alerting
 
 import { SecurityInterface } from './SecurityInterface.js';
-import { SecurityStatus, SecurityLevel } from './SecurityTypes.js';
+import { SecurityStatus } from './SecurityTypes.js';
 
 export class SecurityMonitor extends SecurityInterface {
   constructor(config = {}) {
@@ -88,25 +88,19 @@ export class SecurityMonitor extends SecurityInterface {
    * Check for credential problems
    */
   async checkCredentialProblems() {
-    const { getCredentialVault } = await import('./CredentialVault.js');
-    const vault = getCredentialVault();
-    const health = vault.getHealth();
+    const credentialManager = (await import('./CredentialManager.js')).default;
+    await credentialManager.initialize();
+    const providersWithCredentials = credentialManager.listProvidersWithCredentials();
 
-    if (health.expired > 0) {
-      this.createAlert('critical', 'expired_credentials', 
-        `${health.expired} credential(s) have expired`,
-        { expiredCount: health.expired }
+    // CredentialManager doesn't track expiry currently, but we can check for missing credentials
+    if (providersWithCredentials.length === 0) {
+      this.createAlert('warning', 'no_credentials',
+        'No provider credentials configured',
+        { providerCount: providersWithCredentials.length }
       );
     }
 
-    if (health.expiringSoon > 0) {
-      this.createAlert('warning', 'expiring_credentials',
-        `${health.expiringSoon} credential(s) expire soon`,
-        { expiringCount: health.expiringSoon }
-      );
-    }
-
-    return { status: 'ok', health };
+    return { status: 'ok' };
   }
 
   /**

@@ -11,7 +11,7 @@ export const initials = (n = "") =>
 
 /** Formats a number as Indian rupees, e.g. 1234 → "₹1,234". */
 export const formatRupees = (amount) =>
-  "₹" + Number(amount ?? 0).toLocaleString("en-IN");
+  `₹${  Number(amount ?? 0).toLocaleString("en-IN")}`;
 
 // ── STATUS FLOW ──
 export const STATUS_FLOW = {
@@ -110,66 +110,66 @@ export const C = {
  */
 export const THEME_CSS = `
   :root {
-    /* ── CafeOS Design Tokens — Warm Coffee Theme (Dark Mode) ───────────────────── */
+    /* ── Modern Minimalist Theme (Dark Mode) ───────────────────── */
     
-    /* Backgrounds — warm coffee tones, not harsh black */
-    --cafe-bg:              #1a1614;
-    --cafe-bg-elevated:     #241e1b;
-    --cafe-bg-surface:      #2d2622;
-    --cafe-bg-card:         #362e2a;
-    --cafe-bg-hover:        #423a35;
-    --cafe-bg-primary:      #1a1614;
-    --cafe-bg-secondary:    #2d2622;
+    /* Backgrounds — clean dark tones */
+    --cafe-bg:              #1e1e2e;
+    --cafe-bg-elevated:     #252535;
+    --cafe-bg-surface:      #2a2a3a;
+    --cafe-bg-card:         #323242;
+    --cafe-bg-hover:        #3a3a4a;
+    --cafe-bg-primary:      #1e1e2e;
+    --cafe-bg-secondary:    #2a2a3a;
     
-    /* Accent — warm golden coffee color */
-    --cafe-accent:          #d4a574;
-    --cafe-accent-light:    #e8c9a8;
-    --cafe-accent-dark:     #b8956a;
-    --cafe-accent-dim:      rgba(212,165,116,0.12);
-    --cafe-accent-bg:       rgba(212,165,116,0.08);
-    --cafe-accent-border:   rgba(212,165,116,0.25);
+    /* Accent — modern amber */
+    --cafe-accent:          #f59e0b;
+    --cafe-accent-light:    #fbbf24;
+    --cafe-accent-dark:     #d97706;
+    --cafe-accent-dim:      rgba(245,158,11,0.1);
+    --cafe-accent-bg:       rgba(245,158,11,0.08);
+    --cafe-accent-border:   rgba(245,158,11,0.2);
     
-    /* Text hierarchy — warm whites */
-    --cafe-text-primary:    #faf6f2;
-    --cafe-text-secondary:  #c4b8b0;
-    --cafe-text-tertiary:   #8a7e76;
-    --cafe-text-muted:      #6a5e56;
+    /* Text hierarchy — clean whites */
+    --cafe-text-primary:    #f1f5f9;
+    --cafe-text-secondary:  #cbd5e1;
+    --cafe-text-tertiary:   #94a3b8;
+    --cafe-text-muted:      #64748b;
     
-    /* Semantic colors — warm, cafe-appropriate */
-    --cafe-success:         #5cb85c;
-    --cafe-success-bg:      rgba(92,184,92,0.12);
-    --cafe-success-border:  rgba(92,184,92,0.25);
+    /* Semantic colors — modern palette */
+    --cafe-success:         #22c55e;
+    --cafe-success-bg:      rgba(34,197,94,0.1);
+    --cafe-success-border:  rgba(34,197,94,0.2);
     
-    --cafe-danger:          #e74c3c;
-    --cafe-danger-bg:       rgba(231,76,60,0.12);
-    --cafe-danger-border:   rgba(231,76,60,0.25);
+    --cafe-danger:          #ef4444;
+    --cafe-danger-bg:       rgba(239,68,68,0.1);
+    --cafe-danger-border:   rgba(239,68,68,0.2);
     
-    --cafe-warning:         #f39c12;
-    --cafe-warning-bg:      rgba(243,156,18,0.12);
-    --cafe-warning-border:  rgba(243,156,18,0.25);
+    --cafe-warning:         #f59e0b;
+    --cafe-warning-bg:      rgba(245,158,11,0.1);
+    --cafe-warning-border:  rgba(245,158,11,0.2);
     
-    --cafe-info:            #3498db;
-    --cafe-info-bg:         rgba(52,152,219,0.12);
-    --cafe-info-border:     rgba(52,152,219,0.25);
+    --cafe-info:            #3b82f6;
+    --cafe-info-bg:         rgba(59,130,246,0.1);
+    --cafe-info-border:     rgba(59,130,246,0.2);
     
-    /* Borders — warm, subtle */
-    --cafe-border:          #4a423d;
-    --cafe-border-light:    #3d3632;
+    /* Borders — subtle, modern */
+    --cafe-border:          #3f3f5f;
+    --cafe-border-light:    #4f4f6f;
     --cafe-border-focus:    var(--cafe-accent);
     
-    /* Shadows — warm, soft */
-    --cafe-shadow-sm:       0 2px 4px rgba(0,0,0,0.25);
-    --cafe-shadow-md:       0 4px 12px rgba(0,0,0,0.35);
-    --cafe-shadow-lg:       0 8px 24px rgba(0,0,0,0.4);
-    --cafe-shadow-glow:     0 0 16px rgba(212,165,116,0.2);
+    /* Shadows — soft, modern */
+    --cafe-shadow-sm:       0 1px 2px rgba(0,0,0,0.1);
+    --cafe-shadow-md:       0 4px 6px rgba(0,0,0,0.15);
+    --cafe-shadow-lg:       0 10px 15px rgba(0,0,0,0.2);
+    --cafe-shadow-glow:     0 0 20px rgba(245,158,11,0.15);
     
-    /* Radius — consistent, modern */
-    --cafe-radius-sm:       6px;
-    --cafe-radius-md:       8px;
-    --cafe-radius-lg:       12px;
-    --cafe-radius-xl:       16px;
+    /* Radius — modern, consistent */
+    --cafe-radius-sm:       4px;
+    --cafe-radius-md:       6px;
+    --cafe-radius-lg:       8px;
+    --cafe-radius-xl:       12px;
     
-    /* Spacing scale — refined */
+    /* Spacing scale — modern */
     --cafe-space-xs:        4px;
     --cafe-space-sm:        8px;
     --cafe-space-md:        12px;
@@ -178,21 +178,21 @@ export const THEME_CSS = `
     --cafe-space-2xl:       24px;
     --cafe-space-3xl:       32px;
     
-    /* Typography scale — clean */
+    /* Typography scale — modern */
     --cafe-font-xs:         12px;
     --cafe-font-sm:         13px;
     --cafe-font-base:       14px;
-    --cafe-font-lg:         15px;
-    --cafe-font-xl:         17px;
-    --cafe-font-2xl:        22px;
-    --cafe-font-3xl:        28px;
+    --cafe-font-lg:         16px;
+    --cafe-font-xl:         18px;
+    --cafe-font-2xl:        24px;
+    --cafe-font-3xl:        30px;
     
     /* Status colors for operations */
-    --cafe-status-new:      #3498db;
-    --cafe-status-prep:     #f39c12;
-    --cafe-status-ready:    #5cb85c;
-    --cafe-status-completed:#8a7e76;
-    --cafe-status-cancelled:#e74c3c;
+    --cafe-status-new:      #3b82f6;
+    --cafe-status-prep:     #f59e0b;
+    --cafe-status-ready:    #22c55e;
+    --cafe-status-completed:#64748b;
+    --cafe-status-cancelled:#ef4444;
     
     /* Legacy compatibility — map to new system */
     --c-bg:        var(--cafe-bg);
@@ -459,65 +459,65 @@ export const THEME_CSS = `
   }
 
   .light {
-    /* ── Light Theme — Warm Cream Coffee Tones ───────────────────────────────────────────────── */
+    /* ── Modern Minimalist Theme (Light Mode) ───────────────────── */
     
-    /* Backgrounds — warm cream, not harsh white */
-    --cafe-bg:              #faf8f5;
+    /* Backgrounds — clean light tones */
+    --cafe-bg:              #f8fafc;
     --cafe-bg-elevated:     #ffffff;
-    --cafe-bg-surface:      #f5f0eb;
+    --cafe-bg-surface:      #f1f5f9;
     --cafe-bg-card:         #ffffff;
-    --cafe-bg-hover:        #ebe5de;
-    --cafe-bg-primary:      #faf8f5;
+    --cafe-bg-hover:        #f8fafc;
+    --cafe-bg-primary:      #f8fafc;
     --cafe-bg-secondary:    #ffffff;
     
-    /* Accent — rich coffee brown */
-    --cafe-accent:          #8b6914;
-    --cafe-accent-light:    #a67c00;
-    --cafe-accent-dark:     #6b5210;
-    --cafe-accent-dim:      rgba(139,105,20,0.1);
-    --cafe-accent-bg:       rgba(139,105,20,0.06);
-    --cafe-accent-border:   rgba(139,105,20,0.2);
+    /* Accent — modern amber */
+    --cafe-accent:          #f59e0b;
+    --cafe-accent-light:    #fbbf24;
+    --cafe-accent-dark:     #d97706;
+    --cafe-accent-dim:      rgba(245,158,11,0.08);
+    --cafe-accent-bg:       rgba(245,158,11,0.06);
+    --cafe-accent-border:   rgba(245,158,11,0.15);
     
-    /* Text hierarchy — warm dark browns */
-    --cafe-text-primary:    #2c2420;
-    --cafe-text-secondary:  #5c5048;
-    --cafe-text-tertiary:   #8a7e76;
-    --cafe-text-muted:      #a89a90;
+    /* Text hierarchy — clean darks */
+    --cafe-text-primary:    #1e293b;
+    --cafe-text-secondary:  #475569;
+    --cafe-text-tertiary:   #64748b;
+    --cafe-text-muted:      #94a3b8;
     
-    /* Semantic colors — warm, accessible */
-    --cafe-success:         #27ae60;
-    --cafe-success-bg:      #e8f5e9;
-    --cafe-success-border:  #c8e6c9;
+    /* Semantic colors — modern palette */
+    --cafe-success:         #22c55e;
+    --cafe-success-bg:      #dcfce7;
+    --cafe-success-border:  #bbf7d0;
     
-    --cafe-danger:          #c0392b;
-    --cafe-danger-bg:       #fdeaea;
-    --cafe-danger-border:   #fadbd8;
+    --cafe-danger:          #ef4444;
+    --cafe-danger-bg:       #fee2e2;
+    --cafe-danger-border:   #fecaca;
     
-    --cafe-warning:         #d68910;
-    --cafe-warning-bg:      #fef9e7;
-    --cafe-warning-border:  #fcf3cf;
+    --cafe-warning:         #f59e0b;
+    --cafe-warning-bg:      #fef3c7;
+    --cafe-warning-border:  #fde68a;
     
-    --cafe-info:            #2980b9;
-    --cafe-info-bg:         #eaf2f8;
-    --cafe-info-border:     #d4e6f1;
+    --cafe-info:            #3b82f6;
+    --cafe-info-bg:         #dbeafe;
+    --cafe-info-border:     #bfdbfe;
     
-    /* Borders — warm subtle browns */
-    --cafe-border:          #d4c8c0;
-    --cafe-border-light:    #e8e0d8;
+    /* Borders — subtle, modern */
+    --cafe-border:          #e2e8f0;
+    --cafe-border-light:    #f1f5f9;
     --cafe-border-focus:    var(--cafe-accent);
     
-    /* Shadows — warm, soft depth */
-    --cafe-shadow-sm:       0 2px 4px rgba(44,36,32,0.08);
-    --cafe-shadow-md:       0 4px 12px rgba(44,36,32,0.12);
-    --cafe-shadow-lg:       0 8px 24px rgba(44,36,32,0.15);
-    --cafe-shadow-glow:     0 0 16px rgba(139,105,20,0.15);
+    /* Shadows — soft, modern */
+    --cafe-shadow-sm:       0 1px 2px rgba(0,0,0,0.05);
+    --cafe-shadow-md:       0 4px 6px rgba(0,0,0,0.08);
+    --cafe-shadow-lg:       0 10px 15px rgba(0,0,0,0.1);
+    --cafe-shadow-glow:     0 0 20px rgba(245,158,11,0.1);
     
     /* Status colors — adjusted for light mode */
-    --cafe-status-new:      #2980b9;
-    --cafe-status-prep:     #d68910;
-    --cafe-status-ready:    #27ae60;
-    --cafe-status-completed:#8a7e76;
-    --cafe-status-cancelled:#c0392b;
+    --cafe-status-new:      #3b82f6;
+    --cafe-status-prep:     #f59e0b;
+    --cafe-status-ready:    #22c55e;
+    --cafe-status-completed:#64748b;
+    --cafe-status-cancelled:#ef4444;
     
     /* Legacy compatibility */
     --c-bg:        var(--cafe-bg);
@@ -814,7 +814,7 @@ export const pill = (bg, color, border) => ({
   textTransform: "uppercase",
   background: bg,
   color,
-  border: `1px solid ${border ?? color + "30"}`,
+  border: `1px solid ${border ?? `${color  }30`}`,
   whiteSpace: "nowrap",
   lineHeight: 1.4,
 });

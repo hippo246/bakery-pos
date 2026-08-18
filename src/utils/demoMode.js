@@ -1,7 +1,7 @@
 // Demo Mode Utilities for CafeOS
 // Handles safe demo data management
 
-import { APP_MODES, setAppMode, getAppMode } from './appMode.js';
+import { APP_MODES, setRuntimeMode, getRuntimeMode } from './runtimeMode.js';
 
 const _DEMO_PREFIX = 'demo_';
 
@@ -131,7 +131,7 @@ export function convertDemoToProduction(dataTools, options = {}) {
     }
 
     // Set production mode
-    setAppMode(APP_MODES.PRODUCTION);
+    setRuntimeMode(APP_MODES.PRODUCTION);
 
     return {
       ok: true,
@@ -179,21 +179,21 @@ export function exportDemoData(dataTools) {
  * Check if app is in demo mode
  */
 export function isCurrentlyDemoMode() {
-  return getAppMode() === APP_MODES.DEMO;
+  return getRuntimeMode() === APP_MODES.DEMO;
 }
 
 /**
  * Enable demo mode
  */
 export function enableDemoMode() {
-  setAppMode(APP_MODES.DEMO);
+  setRuntimeMode(APP_MODES.DEMO);
 }
 
 /**
  * Disable demo mode (switch to production)
  */
 export function disableDemoMode() {
-  setAppMode(APP_MODES.PRODUCTION);
+  setRuntimeMode(APP_MODES.PRODUCTION);
 }
 
 export default {

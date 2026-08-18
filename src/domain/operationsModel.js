@@ -344,7 +344,7 @@ export function getCriticalTasks(tasks) {
  */
 export function generateTasksFromTemplate(template, date) {
   const targetDate = new Date(date);
-  const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'uppercase' });
+  const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
   
   // Check if this day matches the recurrence pattern
   if (!template.recurrenceDays.includes(dayOfWeek)) {

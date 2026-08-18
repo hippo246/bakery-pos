@@ -1,5 +1,8 @@
 // Security Event Manager
 // Manages security events and event logging
+// NOTE: This is a frontend-only implementation for demo/local use
+// For production, security events must be logged by the server to be authoritative
+// Frontend events can be tampered with and are not suitable for compliance/forensics
 
 import { SecurityEventType, RiskLevel } from './SecurityTypes.js';
 
@@ -199,6 +202,18 @@ export class SecurityEventManager {
    * @returns {string} Event ID
    */
   generateEventId() {
+    // Use crypto.randomUUID() for security-sensitive ID generation
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return `event_${crypto.randomUUID()}`;
+    }
+    // Fallback to crypto.getRandomValues() if randomUUID not available
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const array = new Uint8Array(8);
+      crypto.getRandomValues(array);
+      const randomPart = Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+      return `event_${Date.now()}_${randomPart}`;
+    }
+    // Last resort fallback (should not happen in modern browsers)
     return `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 

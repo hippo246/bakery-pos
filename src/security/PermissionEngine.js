@@ -1,19 +1,81 @@
 // Permission Engine
 // Access control and permission management
+// NOTE: This is a frontend-only implementation for demo/local use
+// For production, permission checks must be enforced by the server
+// Frontend permission checks are UI-only and can be bypassed by modifying localStorage
+// All permission enforcement must happen on the server-side
 
 import { SecurityInterface } from './SecurityInterface.js';
-import { Permission, SecurityStatus, SecurityLevel } from './SecurityTypes.js';
+import { Permission, SecurityStatus } from './SecurityTypes.js';
 
 export class PermissionEngine extends SecurityInterface {
   constructor(config = {}) {
     super(config);
     this.rolePermissions = new Map();
     this.userPermissions = new Map();
+    this.userAttributes = new Map(); // ABAC: User attributes (department, location, clearance, etc.)
+    this.resourceAttributes = new Map(); // ABAC: Resource attributes (sensitivity, ownership, classification)
+    this.abacPolicies = []; // ABAC: Attribute-based policies
     this.accessLog = [];
     this.maxLogSize = 500;
     this.storageKey = 'cafeos_permission_engine';
     this.loadState();
     this.initializeDefaultPermissions();
+    this.initializeDefaultPolicies();
+  }
+
+  /**
+   * Initialize default ABAC policies
+   */
+  initializeDefaultPolicies() {
+    // Example: Managers can only access data for their own branch
+    this.abacPolicies.push({
+      id: 'manager-branch-isolation',
+      name: 'Manager Branch Isolation',
+      description: 'Managers can only access data for their assigned branch',
+      enabled: true,
+      conditions: {
+        userRole: 'manager',
+        resourceType: 'data'
+      },
+      rule: (userAttrs, resourceAttrs) => {
+        // Manager can only access resources from their branch
+        return userAttrs.branchId === resourceAttrs.branchId;
+      }
+    });
+
+    // Example: Staff can only modify orders they created
+    this.abacPolicies.push({
+      id: 'staff-order-ownership',
+      name: 'Staff Order Ownership',
+      description: 'Staff can only modify orders they created',
+      enabled: true,
+      conditions: {
+        userRole: 'staff',
+        resourceType: 'order',
+        action: 'modify'
+      },
+      rule: (userAttrs, resourceAttrs) => {
+        // Staff can only modify orders they created
+        return userAttrs.userId === resourceAttrs.createdBy;
+      }
+    });
+
+    // Example: Time-based access (business hours only)
+    this.abacPolicies.push({
+      id: 'business-hours-only',
+      name: 'Business Hours Access',
+      description: 'Staff can only access sensitive data during business hours',
+      enabled: false, // Disabled by default
+      conditions: {
+        userRole: 'staff',
+        resourceType: 'sensitive'
+      },
+      rule: (userAttrs, resourceAttrs) => {
+        const hour = new Date().getHours();
+        return hour >= 9 && hour <= 17; // 9 AM to 5 PM
+      }
+    });
   }
 
   /**
@@ -54,18 +116,39 @@ export class PermissionEngine extends SecurityInterface {
   }
 
   /**
-   * Check if a user has permission
+   * Check if a user has permission (RBAC + ABAC)
    * @param {string} permission - Permission to check
    * @param {string} userRole - User role
    * @param {string} userId - User ID (optional)
+   * @param {object} resourceContext - Resource context for ABAC (optional)
    * @returns {object} Permission check result
    */
-  checkPermission(permission, userRole, userId = null) {
+  checkPermission(permission, userRole, userId = null, resourceContext = null) {
+    // First check RBAC
+    let rbacResult = this._checkRBAC(permission, userRole, userId);
+    
+    // If RBAC denies, check ABAC policies
+    if (!rbacResult.allowed && resourceContext) {
+      const abacResult = this._checkABAC(permission, userRole, userId, resourceContext);
+      if (abacResult.allowed) {
+        this.logAccess(permission, userRole, userId, true, 'abac');
+        return { allowed: true, source: 'abac', policy: abacResult.policy };
+      }
+    }
+    
+    this.logAccess(permission, userRole, userId, rbacResult.allowed, rbacResult.source);
+    return rbacResult;
+  }
+
+  /**
+   * Check RBAC (Role-Based Access Control)
+   * @private
+   */
+  _checkRBAC(permission, userRole, userId) {
     // Check user-specific permissions first
     if (userId && this.userPermissions.has(userId)) {
       const userPerms = this.userPermissions.get(userId);
       if (userPerms.includes(permission)) {
-        this.logAccess(permission, userRole, userId, true);
         return { allowed: true, source: 'user' };
       }
     }
@@ -73,27 +156,160 @@ export class PermissionEngine extends SecurityInterface {
     // Check role permissions
     const rolePerms = this.rolePermissions.get(userRole);
     if (rolePerms && rolePerms.includes(permission)) {
-      this.logAccess(permission, userRole, userId, true);
       return { allowed: true, source: 'role' };
     }
 
-    this.logAccess(permission, userRole, userId, false);
     return { allowed: false, reason: 'Permission denied' };
   }
 
   /**
-   * Check multiple permissions
+   * Check ABAC (Attribute-Based Access Control)
+   * @private
+   */
+  _checkABAC(permission, userRole, userId, resourceContext) {
+    const userAttrs = this.userAttributes.get(userId) || {};
+    
+    for (const policy of this.abacPolicies) {
+      if (!policy.enabled) continue;
+      
+      // Check if policy conditions match
+      if (policy.conditions.userRole && policy.conditions.userRole !== userRole) continue;
+      if (policy.conditions.resourceType && policy.conditions.resourceType !== resourceContext.type) continue;
+      if (policy.conditions.action && policy.conditions.action !== resourceContext.action) continue;
+      
+      // Evaluate policy rule
+      try {
+        const result = policy.rule(userAttrs, resourceContext);
+        if (result) {
+          return { allowed: true, policy: policy.id };
+        }
+      } catch (error) {
+        console.error('[PermissionEngine] Policy evaluation error:', error);
+      }
+    }
+    
+    return { allowed: false };
+  }
+
+  /**
+   * Set user attributes for ABAC
+   * @param {string} userId - User ID
+   * @param {object} attributes - User attributes (branchId, department, location, clearance, etc.)
+   * @returns {object} Set result
+   */
+  setUserAttributes(userId, attributes) {
+    this.userAttributes.set(userId, attributes);
+    this.saveState();
+    return { success: true, userId, attributes };
+  }
+
+  /**
+   * Get user attributes
+   * @param {string} userId - User ID
+   * @returns {object} User attributes
+   */
+  getUserAttributes(userId) {
+    return this.userAttributes.get(userId) || {};
+  }
+
+  /**
+   * Set resource attributes for ABAC
+   * @param {string} resourceId - Resource ID
+   * @param {object} attributes - Resource attributes (branchId, sensitivity, ownership, classification, etc.)
+   * @returns {object} Set result
+   */
+  setResourceAttributes(resourceId, attributes) {
+    this.resourceAttributes.set(resourceId, attributes);
+    this.saveState();
+    return { success: true, resourceId, attributes };
+  }
+
+  /**
+   * Get resource attributes
+   * @param {string} resourceId - Resource ID
+   * @returns {object} Resource attributes
+   */
+  getResourceAttributes(resourceId) {
+    return this.resourceAttributes.get(resourceId) || {};
+  }
+
+  /**
+   * Add ABAC policy
+   * @param {object} policy - Policy definition
+   * @returns {object} Add result
+   */
+  addPolicy(policy) {
+    if (!policy.id || !policy.rule) {
+      return { success: false, reason: 'Policy must have id and rule' };
+    }
+    
+    // Check if policy already exists
+    const existingIndex = this.abacPolicies.findIndex(p => p.id === policy.id);
+    if (existingIndex >= 0) {
+      this.abacPolicies[existingIndex] = policy;
+    } else {
+      this.abacPolicies.push(policy);
+    }
+    
+    this.saveState();
+    return { success: true, policyId: policy.id };
+  }
+
+  /**
+   * Remove ABAC policy
+   * @param {string} policyId - Policy ID
+   * @returns {object} Remove result
+   */
+  removePolicy(policyId) {
+    const index = this.abacPolicies.findIndex(p => p.id === policyId);
+    if (index === -1) {
+      return { success: false, reason: 'Policy not found' };
+    }
+    
+    this.abacPolicies.splice(index, 1);
+    this.saveState();
+    return { success: true, policyId };
+  }
+
+  /**
+   * Enable/disable ABAC policy
+   * @param {string} policyId - Policy ID
+   * @param {boolean} enabled - Enable status
+   * @returns {object} Update result
+   */
+  setPolicyEnabled(policyId, enabled) {
+    const policy = this.abacPolicies.find(p => p.id === policyId);
+    if (!policy) {
+      return { success: false, reason: 'Policy not found' };
+    }
+    
+    policy.enabled = enabled;
+    this.saveState();
+    return { success: true, policyId, enabled };
+  }
+
+  /**
+   * Get all ABAC policies
+   * @returns {Array} Policies
+   */
+  getPolicies() {
+    return this.abacPolicies;
+  }
+
+  /**
+   * Check multiple permissions (RBAC + ABAC)
    * @param {Array} permissions - Permissions to check
    * @param {string} userRole - User role
    * @param {string} userId - User ID (optional)
+   * @param {object} resourceContext - Resource context for ABAC (optional)
    * @returns {object} Permission check result
    */
-  checkPermissions(permissions, userRole, userId = null) {
+  checkPermissions(permissions, userRole, userId = null, resourceContext = null) {
     const results = {};
     let allAllowed = true;
 
     permissions.forEach(permission => {
-      const result = this.checkPermission(permission, userRole, userId);
+      const result = this.checkPermission(permission, userRole, userId, resourceContext);
       results[permission] = result;
       if (!result.allowed) {
         allAllowed = false;
@@ -194,14 +410,16 @@ export class PermissionEngine extends SecurityInterface {
    * @param {string} userRole - User role
    * @param {string} userId - User ID
    * @param {boolean} allowed - Whether access was allowed
+   * @param {string} source - Access source (role, user, abac)
    */
-  logAccess(permission, userRole, userId, allowed) {
+  logAccess(permission, userRole, userId, allowed, source = 'role') {
     this.accessLog.push({
       timestamp: new Date().toISOString(),
       permission,
       userRole,
       userId,
-      allowed
+      allowed,
+      source
     });
 
     this.trimLog();
@@ -364,7 +582,10 @@ export class PermissionEngine extends SecurityInterface {
     try {
       const state = {
         rolePermissions: Array.from(this.rolePermissions.entries()),
-        userPermissions: Array.from(this.userPermissions.entries())
+        userPermissions: Array.from(this.userPermissions.entries()),
+        userAttributes: Array.from(this.userAttributes.entries()),
+        resourceAttributes: Array.from(this.resourceAttributes.entries()),
+        abacPolicies: this.abacPolicies
       };
       localStorage.setItem(this.storageKey, JSON.stringify(state));
     } catch (error) {
@@ -382,6 +603,9 @@ export class PermissionEngine extends SecurityInterface {
         const parsed = JSON.parse(state);
         this.rolePermissions = new Map(parsed.rolePermissions || []);
         this.userPermissions = new Map(parsed.userPermissions || []);
+        this.userAttributes = new Map(parsed.userAttributes || []);
+        this.resourceAttributes = new Map(parsed.resourceAttributes || []);
+        this.abacPolicies = parsed.abacPolicies || [];
       }
     } catch (error) {
       console.error('Failed to load permission engine state:', error);
@@ -394,9 +618,13 @@ export class PermissionEngine extends SecurityInterface {
   async reset() {
     this.rolePermissions.clear();
     this.userPermissions.clear();
+    this.userAttributes.clear();
+    this.resourceAttributes.clear();
+    this.abacPolicies = [];
     this.accessLog = [];
     localStorage.removeItem(this.storageKey);
     this.initializeDefaultPermissions();
+    this.initializeDefaultPolicies();
     this.status = SecurityStatus.UNKNOWN;
     return { success: true };
   }

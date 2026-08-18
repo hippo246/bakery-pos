@@ -25,7 +25,7 @@ export const arrayToCSV = (headers, data) => {
   if (!Array.isArray(headers) || !Array.isArray(data)) return '';
   
   // Header row
-  let csv = headers.map(escapeCSVField).join(',') + '\n';
+  let csv = `${headers.map(escapeCSVField).join(',')  }\n`;
   
   // Data rows
   data.forEach(row => {
@@ -34,7 +34,7 @@ export const arrayToCSV = (headers, data) => {
       const value = row[header];
       return escapeCSVField(value);
     });
-    csv += values.join(',') + '\n';
+    csv += `${values.join(',')  }\n`;
   });
   
   return csv;
@@ -77,7 +77,7 @@ export const arrayToXLSX = (headers, data) => {
   if (!Array.isArray(headers) || !Array.isArray(data)) return '';
   
   // Header row
-  let xlsx = headers.join('\t') + '\n';
+  let xlsx = `${headers.join('\t')  }\n`;
   
   // Data rows
   data.forEach(row => {
@@ -86,7 +86,7 @@ export const arrayToXLSX = (headers, data) => {
       const value = row[header];
       return value === null || value === undefined ? '' : String(value);
     });
-    xlsx += values.join('\t') + '\n';
+    xlsx += `${values.join('\t')  }\n`;
   });
   
   return xlsx;
@@ -310,7 +310,7 @@ export const addPrintStyles = () => {
 /**
  * Export sales report to CSV
  */
-export const exportSalesReportCSV = (kpis, channels, dateRange) => {
+export const exportSalesReportCSV = (kpis, channels, dateRange, format = 'csv') => {
   const headers = ['Metric', 'Value', 'Change', 'Context'];
   const data = [
     { Metric: 'Gross Sales', Value: kpis.sales.grossSales, Change: '', Context: 'Before refunds/discounts' },
@@ -322,14 +322,19 @@ export const exportSalesReportCSV = (kpis, channels, dateRange) => {
     { Metric: 'Average Order Value', Value: kpis.sales.averageOrderValue, Change: '', Context: 'Per order' },
   ];
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Sales-Report', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Sales-Report', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Sales-Report', dateRange));
+  }
 };
 
 /**
- * Export channel performance to CSV
+ * Export channel performance to CSV/XLSX
  */
-export const exportChannelReportCSV = (channels, dateRange) => {
+export const exportChannelReportCSV = (channels, dateRange, format = 'csv') => {
   const headers = ['Channel', 'Orders', 'Gross Sales', 'Revenue Share', 'Average Order Value', 'Net Sales'];
   const data = channels.map(ch => ({
     Channel: ch.name,
@@ -340,14 +345,19 @@ export const exportChannelReportCSV = (channels, dateRange) => {
     'Net Sales': ch.netSales.toFixed(2)
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Channel-Report', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Channel-Report', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Channel-Report', dateRange));
+  }
 };
 
 /**
- * Export menu performance to CSV
+ * Export menu performance to CSV/XLSX
  */
-export const exportMenuReportCSV = (items, dateRange) => {
+export const exportMenuReportCSV = (items, dateRange, format = 'csv') => {
   const headers = ['Item', 'Category', 'Quantity Sold', 'Gross Sales', 'Average Price', 'Estimated Cost', 'Estimated Gross Profit', 'Estimated Margin'];
   const data = items.map(item => ({
     Item: item.name,
@@ -360,14 +370,19 @@ export const exportMenuReportCSV = (items, dateRange) => {
     'Estimated Margin': item.estimatedMargin !== null ? `${item.estimatedMargin.toFixed(1)}%` : 'N/A'
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Menu-Performance', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Menu-Performance', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Menu-Performance', dateRange));
+  }
 };
 
 /**
- * Export order report to CSV
+ * Export order report to CSV/XLSX
  */
-export const exportOrderReportCSV = (orders, dateRange) => {
+export const exportOrderReportCSV = (orders, dateRange, format = 'csv') => {
   const headers = ['Order ID', 'Date', 'Customer', 'Source', 'Status', 'Amount', 'Payment Method', 'Payment Status'];
   const data = orders.map(order => ({
     'Order ID': order.id,
@@ -380,14 +395,19 @@ export const exportOrderReportCSV = (orders, dateRange) => {
     'Payment Status': order.payStatus
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Order-Report', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Order-Report', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Order-Report', dateRange));
+  }
 };
 
 /**
- * Export customer report to CSV
+ * Export customer report to CSV/XLSX
  */
-export const exportCustomerReportCSV = (customers, dateRange) => {
+export const exportCustomerReportCSV = (customers, dateRange, format = 'csv') => {
   const headers = ['Customer', 'Phone', 'Order Count', 'Total Spend', 'Average Order Value', 'Last Order Date'];
   const data = customers.map(customer => ({
     Customer: customer.name,
@@ -398,14 +418,19 @@ export const exportCustomerReportCSV = (customers, dateRange) => {
     'Last Order Date': formatDate(customer.lastOrderDate, 'short')
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Customer-Report', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Customer-Report', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Customer-Report', dateRange));
+  }
 };
 
 /**
- * Export payment method report to CSV
+ * Export payment method report to CSV/XLSX
  */
-export const exportPaymentReportCSV = (payments, dateRange) => {
+export const exportPaymentReportCSV = (payments, dateRange, format = 'csv') => {
   const headers = ['Payment Method', 'Transaction Count', 'Amount Collected', 'Share', 'Refunds', 'Net Collected'];
   const data = payments.map(payment => ({
     'Payment Method': payment.name,
@@ -416,14 +441,19 @@ export const exportPaymentReportCSV = (payments, dateRange) => {
     'Net Collected': payment.netCollected.toFixed(2)
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Payment-Report', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Payment-Report', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Payment-Report', dateRange));
+  }
 };
 
 /**
- * Export staff performance to CSV
+ * Export staff performance to CSV/XLSX
  */
-export const exportStaffReportCSV = (staff, dateRange) => {
+export const exportStaffReportCSV = (staff, dateRange, format = 'csv') => {
   const headers = ['Staff Name', 'Orders Handled', 'Sales Processed', 'Average Order Value', 'Refunds Processed', 'Voids Processed'];
   const data = staff.map(s => ({
     'Staff Name': s.staffName,
@@ -434,14 +464,19 @@ export const exportStaffReportCSV = (staff, dateRange) => {
     'Voids Processed': s.voidsProcessed
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Staff-Performance', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Staff-Performance', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Staff-Performance', dateRange));
+  }
 };
 
 /**
- * Export category performance to CSV
+ * Export category performance to CSV/XLSX
  */
-export const exportCategoryReportCSV = (categories, dateRange) => {
+export const exportCategoryReportCSV = (categories, dateRange, format = 'csv') => {
   const headers = ['Category', 'Quantity Sold', 'Gross Sales', 'Order Share', 'Average Price', 'Estimated Gross Profit', 'Estimated Margin'];
   const data = categories.map(cat => ({
     Category: cat.category,
@@ -453,22 +488,33 @@ export const exportCategoryReportCSV = (categories, dateRange) => {
     'Estimated Margin': cat.estimatedMargin !== null ? `${cat.estimatedMargin.toFixed(1)}%` : 'N/A'
   }));
   
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename('Category-Performance', dateRange));
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename('Category-Performance', dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename('Category-Performance', dateRange));
+  }
 };
 
 /**
  * Generic export function for any tabular data
  */
-export const exportGenericCSV = (data, filename, dateRange) => {
+export const exportGenericCSV = (data, filename, dateRange, format = 'csv') => {
   if (!Array.isArray(data) || data.length === 0) {
     console.warn('No data to export');
     return;
   }
   
   const headers = Object.keys(data[0]);
-  const csv = arrayToCSV(headers, data);
-  downloadCSV(csv, generateCSVFilename(filename, dateRange));
+  
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(headers, data);
+    downloadXLSX(xlsx, generateXLSXFilename(filename, dateRange));
+  } else {
+    const csv = arrayToCSV(headers, data);
+    downloadCSV(csv, generateCSVFilename(filename, dateRange));
+  }
 };
 
 /**
@@ -540,9 +586,9 @@ export const exportComparisonReportCSV = (currentKPIs, previousKPIs, comparison,
 };
 
 /**
- * Export full analytics report to CSV (all sections)
+ * Export full analytics report to CSV/XLSX (all sections)
  */
-export const exportFullAnalyticsCSV = (reportData, dateRange) => {
+export const exportFullAnalyticsCSV = (reportData, dateRange, format = 'csv') => {
   const sections = [];
   
   // KPIs section
@@ -603,8 +649,14 @@ export const exportFullAnalyticsCSV = (reportData, dateRange) => {
   }));
   sections.push(arrayToCSV(paymentHeaders, paymentData));
   
-  const csv = sections.join('\n');
-  downloadCSV(csv, generateCSVFilename('Full-Analytics-Report', dateRange));
+  const content = sections.join('\n');
+  
+  if (format === 'xlsx') {
+    const xlsx = arrayToXLSX(['Section', 'Content'], [{ Section: 'Full Analytics Report', Content: content }]);
+    downloadXLSX(xlsx, generateXLSXFilename('Full-Analytics-Report', dateRange));
+  } else {
+    downloadCSV(content, generateCSVFilename('Full-Analytics-Report', dateRange));
+  }
 };
 
 export default {

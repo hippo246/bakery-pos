@@ -14,6 +14,13 @@ import { now } from './dates.js';
  * @property {string|null} customerId - Customer ID if reserved
  * @property {number} occupiedSince - Timestamp when table was occupied
  * @property {string} notes - Table notes
+ * @property {string|null} tenantId - Tenant ID for multi-tenancy
+ * @property {string|null} businessId - Business ID
+ * @property {string|null} branchId - Branch ID for multi-branch isolation
+ * @property {string|null} createdBy - User ID who created the table (ABAC resource attribute)
+ * @property {string|null} updatedBy - User ID who last updated the table (ABAC resource attribute)
+ * @property {string|null} sensitivity - Resource sensitivity level (ABAC: public, internal, confidential, restricted)
+ * @property {string|null} classification - Resource classification (ABAC: standard, sensitive, critical)
  */
 
 // Valid table statuses

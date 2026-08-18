@@ -115,7 +115,7 @@ export function normalizeOrder(legacyOrder) {
   try {
     items = normalizeLegacyItems(legacyOrder);
   } catch (e) {
-    _warn('normalizeOrder: failed to parse items — ' + e.message);
+    _warn(`normalizeOrder: failed to parse items — ${  e.message}`);
     items = [];
   }
 
@@ -236,7 +236,7 @@ export function normalizeKdsCard(legacyKds) {
  */
 export function normalizeOrders(legacyOrders) {
   if (!Array.isArray(legacyOrders)) {
-    if (legacyOrders != null) _warn('normalizeOrders: expected array, got ' + typeof legacyOrders);
+    if (legacyOrders != null) _warn(`normalizeOrders: expected array, got ${  typeof legacyOrders}`);
     return [];
   }
   return legacyOrders.map((o, i) => {
@@ -252,7 +252,7 @@ export function normalizeOrders(legacyOrders) {
  */
 export function normalizeCustomers(legacyCustomers) {
   if (!Array.isArray(legacyCustomers)) {
-    if (legacyCustomers != null) _warn('normalizeCustomers: expected array, got ' + typeof legacyCustomers);
+    if (legacyCustomers != null) _warn(`normalizeCustomers: expected array, got ${  typeof legacyCustomers}`);
     return [];
   }
   return legacyCustomers.map((c, i) => {
@@ -268,7 +268,7 @@ export function normalizeCustomers(legacyCustomers) {
  */
 export function normalizeKdsCards(legacyKdsCards) {
   if (!Array.isArray(legacyKdsCards)) {
-    if (legacyKdsCards != null) _warn('normalizeKdsCards: expected array, got ' + typeof legacyKdsCards);
+    if (legacyKdsCards != null) _warn(`normalizeKdsCards: expected array, got ${  typeof legacyKdsCards}`);
     return [];
   }
   return legacyKdsCards.map((k, i) => {

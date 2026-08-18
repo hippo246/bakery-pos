@@ -1,7 +1,7 @@
 // Notification Domain Model
 // Core notification logic for CafeOS Operational Inbox
 
-const genId = () => "NOTIF-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+const genId = () => `NOTIF-${  Date.now()  }-${  Math.random().toString(36).slice(2, 7)}`;
 const safeStr = (v) => (v === null || v === undefined ? "" : String(v));
 const safeNum = (v, fb = 0) => { const n = Number(v); return Number.isFinite(n) ? n : fb; };
 const safeArr = (v) => (Array.isArray(v) ? v : []);

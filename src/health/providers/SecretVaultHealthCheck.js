@@ -197,7 +197,7 @@ export class SecretVaultHealthCheck extends HealthCheckProvider {
   async checkCredentialIntegrity() {
     try {
       // Perform encryption/decryption round trip to verify integrity
-      const testValue = 'integrity-test-' + Date.now();
+      const testValue = `integrity-test-${  Date.now()}`;
       const encrypted = await credentialManager.encrypt(testValue);
       const decrypted = await credentialManager.decrypt(encrypted);
       

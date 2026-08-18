@@ -5,9 +5,10 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import TopChrome from '../fastfood-pos/TopChrome.jsx';
+import { getTerminalId } from '../../utils/runtimeMode.js';
 import FunctionKeyPanel from '../fastfood-pos/FunctionKeyPanel';
 import ActionButtons from '../fastfood-pos/ActionButtons';
-import TopChrome from '../fastfood-pos/TopChrome';
 
 export default function FastFoodStaff(props) {
   const { onNavigate } = props;
@@ -79,7 +80,7 @@ export default function FastFoodStaff(props) {
       <TopChrome
         customerName=""
         onCustomerNameChange={() => {}}
-        terminalId="HQ-PC01"
+        terminalId={getTerminalId()}
       />
 
       {/* Main Content */}

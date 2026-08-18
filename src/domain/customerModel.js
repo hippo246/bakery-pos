@@ -19,6 +19,13 @@ import { now, toTimestamp } from './dates.js';
  * @property {string} notes - Customer notes
  * @property {number} createdAt - Creation timestamp
  * @property {number} updatedAt - Last update timestamp
+ * @property {string|null} tenantId - Tenant ID for multi-tenancy
+ * @property {string|null} businessId - Business ID
+ * @property {string|null} branchId - Branch ID for multi-branch isolation
+ * @property {string|null} createdBy - User ID who created the customer (ABAC resource attribute)
+ * @property {string|null} updatedBy - User ID who last updated the customer (ABAC resource attribute)
+ * @property {string|null} sensitivity - Resource sensitivity level (ABAC: public, internal, confidential, restricted)
+ * @property {string|null} classification - Resource classification (ABAC: standard, sensitive, critical)
  */
 
 // Valid customer tiers

@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Verify ClassicPosCRM Build",
+  "description": "Verify ClassicPosCRM compiles correctly",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "**/ClassicPosCRM.jsx"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npm run build 2>&1 | head -50",
+    "timeout": 120000
+  }
+}

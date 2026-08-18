@@ -1,18 +1,20 @@
 // Production constants and seed data for CafeOS
 
-import { 
-  BATCH_STATUS, 
-  QC_GRADES, 
-  QC_STATUS, 
-  WASTAGE_REASONS, 
+import {
+  BATCH_STATUS,
+  QC_GRADES,
+  QC_STATUS,
+  WASTAGE_REASONS,
   REPLACEMENT_REASONS,
   TRACEABILITY_STATES,
   EXPIRY_GROUPS,
   QUALITY_CHECK_TYPES,
   CHECK_RESULTS
 } from "../domain/productionModel.js";
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
 
 // ── Seed production batches ───────────────────────────────────────────────────
+// PRODUCTION SAFETY: This is demo data, forbidden in production
 
 export const LEGACY_INIT_PRODUCTION_BATCHES = [
   {
@@ -319,7 +321,12 @@ export const LEGACY_INIT_PRODUCTION_BATCHES = [
 
 import { normalizeProductionBatches } from "../domain/productionModel.js";
 
-export const INIT_PRODUCTION_BATCHES = normalizeProductionBatches(LEGACY_INIT_PRODUCTION_BATCHES);
+export const INIT_PRODUCTION_BATCHES = () => {
+  if (!isDatasetAllowed('INIT_PRODUCTION_BATCHES')) {
+    throw new Error(getProductionBackendError());
+  }
+  return normalizeProductionBatches(LEGACY_INIT_PRODUCTION_BATCHES);
+};
 
 // ── Production UI configuration ───────────────────────────────────────────────────
 

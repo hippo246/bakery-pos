@@ -1,6 +1,5 @@
-import React from 'react';
-import { useState, useMemo, useEffect } from "react";
-import { card, btn, input, label } from "../../styles/theme";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { C, card, btn, input, label } from "../../styles/theme";
 import { createOrder, getOrderDisplayItems, getOrderCustomerName, getOrderAmount } from "../../domain/orderModel.js";
 import { createKdsTicketsFromOrder } from "../../domain/kdsModel.js";
 import { generateId } from "../../domain/ids.js";
@@ -11,6 +10,7 @@ import DestructiveDialog from "../common/DestructiveDialog";
 import WarningDialog from "../common/WarningDialog";
 import PromptDialog from "../common/PromptDialog";
 import SelectionDialog from "../common/SelectionDialog";
+import { useAppContext } from "../../context/AppContext.jsx";
 
 const DELIVERY_PARTNERS = {
   DIRECT_DELIVERY: { id: "direct", name: "Direct Delivery", color: "#4CAF50", icon: "🟢", commission: 0, settlementDays: 0, features: ["custom"] },
@@ -132,9 +132,28 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
 
   const safeStr = (val, fallback = "") => (val == null ? fallback : String(val).trim() || fallback);
 
-  const [ordersState, setOrdersState] = useState(deliveryOrders || INIT_DELIVERY_ORDERS);
+  // Try to use context, but fall back to props if not available
+  let contextDeliveryOrders, saveDeliveryOrders;
+  try {
+    const context = useAppContext();
+    contextDeliveryOrders = context.deliveryOrders;
+    saveDeliveryOrders = context.saveDeliveryOrders;
+  } catch (error) {
+    // Context not available, use props only
+    contextDeliveryOrders = null;
+    saveDeliveryOrders = null;
+  }
+
+  const [ordersState, setOrdersState] = useState(contextDeliveryOrders || deliveryOrders || INIT_DELIVERY_ORDERS);
   const [riders, setRiders] = useState(INIT_RIDERS);
   const [settlements, setSettlements] = useState(INIT_SETTLEMENTS);
+
+  // Sync with context delivery orders when they change
+  useEffect(() => {
+    if (contextDeliveryOrders && contextDeliveryOrders.length > 0) {
+      setOrdersState(contextDeliveryOrders);
+    }
+  }, [contextDeliveryOrders]);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [pipelineFilter, setPipelineFilter] = useState("ALL"); // ALL, PACKING, READY_FOR_PICKUP, PICKED_UP, OUT_FOR_DELIVERY, DELIVERED, FAILED, CANCELLED
   const [search, setSearch] = useState("");
@@ -202,7 +221,10 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
     });
   };
 
-  const handleSetDeliveryOrders = setDeliveryOrders || setOrdersState;
+  const handleSetDeliveryOrders = (newOrders) => {
+    setOrdersState(newOrders);
+    saveDeliveryOrders(newOrders);
+  };
 
   const filtered = useMemo(() => {
     const safeOrders = Array.isArray(ordersState) ? ordersState : [];

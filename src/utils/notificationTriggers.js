@@ -1,7 +1,7 @@
 // Notification Triggers for Operational Modules
 import { createNotification, NOTIFICATION_CATEGORIES, NOTIFICATION_PRIORITY } from '../domain/notificationModel.js';
 
-const genId = () => "NOTIF-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+const genId = () => `NOTIF-${  Date.now()  }-${  Math.random().toString(36).slice(2, 7)}`;
 
 // Order notification triggers
 export const triggerOrderNotification = (order, type, metadata = {}) => {

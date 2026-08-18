@@ -3,10 +3,9 @@
 
 import { createBackupAuditLog } from "../domain/auditLogModel.js";
 import { getCurrentUserId } from "./authService.js";
-import { 
-  uploadToCloudStorage, 
-  getActiveCloudProvider,
-  CLOUD_PROVIDERS 
+import {
+  uploadToCloudStorage,
+  getActiveCloudProvider
 } from "./cloudStorage.js";
 
 const BACKUP_STORAGE_KEY = 'cafeos_backup_schedule';

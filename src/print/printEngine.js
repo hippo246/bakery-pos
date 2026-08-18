@@ -321,7 +321,7 @@ class PrintEngine {
   generateReceipt(data, template, _paperSize) {
     const { businessInfo, order, items, payments, taxes, totals } = data;
 
-    let content = [];
+    const content = [];
 
     // Header
     if (template.showHeader) {
@@ -366,6 +366,14 @@ class PrintEngine {
       style: "normal",
       content: `Cashier: ${order.cashier || "N/A"}`
     });
+    if (template.showTerminal && order.terminalId) {
+      content.push({
+        type: "text",
+        align: "left",
+        style: "normal",
+        content: `Terminal: ${order.terminalId}`
+      });
+    }
     if (order.table) {
       content.push({
         type: "text",
@@ -484,7 +492,7 @@ class PrintEngine {
   generateKitchenTicket(data, _template, _paperSize) {
     const { order, items, station, urgency } = data;
 
-    let content = [];
+    const content = [];
 
     // Header with urgency
     if (urgency === "high") {
@@ -597,7 +605,7 @@ class PrintEngine {
   generateShiftReport(data, _template, _paperSize) {
     const { shift, summary, _transactions, cashier } = data;
 
-    let content = [];
+    const content = [];
 
     // Header
     content.push({
@@ -726,7 +734,7 @@ class PrintEngine {
   generatePurchaseOrder(data, _template, _paperSize) {
     const { order, supplier, items, businessInfo } = data;
 
-    let content = [];
+    const content = [];
 
     // Header
     content.push({
@@ -860,7 +868,7 @@ class PrintEngine {
   generateReservationSlip(data, template, _paperSize) {
     const { reservation, businessInfo } = data;
 
-    let content = [];
+    const content = [];
 
     // Header
     content.push({

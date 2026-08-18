@@ -133,7 +133,7 @@ const KPICard = ({ label, value, change, isPositive, isLoading }) => {
     <div style={{
       background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
       borderRadius: 12, padding: 18,
-      borderLeft: '4px solid ' + (isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"),
+      borderLeft: `4px solid ${  isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"}`,
       transition: 'all 0.2s ease',
     }}>
       <div style={{
@@ -308,7 +308,7 @@ function AnalyticsReports({
   ]);
 
   // Export handler
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(async (format) => {
     if (isExporting) return;
     if (currentPeriodOrders.length === 0) {
       setAlertDialog({
@@ -321,29 +321,31 @@ function AnalyticsReports({
     }
     setIsExporting(true);
     try {
+      // Use the passed format or default to 'csv'
+      const exportFormat = format || 'csv';
       switch (activeSection) {
-        case 'overview':      exportFullAnalyticsCSV({ kpis: currentKPIs, channels: channelPerformance, menuItems: menuPerformance, payments: paymentBreakdown }, currentDateRange); break;
-        case 'sales':         exportSalesReportCSV(currentKPIs, channelPerformance, currentDateRange); break;
-        case 'orders':        exportOrderReportCSV(currentPeriodOrders, currentDateRange); break;
-        case 'menu':          exportMenuReportCSV(menuPerformance, currentDateRange); break;
-        case 'channels':      exportChannelReportCSV(channelPerformance, currentDateRange); break;
-        case 'customers':     exportCustomerReportCSV(customerPerformance, currentDateRange); break;
-        case 'payments':      exportPaymentReportCSV(paymentBreakdown, currentDateRange); break;
-        case 'staff':         exportStaffReportCSV(staffPerformance, currentDateRange); break;
-        case 'categories':    exportCategoryReportCSV(categoryPerformance, currentDateRange); break;
-        case 'profitability': exportGenericCSV([currentKPIs.profitability], 'Profitability', currentDateRange); break;
-        case 'tables':        exportGenericCSV(tablePerformance, 'Table-Performance', currentDateRange); break;
-        case 'delivery':      exportGenericCSV(deliveryPerformance, 'Delivery-Performance', currentDateRange); break;
-        case 'inventory':     exportGenericCSV(inventoryPerformance, 'Inventory-Performance', currentDateRange); break;
-        case 'purchasing':    exportGenericCSV(purchasingPerformance, 'Purchasing-Performance', currentDateRange); break;
-        case 'production':    exportGenericCSV([productionPerformance], 'Production-Performance', currentDateRange); break;
-        case 'documents':     exportGenericCSV([documentStats], 'Document-Stats', currentDateRange); break;
-        default:              exportFullAnalyticsCSV({ kpis: currentKPIs, channels: channelPerformance, menuItems: menuPerformance, payments: paymentBreakdown }, currentDateRange);
+        case 'overview':      exportFullAnalyticsCSV({ kpis: currentKPIs, channels: channelPerformance, menuItems: menuPerformance, payments: paymentBreakdown }, currentDateRange, exportFormat); break;
+        case 'sales':         exportSalesReportCSV(currentKPIs, channelPerformance, currentDateRange, exportFormat); break;
+        case 'orders':        exportOrderReportCSV(currentPeriodOrders, currentDateRange, exportFormat); break;
+        case 'menu':          exportMenuReportCSV(menuPerformance, currentDateRange, exportFormat); break;
+        case 'channels':      exportChannelReportCSV(channelPerformance, currentDateRange, exportFormat); break;
+        case 'customers':     exportCustomerReportCSV(customerPerformance, currentDateRange, exportFormat); break;
+        case 'payments':      exportPaymentReportCSV(paymentBreakdown, currentDateRange, exportFormat); break;
+        case 'staff':         exportStaffReportCSV(staffPerformance, currentDateRange, exportFormat); break;
+        case 'categories':    exportCategoryReportCSV(categoryPerformance, currentDateRange, exportFormat); break;
+        case 'profitability': exportGenericCSV([currentKPIs.profitability], 'Profitability', currentDateRange, exportFormat); break;
+        case 'tables':        exportGenericCSV(tablePerformance, 'Table-Performance', currentDateRange, exportFormat); break;
+        case 'delivery':      exportGenericCSV(deliveryPerformance, 'Delivery-Performance', currentDateRange, exportFormat); break;
+        case 'inventory':     exportGenericCSV(inventoryPerformance, 'Inventory-Performance', currentDateRange, exportFormat); break;
+        case 'purchasing':    exportGenericCSV(purchasingPerformance, 'Purchasing-Performance', currentDateRange, exportFormat); break;
+        case 'production':    exportGenericCSV([productionPerformance], 'Production-Performance', currentDateRange, exportFormat); break;
+        case 'documents':     exportGenericCSV([documentStats], 'Document-Stats', currentDateRange, exportFormat); break;
+        default:              exportFullAnalyticsCSV({ kpis: currentKPIs, channels: channelPerformance, menuItems: menuPerformance, payments: paymentBreakdown }, currentDateRange, exportFormat);
       }
       setAlertDialog({
         isOpen: true,
         title: 'Export Successful',
-        message: 'Report exported successfully.',
+        message: `Report exported successfully as ${exportFormat.toUpperCase()}.`,
         type: 'success'
       });
     } catch (error) {
@@ -361,23 +363,23 @@ function AnalyticsReports({
   }, [activeSection, currentKPIs, channelPerformance, menuPerformance, paymentBreakdown, customerPerformance, staffPerformance, categoryPerformance, currentPeriodOrders, currentDateRange, isExporting, tablePerformance, deliveryPerformance, inventoryPerformance, purchasingPerformance, productionPerformance, documentStats]);
 
   const generateReportHTML = useCallback(() => {
-    return '<div>Report content for ' + activeSection + '</div>';
+    return `<div>Report content for ${  activeSection  }</div>`;
   }, [activeSection]);
 
   const handlePrint = useCallback(() => {
     const reportData = generateReportHTML();
-    const sectionTitle = activeSection.charAt(0).toUpperCase() + activeSection.slice(1) + ' Report';
+    const sectionTitle = `${activeSection.charAt(0).toUpperCase() + activeSection.slice(1)  } Report`;
     printReport(sectionTitle, currentDateRange, reportData, businessDetails);
   }, [activeSection, currentDateRange, businessDetails, generateReportHTML]);
 
-  const formatCurrency = (value) => '₹' + Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const formatCurrency = (value) => `₹${  Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 
   const formatComparison = (comparisonValue) => {
     if (!comparisonValue) return { display: '—', isPositive: true };
     const { value, percentage, direction } = comparisonValue;
     if (value === null) return { display: 'N/A', isPositive: true };
     const sign = direction === 'up' ? '+' : '';
-    const display = sign + percentage.toFixed(1) + '%';
+    const display = `${sign + percentage.toFixed(1)  }%`;
     return { display, isPositive: direction === 'up' || direction === 'neutral' };
   };
 
@@ -500,7 +502,7 @@ function AnalyticsReports({
 
       {/* Content Area */}
       {currentPeriodOrders.length === 0 ? (
-        <EmptyState message={'No orders recorded for ' + currentDateRange.label.toLowerCase() + '. Select a different date range to view analytics.'} />
+        <EmptyState message={`No orders recorded for ${  currentDateRange.label.toLowerCase()  }. Select a different date range to view analytics.`} />
       ) : (
         <>
           {activeSection === 'overview' && (
@@ -638,7 +640,7 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
         <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}              change={salesComparison.display}  isPositive={salesComparison.isPositive} />
         <KPICard label="Orders"          value={currentKPIs.orders.total}                                change={ordersComparison.display} isPositive={ordersComparison.isPositive} />
         <KPICard label="Avg Order Value" value={formatCurrency(currentKPIs.sales.averageOrderValue)}     change={aovComparison.display}    isPositive={aovComparison.isPositive} />
-        <KPICard label="Completion Rate" value={currentKPIs.orders.completionRate.toFixed(1) + '%'}      change={formatComparison(comparison?.completionRate).display} isPositive={true} />
+        <KPICard label="Completion Rate" value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}      change={formatComparison(comparison?.completionRate).display} isPositive={true} />
         <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}               change="—"                        isPositive={false} />
         <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}          change="—"                        isPositive={true} />
       </div>
@@ -797,8 +799,8 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
         <KPICard label="Total Orders"     value={currentKPIs.orders.total}                              change={ordersComparison.display}      isPositive={ordersComparison.isPositive} />
         <KPICard label="Completed"        value={currentKPIs.orders.completed}                          change="—"                             isPositive={true} />
         <KPICard label="Cancelled"        value={currentKPIs.orders.cancelled}                          change="—"                             isPositive={false} />
-        <KPICard label="Completion Rate"  value={currentKPIs.orders.completionRate.toFixed(1) + '%'}    change={completionComparison.display}  isPositive={true} />
-        <KPICard label="Cancellation Rate"value={currentKPIs.orders.cancellationRate.toFixed(1) + '%'}  change={cancellationComparison.display} isPositive={cancellationComparison.isPositive} />
+        <KPICard label="Completion Rate"  value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}    change={completionComparison.display}  isPositive={true} />
+        <KPICard label="Cancellation Rate"value={`${currentKPIs.orders.cancellationRate.toFixed(1)  }%`}  change={cancellationComparison.display} isPositive={cancellationComparison.isPositive} />
         <KPICard label="Open Orders"      value={currentKPIs.orders.open}                               change="—"                             isPositive={true} />
       </div>
 
@@ -855,7 +857,7 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
                 <td style={{ padding: "10px 12px" }}>{order.customer?.name || order.customerName || 'Guest'}</td>
                 <td style={{ padding: "10px 12px" }}>{order.source}</td>
                 <td style={{ padding: "10px 12px" }}>
-                  <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: statusColors[order.status] ? statusColors[order.status] + '22' : "var(--cafe-bg-surface)", color: statusColors[order.status] || "var(--cafe-text-tertiary)", fontWeight: 700 }}>
+                  <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, background: statusColors[order.status] ? `${statusColors[order.status]  }22` : "var(--cafe-bg-surface)", color: statusColors[order.status] || "var(--cafe-text-tertiary)", fontWeight: 700 }}>
                     {order.status}
                   </span>
                 </td>
@@ -1120,7 +1122,7 @@ function ProfitabilitySection({ profitability, currentKPIs, isMobile, formatCurr
         <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)} change="—" isPositive={true} />
         <KPICard label="Estimated COGS"  value={formatCurrency(cogs)}                      change="—" isPositive={false} />
         <KPICard label="Gross Profit"    value={formatCurrency(grossProfit)}               change="—" isPositive={grossProfit >= 0} />
-        <KPICard label="Gross Margin"    value={marginPercent.toFixed(1) + '%'}             change="—" isPositive={marginPercent >= 0} />
+        <KPICard label="Gross Margin"    value={`${marginPercent.toFixed(1)  }%`}             change="—" isPositive={marginPercent >= 0} />
       </div>
 
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
@@ -1128,9 +1130,9 @@ function ProfitabilitySection({ profitability, currentKPIs, isMobile, formatCurr
         <div style={{ fontSize: 14, color: "var(--cafe-text-secondary)", lineHeight: 1.7 }}>
           {[
             { label: "Net Sales",       val: formatCurrency(currentKPIs.sales.netSales) },
-            { label: "Estimated COGS",  val: formatCurrency(cogs) + " (calculated from menu item costs)" },
-            { label: "Gross Profit",    val: formatCurrency(grossProfit) + " (Net Sales - COGS)" },
-            { label: "Gross Margin",    val: marginPercent.toFixed(1) + "% (Gross Profit / Net Sales)" },
+            { label: "Estimated COGS",  val: `${formatCurrency(cogs)  } (calculated from menu item costs)` },
+            { label: "Gross Profit",    val: `${formatCurrency(grossProfit)  } (Net Sales - COGS)` },
+            { label: "Gross Margin",    val: `${marginPercent.toFixed(1)  }% (Gross Profit / Net Sales)` },
           ].map(r => (
             <div key={r.label} style={{ marginBottom: 10 }}><strong>{r.label}:</strong> {r.val}</div>
           ))}
@@ -1200,7 +1202,7 @@ function DeliverySection({ deliveryPerformance }) {
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>
-                    {driver.averageDeliveryTime ? driver.averageDeliveryTime.toFixed(1) + 'm' : 'N/A'}
+                    {driver.averageDeliveryTime ? `${driver.averageDeliveryTime.toFixed(1)  }m` : 'N/A'}
                   </div>
                   <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{driver.completionRate.toFixed(1)}% complete</div>
                 </div>
@@ -1279,8 +1281,8 @@ function ProductionSection({ productionPerformance, isMobile }) {
         <KPICard label="Completed"      value={productionPerformance.completedBatches}            change="—" isPositive={true} />
         <KPICard label="In Progress"    value={productionPerformance.inProgressBatches}           change="—" isPositive={true} />
         <KPICard label="Failed"         value={productionPerformance.failedBatches}               change="—" isPositive={false} />
-        <KPICard label="Average Yield"  value={productionPerformance.averageYield.toFixed(1)+'%'} change="—" isPositive={true} />
-        <KPICard label="Waste Rate"     value={productionPerformance.wasteRate.toFixed(1)+'%'}    change="—" isPositive={false} />
+        <KPICard label="Average Yield"  value={`${productionPerformance.averageYield.toFixed(1)}%`} change="—" isPositive={true} />
+        <KPICard label="Waste Rate"     value={`${productionPerformance.wasteRate.toFixed(1)}%`}    change="—" isPositive={false} />
       </div>
     </div>
   );
@@ -1344,7 +1346,7 @@ function HistorySection({ isMobile }) {
     }
   }, [selectedDay]);
 
-  const rs = (v) => '₹' + Number(v).toLocaleString('en-IN');
+  const rs = (v) => `₹${  Number(v).toLocaleString('en-IN')}`;
 
   // Build a monthly comparison mini-table from all archived days
   // (hooks must be called before any conditional return)

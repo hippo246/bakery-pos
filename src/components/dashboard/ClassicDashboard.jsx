@@ -485,7 +485,7 @@ export default function ClassicDashboard({
         doc.rect(15, yPos - 5, 180, 8, 'F');
       }
       doc.setFont('helvetica', 'bold');
-      doc.text(label + ':', 20, yPos);
+      doc.text(`${label  }:`, 20, yPos);
       doc.setFont('helvetica', 'normal');
       doc.text(value, 80, yPos);
       yPos += 8;

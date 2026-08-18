@@ -470,7 +470,7 @@ export class CacheManager {
     const now = Date.now();
     let totalSize = 0;
     let expiredCount = 0;
-    let byPriority = { high: 0, normal: 0, low: 0 };
+    const byPriority = { high: 0, normal: 0, low: 0 };
     
     this.cacheMetadata.forEach(metadata => {
       totalSize += metadata.size;

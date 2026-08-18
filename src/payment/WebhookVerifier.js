@@ -154,9 +154,9 @@ export class WebhookVerifier {
     const sortedKeys = Object.keys(data).sort();
     
     // Create checksum string
-    const checksumString = sortedKeys
+    const checksumString = `${sortedKeys
       .map(key => `${data[key]}`)
-      .join('|') + '|' + secret;
+      .join('|')  }|${  secret}`;
     
     // Generate SHA256 hash
     const encoder = new TextEncoder();

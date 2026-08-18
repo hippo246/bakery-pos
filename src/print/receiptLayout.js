@@ -402,12 +402,12 @@ class ReceiptLayout {
       switch (item.type) {
         case "text": {
           const alignedText = this.alignText(item.text, item.align, charWidth);
-          text += alignedText + "\n";
+          text += `${alignedText  }\n`;
           break;
         }
 
         case "line":
-          text += "-".repeat(charWidth) + "\n";
+          text += `${"-".repeat(charWidth)  }\n`;
           break;
 
         case "qr":
@@ -454,7 +454,7 @@ class ReceiptLayout {
 
   // Pad text for table cells
   padText(text, width, align) {
-    const truncated = text.length > width ? text.substring(0, width - 3) + "..." : text;
+    const truncated = text.length > width ? `${text.substring(0, width - 3)  }...` : text;
     return this.alignText(truncated, align, width);
   }
 

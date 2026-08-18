@@ -239,7 +239,7 @@ export const analyticsStrategies = {
           📊 Analytics (Cached)
         </div>
         <div style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>
-          {isCached && 'Showing cached data from ' + new Date(cachedData.timestamp).toLocaleString()}
+          {isCached && `Showing cached data from ${  new Date(cachedData.timestamp).toLocaleString()}`}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
           <div style={{ backgroundColor: '#F8F9FA', padding: '12px', borderRadius: '4px' }}>

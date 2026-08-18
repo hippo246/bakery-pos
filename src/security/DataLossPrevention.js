@@ -2,7 +2,7 @@
 // Prevents accidental data loss through confirmation and validation
 
 import { SecurityInterface } from './SecurityInterface.js';
-import { SecurityStatus, SecurityLevel } from './SecurityTypes.js';
+import { SecurityStatus } from './SecurityTypes.js';
 import { getSecurityEventManager } from './SecurityEventManager.js';
 
 export class DataLossPrevention extends SecurityInterface {

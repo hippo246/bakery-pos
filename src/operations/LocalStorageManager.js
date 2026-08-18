@@ -49,7 +49,7 @@ export class LocalStorageManager {
   calculateUsage() {
     let total = 0;
     
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
         total += (localStorage[key].length + key.length) * 2; // UTF-16 uses 2 bytes per character
       }
@@ -263,7 +263,7 @@ export class LocalStorageManager {
    */
   async performCleanup() {
     const usage = this.calculateUsage();
-    console.log('[LocalStorageManager] Performing cleanup, usage:', usage.percentage.toFixed(2) + '%');
+    console.log('[LocalStorageManager] Performing cleanup, usage:', `${usage.percentage.toFixed(2)  }%`);
     
     let freedSpace = 0;
     
@@ -272,7 +272,7 @@ export class LocalStorageManager {
       freedSpace += freed;
     }
     
-    console.log('[LocalStorageManager] Cleanup completed, freed:', (freedSpace / 1024).toFixed(2) + 'KB');
+    console.log('[LocalStorageManager] Cleanup completed, freed:', `${(freedSpace / 1024).toFixed(2)  }KB`);
     
     return freedSpace;
   }
@@ -285,7 +285,7 @@ export class LocalStorageManager {
     const now = Date.now();
     
     for (const keyPattern of rule.keys) {
-      for (let key in localStorage) {
+      for (const key in localStorage) {
         if (key.startsWith(keyPattern)) {
           try {
             const data = localStorage.getItem(key);
@@ -334,7 +334,7 @@ export class LocalStorageManager {
     
     const keySizes = [];
     
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
         const size = (localStorage[key].length + key.length) * 2;
         keySizes.push({ key, size });
@@ -363,7 +363,7 @@ export class LocalStorageManager {
       }
     }
     
-    console.log('[LocalStorageManager] Emergency cleanup freed:', (freedSpace / 1024).toFixed(2) + 'KB');
+    console.log('[LocalStorageManager] Emergency cleanup freed:', `${(freedSpace / 1024).toFixed(2)  }KB`);
     
     return freedSpace;
   }
@@ -424,7 +424,7 @@ export class LocalStorageManager {
     
     // Calculate size by key prefix
     const sizeByPrefix = {};
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
         const prefix = key.split('_')[0] || 'other';
         const size = (localStorage[key].length + key.length) * 2;
@@ -448,7 +448,7 @@ export class LocalStorageManager {
   getLargestKeys(limit = 10) {
     const keySizes = [];
     
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (localStorage.hasOwnProperty(key)) {
         const size = (localStorage[key].length + key.length) * 2;
         keySizes.push({ key, size });
@@ -466,7 +466,7 @@ export class LocalStorageManager {
   clearKeyPattern(pattern) {
     let clearedCount = 0;
     
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (key.startsWith(pattern)) {
         localStorage.removeItem(key);
         clearedCount++;

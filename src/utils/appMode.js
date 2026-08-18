@@ -39,13 +39,16 @@ export const SETUP_STEPS = [
 
 /**
  * Get current app mode
+ * Defaults to DEMO mode for demo builds
  */
 export function getAppMode() {
   try {
     const mode = localStorage.getItem(STORAGE_KEY);
-    return mode || APP_MODES.SETUP;
+    // Default to DEMO mode for demo builds
+    // Client production deployments will explicitly set mode via setup
+    return mode || APP_MODES.DEMO;
   } catch {
-    return APP_MODES.SETUP;
+    return APP_MODES.DEMO;
   }
 }
 

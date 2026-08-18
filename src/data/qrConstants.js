@@ -1,11 +1,17 @@
 // QR Ordering constants and seed data
 
 import { createQRCode } from '../domain/qrModel.js';
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
 
 /**
  * Initial seed QR codes for new installations
+ * PRODUCTION SAFETY: This is demo data, forbidden in production
  */
-export const INIT_QR_CODES = [
+export const INIT_QR_CODES = () => {
+  if (!isDatasetAllowed('INIT_QR_CODES')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: 'QR-001',
     code: 'QR-TABLE-1',
@@ -97,6 +103,7 @@ export const INIT_QR_CODES = [
     }
   }
 ];
+}
 
 /**
  * QR type display configuration
@@ -193,7 +200,12 @@ export const PRINT_COPY_TEMPLATES = {
  * Get normalized seed QR codes
  */
 export function getSeedQRCodes() {
-  return INIT_QR_CODES.map(qr => createQRCode(qr));
+  try {
+    return INIT_QR_CODES().map(qr => createQRCode(qr));
+  } catch (error) {
+    console.warn('[qrConstants] Demo data not available:', error.message);
+    return [];
+  }
 }
 
 /**

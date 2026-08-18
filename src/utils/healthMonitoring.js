@@ -4,12 +4,10 @@
 import {
   createHealthMetric,
   createHealthAlert,
-  createDeviceStatus,
   createMaintenanceLog,
   HEALTH_STATUS,
   HEALTH_CATEGORIES,
   ALERT_TYPES,
-  DEVICE_TYPES,
   MAINTENANCE_OPERATIONS,
   calculateHealthScore,
   getOverallHealthStatus,
@@ -71,7 +69,7 @@ export function addHealthLog(log) {
 
 export function estimateStorageUsage() {
   let total = 0;
-  for (let key in localStorage) {
+  for (const key in localStorage) {
     if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
       total += localStorage[key].length * 2;
     }
@@ -81,7 +79,7 @@ export function estimateStorageUsage() {
 
 export function getStorageBreakdown() {
   const breakdown = { database: 0, images: 0, receipts: 0, logs: 0, exports: 0, temporary: 0, other: 0 };
-  for (let key in localStorage) {
+  for (const key in localStorage) {
     if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
       const size = localStorage[key].length * 2;
       if (key.includes('orders') || key.includes('customers') || key.includes('inventory')) {
@@ -330,7 +328,7 @@ export function clearCache() {
   let clearedCount = 0;
   try {
     const keysToRemove = [];
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (Object.prototype.hasOwnProperty.call(localStorage, key) && (key.includes('cache') || key.includes('temp'))) {
         keysToRemove.push(key);
       }
@@ -350,7 +348,7 @@ export function cleanTemporaryFiles() {
   let cleanedSize = 0;
   try {
     const keysToRemove = [];
-    for (let key in localStorage) {
+    for (const key in localStorage) {
       if (Object.prototype.hasOwnProperty.call(localStorage, key) && (key.includes('temp') || key.includes('tmp'))) {
         cleanedSize += localStorage[key].length * 2;
         keysToRemove.push(key);

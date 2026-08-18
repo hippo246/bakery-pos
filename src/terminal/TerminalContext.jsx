@@ -1,19 +1,16 @@
 // Terminal Context
 // React Context for terminal identification and access throughout the app
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { getTerminalManager } from './TerminalManager.js';
-import { getRealtimeSyncClient } from '../realtime/RealtimeSyncClient.js';
 
 const TerminalContext = createContext(null);
 
 export const TerminalProvider = ({ children }) => {
   const [currentTerminal, setCurrentTerminal] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
   const [allTerminals, setAllTerminals] = useState([]);
   
   const terminalManager = getTerminalManager();
-  const syncClient = getRealtimeSyncClient();
   
   // Initialize terminal
   useEffect(() => {
@@ -24,18 +21,6 @@ export const TerminalProvider = ({ children }) => {
       if (terminal) {
         setCurrentTerminal(terminal);
         setAllTerminals(terminalManager.getAllTerminals());
-        
-        // Connect to sync server
-        syncClient.connect(terminal.id).then(() => {
-          setIsConnected(true);
-        }).catch(error => {
-          console.error('Failed to connect to sync server:', error);
-        });
-        
-        // Subscribe to orders and tables
-        syncClient.subscribe('orders');
-        syncClient.subscribe('tables');
-        syncClient.subscribe('inventory');
       } else {
         // No terminal set, prompt user to select or create one
         console.log('No terminal set. Need to select or create a terminal.');
@@ -58,40 +43,16 @@ export const TerminalProvider = ({ children }) => {
       setAllTerminals(terminalManager.getAllTerminals());
     });
     
-    // Listen for sync connection changes
-    syncClient.on('connected', () => setIsConnected(true));
-    syncClient.on('disconnected', () => setIsConnected(false));
-    
     return () => {
       terminalManager.off('currentTerminalChanged', handleTerminalChanged);
-      syncClient.disconnect();
     };
-  }, [terminalManager, syncClient]);
+  }, [terminalManager]);
   
   // Set current terminal
-  const selectTerminal = async (terminalId) => {
-    try {
-      const terminal = terminalManager.setCurrentTerminal(terminalId);
-      setCurrentTerminal(terminal);
-      
-      // Reconnect to sync server with new terminal
-      if (syncClient.isConnected) {
-        syncClient.disconnect();
-      }
-      
-      await syncClient.connect(terminalId);
-      setIsConnected(true);
-      
-      // Subscribe to resources
-      syncClient.subscribe('orders');
-      syncClient.subscribe('tables');
-      syncClient.subscribe('inventory');
-      
-      return terminal;
-    } catch (error) {
-      console.error('Failed to select terminal:', error);
-      throw error;
-    }
+  const selectTerminal = (terminalId) => {
+    const terminal = terminalManager.setCurrentTerminal(terminalId);
+    setCurrentTerminal(terminal);
+    return terminal;
   };
   
   // Create new terminal
@@ -125,15 +86,13 @@ export const TerminalProvider = ({ children }) => {
   
   const value = {
     currentTerminal,
-    isConnected,
     allTerminals,
     selectTerminal,
     createTerminal,
     updateTerminal,
     getTerminal,
     getOnlineTerminals,
-    terminalManager,
-    syncClient
+    terminalManager
   };
   
   return (

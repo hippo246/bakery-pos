@@ -415,7 +415,7 @@ export class OrderAttachmentsManager {
    * @returns {Array} Filtered attachments
    */
   searchAttachments(filters = {}) {
-    let results = [];
+    const results = [];
 
     for (const [orderId, attachments] of this.attachments) {
       attachments.forEach(attachment => {
@@ -467,7 +467,7 @@ export class OrderAttachmentsManager {
    */
   getStatistics() {
     let totalAttachments = 0;
-    let byType = {};
+    const byType = {};
     let totalStorage = 0;
 
     for (const attachments of this.attachments.values()) {

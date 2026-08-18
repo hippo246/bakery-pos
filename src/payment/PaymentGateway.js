@@ -319,24 +319,60 @@ export class PaymentRecord {
 
 /**
  * Payment Storage
- * Manages payment records in localStorage
+ * Manages payment records using repository layer
+ * Adapter that bridges existing PaymentStorage interface to PaymentRepository
  */
 export class PaymentStorage {
-  constructor() {
-    this.storageKey = 'cafeos_payments';
+  constructor(repository = null) {
+    this.repository = repository;
+    this.storageKey = 'cafeos_payments'; // Fallback for backward compatibility
+  }
+
+  /**
+   * Set the repository instance
+   * @param {PaymentRepository} repository - Payment repository instance
+   */
+  setRepository(repository) {
+    this.repository = repository;
   }
 
   /**
    * Save payment record
    */
-  save(payment) {
-    const payments = this.getAll();
+  async save(payment) {
+    if (this.repository) {
+      try {
+        const paymentData = payment.toJSON ? payment.toJSON() : payment;
+        const existing = await this.repository.findById(paymentData.id);
+        
+        if (existing) {
+          await this.repository.update(paymentData.id, paymentData);
+        } else {
+          await this.repository.create(paymentData);
+        }
+      } catch (error) {
+        console.error('[PaymentStorage] Repository save failed:', error);
+        // Fallback to localStorage if repository fails
+        this._saveToLocalStorage(payment);
+      }
+    } else {
+      // Fallback to direct localStorage
+      this._saveToLocalStorage(payment);
+    }
+  }
+
+  /**
+   * Save to localStorage (fallback)
+   * @private
+   */
+  _saveToLocalStorage(payment) {
+    const payments = this._getAllFromLocalStorage();
     const index = payments.findIndex(p => p.id === payment.id);
     
     if (index >= 0) {
-      payments[index] = payment.toJSON();
+      payments[index] = payment.toJSON ? payment.toJSON() : payment;
     } else {
-      payments.push(payment.toJSON());
+      payments.push(payment.toJSON ? payment.toJSON() : payment);
     }
     
     localStorage.setItem(this.storageKey, JSON.stringify(payments));
@@ -345,8 +381,26 @@ export class PaymentStorage {
   /**
    * Get payment by ID
    */
-  getById(id) {
-    const payments = this.getAll();
+  async getById(id) {
+    if (this.repository) {
+      try {
+        const payment = await this.repository.findById(id);
+        return payment ? PaymentRecord.fromJSON(payment) : null;
+      } catch (error) {
+        console.error('[PaymentStorage] Repository getById failed:', error);
+        // Fallback to localStorage
+        return this._getByIdFromLocalStorage(id);
+      }
+    }
+    return this._getByIdFromLocalStorage(id);
+  }
+
+  /**
+   * Get by ID from localStorage (fallback)
+   * @private
+   */
+  _getByIdFromLocalStorage(id) {
+    const payments = this._getAllFromLocalStorage();
     const payment = payments.find(p => p.id === id);
     return payment ? PaymentRecord.fromJSON(payment) : null;
   }
@@ -354,8 +408,26 @@ export class PaymentStorage {
   /**
    * Get payments by order ID
    */
-  getByOrderId(orderId) {
-    const payments = this.getAll();
+  async getByOrderId(orderId) {
+    if (this.repository) {
+      try {
+        const payments = await this.repository.findByOrderId(orderId);
+        return payments.map(p => PaymentRecord.fromJSON(p));
+      } catch (error) {
+        console.error('[PaymentStorage] Repository getByOrderId failed:', error);
+        // Fallback to localStorage
+        return this._getByOrderIdFromLocalStorage(orderId);
+      }
+    }
+    return this._getByOrderIdFromLocalStorage(orderId);
+  }
+
+  /**
+   * Get by order ID from localStorage (fallback)
+   * @private
+   */
+  _getByOrderIdFromLocalStorage(orderId) {
+    const payments = this._getAllFromLocalStorage();
     return payments
       .filter(p => p.orderId === orderId)
       .map(p => PaymentRecord.fromJSON(p));
@@ -364,12 +436,30 @@ export class PaymentStorage {
   /**
    * Get all payments
    */
-  getAll() {
+  async getAll() {
+    if (this.repository) {
+      try {
+        const payments = await this.repository.findAll();
+        return payments;
+      } catch (error) {
+        console.error('[PaymentStorage] Repository getAll failed:', error);
+        // Fallback to localStorage
+        return this._getAllFromLocalStorage();
+      }
+    }
+    return this._getAllFromLocalStorage();
+  }
+
+  /**
+   * Get all from localStorage (fallback)
+   * @private
+   */
+  _getAllFromLocalStorage() {
     try {
       const data = localStorage.getItem(this.storageKey);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error('[PaymentStorage] Failed to load payments:', error);
+      console.error('[PaymentStorage] Failed to load payments from localStorage:', error);
       return [];
     }
   }
@@ -377,8 +467,26 @@ export class PaymentStorage {
   /**
    * Delete payment
    */
-  delete(id) {
-    const payments = this.getAll();
+  async delete(id) {
+    if (this.repository) {
+      try {
+        await this.repository.delete(id);
+      } catch (error) {
+        console.error('[PaymentStorage] Repository delete failed:', error);
+        // Fallback to localStorage
+        this._deleteFromLocalStorage(id);
+      }
+    } else {
+      this._deleteFromLocalStorage(id);
+    }
+  }
+
+  /**
+   * Delete from localStorage (fallback)
+   * @private
+   */
+  _deleteFromLocalStorage(id) {
+    const payments = this._getAllFromLocalStorage();
     const filtered = payments.filter(p => p.id !== id);
     localStorage.setItem(this.storageKey, JSON.stringify(filtered));
   }
@@ -386,8 +494,25 @@ export class PaymentStorage {
   /**
    * Get payment statistics
    */
-  getStatistics() {
-    const payments = this.getAll();
+  async getStatistics() {
+    if (this.repository) {
+      try {
+        return await this.repository.getStatistics();
+      } catch (error) {
+        console.error('[PaymentStorage] Repository getStatistics failed:', error);
+        // Fallback to localStorage
+        return this._getStatisticsFromLocalStorage();
+      }
+    }
+    return this._getStatisticsFromLocalStorage();
+  }
+
+  /**
+   * Get statistics from localStorage (fallback)
+   * @private
+   */
+  _getStatisticsFromLocalStorage() {
+    const payments = this._getAllFromLocalStorage();
     
     return {
       total: payments.length,

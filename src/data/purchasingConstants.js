@@ -1,11 +1,17 @@
 // Purchasing constants and seed data
 
 import { createSupplier, createPurchaseOrder, createSupplierItem } from '../domain/purchasingModel.js';
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
 
 /**
  * Initial seed suppliers
+ * PRODUCTION SAFETY: This is demo data, forbidden in production
  */
-export const INIT_SUPPLIERS = [
+export const INIT_SUPPLIERS = () => {
+  if (!isDatasetAllowed('INIT_SUPPLIERS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: 'sup-001',
     name: 'Coffee Co',
@@ -151,11 +157,17 @@ export const INIT_SUPPLIERS = [
     lastDeliveryDate: '2026-06-23'
   }
 ];
+};
 
 /**
  * Initial seed purchase orders
+ * PRODUCTION SAFETY: This is demo data, forbidden in production
  */
-export const INIT_PURCHASE_ORDERS = [
+export const INIT_PURCHASE_ORDERS = () => {
+  if (!isDatasetAllowed('INIT_PURCHASE_ORDERS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: 'po-001',
     poNumber: 'PO-20260620-001',
@@ -395,6 +407,7 @@ export const INIT_PURCHASE_ORDERS = [
     internalNote: 'Draft - pending approval'
   }
 ];
+};
 
 /**
  * Purchase order status configuration
@@ -490,14 +503,24 @@ export const PAYMENT_TERMS_OPTIONS = [
  * Get normalized seed suppliers
  */
 export function getSeedSuppliers() {
-  return INIT_SUPPLIERS.map(supplier => createSupplier(supplier));
+  try {
+    return INIT_SUPPLIERS().map(supplier => createSupplier(supplier));
+  } catch (error) {
+    console.warn('[purchasingConstants] Demo data not available:', error.message);
+    return [];
+  }
 }
 
 /**
  * Get normalized seed purchase orders
  */
 export function getSeedPurchaseOrders() {
-  return INIT_PURCHASE_ORDERS.map(po => createPurchaseOrder(po));
+  try {
+    return INIT_PURCHASE_ORDERS().map(po => createPurchaseOrder(po));
+  } catch (error) {
+    console.warn('[purchasingConstants] Demo data not available:', error.message);
+    return [];
+  }
 }
 
 /**

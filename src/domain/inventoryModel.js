@@ -14,6 +14,13 @@ import { generateId, createInventoryId } from './ids.js';
  * @property {number} cost - Cost per unit
  * @property {string} supplier - Supplier name
  * @property {string} lastRestock - Last restock date (ISO string)
+ * @property {string|null} tenantId - Tenant ID for multi-tenancy
+ * @property {string|null} businessId - Business ID
+ * @property {string|null} branchId - Branch ID for multi-branch isolation
+ * @property {string|null} createdBy - User ID who created the item (ABAC resource attribute)
+ * @property {string|null} updatedBy - User ID who last updated the item (ABAC resource attribute)
+ * @property {string|null} sensitivity - Resource sensitivity level (ABAC: public, internal, confidential, restricted)
+ * @property {string|null} classification - Resource classification (ABAC: standard, sensitive, critical)
  */
 
 /**

@@ -23,13 +23,13 @@ const safeDate = (v) => parseDate(v);
 // Currency formatting
 const formatCurrency = (amount) => {
   const n = safeNum(amount);
-  return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return `₹${  n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 };
 
 // Percentage formatting
 const formatPercentage = (value) => {
   const n = safeNum(value);
-  return n.toFixed(1) + '%';
+  return `${n.toFixed(1)  }%`;
 };
 
 // Order status definitions

@@ -48,7 +48,7 @@ export function generateThermalReceiptHTML(document, width = '58mm') {
   // Truncate text to fit width
   const truncate = (text, maxLen) => {
     if (!text) return '';
-    return text.length > maxLen ? text.substring(0, maxLen - 3) + '...' : text;
+    return text.length > maxLen ? `${text.substring(0, maxLen - 3)  }...` : text;
   };
   
   // Right align text
@@ -101,10 +101,10 @@ export function generateThermalReceiptHTML(document, width = '58mm') {
   
   // Customer info
   if (document.customerName) {
-    html += `<div>${truncate('Customer: ' + document.customerName, charsPerLine)}</div>\n`;
+    html += `<div>${truncate(`Customer: ${  document.customerName}`, charsPerLine)}</div>\n`;
   }
   if (document.customerPhone) {
-    html += `<div>${truncate('Phone: ' + document.customerPhone, charsPerLine)}</div>\n`;
+    html += `<div>${truncate(`Phone: ${  document.customerPhone}`, charsPerLine)}</div>\n`;
   }
   if (document.orderId) {
     html += `<div>Order: ${document.orderId}</div>\n`;
@@ -131,21 +131,21 @@ export function generateThermalReceiptHTML(document, width = '58mm') {
   html += `<div class="divider"></div>\n`;
   
   // Totals
-  html += `<div>${right('Subtotal: ' + formatDocumentCurrency(document.subtotal))}</div>\n`;
+  html += `<div>${right(`Subtotal: ${  formatDocumentCurrency(document.subtotal)}`)}</div>\n`;
   if (document.discountAmount > 0) {
-    html += `<div>${right('Discount: -' + formatDocumentCurrency(document.discountAmount))}</div>\n`;
+    html += `<div>${right(`Discount: -${  formatDocumentCurrency(document.discountAmount)}`)}</div>\n`;
   }
   if (document.taxAmount > 0) {
-    html += `<div>${right('GST: ' + formatDocumentCurrency(document.taxAmount))}</div>\n`;
+    html += `<div>${right(`GST: ${  formatDocumentCurrency(document.taxAmount)}`)}</div>\n`;
   }
   if (document.serviceCharge > 0) {
-    html += `<div>${right('Service: ' + formatDocumentCurrency(document.serviceCharge))}</div>\n`;
+    html += `<div>${right(`Service: ${  formatDocumentCurrency(document.serviceCharge)}`)}</div>\n`;
   }
   if (document.deliveryCharge > 0) {
-    html += `<div>${right('Delivery: ' + formatDocumentCurrency(document.deliveryCharge))}</div>\n`;
+    html += `<div>${right(`Delivery: ${  formatDocumentCurrency(document.deliveryCharge)}`)}</div>\n`;
   }
   html += `<div class="divider"></div>\n`;
-  html += `<div class="total">${right('TOTAL: ' + formatDocumentCurrency(document.total))}</div>\n`;
+  html += `<div class="total">${right(`TOTAL: ${  formatDocumentCurrency(document.total)}`)}</div>\n`;
   
   // Payment info
   if (document.paymentMethod) {
@@ -153,10 +153,10 @@ export function generateThermalReceiptHTML(document, width = '58mm') {
     html += `<div>Payment: ${document.paymentMethod}</div>\n`;
   }
   if (document.amountPaid !== undefined) {
-    html += `<div>${right('Paid: ' + formatDocumentCurrency(document.amountPaid))}</div>\n`;
+    html += `<div>${right(`Paid: ${  formatDocumentCurrency(document.amountPaid)}`)}</div>\n`;
   }
   if (document.balance !== undefined) {
-    html += `<div>${right('Balance: ' + formatDocumentCurrency(document.balance))}</div>\n`;
+    html += `<div>${right(`Balance: ${  formatDocumentCurrency(document.balance)}`)}</div>\n`;
   }
   
   // Footer
@@ -186,7 +186,7 @@ export function generateA4DocumentHTML(document) {
   const docNumber = document.receiptNumber || document.invoiceNumber || document.paymentReceiptNumber || document.creditNoteNumber;
   const docLabel = docType === 'RECEIPT' ? 'SALES RECEIPT' : docType === 'INVOICE' ? 'INVOICE' : docType === 'PAYMENT_RECEIPT' ? 'PAYMENT RECEIPT' : 'CREDIT NOTE';
   
-  let html = `
+  const html = `
 <!DOCTYPE html>
 <html>
 <head>

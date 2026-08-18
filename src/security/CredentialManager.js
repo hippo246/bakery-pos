@@ -34,6 +34,21 @@ class CredentialManager {
   }
 
   /**
+   * Get security score for credential manager
+   * @returns {number} Security score (0-100)
+   */
+  getSecurityScore() {
+    if (!this.initialized) return 0;
+    // Check if secret vault is initialized
+    try {
+      const vaultInitialized = secretVault.initialized;
+      return vaultInitialized ? 85 : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
    * Store provider credentials
    * @param {string} providerId - Provider identifier (e.g., 'aws-s3', 'firebase-storage')
    * @param {object} credentials - Credential object
@@ -356,10 +371,14 @@ class CredentialManager {
       'cloudflare-r2': ['accessKey', 'secretKey'],
       'minio': ['accessKey', 'secretKey'],
       'digitalocean-spaces': ['accessKey', 'secretKey'],
-      'backblaze-b2': ['accessKey', 'secretKey'],
+      'backblaze-b2': ['keyId', 'applicationKey'],
       'firebase-storage': ['apiKey'],
+      'gcs': ['serviceAccountKey'],
       'google-cloud-storage': ['apiKey', 'serviceAccountKey'],
-      'azure-blob': ['accountName', 'accountKey']
+      'azure-blob': ['accountKey', 'connectionString'],
+      'supabase-storage': ['anonKey'],
+      'webdav': ['password'],
+      'smb-nas': ['password']
     };
 
     return fieldMap[providerId] || [];

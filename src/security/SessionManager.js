@@ -2,7 +2,7 @@
 // Session security with timeout, idle detection, and auto-lock
 
 import { SecurityInterface } from './SecurityInterface.js';
-import { SessionStatus, SecurityStatus, SecurityLevel } from './SecurityTypes.js';
+import { SessionStatus, SecurityStatus } from './SecurityTypes.js';
 
 export class SessionManager extends SecurityInterface {
   constructor(config = {}) {

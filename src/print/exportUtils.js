@@ -21,18 +21,18 @@ class CSVGenerator {
 
     // Add headers if requested
     if (includeHeaders && headers.length > 0) {
-      csv += headers.map(h => this.escapeCSV(h)).join(delimiter) + "\n";
+      csv += `${headers.map(h => this.escapeCSV(h)).join(delimiter)  }\n`;
     }
 
     // Add data rows
     data.forEach(row => {
       if (Array.isArray(row)) {
-        csv += row.map(cell => this.escapeCSV(cell)).join(delimiter) + "\n";
+        csv += `${row.map(cell => this.escapeCSV(cell)).join(delimiter)  }\n`;
       } else if (typeof row === "object") {
         const values = headers.length > 0 
           ? headers.map(h => row[h] ?? "")
           : Object.values(row);
-        csv += values.map(cell => this.escapeCSV(cell)).join(delimiter) + "\n";
+        csv += `${values.map(cell => this.escapeCSV(cell)).join(delimiter)  }\n`;
       }
     });
 

@@ -4,14 +4,17 @@
  * Vibrant touch-friendly reports with fast food styling.
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import FunctionKeyPanel from '../fastfood-pos/FunctionKeyPanel';
 import ActionButtons from '../fastfood-pos/ActionButtons';
-import TopChrome from '../fastfood-pos/TopChrome';
+import TopChrome from '../fastfood-pos/TopChrome.jsx';
+import { getTerminalId } from '../../utils/runtimeMode.js';
 
-export default function FastFoodReports(props) {
-  const { onNavigate } = props;
+export default function FastFoodReports() {
   const [customerName, setCustomerName] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [terminalId] = useState(() => getTerminalId());
   const [selectedCategory, setSelectedCategory] = useState('Sales');
   const [selectedRow, setSelectedRow] = useState(null);
   const [_categoryPage, _setCategoryPage] = useState(0);
@@ -121,9 +124,9 @@ export default function FastFoodReports(props) {
       <TopChrome
         customerName={customerName}
         onCustomerNameChange={setCustomerName}
-        terminalId="HQ-PC01"
+        terminalId={terminalId}
+        orderCount={orderCount}
       />
-
       {/* Main Content */}
       <div style={{ 
         display: 'flex', 

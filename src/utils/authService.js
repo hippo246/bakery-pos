@@ -2,6 +2,8 @@
 // Handles login, logout, session persistence, and current user state
 // NOTE: This is a localStorage-only implementation for demo/local use
 // For production, this should be replaced with proper backend authentication
+// Frontend authentication is NOT secure - it can be bypassed by modifying localStorage
+// All permission checks are UI-only and NOT authoritative security enforcement
 
 import { normalizeStaff } from '../domain/staffModel.js';
 import { normalizeRole } from '../domain/roleModel.js';

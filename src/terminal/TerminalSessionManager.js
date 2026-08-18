@@ -118,7 +118,7 @@ export class TerminalSessionManager {
   getActiveSessions() {
     const activeSessions = [];
     
-    this.terminalSessions.forEach((session, terminalId) => {
+    this.terminalSessions.forEach((session, _terminalId) => {
       if (session.isActive) {
         activeSessions.push(session);
       }

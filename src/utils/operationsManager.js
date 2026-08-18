@@ -6,7 +6,6 @@ import {
   createRecurringTaskTemplate,
   createDailyChecklist,
   createTaskCompletion,
-  normalizeTask,
   updateTaskStatus,
   addTaskEvidence,
   calculateChecklistProgress,
@@ -15,8 +14,6 @@ import {
   TASK_STATUS,
   TASK_PRIORITY,
   generateTasksFromTemplate,
-  sortTasksByPriority,
-  sortTasksByDueTime,
   getOverdueTasks,
   getCriticalTasks
 } from "../domain/operationsModel.js";
@@ -279,7 +276,7 @@ export function generateDailyTasks(date) {
   const tasks = getTasks();
   const existingDate = date || new Date().toISOString().split('T')[0];
   
-  let newTasks = [];
+  const newTasks = [];
   
   templates.forEach(template => {
     const generated = generateTasksFromTemplate(template, existingDate);

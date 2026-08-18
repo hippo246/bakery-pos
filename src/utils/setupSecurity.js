@@ -11,7 +11,7 @@ const STORAGE_KEYS = {
 // Simple hash function for demo purposes (use bcrypt in production)
 export async function hashPassword(password) {
   const encoder = new TextEncoder();
-  const data = encoder.encode(password + 'cafeos_salt_v1');
+  const data = encoder.encode(`${password  }cafeos_salt_v1`);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -40,11 +40,43 @@ export function isValidPhone(phone) {
   return phoneRegex.test(phone);
 }
 
+// Sanitize object for storage to remove circular references
+function sanitizeForStorage(obj, seen = new WeakSet()) {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (seen.has(obj)) {
+    return '[Circular Reference]';
+  }
+
+  seen.add(obj);
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeForStorage(item, seen));
+  }
+
+  const sanitized = {};
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      // Skip browser/window objects
+      if (key === 'window' || key === 'document' || key === 'navigator') {
+        continue;
+      }
+      sanitized[key] = sanitizeForStorage(obj[key], seen);
+    }
+  }
+
+  return sanitized;
+}
+
 // Secure storage wrapper
 export const secureStorage = {
   setItem: (key, value) => {
     try {
-      const data = JSON.stringify(value);
+      // Sanitize value to remove circular references
+     const sanitized = sanitizeForStorage(value);
+      const data = JSON.stringify(sanitized);
       // In production, encrypt the data before storing
       localStorage.setItem(key, data);
       return true;

@@ -1,4 +1,5 @@
 import { normalizeOrders, normalizeCustomers, normalizeKdsCards } from '../domain/normalize.js';
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
 
 export const MENU_ITEMS = [
   { id: "m1", code: "ESP", name: "Espresso", price: 80, cat: "Coffee", desc: "Double shot, intense & smooth", emoji: "☕", popular: true, eightySixed: false, active: true },
@@ -54,7 +55,13 @@ export const LEGACY_INIT_ORDERS = [
 ];
 
 // Normalized orders using new domain model
-export const INIT_ORDERS = normalizeOrders(LEGACY_INIT_ORDERS);
+// PRODUCTION SAFETY: This is demo data, forbidden in production
+export const INIT_ORDERS = () => {
+  if (!isDatasetAllowed('INIT_ORDERS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return normalizeOrders(LEGACY_INIT_ORDERS);
+};
 
 // Legacy customer data - will be normalized on import
 export const LEGACY_INIT_CUSTOMERS = [
@@ -66,7 +73,13 @@ export const LEGACY_INIT_CUSTOMERS = [
 ];
 
 // Normalized customers using new domain model
-export const INIT_CUSTOMERS = normalizeCustomers(LEGACY_INIT_CUSTOMERS);
+// PRODUCTION SAFETY: This is demo data, forbidden in production
+export const INIT_CUSTOMERS = () => {
+  if (!isDatasetAllowed('INIT_CUSTOMERS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return normalizeCustomers(LEGACY_INIT_CUSTOMERS);
+};
 
 export const INIT_HIST = {
   c1: [{ date: "May 29", items: "Cappuccino × 2, Croissant", amt: 330 }, { date: "May 27", items: "Cappuccino × 1", amt: 120 }, { date: "May 24", items: "Flat White, Banana Bread", amt: 230 }],
@@ -85,7 +98,13 @@ export const LEGACY_INIT_KDS = [
 ];
 
 // Normalized KDS cards using new domain model
-export const INIT_KDS = normalizeKdsCards(LEGACY_INIT_KDS);
+// PRODUCTION SAFETY: This is demo data, forbidden in production
+export const INIT_KDS = () => {
+  if (!isDatasetAllowed('INIT_KDS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return normalizeKdsCards(LEGACY_INIT_KDS);
+};
 
 export const MENU_CATS = ["ALL", "Coffee", "Special", "Food", "Popular", "Available only"];
 

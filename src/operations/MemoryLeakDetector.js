@@ -203,9 +203,9 @@ export class MemoryLeakDetector {
    */
   triggerMemoryAlert(memory) {
     console.error('[MemoryLeakDetector] MEMORY ALERT:', {
-      used: memory.usedMB + 'MB',
-      limit: memory.limitMB + 'MB',
-      usagePercent: ((memory.used / memory.limit) * 100).toFixed(1) + '%',
+      used: `${memory.usedMB  }MB`,
+      limit: `${memory.limitMB  }MB`,
+      usagePercent: `${((memory.used / memory.limit) * 100).toFixed(1)  }%`,
       highMemoryCount: this.highMemoryCount
     });
     

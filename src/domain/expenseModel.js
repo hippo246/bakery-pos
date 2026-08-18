@@ -25,6 +25,13 @@ import { roundCurrency } from './money.js';
  * @property {string|null} recurrencePattern - Recurrence pattern (weekly, monthly, etc.)
  * @property {number} createdAt - Creation timestamp
  * @property {number} updatedAt - Last update timestamp
+ * @property {string|null} tenantId - Tenant ID for multi-tenancy
+ * @property {string|null} businessId - Business ID
+ * @property {string|null} branchId - Branch ID for multi-branch isolation
+ * @property {string|null} createdBy - User ID who created the expense (ABAC resource attribute)
+ * @property {string|null} updatedBy - User ID who last updated the expense (ABAC resource attribute)
+ * @property {string|null} sensitivity - Resource sensitivity level (ABAC: public, internal, confidential, restricted)
+ * @property {string|null} classification - Resource classification (ABAC: standard, sensitive, critical)
  */
 
 // Valid expense categories

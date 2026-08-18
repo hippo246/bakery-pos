@@ -16,7 +16,7 @@ const LOCATIONS = [
   { id: 'office', name: 'Office' }
 ];
 
-export default function TerminalSelector({ onClose, onTerminalSelected }) {
+export default function TerminalSelector({ onClose, onTerminalSelected, staff = [] }) {
   const { currentTerminal, allTerminals, selectTerminal, createTerminal, isConnected } = useTerminal();
   const [mode, setMode] = useState('select'); // 'select' or 'create'
   const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
@@ -24,7 +24,8 @@ export default function TerminalSelector({ onClose, onTerminalSelected }) {
     name: '',
     type: 'pos',
     location: 'main',
-    defaultOrderType: 'dine_in'
+    defaultOrderType: 'dine_in',
+    assignedStaff: []
   });
 
   const handleSelectTerminal = async (terminal) => {
@@ -38,7 +39,7 @@ export default function TerminalSelector({ onClose, onTerminalSelected }) {
       }
     } catch (error) {
       console.error('Failed to select terminal:', error);
-      setAlertDialog({ isOpen: true, title: 'Selection Failed', message: 'Failed to select terminal: ' + error.message, type: 'error' });
+      setAlertDialog({ isOpen: true, title: 'Selection Failed', message: `Failed to select terminal: ${  error.message}`, type: 'error' });
     }
   };
 
@@ -55,7 +56,8 @@ export default function TerminalSelector({ onClose, onTerminalSelected }) {
         name: formData.name,
         type: formData.type,
         location: formData.location,
-        defaultOrderType: formData.defaultOrderType
+        defaultOrderType: formData.defaultOrderType,
+        assignedStaff: formData.assignedStaff
       });
 
       await selectTerminal(newTerminal.id);
@@ -68,7 +70,7 @@ export default function TerminalSelector({ onClose, onTerminalSelected }) {
       }
     } catch (error) {
       console.error('Failed to create terminal:', error);
-      setAlertDialog({ isOpen: true, title: 'Creation Failed', message: 'Failed to create terminal: ' + error.message, type: 'error' });
+      setAlertDialog({ isOpen: true, title: 'Creation Failed', message: `Failed to create terminal: ${  error.message}`, type: 'error' });
     }
   };
 
@@ -215,6 +217,54 @@ export default function TerminalSelector({ onClose, onTerminalSelected }) {
                 <option value="takeaway">Takeaway</option>
                 <option value="delivery">Delivery</option>
               </select>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--cafe-text-secondary)', marginBottom: 8 }}>
+                Assign Staff
+              </label>
+              <div style={{
+                background: 'var(--cafe-bg)',
+                border: '1px solid var(--cafe-border)',
+                borderRadius: 8,
+                padding: 12,
+                maxHeight: 150,
+                overflowY: 'auto'
+              }}>
+                {staff.length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--cafe-text-tertiary)', textAlign: 'center', padding: 20 }}>
+                    No staff available. Add staff in the Staff tab first.
+                  </div>
+                ) : (
+                  staff.map(staffMember => (
+                    <label key={staffMember.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 0',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid var(--cafe-border)'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.assignedStaff.includes(staffMember.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setFormData({ ...formData, assignedStaff: [...formData.assignedStaff, staffMember.id] });
+                          } else {
+                            setFormData({ ...formData, assignedStaff: formData.assignedStaff.filter(id => id !== staffMember.id) });
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <div>
+                        <div style={{ fontSize: 14, color: 'var(--cafe-text-primary)' }}>{staffMember.name}</div>
+                        <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)' }}>{staffMember.role}</div>
+                      </div>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 12 }}>
@@ -409,6 +459,11 @@ export default function TerminalSelector({ onClose, onTerminalSelected }) {
                       <div style={{ fontSize: 12, color: 'var(--cafe-text-secondary)' }}>
                         {terminal.type.toUpperCase()} • {terminal.location}
                       </div>
+                      {terminal.assignedStaff && terminal.assignedStaff.length > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--cafe-text-tertiary)', marginTop: 4 }}>
+                          Staff: {staff.filter(s => terminal.assignedStaff.includes(s.id)).map(s => s.name).join(', ')}
+                        </div>
+                      )}
                     </div>
                     {currentTerminal?.id === terminal.id && (
                       <span style={{ fontSize: 12, color: 'var(--cafe-accent)', fontWeight: 600 }}>

@@ -1,8 +1,10 @@
 // Shift Audit Logging System for CafeOS
 // Comprehensive audit trail for all shift operations
 
+import { getRepositoryFactoryInstance } from '../repository/RepositoryFactory.js';
+
 /**
- * Audit log storage key
+ * Audit log storage key (fallback for DEMO/SETUP)
  */
 const AUDIT_LOG_STORAGE_KEY = 'cafeos_shift_audit_log';
 
@@ -53,6 +55,17 @@ export function logAuditEvent(eventType, data) {
   const entry = createAuditLogEntry(eventType, data);
   
   try {
+    // Try to use repository first
+    const factory = getRepositoryFactoryInstance();
+    if (factory) {
+      const repo = factory.createAuditLogRepository();
+      if (repo) {
+        repo.save(entry);
+        return entry;
+      }
+    }
+    
+    // Fallback to localStorage for DEMO/SETUP
     const existingLogs = getAuditLogs();
     existingLogs.push(entry);
     
@@ -74,6 +87,19 @@ export function logAuditEvent(eventType, data) {
  */
 export function getAuditLogs() {
   try {
+    // Try to use repository first
+    const factory = getRepositoryFactoryInstance();
+    if (factory) {
+      const repo = factory.createAuditLogRepository();
+      if (repo) {
+        const logs = repo.getAll();
+        if (logs && logs.length > 0) {
+          return logs;
+        }
+      }
+    }
+    
+    // Fallback to localStorage for DEMO/SETUP
     const logs = localStorage.getItem(AUDIT_LOG_STORAGE_KEY);
     return logs ? JSON.parse(logs) : [];
   } catch (error) {
@@ -125,6 +151,17 @@ export function getAuditLogsByDateRange(startDate, endDate) {
  */
 export function clearAuditLogs() {
   try {
+    // Try to use repository first
+    const factory = getRepositoryFactoryInstance();
+    if (factory) {
+      const repo = factory.createAuditLogRepository();
+      if (repo) {
+        repo.clear();
+        return true;
+      }
+    }
+    
+    // Fallback to localStorage for DEMO/SETUP
     localStorage.removeItem(AUDIT_LOG_STORAGE_KEY);
     return true;
   } catch (error) {

@@ -1,17 +1,31 @@
 // Notification Service for persistence and management
 import { getSeedNotifications } from '../data/notificationConstants.js';
 import { normalizeNotification } from '../domain/notificationModel.js';
+import { getRepositoryFactory } from '../repository/RepositoryFactory.js';
 
 const STORAGE_KEY = 'cafeos_notifications';
 const STORAGE_VERSION = 1;
 
 const safeArr = (v) => (Array.isArray(v) ? v : []);
 
-// Load notifications from localStorage
+// Load notifications from repository or localStorage (fallback for DEMO/SETUP)
 export const loadNotifications = () => {
   if (typeof window === "undefined") return [];
   
   try {
+    // Try to use repository first
+    const factory = getRepositoryFactory();
+    if (factory) {
+      const repo = factory.createNotificationRepository();
+      if (repo) {
+        const notifications = repo.getAll();
+        if (notifications && notifications.length > 0) {
+          return notifications.map(n => normalizeNotification(n));
+        }
+      }
+    }
+    
+    // Fallback to localStorage for DEMO/SETUP
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return getSeedNotifications();
     
@@ -20,7 +34,6 @@ export const loadNotifications = () => {
     // Check version and migrate if needed
     if (data.version !== STORAGE_VERSION) {
       console.log('[NotificationService] Migrating notification storage from version', data.version, 'to', STORAGE_VERSION);
-      // Migration logic would go here
       return getSeedNotifications();
     }
     
@@ -34,11 +47,27 @@ export const loadNotifications = () => {
   }
 };
 
-// Save notifications to localStorage
+// Save notifications to repository or localStorage (fallback for DEMO/SETUP)
 export const saveNotifications = (notifications) => {
   if (typeof window === "undefined") return;
   
   try {
+    // Try to use repository first
+    const factory = getRepositoryFactory();
+    if (factory) {
+      const repo = factory.createNotificationRepository();
+      if (repo) {
+        // Save each notification individually for now
+        // TODO: Implement bulk save in repository
+        notifications.forEach(notification => {
+          const normalized = normalizeNotification(notification);
+          repo.save(normalized);
+        });
+        return;
+      }
+    }
+    
+    // Fallback to localStorage for DEMO/SETUP
     const data = {
       version: STORAGE_VERSION,
       notifications: safeArr(notifications),
@@ -51,11 +80,22 @@ export const saveNotifications = (notifications) => {
   }
 };
 
-// Clear notifications from localStorage
+// Clear notifications from repository or localStorage (fallback for DEMO/SETUP)
 export const clearNotifications = () => {
   if (typeof window === "undefined") return;
   
   try {
+    // Try to use repository first
+    const factory = getRepositoryFactory();
+    if (factory) {
+      const repo = factory.createNotificationRepository();
+      if (repo) {
+        repo.clear();
+        return;
+      }
+    }
+    
+    // Fallback to localStorage for DEMO/SETUP
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error('[NotificationService] Error clearing notifications:', error);

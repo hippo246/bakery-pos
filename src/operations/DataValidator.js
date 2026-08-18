@@ -294,7 +294,7 @@ export class DataValidator {
   async repairData(data, rule, validationResult) {
     try {
       let repairedData = { ...data };
-      let repairLog = [];
+      const repairLog = [];
 
       // Create backup before repair if enabled
       if (this.config.createBackupBeforeRepair) {

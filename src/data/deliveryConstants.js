@@ -2,6 +2,7 @@
 // Seed data for Route & Tracking module
 
 import { normalizeDeliveryOrder, normalizeDriver, createRoute } from "../domain/deliveryModel.js";
+import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
 
 // Cafe location (Bangalore default)
 export const CAFE_LOCATION = {
@@ -11,7 +12,12 @@ export const CAFE_LOCATION = {
 };
 
 // Initial drivers with GPS coordinates
-export const INIT_DRIVERS = [
+// PRODUCTION SAFETY: This is demo data, forbidden in production
+export const INIT_DRIVERS = () => {
+  if (!isDatasetAllowed('INIT_DRIVERS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: "driver-1",
     name: "Amit Kumar",
@@ -83,9 +89,15 @@ export const INIT_DRIVERS = [
     branch: "main"
   }
 ];
+};
 
 // Initial delivery orders with coordinates
-export const INIT_DELIVERY_ORDERS = [
+// PRODUCTION SAFETY: This is demo data, forbidden in production
+export const INIT_DELIVERY_ORDERS = function() {
+  if (!isDatasetAllowed('INIT_DELIVERY_ORDERS')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: "del-1",
     orderId: "ord-001",
@@ -222,9 +234,15 @@ export const INIT_DELIVERY_ORDERS = [
     notes: ""
   }
 ];
+};
 
 // Initial routes
-export const INIT_ROUTES = [
+// PRODUCTION SAFETY: This is demo data, forbidden in production
+export const INIT_ROUTES = function() {
+  if (!isDatasetAllowed('INIT_ROUTES')) {
+    throw new Error(getProductionBackendError());
+  }
+  return [
   {
     id: "route-1",
     driverId: "driver-2",
@@ -259,6 +277,7 @@ export const INIT_ROUTES = [
     updatedAt: new Date(Date.now() - 2 * 60000).toISOString()
   }
 ];
+};
 
 // Route & Tracking sections
 export const ROUTE_SECTIONS = [
@@ -380,10 +399,31 @@ export const formatRelativeTime = (dateString) => {
 };
 
 // Get seed drivers
-export const getSeedDrivers = () => INIT_DRIVERS.map(normalizeDriver);
+export const getSeedDrivers = () => {
+  try {
+    return INIT_DRIVERS().map(normalizeDriver);
+  } catch (error) {
+    console.warn('[deliveryConstants] Demo data not available:', error.message);
+    return [];
+  }
+};
 
 // Get seed delivery orders with coordinates
-export const getSeedDeliveryOrders = () => INIT_DELIVERY_ORDERS.map(normalizeDeliveryOrder);
+export const getSeedDeliveryOrders = () => {
+  try {
+    return INIT_DELIVERY_ORDERS().map(normalizeDeliveryOrder);
+  } catch (error) {
+    console.warn('[deliveryConstants] Demo data not available:', error.message);
+    return [];
+  }
+};
 
 // Get seed routes
-export const getSeedRoutes = () => INIT_ROUTES;
+export const getSeedRoutes = () => {
+  try {
+    return INIT_ROUTES();
+  } catch (error) {
+    console.warn('[deliveryConstants] Demo data not available:', error.message);
+    return [];
+  }
+};

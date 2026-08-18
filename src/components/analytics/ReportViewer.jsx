@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMemo } from "react";
 
-const formatMoney = (n) => "₹" + (Number.isFinite(n) ? Math.round(n) : 0).toLocaleString("en-IN");
+const formatMoney = (n) => `₹${  (Number.isFinite(n) ? Math.round(n) : 0).toLocaleString("en-IN")}`;
 
 // Premium styling tokens matching CafeOS
 const S = {
