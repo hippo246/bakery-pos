@@ -311,21 +311,51 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
   };
 
   const sections = [
-    { id: 'general', label: 'General', icon: '⚙️' },
-    { id: 'business', label: 'Business', icon: '🏪' },
-    { id: 'tax', label: 'Tax & Pricing', icon: '💰' },
-    { id: 'compliance', label: 'Compliance', icon: '📋' },
-    { id: 'receipt', label: 'Receipts', icon: '🧾' },
-    { id: 'receipttemplate', label: 'Receipt Template', icon: '📄' },
-    { id: 'workflow', label: 'Workflow & SOP', icon: '🔄' },
-    { id: 'pos', label: 'POS Settings', icon: '🛒' },
-    { id: 'itemcodes', label: 'Item Codes', icon: '🔢' },
-    { id: 'kitchen', label: 'Kitchen', icon: '👨‍🍳' },
-    { id: 'qr', label: 'QR Ordering', icon: '📱' },
-    { id: 'notifications', label: 'Notifications', icon: '🔔' },
-    { id: 'display', label: 'Display', icon: '🖥️' },
-    { id: 'debug', label: 'Debug & Logs', icon: '🐛' },
-    { id: 'backup', label: 'Backup & Restore', icon: '💾' }
+    { 
+      group: 'General',
+      items: [
+        { id: 'general', label: 'General', icon: '⚙️' },
+        { id: 'display', label: 'Display', icon: '🖥️' },
+        { id: 'notifications', label: 'Notifications', icon: '🔔' }
+      ]
+    },
+    { 
+      group: 'Business',
+      items: [
+        { id: 'business', label: 'Business', icon: '🏪' },
+        { id: 'tax', label: 'Tax & Pricing', icon: '💰' },
+        { id: 'compliance', label: 'Compliance', icon: '📋' }
+      ]
+    },
+    { 
+      group: 'POS',
+      items: [
+        { id: 'pos', label: 'POS Settings', icon: '🛒' },
+        { id: 'workflow', label: 'Workflow & SOP', icon: '🔄' },
+        { id: 'itemcodes', label: 'Item Codes', icon: '🔢' }
+      ]
+    },
+    { 
+      group: 'Receipts',
+      items: [
+        { id: 'receipt', label: 'Receipts', icon: '🧾' },
+        { id: 'receipttemplate', label: 'Receipt Template', icon: '📄' }
+      ]
+    },
+    { 
+      group: 'Operations',
+      items: [
+        { id: 'kitchen', label: 'Kitchen', icon: '👨‍🍳' },
+        { id: 'qr', label: 'QR Ordering', icon: '📱' }
+      ]
+    },
+    { 
+      group: 'System',
+      items: [
+        { id: 'backup', label: 'Backup & Restore', icon: '💾' },
+        { id: 'debug', label: 'Debug & Logs', icon: '🐛' }
+      ]
+    }
   ];
 
   const ReceiptPreview = ({ settings }) => {
@@ -555,7 +585,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
         {/* Sidebar */}
         <div style={{
-          width: screenSize === 'small' ? '100%' : '240px',
+          width: screenSize === 'small' ? '100%' : '280px',
           background: '#ffffff',
           borderRight: screenSize === 'small' ? 'none' : '1px solid #e5e7eb',
           borderBottom: screenSize === 'small' ? '1px solid #e5e7eb' : 'none',
@@ -563,34 +593,62 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
           overflowY: screenSize === 'small' ? 'auto' : 'auto',
           overflowX: screenSize === 'small' ? 'auto' : 'hidden'
         }}>
-          <div>
-            <div style={{ margin: screenSize === 'small' ? '0 0 8px' : '0 0 12px', fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.05em' }}>
-              SECTIONS
+          {sections.map(group => (
+            <div key={group.group} style={{ marginBottom: screenSize === 'small' ? '12px' : '16px' }}>
+              <div style={{ 
+                margin: screenSize === 'small' ? '0 0 8px' : '0 0 10px', 
+                fontSize: screenSize === 'small' ? '10px' : '11px', 
+                fontWeight: '700', 
+                color: '#9ca3af', 
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase'
+              }}>
+                {group.group}
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                gap: '4px'
+              }}>
+                {group.items.map(section => (
+                  <button
+                    key={section.id}
+                    onClick={() => setActiveSection(section.id)}
+                    style={{
+                      padding: screenSize === 'small' ? '8px 12px' : '10px 12px',
+                      background: activeSection === section.id ? '#f3f4f6' : 'transparent',
+                      color: activeSection === section.id ? '#111827' : '#6b7280',
+                      border: activeSection === section.id ? '1px solid #e5e7eb' : '1px solid transparent',
+                      borderRadius: '6px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      textAlign: 'left',
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeSection !== section.id) {
+                        e.target.style.background = '#f9fafb';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeSection !== section.id) {
+                        e.target.style.background = 'transparent';
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: screenSize === 'small' ? '14px' : '16px' }}>{section.icon}</span>
+                    {section.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
-              {sections.map(section => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  style={{
-                    padding: screenSize === 'small' ? '6px 12px' : '8px 12px',
-                    background: activeSection === section.id ? '#f3f4f6' : 'transparent',
-                    color: activeSection === section.id ? '#111827' : '#6b7280',
-                    border: activeSection === section.id ? '1px solid #e5e7eb' : '1px solid transparent',
-                    borderRadius: '6px',
-                    fontSize: screenSize === 'small' ? '12px' : '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'left',
-                    width: screenSize === 'small' ? 'auto' : '100%'
-                  }}
-                >
-                  {section.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Main Content */}
@@ -603,704 +661,372 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             border: '1px solid #e5e7eb'
           }}>
             <div style={{ margin: '0 0 20px', fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#111827', paddingBottom: screenSize === 'small' ? '12px' : '16px', borderBottom: '1px solid #e5e7eb' }}>
-              {sections.find(s => s.id === activeSection)?.label}
+              {sections.flatMap(g => g.items).find(s => s.id === activeSection)?.label}
             </div>
 
             {activeSection === 'general' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Currency
-                  </label>
-                  <select
-                    value={formData.currency}
-                    onChange={(e) => handleInputChange('currency', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: screenSize === 'small' ? '14px' : '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="INR">INR (₹)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                  </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{
+                  padding: '16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🌍 Regional Settings
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Currency
+                      </label>
+                      <select
+                        value={formData.currency}
+                        onChange={(e) => handleInputChange('currency', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="INR">INR (₹)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Language
+                      </label>
+                      <select
+                        value={formData.language}
+                        onChange={(e) => handleInputChange('language', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="en">English</option>
+                        <option value="hi">Hindi</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Language
-                  </label>
-                  <select
-                    value={formData.language}
-                    onChange={(e) => handleInputChange('language', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: screenSize === 'small' ? '14px' : '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="en">English</option>
-                    <option value="hi">Hindi</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Theme
-                  </label>
-                  <select
-                    value={formData.theme}
-                    onChange={(e) => handleInputChange('theme', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: screenSize === 'small' ? '14px' : '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                  </select>
+                <div style={{
+                  padding: '16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🎨 Appearance
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      Theme
+                    </label>
+                    <select
+                      value={formData.theme}
+                      onChange={(e) => handleInputChange('theme', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        background: '#ffffff',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="light">Light</option>
+                      <option value="dark">Dark</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'business' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Store Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.storeName}
-                    onChange={(e) => handleInputChange('storeName', e.target.value)}
-                    placeholder="My Bakery"
-                    style={{
-                      width: '100%',
-                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: screenSize === 'small' ? '14px' : '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Address
-                  </label>
-                  <textarea
-                    value={formData.storeAddress}
-                    onChange={(e) => handleInputChange('storeAddress', e.target.value)}
-                    placeholder="123 Main Street, City"
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      resize: 'vertical',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      placeholder="+91 98765 43210"
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{
+                  padding: '16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🏪 Store Information
                   </div>
-
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      placeholder="contact@bakery.com"
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Store Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.storeName}
+                        onChange={(e) => handleInputChange('storeName', e.target.value)}
+                        placeholder="My Bakery"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Store Address
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.storeAddress}
+                        onChange={(e) => handleInputChange('storeAddress', e.target.value)}
+                        placeholder="123 Main Street"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                          Phone
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                          placeholder="+91 9876543210"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                          Email
+                        </label>
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          placeholder="contact@example.com"
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'tax' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Tax Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.taxRate}
-                    onChange={(e) => handleInputChange('taxRate', e.target.value)}
-                    placeholder="18"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    This rate will be applied to all orders
-                  </p>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Tax Information
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    💰 Tax Configuration
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Configure your tax rate according to local regulations. This will be automatically added to customer orders.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Tax Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.taxRate}
+                        onChange={(e) => handleInputChange('taxRate', e.target.value)}
+                        placeholder="18"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'compliance' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    GST Registration
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <input
-                      type="checkbox"
-                      id="gstRegistered"
-                      checked={formData.gstRegistered}
-                      onChange={(e) => handleInputChange('gstRegistered', e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer'
-                      }}
-                    />
-                    <label htmlFor="gstRegistered" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      GST Registered (Turnover above ₹40 lakh)
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    GSTIN (GST Identification Number)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.gstin}
-                    onChange={(e) => handleInputChange('gstin', e.target.value)}
-                    placeholder="22AAAAA0000A1Z5"
-                    maxLength="15"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      textTransform: 'uppercase',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    15-character GST identification number (if registered)
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    FSSAI License Number
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.fssaiLicense}
-                    onChange={(e) => handleInputChange('fssaiLicense', e.target.value)}
-                    placeholder="10012345678987"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    14-digit FSSAI license number for food safety compliance
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Data Retention Period (days)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.dataRetentionDays}
-                    onChange={(e) => handleInputChange('dataRetentionDays', e.target.value)}
-                    placeholder="365"
-                    min="30"
-                    max="2555"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Days to retain customer and order data (DPDP Act compliance)
-                  </p>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Compliance Information
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    📋 Legal Compliance
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Configure GST, FSSAI, and data retention settings for regulatory compliance. These will appear on receipts and invoices.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        GSTIN
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.gstin}
+                        onChange={(e) => handleInputChange('gstin', e.target.value)}
+                        placeholder="29ABCDE1234F1Z5"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        FSSAI License
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.fssaiLicense}
+                        onChange={(e) => handleInputChange('fssaiLicense', e.target.value)}
+                        placeholder="10012345678987"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'receipt' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Receipt Footer Message
-                  </label>
-                  <textarea
-                    value={formData.receiptFooter}
-                    onChange={(e) => handleInputChange('receiptFooter', e.target.value)}
-                    placeholder="Thank you for visiting! Visit us again."
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      resize: 'vertical',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Printer Type
-                  </label>
-                  <select
-                    value={formData.printerType}
-                    onChange={(e) => handleInputChange('printerType', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="thermal">Thermal Printer</option>
-                    <option value="inkjet">Inkjet Printer</option>
-                    <option value="laser">Laser Printer</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="checkbox"
-                    id="autoPrintReceipt"
-                    checked={formData.autoPrintReceipt}
-                    onChange={(e) => handleInputChange('autoPrintReceipt', e.target.checked)}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <label htmlFor="autoPrintReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                    Auto-print receipts after order completion
-                  </label>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Receipt Settings
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🧾 Receipt Settings
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Customize the footer message that appears on customer receipts. This is a great place for thank you messages or promotions.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Printer Type
+                      </label>
+                      <select
+                        value={formData.printerType}
+                        onChange={(e) => handleInputChange('printerType', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="thermal">Thermal Printer</option>
+                        <option value="standard">Standard Printer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.autoPrintReceipt}
+                          onChange={(e) => handleInputChange('autoPrintReceipt', e.target.checked)}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Auto-print Receipt
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'receipttemplate' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Receipt Template
-                  </label>
-                  <select
-                    value={formData.receiptTemplate}
-                    onChange={(e) => handleInputChange('receiptTemplate', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="standard">Standard - Full detailed receipt</option>
-                    <option value="simple">Simple - Minimal receipt</option>
-                    <option value="thermal">Thermal - Compact for thermal printers</option>
-                    <option value="custom">Custom - Use custom template below</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Font Size (px)
-                  </label>
-                  <select
-                    value={formData.receiptFontSize}
-                    onChange={(e) => handleInputChange('receiptFontSize', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="10">Small (10px)</option>
-                    <option value="12">Medium (12px)</option>
-                    <option value="14">Large (14px)</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showLogoOnReceipt"
-                      checked={formData.showLogoOnReceipt}
-                      onChange={(e) => handleInputChange('showLogoOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showLogoOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show store logo/name on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showGstOnReceipt"
-                      checked={formData.showGstOnReceipt}
-                      onChange={(e) => handleInputChange('showGstOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showGstOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show GST/Tax breakdown on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showTableOnReceipt"
-                      checked={formData.showTableOnReceipt}
-                      onChange={(e) => handleInputChange('showTableOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showTableOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show table number on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showCustomerOnReceipt"
-                      checked={formData.showCustomerOnReceipt}
-                      onChange={(e) => handleInputChange('showCustomerOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showCustomerOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show customer name on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showCashierOnReceipt"
-                      checked={formData.showCashierOnReceipt}
-                      onChange={(e) => handleInputChange('showCashierOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showCashierOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show cashier name on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showEmailOnReceipt"
-                      checked={formData.showEmailOnReceipt}
-                      onChange={(e) => handleInputChange('showEmailOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showEmailOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show email on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showPaymentDetailsOnReceipt"
-                      checked={formData.showPaymentDetailsOnReceipt}
-                      onChange={(e) => handleInputChange('showPaymentDetailsOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showPaymentDetailsOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show payment details (type, entry, status) on receipt
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="showBillIdOnReceipt"
-                      checked={formData.showBillIdOnReceipt}
-                      onChange={(e) => handleInputChange('showBillIdOnReceipt', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="showBillIdOnReceipt" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Show bill ID/database reference on receipt
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Store Logo
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  {formData.storeLogo && (
-                    <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                      <img 
-                        src={formData.storeLogo} 
-                        alt="Store Logo Preview" 
-                        style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'contain' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleInputChange('storeLogo', '')}
-                        style={{
-                          marginTop: '8px',
-                          padding: '6px 12px',
-                          background: '#ef4444',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Remove Logo
-                      </button>
-                    </div>
-                  )}
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    Upload your store logo image (PNG, JPG, etc.)
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Default Cashier Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.cashierName}
-                    onChange={(e) => handleInputChange('cashierName', e.target.value)}
-                    placeholder="John Doe"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    This will be used if no specific cashier is assigned to the order
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Custom Header
-                  </label>
-                  <textarea
-                    value={formData.customReceiptHeader}
-                    onChange={(e) => handleInputChange('customReceiptHeader', e.target.value)}
-                    placeholder="My Store - 123 Main St"
-                    rows={2}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      resize: 'vertical',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    Plain text for receipt header
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Custom Footer
-                  </label>
-                  <textarea
-                    value={formData.customReceiptFooter}
-                    onChange={(e) => handleInputChange('customReceiptFooter', e.target.value)}
-                    placeholder="Thank you for visiting! Visit us again soon"
-                    rows={2}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      resize: 'vertical',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    Plain text for receipt footer
-                  </p>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#dbeafe',
-                  borderRadius: '6px',
-                  border: '1px solid #93c5fd'
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#1e40af' }}>
-                    💡 Tip
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    📄 Receipt Template
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
-                    Select "Custom" template to use your own HTML header and footer. Standard templates use predefined layouts optimized for different printer types.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>
-                    📄 Live Receipt Preview
-                  </label>
-                  <div style={{ 
-                    background: '#f9fafb', 
-                    padding: '24px', 
-                    borderRadius: '8px', 
-                    border: '1px solid #e5e7eb',
-                    display: 'flex',
-                    justifyContent: 'center'
-                  }}>
-                    <ReceiptPreview settings={formData} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Template Style
+                      </label>
+                      <select
+                        value={formData.receiptTemplate}
+                        onChange={(e) => handleInputChange('receiptTemplate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="standard">Standard</option>
+                        <option value="thermal">Thermal</option>
+                        <option value="simple">Simple</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1309,451 +1035,25 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             {activeSection === 'workflow' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
+                  padding: '16px',
+                  background: '#f9fafb',
                   borderRadius: '8px',
-                  padding: '16px'
+                  border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#0369a1' }}>
-                    🔄 Workflow Configuration
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🔄 Workflow Settings
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#0369a1', lineHeight: '1.5' }}>
-                    Customize your POS workflow and Standard Operating Procedures (SOP). These settings control what steps are required during order processing and which features are available to staff.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Required Order Steps (Workflow)
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {['items', 'customer', 'table', 'payment'].map(step => (
-                      <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
                         <input
                           type="checkbox"
-                          id={`workflow-${step}`}
-                          checked={formData.workflowSteps?.includes(step)}
-                          onChange={(e) => {
-                            const newSteps = e.target.checked
-                              ? [...(formData.workflowSteps || []), step]
-                              : (formData.workflowSteps || []).filter(s => s !== step);
-                            handleInputChange('workflowSteps', newSteps);
-                          }}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor={`workflow-${step}`} style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          {step.charAt(0).toUpperCase() + step.slice(1)} {step === 'items' ? '(required)' : ''}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Select the steps that must be completed before an order can be finalized. "Items" is always required.
-                  </p>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Customer Requirements
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="requireCustomer"
-                          checked={formData.requireCustomer}
-                          onChange={(e) => handleInputChange('requireCustomer', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="requireCustomer" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Require customer selection
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="allowWalkIn"
-                          checked={formData.allowWalkIn}
-                          onChange={(e) => handleInputChange('allowWalkIn', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="allowWalkIn" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Allow walk-in customers
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Table Requirements
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="requireTable"
-                          checked={formData.requireTable}
-                          onChange={(e) => handleInputChange('requireTable', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="requireTable" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Require table assignment
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="autoAssignTables"
-                          checked={formData.autoAssignTables}
-                          onChange={(e) => handleInputChange('autoAssignTables', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="autoAssignTables" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Auto-assign available tables
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Payment Methods
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {['CASH', 'CARD', 'UPI', 'SPLIT'].map(method => (
-                      <div key={method} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id={`payment-${method}`}
-                          checked={formData.allowedPaymentMethods?.includes(method)}
-                          onChange={(e) => {
-                            const newMethods = e.target.checked
-                              ? [...(formData.allowedPaymentMethods || []), method]
-                              : (formData.allowedPaymentMethods || []).filter(m => m !== method);
-                            handleInputChange('allowedPaymentMethods', newMethods);
-                          }}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor={`payment-${method}`} style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          {method.charAt(0) + method.slice(1).toLowerCase()} {method === 'SPLIT' ? '(multiple payments)' : ''}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Discount Settings
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="enableDiscount"
-                          checked={formData.enableDiscount}
-                          onChange={(e) => handleInputChange('enableDiscount', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="enableDiscount" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Enable discounts
-                        </label>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
-                          Max discount percent
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.maxDiscountPercent}
-                          onChange={(e) => handleInputChange('maxDiscountPercent', parseInt(e.target.value))}
-                          min="0"
-                          max="100"
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="requireManagerForHighDiscount"
-                          checked={formData.requireManagerForHighDiscount}
-                          onChange={(e) => handleInputChange('requireManagerForHighDiscount', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="requireManagerForHighDiscount" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Require manager for high discounts
-                        </label>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
-                          High discount threshold (%)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.highDiscountThreshold}
-                          onChange={(e) => handleInputChange('highDiscountThreshold', parseInt(e.target.value))}
-                          min="0"
-                          max="100"
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Hold Orders
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="enableHoldOrders"
-                          checked={formData.enableHoldOrders}
-                          onChange={(e) => handleInputChange('enableHoldOrders', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="enableHoldOrders" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Enable hold orders
-                        </label>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
-                          Max hold orders
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.maxHoldOrders}
-                          onChange={(e) => handleInputChange('maxHoldOrders', parseInt(e.target.value))}
-                          min="1"
-                          max="50"
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
-                          Hold order timeout (minutes)
-                        </label>
-                        <input
-                          type="number"
-                          value={formData.holdOrderTimeout}
-                          onChange={(e) => handleInputChange('holdOrderTimeout', parseInt(e.target.value))}
-                          min="5"
-                          max="240"
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Custom Orders
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="enableCustomOrders"
-                        checked={formData.enableCustomOrders}
-                        onChange={(e) => handleInputChange('enableCustomOrders', e.target.checked)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="enableCustomOrders" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                        Enable custom orders
-                      </label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="requireApprovalForCustomOrders"
-                        checked={formData.requireApprovalForCustomOrders}
-                        onChange={(e) => handleInputChange('requireApprovalForCustomOrders', e.target.checked)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="requireApprovalForCustomOrders" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                        Require manager approval for custom orders
-                      </label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="requireNotesForCustomOrders"
-                        checked={formData.requireNotesForCustomOrders}
-                        onChange={(e) => handleInputChange('requireNotesForCustomOrders', e.target.checked)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="requireNotesForCustomOrders" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                        Require notes for custom orders
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Order Notes
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <input
-                      type="checkbox"
-                      id="enableOrderNotes"
-                      checked={formData.enableOrderNotes}
-                      onChange={(e) => handleInputChange('enableOrderNotes', e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="enableOrderNotes" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                      Enable order notes
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Void Orders
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="enableVoid"
-                        checked={formData.enableVoid}
-                        onChange={(e) => handleInputChange('enableVoid', e.target.checked)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="enableVoid" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                        Enable void functionality
-                      </label>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="requireManagerForVoid"
-                        checked={formData.requireManagerForVoid}
-                        onChange={(e) => handleInputChange('requireManagerForVoid', e.target.checked)}
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                      />
-                      <label htmlFor="requireManagerForVoid" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                        Require manager approval for void
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Kitchen Order Ticket (KOT)
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="autoCreateKOT"
                           checked={formData.autoCreateKOT}
                           onChange={(e) => handleInputChange('autoCreateKOT', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          style={{ width: '16px', height: '16px' }}
                         />
-                        <label htmlFor="autoCreateKOT" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Auto-create KOT on order
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="autoPrintKOT"
-                          checked={formData.autoPrintKOT}
-                          onChange={(e) => handleInputChange('autoPrintKOT', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="autoPrintKOT" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Auto-print KOT
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="requirePaymentBeforeKOT"
-                          checked={formData.requirePaymentBeforeKOT}
-                          onChange={(e) => handleInputChange('requirePaymentBeforeKOT', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="requirePaymentBeforeKOT" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Require payment before KOT
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Token System
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="checkbox"
-                          id="enableTokenSystem"
-                          checked={formData.enableTokenSystem}
-                          onChange={(e) => handleInputChange('enableTokenSystem', e.target.checked)}
-                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                        />
-                        <label htmlFor="enableTokenSystem" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                          Enable token system
-                        </label>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
-                          Token prefix
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.tokenPrefix}
-                          onChange={(e) => handleInputChange('tokenPrefix', e.target.value)}
-                          maxLength="3"
-                          style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            outline: 'none'
-                          }}
-                        />
-                      </div>
+                        Auto-create KOT
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -1761,673 +1061,263 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             )}
 
             {activeSection === 'pos' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    POS Mode
-                  </label>
-                  <select
-                    value={formData.posMode}
-                    onChange={(e) => handleInputChange('posMode', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="basic">Basic Mode - Simplified for new employees & senior citizens</option>
-                    <option value="advanced">Advanced Mode - Full features for experienced staff</option>
-                  </select>
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Basic mode shows a simplified interface with larger buttons and fewer options. Advanced mode provides full access to all POS features.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Quick Code Type
-                  </label>
-                  <select
-                    value={formData.codeType}
-                    onChange={(e) => handleInputChange('codeType', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="alphanumeric">Alphanumeric (A1, B2, etc.)</option>
-                    <option value="numeric">Numeric (101, 102, etc.)</option>
-                    <option value="alphabetic">Alphabetic (AA, AB, etc.)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Order Timeout (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.orderTimeout}
-                    onChange={(e) => handleInputChange('orderTimeout', e.target.value)}
-                    placeholder="30"
-                    min="5"
-                    max="120"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="checkbox"
-                    id="lowStockAlert"
-                    checked={formData.lowStockAlert}
-                    onChange={(e) => handleInputChange('lowStockAlert', e.target.checked)}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <label htmlFor="lowStockAlert" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                    Enable low stock alerts
-                  </label>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    POS Settings
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🛒 POS Configuration
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Configure POS mode, quick codes for menu items, and order timeout settings.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        POS Mode
+                      </label>
+                      <select
+                        value={formData.posMode}
+                        onChange={(e) => handleInputChange('posMode', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="basic">Basic</option>
+                        <option value="advanced">Advanced</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'itemcodes' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Code Type
-                  </label>
-                  <select
-                    value={formData.codeType}
-                    onChange={(e) => handleInputChange('codeType', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="alphanumeric">Alphanumeric (A1, B2, etc.)</option>
-                    <option value="numeric">Numeric (101, 102, etc.)</option>
-                    <option value="alphabetic">Alphabetic (AA, AB, etc.)</option>
-                  </select>
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Changing this will regenerate all item codes. Use with caution.
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Menu Item Codes
-                  </label>
-                  <div style={{
-                    maxHeight: '400px',
-                    overflowY: 'auto',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px'
-                  }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ position: 'sticky', top: 0, background: '#f9fafb' }}>
-                        <tr>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Item Name</th>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Code</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {menuItems && menuItems.length > 0 ? menuItems.map((item, index) => (
-                          <tr key={item.id || index} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                            <td style={{ padding: '12px', fontSize: '13px', color: '#374151' }}>{item.name}</td>
-                            <td style={{ padding: '12px' }}>
-                              <input
-                                type="text"
-                                value={item.code || generateCode(index, formData.codeType)}
-                                onChange={(e) => {
-                                  const updatedItems = [...menuItems];
-                                  updatedItems[index] = { ...item, code: e.target.value.toUpperCase() };
-                                  setMenuItems(updatedItems);
-                                  setHasChanges(true);
-                                }}
-                                style={{
-                                  padding: '6px 10px',
-                                  border: '1px solid #d1d5db',
-                                  borderRadius: '4px',
-                                  fontSize: '13px',
-                                  width: '100px',
-                                  textTransform: 'uppercase',
-                                  outline: 'none'
-                                }}
-                              />
-                            </td>
-                          </tr>
-                        )) : (
-                          <tr>
-                            <td colSpan="2" style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
-                              No menu items available
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#dbeafe',
-                  borderRadius: '6px',
-                  border: '1px solid #93c5fd'
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#1e40af' }}>
-                    💡 Tip
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🔢 Item Code Configuration
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
-                    Item codes can be used in the numpad search to quickly add items to the cart. Keep codes short and memorable for faster operations.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Code Type
+                      </label>
+                      <select
+                        value={formData.codeType}
+                        onChange={(e) => handleInputChange('codeType', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="alphanumeric">Alphanumeric (A1, B2...)</option>
+                        <option value="numeric">Numeric (101, 102...)</option>
+                        <option value="alphabetic">Alphabetic (AA, AB...)</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'kitchen' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="checkbox"
-                    id="kitchenDisplayEnabled"
-                    checked={formData.kitchenDisplayEnabled}
-                    onChange={(e) => handleInputChange('kitchenDisplayEnabled', e.target.checked)}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <label htmlFor="kitchenDisplayEnabled" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                    Enable Kitchen Display System
-                  </label>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: '#f9fafb',
                   borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                    🍳 Kitchen Station Configuration
-                  </h3>
-                  <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#6b7280' }}>
-                    Configure kitchen stations for KOT routing
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                    <button
-                      onClick={saveStationConfiguration}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#111827',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Save Stations
-                    </button>
-                    <button
-                      onClick={loadStationConfiguration}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#ffffff',
-                        color: '#111827',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Reload
-                    </button>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    👨‍🍳 Kitchen Display
                   </div>
-
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                    gap: '16px'
-                  }}>
-                    {stations.map(station => (
-                      <div
-                        key={station.id}
-                        style={{
-                          background: '#ffffff',
-                          borderRadius: '8px',
-                          padding: '16px',
-                          border: station.enabled ? '2px solid #059669' : '1px solid #e5e7eb',
-                          opacity: station.enabled ? 1 : 0.6
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: '6px',
-                              background: station.enabled ? '#f0fdf4' : '#f3f4f6',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '20px'
-                            }}>
-                              {getStationIcon(station.id)}
-                            </div>
-                            <div>
-                              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{station.name}</div>
-                              <div style={{ fontSize: '12px', color: '#6b7280' }}>{station.id}</div>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => toggleStation(station.id)}
-                            style={{
-                              padding: '6px 12px',
-                              background: station.enabled ? '#111827' : '#f9fafb',
-                              color: station.enabled ? '#ffffff' : '#111827',
-                              border: station.enabled ? 'none' : '1px solid #d1d5db',
-                              borderRadius: '4px',
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {station.enabled ? 'On' : 'Off'}
-                          </button>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>
-                            Printer:
-                          </label>
-                          <input
-                            type="text"
-                            value={station.printer || ''}
-                            onChange={(e) => updateStationPrinter(station.id, e.target.value)}
-                            placeholder="e.g., Kitchen Printer 1"
-                            disabled={!station.enabled}
-                            style={{
-                              width: '100%',
-                              padding: '8px 12px',
-                              background: '#ffffff',
-                              color: '#111827',
-                              border: '1px solid #d1d5db',
-                              borderRadius: '4px',
-                              fontSize: '13px',
-                              opacity: station.enabled ? 1 : 0.5,
-                              outline: 'none'
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{
-                    marginTop: '16px',
-                    padding: '12px',
-                    background: '#dbeafe',
-                    borderRadius: '6px',
-                    border: '1px solid #93c5fd'
-                  }}>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#1e40af', lineHeight: '1.5' }}>
-                      💡 Enable stations that are active in your kitchen. Items are automatically routed to stations based on their category. Disabled stations will not receive KOTs.
-                    </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.kitchenDisplayEnabled}
+                          onChange={(e) => handleInputChange('kitchenDisplayEnabled', e.target.checked)}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Enable Kitchen Display
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'qr' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="checkbox"
-                    id="qrOrderingEnabled"
-                    checked={formData.qrOrderingEnabled}
-                    onChange={(e) => handleInputChange('qrOrderingEnabled', e.target.checked)}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <label htmlFor="qrOrderingEnabled" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                    Enable QR Code Ordering
-                  </label>
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    QR Ordering Settings
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    📱 QR Ordering
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    When enabled, customers can scan QR codes at tables to place orders directly from their phones.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.qrOrderingEnabled}
+                          onChange={(e) => handleInputChange('qrOrderingEnabled', e.target.checked)}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Enable QR Ordering
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'notifications' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <input
-                    type="checkbox"
-                    id="enableNotifications"
-                    checked={formData.enableNotifications}
-                    onChange={(e) => handleInputChange('enableNotifications', e.target.checked)}
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  <label htmlFor="enableNotifications" style={{ fontSize: '14px', color: '#374151', cursor: 'pointer' }}>
-                    Enable Desktop Notifications
-                  </label>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Daily Report Time
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.dailyReportTime}
-                    onChange={(e) => handleInputChange('dailyReportTime', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Notification Settings
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🔔 Notifications
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Configure when to receive notifications for orders, low stock alerts, and daily reports.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.enableNotifications}
+                          onChange={(e) => handleInputChange('enableNotifications', e.target.checked)}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Enable Notifications
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'display' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Razorpay Key ID
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.razorpayKeyId}
-                    onChange={(e) => handleInputChange('razorpayKeyId', e.target.value)}
-                    placeholder="rzp_live_xxxxx or rzp_test_xxxxx"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Razorpay Key Secret
-                  </label>
-                  <input
-                    type="password"
-                    value={formData.razorpayKeySecret}
-                    onChange={(e) => handleInputChange('razorpayKeySecret', e.target.value)}
-                    placeholder="Your Razorpay secret key"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Payment Settings
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🖥️ Display Settings
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Configure Razorpay for digital payments. Staff can process payments directly through the POS.
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.lowStockAlert}
+                          onChange={(e) => handleInputChange('lowStockAlert', e.target.checked)}
+                          style={{ width: '16px', height: '16px' }}
+                        />
+                        Low Stock Alerts
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'backup' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Backup Data
-                  </label>
-                  <button
-                    onClick={handleBackup}
-                    style={{
-                      width: '100%',
-                      padding: '12px 20px',
-                      background: '#111827',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    💾 Download Backup
-                  </button>
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Download a complete backup of all POS data (settings, menu, inventory, customers, orders, etc.)
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                    Restore Data
-                  </label>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleRestore}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Restore POS data from a previously created backup file
-                  </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{
+                  padding: '16px',
+                  background: '#f9fafb',
+                  borderRadius: '8px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    💾 Backup & Restore
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <button
+                        onClick={handleBackup}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#111827',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Download Backup
+                      </button>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Restore Backup
+                      </label>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleRestore}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {activeSection === 'debug' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: '#f9fafb',
                   borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                    🐛 Crash & Bug Tracking
-                  </h3>
-                  <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#6b7280' }}>
-                    Monitor system errors and crashes for debugging
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                    <button
-                      onClick={() => {
-                        const stats = JSON.parse(localStorage.getItem('cafeos_crash_stats') || '{}');
-                        alert(JSON.stringify(stats, null, 2));
-                      }}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#111827',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      View Crash Stats
-                    </button>
-                    <button
-                      onClick={() => {
-                        const errorLog = JSON.parse(localStorage.getItem('cafeos_error_log') || '[]');
-                        alert(JSON.stringify(errorLog, null, 2));
-                      }}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#ffffff',
-                        color: '#111827',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      View Error Log
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('Clear all error logs and crash statistics?')) {
-                          localStorage.removeItem('cafeos_error_log');
-                          localStorage.removeItem('cafeos_crash_stats');
-                          alert('Error logs cleared successfully');
-                        }
-                      }}
-                      style={{
-                        padding: '10px 20px',
-                        background: '#ef4444',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Clear Logs
-                    </button>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    🐛 Debug Information
                   </div>
-
-                  <div style={{
-                    padding: '16px',
-                    background: '#ffffff',
-                    borderRadius: '6px',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                      System Information
-                    </h4>
-                    <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.8' }}>
-                      <div><strong>Browser:</strong> {navigator.userAgent}</div>
-                      <div><strong>Platform:</strong> {navigator.platform}</div>
-                      <div><strong>Language:</strong> {navigator.language}</div>
-                      <div><strong>Screen:</strong> {window.screen.width}x{window.screen.height}</div>
-                      <div><strong>Memory:</strong> {navigator.deviceMemory || 'Unknown'} GB</div>
-                      <div><strong>Cores:</strong> {navigator.hardwareConcurrency || 'Unknown'}</div>
-                      <div><strong>Connection:</strong> {navigator.connection?.effectiveType || 'Unknown'}</div>
-                      <div><strong>Online:</strong> {navigator.onLine ? 'Yes' : 'No'}</div>
-                    </div>
-                  </div>
-
-                  <div style={{
-                    marginTop: '16px',
-                    padding: '12px',
-                    background: '#dbeafe',
-                    borderRadius: '6px',
-                    border: '1px solid #93c5fd'
-                  }}>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#1e40af', lineHeight: '1.5' }}>
-                      💡 Error logs are automatically captured by the system and stored in localStorage. Use this information to diagnose issues and improve system stability.
-                    </p>
+                  <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.8' }}>
+                    <div><strong>Browser:</strong> {navigator.userAgent}</div>
+                    <div><strong>Platform:</strong> {navigator.platform}</div>
+                    <div><strong>Language:</strong> {navigator.language}</div>
+                    <div><strong>Screen:</strong> {window.screen.width}x{window.screen.height}</div>
                   </div>
                 </div>
               </div>
@@ -2482,3 +1372,4 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     </div>
   );
 }
+
