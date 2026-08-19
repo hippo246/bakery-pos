@@ -19,6 +19,15 @@ function InventoryContent({ inventory = [], setInventory }) {
     cost: ''
   });
 
+  // Sync menu items to localStorage for QR ordering
+  useEffect(() => {
+    try {
+      localStorage.setItem('bakery_menu', JSON.stringify(inventory));
+    } catch (error) {
+      console.error('Error saving menu to localStorage:', error);
+    }
+  }, [inventory]);
+
   // Screen size detection
   useEffect(() => {
     const handleResize = () => {

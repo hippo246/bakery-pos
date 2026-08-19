@@ -3,6 +3,27 @@ import KitchenDisplaySystem from './KitchenDisplaySystem';
 
 export default function Kitchen({ onNavigate, orders = [] }) {
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+  const [qrOrders, setQROrders] = useState([]);
+
+  // Poll for QR orders from localStorage
+  useEffect(() => {
+    const loadQROrders = () => {
+      try {
+        const storedOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+        setQROrders(storedOrders);
+      } catch (error) {
+        console.error('Error loading QR orders:', error);
+      }
+    };
+
+    loadQROrders();
+    const interval = setInterval(loadQROrders, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Combine regular orders with QR orders
+  const allOrders = [...orders, ...qrOrders];
 
   // Screen size detection
   useEffect(() => {
@@ -76,7 +97,7 @@ export default function Kitchen({ onNavigate, orders = [] }) {
 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <KitchenDisplaySystem screenSize={screenSize} />
+        <KitchenDisplaySystem screenSize={screenSize} orders={allOrders} />
       </div>
     </div>
   );

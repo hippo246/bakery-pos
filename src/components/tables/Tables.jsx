@@ -4,6 +4,24 @@ import QROrdering from '../qrodering/QROrdering';
 export default function Tables({ onNavigate, orders = [], setOrders, tables: externalTables = [], setTables: setExternalTables, menuItems = [], settings = {} }) {
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [lastCallCount, setLastCallCount] = useState(0);
+  const [qrOrders, setQROrders] = useState([]);
+
+  // Poll for QR orders from localStorage
+  useEffect(() => {
+    const loadQROrders = () => {
+      try {
+        const storedOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+        setQROrders(storedOrders);
+      } catch (error) {
+        console.error('Error loading QR orders:', error);
+      }
+    };
+
+    loadQROrders();
+    const interval = setInterval(loadQROrders, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Screen size detection
   useEffect(() => {
@@ -155,13 +173,15 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
     });
   };
 
-  // Get orders for each table with filters applied
+  // Get orders for each table with filters applied (combine regular orders with QR orders)
   const tableOrders = useMemo(() => {
     const ordersByTable = {};
     
-    if (!orders || !Array.isArray(orders)) return ordersByTable;
+    const allOrders = [...orders, ...qrOrders];
     
-    orders.forEach(order => {
+    if (!allOrders || !Array.isArray(allOrders)) return ordersByTable;
+    
+    allOrders.forEach(order => {
       if (!order) return;
       
       // Check both tableId and tableName for compatibility
@@ -403,32 +423,17 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
               {occupiedCount}
             </div>
           </div>
-          <div style={{
-            background: '#252538',
-            borderRadius: '16px',
-            padding: screenSize === 'small' ? '16px' : '24px',
-            border: '1px solid #2d2d44'
-          }}>
-            <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Total
-            </div>
-            <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#6366f1' }}>
-              {tablesWithStatus.length}
-            </div>
-          </div>
         </div>
 
         {/* Controls */}
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          gap: screenSize === 'small' ? '12px' : '16px',
           marginBottom: screenSize === 'small' ? '16px' : '24px',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
+          flexWrap: 'wrap'
         }}>
           <button
-            onClick={handleAddTable}
+            onClick={() => setShowModal(true)}
             style={{
               padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
               background: '#6366f1',
@@ -447,6 +452,31 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
             + Add Table
           </button>
           <button
+            onClick={() => {
+              const tableData = encodeURIComponent(JSON.stringify({
+                tableId: 1,
+                tableName: 'T1'
+              }));
+              window.open(`/qr-ordering.html?table=${tableData}`, '_blank');
+            }}
+            style={{
+              padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+              background: '#8b5cf6',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              width: screenSize === 'small' ? '100%' : 'auto'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#7c3aed'}
+            onMouseLeave={(e) => e.target.style.background = '#8b5cf6'}
+          >
+            📱 QR
+          </button>
+          <button
             onClick={() => setShowQRDemoModal(true)}
             style={{
               padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
@@ -463,7 +493,7 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
             onMouseEnter={(e) => e.target.style.background = '#3d3d5c'}
             onMouseLeave={(e) => e.target.style.background = '#2d2d44'}
           >
-            QR Ordering
+            QR Demo
           </button>
         </div>
 

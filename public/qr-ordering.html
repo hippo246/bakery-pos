@@ -405,20 +405,34 @@
     
     <script>
         // Sample menu data - in production, this would come from an API
-        const menuItems = [
-            { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐' },
-            { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫' },
-            { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖' },
-            { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕' },
-            { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛' },
-            { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕' },
-            { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰' },
-            { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀' },
-            { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮' },
-            { id: 10, name: 'Sandwich', category: 'Food', price: 85, description: 'Club sandwich with fries', emoji: '🥪' },
-            { id: 11, name: 'Salad', category: 'Food', price: 75, description: 'Fresh garden salad', emoji: '🥗' },
-            { id: 12, name: 'Soup', category: 'Food', price: 65, description: 'Soup of the day', emoji: '🍲' }
-        ];
+        // Try to load from localStorage first, fall back to sample data
+        let menuItems = [];
+        try {
+            const savedMenu = localStorage.getItem('bakery_menu');
+            if (savedMenu) {
+                menuItems = JSON.parse(savedMenu);
+            }
+        } catch (error) {
+            console.error('Error loading menu from localStorage:', error);
+        }
+        
+        // Fallback sample data if no menu found
+        if (menuItems.length === 0) {
+            menuItems = [
+                { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐' },
+                { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫' },
+                { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖' },
+                { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕' },
+                { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛' },
+                { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕' },
+                { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰' },
+                { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀' },
+                { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮' },
+                { id: 10, name: 'Sandwich', category: 'Food', price: 85, description: 'Club sandwich with fries', emoji: '🥪' },
+                { id: 11, name: 'Salad', category: 'Food', price: 75, description: 'Fresh garden salad', emoji: '🥗' },
+                { id: 12, name: 'Soup', category: 'Food', price: 65, description: 'Soup of the day', emoji: '🍲' }
+            ];
+        }
         
         let cart = [];
         let selectedCategory = 'All';

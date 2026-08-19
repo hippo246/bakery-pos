@@ -7,6 +7,24 @@ export default function TokenManagement({ orders, onNavigate }) {
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [selectedToken, setSelectedToken] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [qrOrders, setQROrders] = useState([]);
+
+  // Poll for QR orders from localStorage
+  useEffect(() => {
+    const loadQROrders = () => {
+      try {
+        const storedOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+        setQROrders(storedOrders);
+      } catch (error) {
+        console.error('Error loading QR orders:', error);
+      }
+    };
+
+    loadQROrders();
+    const interval = setInterval(loadQROrders, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Screen size detection
   useEffect(() => {
@@ -26,8 +44,9 @@ export default function TokenManagement({ orders, onNavigate }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Filter orders that have tokens
-  const tokens = orders.filter(order => order.token).sort((a, b) => {
+  // Filter orders that have tokens (combine regular orders with QR orders)
+  const allOrders = [...orders, ...qrOrders];
+  const tokens = allOrders.filter(order => order.token).sort((a, b) => {
     // Sort by token number (extract numeric part)
     const aNum = parseInt(a.token.replace('T-', ''));
     const bNum = parseInt(b.token.replace('T-', ''));

@@ -9,6 +9,24 @@ export default function Waiters({ onNavigate, orders = [], staff = [] }) {
   const [waiterCalls, setWaiterCalls] = useState([]);
   const [lastCallCount, setLastCallCount] = useState(0);
   const [showWaiterCallsModal, setShowWaiterCallsModal] = useState(false);
+  const [qrOrders, setQROrders] = useState([]);
+
+  // Poll for QR orders from localStorage
+  useEffect(() => {
+    const loadQROrders = () => {
+      try {
+        const storedOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+        setQROrders(storedOrders);
+      } catch (error) {
+        console.error('Error loading QR orders:', error);
+      }
+    };
+
+    loadQROrders();
+    const interval = setInterval(loadQROrders, 3000); // Check every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Screen size detection
   useEffect(() => {
@@ -88,20 +106,21 @@ export default function Waiters({ onNavigate, orders = [], staff = [] }) {
     }
   };
 
-  // Get waiter orders
+  // Get waiter orders (combine regular orders with QR orders)
+  const allOrders = [...orders, ...qrOrders];
   const waiterOrders = useMemo(() => {
     if (!selectedStaff) {
       // Show all orders when "All Waiters" is selected
-      return orders.filter(order => order?.status !== 'CANCELLED');
+      return allOrders.filter(order => order?.status !== 'CANCELLED');
     }
-    return orders.filter(order => 
+    return allOrders.filter(order => 
       (order.staffId === selectedStaff.id || 
        order.employeeId === selectedStaff.id ||
        (order.isQROrder && selectedStaff.id === 'qr') ||
        (!order.staffId && !order.employeeId && selectedStaff.id === 'unassigned')) && 
       order?.status !== 'CANCELLED'
     );
-  }, [orders, selectedStaff]);
+  }, [allOrders, selectedStaff]);
 
   // Filter orders by status and search
   const filteredOrders = useMemo(() => {
@@ -165,15 +184,15 @@ export default function Waiters({ onNavigate, orders = [], staff = [] }) {
 
   // Calculate stats
   const stats = useMemo(() => {
-    const allOrders = orders.filter(o => o?.status !== 'CANCELLED');
+    const allOrdersList = allOrders.filter(o => o?.status !== 'CANCELLED');
     return {
-      total: allOrders.length,
-      completed: allOrders.filter(o => o?.status === 'COMPLETED').length,
-      pending: allOrders.filter(o => o?.status === 'PENDING' || o?.status === 'IN_PROGRESS').length,
-      revenue: allOrders.filter(o => o?.status === 'COMPLETED').reduce((sum, o) => sum + (o?.total || 0), 0),
+      total: allOrdersList.length,
+      completed: allOrdersList.filter(o => o?.status === 'COMPLETED').length,
+      pending: allOrdersList.filter(o => o?.status === 'PENDING' || o?.status === 'IN_PROGRESS').length,
+      revenue: allOrdersList.filter(o => o?.status === 'COMPLETED').reduce((sum, o) => sum + (o?.total || 0), 0),
       activeStaff: waiters.length - 3 // Subtract the 3 special options
     };
-  }, [orders, waiters]);
+  }, [allOrders, waiters]);
 
   // Get status color
   const getStatusColor = (status) => {
