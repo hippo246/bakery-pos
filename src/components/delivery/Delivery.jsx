@@ -147,6 +147,25 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
   const [ordersState, setOrdersState] = useState(contextDeliveryOrders || deliveryOrders || INIT_DELIVERY_ORDERS);
   const [riders, setRiders] = useState(INIT_RIDERS);
   const [settlements, setSettlements] = useState(INIT_SETTLEMENTS);
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Sync with context delivery orders when they change
   useEffect(() => {

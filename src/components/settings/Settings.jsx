@@ -1,7 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { KitchenStation } from '../../domain/kotTypes.js';
 
 export default function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables }) {
   const [activeSection, setActiveSection] = useState('general');
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [formData, setFormData] = useState({
     storeName: settings.storeName || '',
     storeAddress: settings.storeAddress || '',
@@ -12,8 +32,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     language: settings.language || 'en',
     receiptFooter: settings.receiptFooter || '',
     codeType: settings.codeType || 'alphanumeric',
-    razorpayKeyId: settings.razorpayKeyId || 'rzp_test_TNOHWmxS3Z0i8f',
-    razorpayKeySecret: settings.razorpayKeySecret || 'YbVAsBPPz7NT6iwXnuvBUDHb',
+    razorpayKeyId: settings.razorpayKeyId || '',
+    razorpayKeySecret: settings.razorpayKeySecret || '',
     printerType: settings.printerType || 'thermal',
     autoPrintReceipt: settings.autoPrintReceipt !== false,
     kitchenDisplayEnabled: settings.kitchenDisplayEnabled !== false,
@@ -74,6 +94,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [stations, setStations] = useState([
+    { id: KitchenStation.BAKERY, name: 'Bakery', enabled: true, printer: null },
+    { id: KitchenStation.KITCHEN, name: 'Kitchen', enabled: true, printer: null },
+    { id: KitchenStation.BEVERAGE, name: 'Beverage', enabled: true, printer: null },
+    { id: KitchenStation.DESSERT, name: 'Dessert', enabled: true, printer: null },
+    { id: KitchenStation.GRILL, name: 'Grill', enabled: false, printer: null },
+    { id: KitchenStation.FRYER, name: 'Fryer', enabled: false, printer: null },
+    { id: KitchenStation.COLD, name: 'Cold', enabled: false, printer: null },
+    { id: KitchenStation.GENERAL, name: 'General', enabled: true, printer: null }
+  ]);
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
@@ -89,6 +119,59 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Station configuration functions
+  const toggleStation = (stationId) => {
+    setStations(stations.map(s => 
+      s.id === stationId ? { ...s, enabled: !s.enabled } : s
+    ));
+  };
+
+  const updateStationPrinter = (stationId, printer) => {
+    setStations(stations.map(s => 
+      s.id === stationId ? { ...s, printer } : s
+    ));
+  };
+
+  const saveStationConfiguration = () => {
+    try {
+      localStorage.setItem('cafeos_kitchen_stations', JSON.stringify(stations));
+      alert('Station configuration saved!');
+    } catch (error) {
+      console.error('Error saving station configuration:', error);
+      alert('Failed to save station configuration');
+    }
+  };
+
+  const loadStationConfiguration = () => {
+    try {
+      const saved = localStorage.getItem('cafeos_kitchen_stations');
+      if (saved) {
+        setStations(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading station configuration:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadStationConfiguration();
+  }, []);
+
+  // Helper function for station icons
+  const getStationIcon = (stationId) => {
+    const icons = {
+      [KitchenStation.BAKERY]: '🥐',
+      [KitchenStation.KITCHEN]: '🍳',
+      [KitchenStation.BEVERAGE]: '☕',
+      [KitchenStation.DESSERT]: '🍰',
+      [KitchenStation.GRILL]: '🥩',
+      [KitchenStation.FRYER]: '🍟',
+      [KitchenStation.COLD]: '🥗',
+      [KitchenStation.GENERAL]: '🍽️'
+    };
+    return icons[stationId] || '🍽️';
   };
 
   const generateCode = (index, codeType) => {
@@ -241,6 +324,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     { id: 'qr', label: 'QR Ordering', icon: '📱' },
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'display', label: 'Display', icon: '🖥️' },
+    { id: 'debug', label: 'Debug & Logs', icon: '🐛' },
     { id: 'backup', label: 'Backup & Restore', icon: '💾' }
   ];
 
@@ -427,35 +511,37 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       {/* Header */}
       <div style={{
         background: '#ffffff',
-        padding: '20px 24px',
+        padding: screenSize === 'small' ? '16px' : '20px 24px',
         borderBottom: '1px solid #e5e7eb'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
           <div>
             <div style={{
               color: '#111827',
-              fontSize: '20px',
+              fontSize: screenSize === 'small' ? '18px' : '20px',
               fontWeight: '600'
             }}>
               Settings
             </div>
-            <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
               Configure your POS system preferences
             </div>
           </div>
           <button
             onClick={() => onNavigate?.('dashboard')}
             style={{
-              padding: '10px 20px',
+              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: '#f9fafb',
               color: '#111827',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: screenSize === 'small' ? '12px' : '13px',
               fontWeight: '500',
               cursor: 'pointer'
             }}
@@ -466,57 +552,57 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       </div>
 
       {/* Content */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
         {/* Sidebar */}
         <div style={{
-          width: '240px',
+          width: screenSize === 'small' ? '100%' : '240px',
           background: '#ffffff',
-          borderRight: '1px solid #e5e7eb',
-          padding: '16px',
-          overflowY: 'auto'
+          borderRight: screenSize === 'small' ? 'none' : '1px solid #e5e7eb',
+          borderBottom: screenSize === 'small' ? '1px solid #e5e7eb' : 'none',
+          padding: screenSize === 'small' ? '12px' : '16px',
+          overflowY: screenSize === 'small' ? 'auto' : 'auto',
+          overflowX: screenSize === 'small' ? 'auto' : 'hidden'
         }}>
           <div>
-            <div style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.05em' }}>
+            <div style={{ margin: screenSize === 'small' ? '0 0 8px' : '0 0 12px', fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: '#9ca3af', letterSpacing: '0.05em' }}>
               SECTIONS
             </div>
-            {sections.map(section => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  background: activeSection === section.id ? '#f3f4f6' : '#ffffff',
-                  color: activeSection === section.id ? '#111827' : '#6b7280',
-                  border: activeSection === section.id ? '1px solid #d1d5db' : '1px solid transparent',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  marginBottom: '4px',
-                  textAlign: 'left',
-                  borderRadius: '6px'
-                }}
-              >
-                <span>{section.icon}</span>
-                {section.label}
-              </button>
-            ))}
+            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+              {sections.map(section => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  style={{
+                    padding: screenSize === 'small' ? '6px 12px' : '8px 12px',
+                    background: activeSection === section.id ? '#f3f4f6' : 'transparent',
+                    color: activeSection === section.id ? '#111827' : '#6b7280',
+                    border: activeSection === section.id ? '1px solid #e5e7eb' : '1px solid transparent',
+                    borderRadius: '6px',
+                    fontSize: screenSize === 'small' ? '12px' : '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'left',
+                    width: screenSize === 'small' ? 'auto' : '100%'
+                  }}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: '#f9fafb' }}>
+        <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f9fafb' }}>
           <div style={{
             background: '#ffffff',
             borderRadius: '8px',
-            padding: '24px',
+            padding: screenSize === 'small' ? '16px' : '24px',
             maxWidth: '700px',
             border: '1px solid #e5e7eb'
           }}>
-            <div style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: '600', color: '#111827', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ margin: '0 0 20px', fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#111827', paddingBottom: screenSize === 'small' ? '12px' : '16px', borderBottom: '1px solid #e5e7eb' }}>
               {sections.find(s => s.id === activeSection)?.label}
             </div>
 
@@ -531,10 +617,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     onChange={(e) => handleInputChange('currency', e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '14px' : '14px',
                       background: '#ffffff',
                       outline: 'none'
                     }}
@@ -547,7 +633,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
                     Language
                   </label>
                   <select
@@ -555,10 +641,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     onChange={(e) => handleInputChange('language', e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '14px' : '14px',
                       background: '#ffffff',
                       outline: 'none'
                     }}
@@ -569,7 +655,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
                     Theme
                   </label>
                   <select
@@ -577,10 +663,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     onChange={(e) => handleInputChange('theme', e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '14px' : '14px',
                       background: '#ffffff',
                       outline: 'none'
                     }}
@@ -595,7 +681,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             {activeSection === 'business' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
                     Store Name
                   </label>
                   <input
@@ -605,17 +691,17 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     placeholder="My Bakery"
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '14px' : '14px',
                       outline: 'none'
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
                     Address
                   </label>
                   <textarea
@@ -625,7 +711,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     rows={3}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
                       fontSize: '14px',
@@ -1898,17 +1984,142 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 </div>
 
                 <div style={{
-                  padding: '16px',
+                  padding: '20px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Kitchen Display Settings
-                  </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    When enabled, orders will appear in the Kitchen tab for staff to manage preparation status.
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                    🍳 Kitchen Station Configuration
+                  </h3>
+                  <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#6b7280' }}>
+                    Configure kitchen stations for KOT routing
                   </p>
+
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                    <button
+                      onClick={saveStationConfiguration}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#111827',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Save Stations
+                    </button>
+                    <button
+                      onClick={loadStationConfiguration}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#ffffff',
+                        color: '#111827',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Reload
+                    </button>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '16px'
+                  }}>
+                    {stations.map(station => (
+                      <div
+                        key={station.id}
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '8px',
+                          padding: '16px',
+                          border: station.enabled ? '2px solid #059669' : '1px solid #e5e7eb',
+                          opacity: station.enabled ? 1 : 0.6
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '6px',
+                              background: station.enabled ? '#f0fdf4' : '#f3f4f6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '20px'
+                            }}>
+                              {getStationIcon(station.id)}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{station.name}</div>
+                              <div style={{ fontSize: '12px', color: '#6b7280' }}>{station.id}</div>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={() => toggleStation(station.id)}
+                            style={{
+                              padding: '6px 12px',
+                              background: station.enabled ? '#111827' : '#f9fafb',
+                              color: station.enabled ? '#ffffff' : '#111827',
+                              border: station.enabled ? 'none' : '1px solid #d1d5db',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: '500',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {station.enabled ? 'On' : 'Off'}
+                          </button>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '6px', fontWeight: '500' }}>
+                            Printer:
+                          </label>
+                          <input
+                            type="text"
+                            value={station.printer || ''}
+                            onChange={(e) => updateStationPrinter(station.id, e.target.value)}
+                            placeholder="e.g., Kitchen Printer 1"
+                            disabled={!station.enabled}
+                            style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              background: '#ffffff',
+                              color: '#111827',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              opacity: station.enabled ? 1 : 0.5,
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    background: '#dbeafe',
+                    borderRadius: '6px',
+                    border: '1px solid #93c5fd'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#1e40af', lineHeight: '1.5' }}>
+                      💡 Enable stations that are active in your kitchen. Items are automatically routed to stations based on their category. Disabled stations will not receive KOTs.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -2100,26 +2311,124 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       padding: '12px 16px',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      outline: 'none'
                     }}
                   />
                   <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#6b7280' }}>
-                    Restore data from a previously created backup file. This will replace all current data.
+                    Restore POS data from a previously created backup file
                   </p>
                 </div>
+              </div>
+            )}
 
+            {activeSection === 'debug' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '16px',
+                  padding: '20px',
                   background: '#f9fafb',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                    Backup & Restore
-                  </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>
-                    Regular backups are recommended for data safety. Store backups securely and follow data retention policies.
+                  <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                    🐛 Crash & Bug Tracking
+                  </h3>
+                  <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#6b7280' }}>
+                    Monitor system errors and crashes for debugging
                   </p>
+
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                    <button
+                      onClick={() => {
+                        const stats = JSON.parse(localStorage.getItem('cafeos_crash_stats') || '{}');
+                        alert(JSON.stringify(stats, null, 2));
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#111827',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      View Crash Stats
+                    </button>
+                    <button
+                      onClick={() => {
+                        const errorLog = JSON.parse(localStorage.getItem('cafeos_error_log') || '[]');
+                        alert(JSON.stringify(errorLog, null, 2));
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#ffffff',
+                        color: '#111827',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      View Error Log
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Clear all error logs and crash statistics?')) {
+                          localStorage.removeItem('cafeos_error_log');
+                          localStorage.removeItem('cafeos_crash_stats');
+                          alert('Error logs cleared successfully');
+                        }
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear Logs
+                    </button>
+                  </div>
+
+                  <div style={{
+                    padding: '16px',
+                    background: '#ffffff',
+                    borderRadius: '6px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                      System Information
+                    </h4>
+                    <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.8' }}>
+                      <div><strong>Browser:</strong> {navigator.userAgent}</div>
+                      <div><strong>Platform:</strong> {navigator.platform}</div>
+                      <div><strong>Language:</strong> {navigator.language}</div>
+                      <div><strong>Screen:</strong> {window.screen.width}x{window.screen.height}</div>
+                      <div><strong>Memory:</strong> {navigator.deviceMemory || 'Unknown'} GB</div>
+                      <div><strong>Cores:</strong> {navigator.hardwareConcurrency || 'Unknown'}</div>
+                      <div><strong>Connection:</strong> {navigator.connection?.effectiveType || 'Unknown'}</div>
+                      <div><strong>Online:</strong> {navigator.onLine ? 'Yes' : 'No'}</div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    background: '#dbeafe',
+                    borderRadius: '6px',
+                    border: '1px solid #93c5fd'
+                  }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#1e40af', lineHeight: '1.5' }}>
+                      💡 Error logs are automatically captured by the system and stored in localStorage. Use this information to diagnose issues and improve system stability.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -2127,22 +2436,23 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             {/* Action Buttons */}
             <div style={{
               display: 'flex',
-              gap: '12px',
-              marginTop: '24px',
-              paddingTop: '20px',
+              gap: screenSize === 'small' ? '8px' : '12px',
+              marginTop: screenSize === 'small' ? '16px' : '24px',
+              paddingTop: screenSize === 'small' ? '16px' : '20px',
               borderTop: '1px solid #e5e7eb',
-              justifyContent: 'flex-end'
+              justifyContent: screenSize === 'small' ? 'stretch' : 'flex-end',
+              flexDirection: screenSize === 'small' ? 'column' : 'row'
             }}>
               <button
                 onClick={handleReset}
                 disabled={!hasChanges}
                 style={{
-                  padding: '12px 24px',
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
                   background: hasChanges ? '#f9fafb' : '#f3f4f6',
                   color: hasChanges ? '#111827' : '#9ca3af',
                   border: hasChanges ? '1px solid #e5e7eb' : '1px solid #e5e7eb',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
                   fontWeight: '500',
                   cursor: hasChanges ? 'pointer' : 'not-allowed'
                 }}
@@ -2153,12 +2463,12 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 onClick={handleSave}
                 disabled={!hasChanges}
                 style={{
-                  padding: '12px 24px',
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
                   background: hasChanges ? '#111827' : '#f3f4f6',
                   color: hasChanges ? '#ffffff' : '#9ca3af',
                   border: hasChanges ? 'none' : '1px solid #e5e7eb',
                   borderRadius: '6px',
-                  fontSize: '14px',
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
                   fontWeight: '500',
                   cursor: hasChanges ? 'pointer' : 'not-allowed'
                 }}

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BakeryPOS - QR Ordering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f9fafb;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: #ffffff;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .cart-button {
+            padding: 10px 16px;
+            background: #111827;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .content {
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: #ffffff;
+            color: #111827;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 24px;
+        }
+        
+        .categories {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        
+        .category-button {
+            padding: 10px 20px;
+            background: #ffffff;
+            color: #111827;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        
+        .category-button.active {
+            background: #111827;
+            color: #ffffff;
+            border: none;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .menu-item {
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .menu-item-image {
+            width: 100%;
+            height: 180px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+        
+        .menu-item-content {
+            padding: 16px;
+        }
+        
+        .menu-item-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+        
+        .menu-item-description {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 12px;
+        }
+        
+        .menu-item-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .menu-item-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .add-button {
+            padding: 8px 16px;
+            background: #111827;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .cart-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .cart-modal.active {
+            display: flex;
+        }
+        
+        .cart-content {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: auto;
+        }
+        
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .cart-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .cart-item-info {
+            flex: 1;
+        }
+        
+        .cart-item-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .cart-item-price {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .quantity-button {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .cart-total {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .total-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .total-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+        
+        .checkout-form {
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .checkout-button {
+            width: 100%;
+            padding: 14px;
+            background: #10b981;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        
+        .call-waiter-button {
+            width: 100%;
+            padding: 14px;
+            background: #f59e0b;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        
+        .success-message {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #10b981;
+            color: #ffffff;
+            padding: 24px 48px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            z-index: 2000;
+        }
+        
+        .success-message.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .menu-item-image {
+                height: 120px;
+                font-size: 32px;
+            }
+            
+            .content {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">🥐 BakeryPOS</div>
+            <button class="cart-button" onclick="showCart()">
+                🛒 Cart (<span id="cart-count">0</span>)
+            </button>
+        </div>
+    </div>
+    
+    <div class="content">
+        <input type="text" class="search-input" id="search-input" placeholder="Search menu items..." oninput="filterItems()">
+        
+        <div class="categories" id="categories"></div>
+        
+        <div class="menu-grid" id="menu-grid"></div>
+    </div>
+    
+    <div class="cart-modal" id="cart-modal">
+        <div class="cart-content">
+            <div class="cart-header">
+                <div class="cart-title">Your Cart</div>
+                <button class="close-button" onclick="hideCart()">×</button>
+            </div>
+            <div id="cart-items"></div>
+            <div class="cart-total">
+                <div class="total-label">Total</div>
+                <div class="total-amount">₹<span id="cart-total">0</span></div>
+            </div>
+            <div class="checkout-form">
+                <div class="form-group">
+                    <label class="form-label">Your Name *</label>
+                    <input type="text" class="form-input" id="customer-name" placeholder="Enter your name">
+                </div>
+                <button class="checkout-button" onclick="placeOrder()">Place Order</button>
+                <button class="call-waiter-button" onclick="callWaiter()">🔔 Call Waiter</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="success-message" id="success-message">Order placed successfully!</div>
+    
+    <script>
+        // Sample menu data - in production, this would come from an API
+        const menuItems = [
+            { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐' },
+            { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫' },
+            { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖' },
+            { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕' },
+            { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛' },
+            { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕' },
+            { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰' },
+            { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀' },
+            { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮' },
+            { id: 10, name: 'Sandwich', category: 'Food', price: 85, description: 'Club sandwich with fries', emoji: '🥪' },
+            { id: 11, name: 'Salad', category: 'Food', price: 75, description: 'Fresh garden salad', emoji: '🥗' },
+            { id: 12, name: 'Soup', category: 'Food', price: 65, description: 'Soup of the day', emoji: '🍲' }
+        ];
+        
+        let cart = [];
+        let selectedCategory = 'All';
+        
+        // Get table info from URL
+        function getTableInfo() {
+            const params = new URLSearchParams(window.location.search);
+            const tableData = params.get('table');
+            if (tableData) {
+                try {
+                    return JSON.parse(decodeURIComponent(tableData));
+                } catch {
+                    return null;
+                }
+            }
+            return null;
+        }
+        
+        const tableInfo = getTableInfo();
+        
+        // Initialize
+        function init() {
+            renderCategories();
+            renderMenuItems();
+            loadCart();
+        }
+        
+        function renderCategories() {
+            const categories = ['All', ...new Set(menuItems.map(item => item.category))];
+            const container = document.getElementById('categories');
+            container.innerHTML = categories.map(cat => `
+                <button class="category-button ${cat === selectedCategory ? 'active' : ''}" 
+                        onclick="selectCategory('${cat}')">
+                    ${cat}
+                </button>
+            `).join('');
+        }
+        
+        function selectCategory(category) {
+            selectedCategory = category;
+            renderCategories();
+            renderMenuItems();
+        }
+        
+        function renderMenuItems() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filtered = menuItems.filter(item => {
+                const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+                const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
+                                     item.description.toLowerCase().includes(searchTerm);
+                return matchesCategory && matchesSearch;
+            });
+            
+            const container = document.getElementById('menu-grid');
+            container.innerHTML = filtered.map(item => `
+                <div class="menu-item">
+                    <div class="menu-item-image">${item.emoji}</div>
+                    <div class="menu-item-content">
+                        <div class="menu-item-name">${item.name}</div>
+                        <div class="menu-item-description">${item.description}</div>
+                        <div class="menu-item-footer">
+                            <div class="menu-item-price">₹${item.price}</div>
+                            <button class="add-button" onclick="addToCart(${item.id})">Add</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function filterItems() {
+            renderMenuItems();
+        }
+        
+        function addToCart(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            const existing = cart.find(c => c.id === itemId);
+            
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+            
+            saveCart();
+            updateCartUI();
+        }
+        
+        function updateCartUI() {
+            const count = cart.reduce((sum, item) => sum + item.qty, 0);
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            
+            document.getElementById('cart-count').textContent = count;
+            document.getElementById('cart-total').textContent = total;
+            
+            const container = document.getElementById('cart-items');
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 20px;">Your cart is empty</p>';
+            } else {
+                container.innerHTML = cart.map(item => `
+                    <div class="cart-item">
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-price">₹${item.price} × ${item.qty}</div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <button class="quantity-button" onclick="updateQty(${item.id}, -1)">-</button>
+                            <span>${item.qty}</span>
+                            <button class="quantity-button" onclick="updateQty(${item.id}, 1)">+</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function updateQty(itemId, delta) {
+            const item = cart.find(c => c.id === itemId);
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) {
+                    cart = cart.filter(c => c.id !== itemId);
+                }
+                saveCart();
+                updateCartUI();
+            }
+        }
+        
+        function saveCart() {
+            localStorage.setItem('qr_cart', JSON.stringify(cart));
+        }
+        
+        function loadCart() {
+            const saved = localStorage.getItem('qr_cart');
+            if (saved) {
+                cart = JSON.parse(saved);
+                updateCartUI();
+            }
+        }
+        
+        function showCart() {
+            document.getElementById('cart-modal').classList.add('active');
+        }
+        
+        function hideCart() {
+            document.getElementById('cart-modal').classList.remove('active');
+        }
+        
+        function placeOrder() {
+            const customerName = document.getElementById('customer-name').value.trim();
+            
+            if (!customerName) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            if (cart.length === 0) {
+                alert('Please add items to your cart');
+                return;
+            }
+            
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            
+            const order = {
+                id: `ORD-${Date.now()}`,
+                items: cart,
+                total: total,
+                subtotal: total,
+                discount: 0,
+                discountAmount: 0,
+                taxRate: 18,
+                taxAmount: total * 0.18,
+                paymentMethod: 'QR_ORDER',
+                customerName: customerName,
+                tableId: tableInfo?.tableId || null,
+                tableName: tableInfo?.tableName || null,
+                employeeId: 'qr',
+                employeeName: 'QR Self-Order',
+                status: 'PENDING',
+                createdAt: new Date().toISOString(),
+                isQROrder: true
+            };
+            
+            // Store in localStorage for POS to pick up
+            try {
+                const existingOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+                localStorage.setItem('qr_orders', JSON.stringify([...existingOrders, order]));
+                
+                // Clear cart
+                cart = [];
+                localStorage.removeItem('qr_cart');
+                updateCartUI();
+                hideCart();
+                document.getElementById('customer-name').value = '';
+                
+                // Show success message
+                const successMsg = document.getElementById('success-message');
+                successMsg.textContent = 'Order placed successfully!';
+                successMsg.classList.add('active');
+                setTimeout(() => successMsg.classList.remove('active'), 3000);
+            } catch (error) {
+                console.error('Error storing order:', error);
+                alert('Failed to place order. Please try again.');
+            }
+        }
+        
+        function callWaiter() {
+            const customerName = document.getElementById('customer-name').value.trim() || 'Guest';
+            
+            const waiterCall = {
+                id: `WAITER-${Date.now()}`,
+                tableId: tableInfo?.tableId || null,
+                tableName: tableInfo?.tableName || null,
+                customerName: customerName,
+                type: 'CALL_WAITER',
+                status: 'PENDING',
+                createdAt: new Date().toISOString()
+            };
+            
+            // Store in localStorage for POS to pick up
+            try {
+                const existingCalls = JSON.parse(localStorage.getItem('waiter_calls') || '[]');
+                localStorage.setItem('waiter_calls', JSON.stringify([...existingCalls, waiterCall]));
+                
+                hideCart();
+                
+                // Show success message
+                const successMsg = document.getElementById('success-message');
+                successMsg.textContent = 'Waiter called successfully!';
+                successMsg.classList.add('active');
+                setTimeout(() => successMsg.classList.remove('active'), 3000);
+            } catch (error) {
+                console.error('Error calling waiter:', error);
+                alert('Failed to call waiter. Please try again.');
+            }
+        }
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

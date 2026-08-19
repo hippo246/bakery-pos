@@ -1,10 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 function InventoryContent({ inventory = [], setInventory }) {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [formData, setFormData] = useState({
     name: '',
     category: 'Ingredients',
@@ -13,6 +18,24 @@ function InventoryContent({ inventory = [], setInventory }) {
     minStock: '',
     cost: ''
   });
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const categories = ['ALL', ...new Set(inventory.map(item => item.category))];
 
@@ -89,8 +112,15 @@ function InventoryContent({ inventory = [], setInventory }) {
   };
 
   const handleDeleteItem = (itemId) => {
-    if (confirm('Are you sure you want to delete this inventory item?')) {
-      setInventory(inventory.filter(item => item.id !== itemId));
+    setItemToDelete(itemId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteItem = () => {
+    if (itemToDelete) {
+      setInventory(inventory.filter(item => item.id !== itemToDelete));
+      setShowDeleteConfirm(false);
+      setItemToDelete(null);
     }
   };
 
@@ -112,100 +142,104 @@ function InventoryContent({ inventory = [], setInventory }) {
       <div style={{
         background: '#ffffff',
         borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '20px',
-        display: 'flex',
-        gap: '12px',
-        alignItems: 'center',
+        padding: screenSize === 'small' ? '12px' : '16px',
+        marginBottom: screenSize === 'small' ? '16px' : '20px',
         border: '1px solid #e5e7eb'
       }}>
-        <input
-          type="text"
-          placeholder="Search inventory items..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '14px',
-            outline: 'none'
-          }}
-        />
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{
-            padding: '12px 16px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            fontSize: '14px',
-            background: '#ffffff',
-            outline: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        <button
-          onClick={handleAddItem}
-          style={{
-            padding: '12px 24px',
-            background: '#111827',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          + Add Item
-        </button>
+        <div style={{
+          display: 'flex',
+          gap: screenSize === 'small' ? '8px' : '12px',
+          flexWrap: 'wrap'
+        }}>
+          <input
+            type="text"
+            placeholder="Search items..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              flex: 1,
+              minWidth: screenSize === 'small' ? '200px' : '300px',
+              padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
+              outline: 'none'
+            }}
+          />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={{
+              padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
+              background: '#ffffff',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleAddItem}
+            style={{
+              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
+              background: '#111827',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            + Add Item
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
-        marginBottom: '20px'
+        gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+        gap: screenSize === 'small' ? '12px' : '16px',
+        marginBottom: screenSize === 'small' ? '16px' : '20px'
       }}>
         <div style={{
           background: '#ffffff',
           borderRadius: '8px',
-          padding: '20px',
+          padding: screenSize === 'small' ? '16px' : '20px',
           border: '1px solid #e5e7eb'
         }}>
-          <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
             Total Items
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: '#111827' }}>{inventory.length}</div>
+          <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '600', color: '#111827' }}>{inventory.length}</div>
         </div>
         <div style={{
           background: '#ffffff',
           borderRadius: '8px',
-          padding: '20px',
+          padding: screenSize === 'small' ? '16px' : '20px',
           border: '1px solid #e5e7eb'
         }}>
-          <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
             Low Stock
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: '#111827' }}>{lowStockCount}</div>
+          <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '600', color: '#111827' }}>{lowStockCount}</div>
         </div>
         <div style={{
           background: '#ffffff',
           borderRadius: '8px',
-          padding: '20px',
+          padding: screenSize === 'small' ? '16px' : '20px',
           border: '1px solid #e5e7eb'
         }}>
-          <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
             Total Value
           </div>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: '#111827' }}>₹{totalValue.toLocaleString()}</div>
+          <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '600', color: '#111827' }}>₹{totalValue.toLocaleString()}</div>
         </div>
       </div>
 
@@ -236,46 +270,48 @@ function InventoryContent({ inventory = [], setInventory }) {
                   background: '#f9fafb',
                   border: '1px solid #e5e7eb',
                   borderRadius: '6px',
-                  padding: '16px',
-                  marginBottom: '12px',
+                  padding: screenSize === 'small' ? '12px' : '16px',
+                  marginBottom: screenSize === 'small' ? '10px' : '12px',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+                  flexDirection: screenSize === 'small' ? 'column' : 'row',
+                  gap: screenSize === 'small' ? '12px' : '0'
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827', marginBottom: '6px' }}>
+                <div style={{ flex: 1, width: screenSize === 'small' ? '100%' : 'auto' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '500', color: '#111827', marginBottom: '6px' }}>
                     {item.name}
                   </div>
-                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#6b7280', marginBottom: '4px' }}>
                     📂 {item.category}
                   </div>
                   <div style={{ 
-                    fontSize: '12px', 
+                    fontSize: screenSize === 'small' ? '11px' : '12px', 
                     color: isLowStock ? '#d97706' : '#059669', 
                     fontWeight: '500',
                     display: 'inline-block',
-                    padding: '4px 8px',
+                    padding: screenSize === 'small' ? '3px 6px' : '4px 8px',
                     borderRadius: '4px',
                     background: isLowStock ? '#fef3c7' : '#f0fdf4',
                     marginBottom: '4px'
                   }}>
                     Qty: {item.quantity} {item.unit} • Min: {item.minStock} {item.unit}
                   </div>
-                  <div style={{ fontSize: '13px', color: '#6b7280' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#6b7280' }}>
                     💰 Value: ₹{itemValue.toFixed(2)}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', flexWrap: 'wrap', width: screenSize === 'small' ? '100%' : 'auto' }}>
                   <button
                     onClick={() => handleAdjustStock(item, -1)}
                     style={{
-                      padding: '8px 16px',
+                      padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
                       background: '#ffffff',
                       color: '#111827',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '13px',
+                      fontSize: screenSize === 'small' ? '12px' : '13px',
                       fontWeight: '500',
                       cursor: 'pointer'
                     }}
@@ -285,12 +321,12 @@ function InventoryContent({ inventory = [], setInventory }) {
                   <button
                     onClick={() => handleAdjustStock(item, 1)}
                     style={{
-                      padding: '8px 16px',
+                      padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
                       background: '#ffffff',
                       color: '#111827',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '13px',
+                      fontSize: screenSize === 'small' ? '12px' : '13px',
                       fontWeight: '500',
                       cursor: 'pointer'
                     }}
@@ -300,12 +336,12 @@ function InventoryContent({ inventory = [], setInventory }) {
                   <button
                     onClick={() => handleEditItem(item)}
                     style={{
-                      padding: '8px 16px',
+                      padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
                       background: '#ffffff',
                       color: '#111827',
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
-                      fontSize: '13px',
+                      fontSize: screenSize === 'small' ? '12px' : '13px',
                       fontWeight: '500',
                       cursor: 'pointer'
                     }}
@@ -315,12 +351,12 @@ function InventoryContent({ inventory = [], setInventory }) {
                   <button
                     onClick={() => handleDeleteItem(item.id)}
                     style={{
-                      padding: '8px 16px',
+                      padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
                       background: '#ffffff',
                       color: '#ef4444',
                       border: '1px solid #fecaca',
                       borderRadius: '6px',
-                      fontSize: '13px',
+                      fontSize: screenSize === 'small' ? '12px' : '13px',
                       fontWeight: '500',
                       cursor: 'pointer'
                     }}
@@ -342,198 +378,326 @@ function InventoryContent({ inventory = [], setInventory }) {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '500px',
-            width: '90%',
-            overflow: 'hidden'
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '500px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
           }}>
-            <div style={{
-              background: '#111827',
-              color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span>{selectedItem ? 'Edit Item' : 'Add Item'}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                {selectedItem ? 'Edit Item' : 'Add Item'}
+              </h3>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
+                  padding: '8px 12px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  borderRadius: '6px'
+                  fontSize: '16px'
                 }}
               >
                 ×
               </button>
             </div>
             
-            <div style={{ padding: '24px', background: '#ffffff' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Name *
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  placeholder="Enter item name..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Category
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Ingredients">Ingredients</option>
+                  <option value="Packaging">Packaging</option>
+                  <option value="Supplies">Supplies</option>
+                  <option value="Equipment">Equipment</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                    Quantity
                   </label>
                   <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                      Unit
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.unit}
-                      onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                      Min Stock
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.minStock}
-                      onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                      Cost
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.cost}
-                      onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    style={{
-                      flex: 1,
                       padding: '12px',
-                      background: '#f9fafb',
-                      color: '#111827',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveItem}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      background: '#111827',
+                      background: '#1a1a2e',
                       color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
                       fontSize: '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer'
+                      outline: 'none'
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+                <div style={{ width: '120px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                    Unit
+                  </label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none'
                     }}
                   >
-                    Save
-                  </button>
+                    <option value="pieces">pcs</option>
+                    <option value="kg">kg</option>
+                    <option value="liters">L</option>
+                    <option value="boxes">box</option>
+                  </select>
                 </div>
               </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                    Min Stock
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                    Cost (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.cost}
+                    onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveItem}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Delete Item
+            </h3>
+            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+              Are you sure you want to delete this inventory item?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setItemToDelete(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteItem}
+                style={{
+                  padding: '12px 24px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Notice
+            </h3>
+            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+              {alertMessage}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowAlert(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
@@ -879,262 +1043,163 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '500px',
-            width: '90%',
-            overflow: 'hidden'
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '500px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
           }}>
-            {/* Title Bar */}
-            <div style={{
-              background: '#111827',
-              color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span>{selectedItem ? 'Edit Item' : 'Add Item'}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                {selectedItem ? 'Edit Item' : 'Add Item'}
+              </h3>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
+                  padding: '8px 12px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  borderRadius: '6px'
+                  fontSize: '16px'
                 }}
               >
                 ×
               </button>
             </div>
             
-            {/* Content */}
-            <div style={{ padding: '24px', background: '#ffffff' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Price (₹) *
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  placeholder="Enter item name..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Category
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="Beverages">Beverages</option>
+                  <option value="Food">Food</option>
+                  <option value="Desserts">Desserts</option>
+                  <option value="Snacks">Snacks</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                    Price (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    min="0"
-                    step="0.01"
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none'
                     }}
+                    placeholder="0.00"
                   />
                 </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Category *
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    {categories.filter(c => c !== 'ALL').map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      resize: 'vertical',
-                      outline: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Emoji
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                    Prep Time (min)
                   </label>
                   <input
-                    type="text"
-                    value={formData.emoji}
-                    onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
-                    maxLength={2}
+                    type="number"
+                    value={formData.prepTime}
+                    onChange={(e) => setFormData({ ...formData, prepTime: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
                       fontSize: '14px',
                       outline: 'none'
                     }}
+                    placeholder="5"
                   />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Quick Code (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="e.g., A1, 101"
-                    maxLength={10}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      textTransform: 'uppercase'
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    HSN/SAC Code (GST Compliance)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.hsnCode}
-                    onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value.toUpperCase() })}
-                    placeholder="e.g., 19059000"
-                    maxLength={8}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      textTransform: 'uppercase'
-                    }}
-                  />
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    8-digit HSN/SAC code for GST invoicing
-                  </p>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Allergens (FSSAI Compliance)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.allergens}
-                    onChange={(e) => setFormData({ ...formData, allergens: e.target.value })}
-                    placeholder="e.g., Milk, Nuts, Gluten"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#6b7280' }}>
-                    Comma-separated allergen information
-                  </p>
                 </div>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#f9fafb',
-                    color: '#111827',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveItem}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#111827',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {selectedItem ? 'Update' : 'Add'} Item
-                </button>
-              </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveItem}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>

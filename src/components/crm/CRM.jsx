@@ -1,15 +1,34 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 export default function SimpleCRM({ customers = [], setCustomers, orders = [], onNavigate }) {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     notes: ''
   });
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const filteredCustomers = useMemo(() => {
     if (!search) return customers;
@@ -94,35 +113,37 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
       {/* Header */}
       <div style={{
         background: '#ffffff',
-        padding: '20px 24px',
+        padding: screenSize === 'small' ? '16px' : '20px 24px',
         borderBottom: '1px solid #e5e7eb'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
           <div>
             <div style={{
               color: '#111827',
-              fontSize: '20px',
+              fontSize: screenSize === 'small' ? '18px' : '20px',
               fontWeight: '600'
             }}>
               Customer Management
             </div>
-            <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
               Manage your customer relationships
             </div>
           </div>
           <button
             onClick={() => onNavigate?.('dashboard')}
             style={{
-              padding: '10px 20px',
+              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: '#f9fafb',
               color: '#111827',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: screenSize === 'small' ? '12px' : '13px',
               fontWeight: '500',
               cursor: 'pointer'
             }}
@@ -133,16 +154,17 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
       </div>
 
       {/* Content */}
-      <div style={{ padding: '24px', overflow: 'auto', flex: 1 }}>
+      <div style={{ padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', flex: 1 }}>
         {/* Controls */}
         <div style={{
           background: '#ffffff',
           borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '20px',
+          padding: screenSize === 'small' ? '12px' : '16px',
+          marginBottom: screenSize === 'small' ? '16px' : '20px',
           display: 'flex',
-          gap: '12px',
-          alignItems: 'center',
+          gap: screenSize === 'small' ? '8px' : '12px',
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexWrap: 'wrap',
           border: '1px solid #e5e7eb'
         }}>
           <input
@@ -152,22 +174,23 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
             onChange={(e) => setSearch(e.target.value)}
             style={{
               flex: 1,
-              padding: '12px 16px',
+              minWidth: screenSize === 'small' ? '200px' : '300px',
+              padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
               outline: 'none'
             }}
           />
           <button
             onClick={handleAddCustomer}
             style={{
-              padding: '12px 24px',
+              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
               background: '#111827',
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
               fontWeight: '500',
               cursor: 'pointer'
             }}

@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 export default function SimpleInventory({ inventory = [], setInventory, onNavigate }) {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [formData, setFormData] = useState({
     name: '',
     category: 'Ingredients',
@@ -13,6 +14,24 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
     minStock: '',
     cost: ''
   });
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const categories = ['ALL', ...new Set(inventory.map(item => item.category))];
 
@@ -117,30 +136,32 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
       {/* Header */}
       <div style={{
         background: '#c0c0c0',
-        border: '2px outset #ffffff',
-        padding: '4px',
-        marginBottom: '8px'
+        border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
+        padding: screenSize === 'small' ? '8px' : '4px',
+        marginBottom: screenSize === 'small' ? '12px' : '8px'
       }}>
         <div style={{
           background: '#000080',
           color: '#ffffff',
-          padding: '4px 8px',
-          fontSize: '12px',
+          padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
+          fontSize: screenSize === 'small' ? '11px' : '12px',
           fontWeight: 'bold',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '8px' : '0'
         }}>
           <span>INVENTORY MANAGEMENT</span>
           <button
             onClick={() => onNavigate?.('dashboard')}
             style={{
               background: '#c0c0c0',
-              border: '2px outset #ffffff',
+              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
               color: '#000000',
-              fontSize: '10px',
+              fontSize: screenSize === 'small' ? '10px' : '10px',
               fontWeight: 'bold',
-              padding: '2px 6px',
+              padding: screenSize === 'small' ? '4px 12px' : '2px 6px',
               cursor: 'pointer'
             }}
           >
@@ -150,16 +171,17 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
       </div>
 
       {/* Content */}
-      <div style={{ padding: '8px', overflow: 'auto', flex: 1 }}>
+      <div style={{ padding: screenSize === 'small' ? '12px' : '8px', overflow: 'auto', flex: 1 }}>
         {/* Controls */}
         <div style={{
           background: '#c0c0c0',
-          border: '2px inset #808080',
-          padding: '8px',
-          marginBottom: '8px',
+          border: screenSize === 'small' ? '1px inset #808080' : '2px inset #808080',
+          padding: screenSize === 'small' ? '12px' : '8px',
+          marginBottom: screenSize === 'small' ? '12px' : '8px',
           display: 'flex',
-          gap: '8px',
-          alignItems: 'center'
+          gap: screenSize === 'small' ? '8px' : '8px',
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexWrap: 'wrap'
         }}>
           <input
             type="text"
@@ -168,19 +190,21 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             onChange={(e) => setSearch(e.target.value)}
             style={{
               flex: 1,
-              padding: '4px',
-              border: '2px inset #808080',
-              fontSize: '12px'
+              minWidth: screenSize === 'small' ? '150px' : '200px',
+              padding: screenSize === 'small' ? '6px 8px' : '4px',
+              border: screenSize === 'small' ? '1px inset #808080' : '2px inset #808080',
+              fontSize: screenSize === 'small' ? '11px' : '12px'
             }}
           />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
-              padding: '4px',
-              border: '2px inset #808080',
-              fontSize: '12px',
-              background: '#ffffff'
+              padding: screenSize === 'small' ? '6px 8px' : '4px',
+              border: screenSize === 'small' ? '1px inset #808080' : '2px inset #808080',
+              fontSize: screenSize === 'small' ? '11px' : '12px',
+              background: '#ffffff',
+              cursor: 'pointer'
             }}
           >
             {categories.map(cat => (
@@ -190,12 +214,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           <button
             onClick={handleAddItem}
             style={{
-              padding: '4px 12px',
-              background: '#c0c0c0',
-              border: '2px outset #ffffff',
-              color: '#000000',
-              fontSize: '11px',
+              background: '#000080',
+              color: '#ffffff',
+              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
+              fontSize: screenSize === 'small' ? '11px' : '12px',
               fontWeight: 'bold',
+              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
               cursor: 'pointer'
             }}
           >

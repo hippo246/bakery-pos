@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 // Report Categories and Types
@@ -402,7 +402,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
       ['Total GST', `₹${reportData.totalGST.toLocaleString()}`]
     ];
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: 55,
       head: [['Metric', 'Value']],
       body: summaryData.slice(1),
@@ -438,7 +438,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
     
     if (reportDataArray.length > 0) {
       doc.text('Report Details', 14, doc.lastAutoTable.finalY + 15);
-      doc.autoTable({
+      autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 20,
         head: [reportDataArray[0]],
         body: reportDataArray.slice(1),

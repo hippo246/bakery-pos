@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import KitchenDisplaySystem from './KitchenDisplaySystem';
-import KitchenStationManager from './KitchenStationManager';
 
 export default function Kitchen({ onNavigate, orders = [] }) {
-  const [view, setView] = useState('kds'); // 'kds' or 'stations'
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('rotate', handleResize);
+  }, []);
 
   return (
     <div style={{
@@ -16,72 +33,38 @@ export default function Kitchen({ onNavigate, orders = [] }) {
       {/* Header */}
       <div style={{
         background: '#ffffff',
-        padding: '20px 24px',
+        padding: screenSize === 'small' ? '16px' : '20px 24px',
         borderBottom: '1px solid #e5e7eb'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div>
-              <div style={{
-                color: '#111827',
-                fontSize: '20px',
-                fontWeight: '600'
-              }}>
-                👨‍🍳 Kitchen
-              </div>
-              <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
-                Manage kitchen orders and stations
-              </div>
+          <div>
+            <div style={{
+              color: '#111827',
+              fontSize: screenSize === 'small' ? '18px' : '20px',
+              fontWeight: '600'
+            }}>
+              👨‍🍳 Kitchen
             </div>
-            
-            {/* View Toggle */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setView('kds')}
-                style={{
-                  padding: '10px 20px',
-                  background: view === 'kds' ? '#111827' : '#ffffff',
-                  color: view === 'kds' ? '#ffffff' : '#111827',
-                  border: view === 'kds' ? 'none' : '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                KDS Display
-              </button>
-              <button
-                onClick={() => setView('stations')}
-                style={{
-                  padding: '10px 20px',
-                  background: view === 'stations' ? '#111827' : '#ffffff',
-                  color: view === 'stations' ? '#ffffff' : '#111827',
-                  border: view === 'stations' ? 'none' : '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Station Config
-              </button>
+            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
+              Manage kitchen orders
             </div>
           </div>
 
           <button
             onClick={() => onNavigate?.('dashboard')}
             style={{
-              padding: '10px 20px',
+              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: '#f9fafb',
               color: '#111827',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: screenSize === 'small' ? '12px' : '13px',
               fontWeight: '500',
               cursor: 'pointer'
             }}
@@ -93,11 +76,7 @@ export default function Kitchen({ onNavigate, orders = [] }) {
 
       {/* Content */}
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {view === 'kds' ? (
-          <KitchenDisplaySystem />
-        ) : (
-          <KitchenStationManager />
-        )}
+        <KitchenDisplaySystem screenSize={screenSize} />
       </div>
     </div>
   );

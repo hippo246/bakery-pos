@@ -13,6 +13,25 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
     address: '',
     notes: ''
   });
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     // Load cart from localStorage
@@ -105,7 +124,7 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
       {/* Header */}
       <div style={{
         background: '#ffffff',
-        padding: '20px 24px',
+        padding: screenSize === 'small' ? '16px' : '20px 24px',
         borderBottom: '1px solid #e5e7eb',
         position: 'sticky',
         top: 0,
@@ -114,29 +133,31 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
           <div>
             <div style={{
               color: '#111827',
-              fontSize: '20px',
+              fontSize: screenSize === 'small' ? '18px' : '20px',
               fontWeight: '600'
             }}>
               🥐 BakeryPOS
             </div>
-            <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
               Online Ordering
             </div>
           </div>
           <button
             onClick={() => setShowCart(true)}
             style={{
-              padding: '12px 20px',
+              padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
               background: '#111827',
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
               fontWeight: '500',
               cursor: 'pointer',
               display: 'flex',
@@ -150,9 +171,9 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: '#f9fafb' }}>
+      <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f9fafb' }}>
         {/* Search */}
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
           <input
             type="text"
             placeholder="Search menu items..."
@@ -160,12 +181,12 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: '100%',
-              padding: '16px 20px',
+              padding: screenSize === 'small' ? '12px 16px' : '16px 20px',
               background: '#ffffff',
               color: '#111827',
               border: '1px solid #d1d5db',
               borderRadius: '8px',
-              fontSize: '15px',
+              fontSize: screenSize === 'small' ? '14px' : '15px',
               outline: 'none'
             }}
           />
@@ -174,8 +195,8 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
         {/* Categories */}
         <div style={{
           display: 'flex',
-          gap: '8px',
-          marginBottom: '24px',
+          gap: screenSize === 'small' ? '6px' : '8px',
+          marginBottom: screenSize === 'small' ? '16px' : '24px',
           overflow: 'auto',
           paddingBottom: '8px'
         }}>
@@ -184,15 +205,16 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
               key={category}
               onClick={() => setSelectedCategory(category)}
               style={{
-                padding: '10px 20px',
+                padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
                 background: selectedCategory === category ? '#111827' : '#ffffff',
                 color: selectedCategory === category ? '#ffffff' : '#111827',
                 border: selectedCategory === category ? 'none' : '1px solid #d1d5db',
-                borderRadius: '20px',
-                fontSize: '14px',
+                borderRadius: '6px',
+                fontSize: screenSize === 'small' ? '13px' : '14px',
                 fontWeight: '500',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease'
               }}
             >
               {category === 'all' ? 'All Items' : category}

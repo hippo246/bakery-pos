@@ -3,6 +3,7 @@ import Razorpay from 'razorpay';
 import { useTerminal } from '../terminal/TerminalContext.jsx';
 import { getKOTManager } from '../operations/KOTManager.js';
 import { getKOTPrinter } from '../utils/KOTPrinter.js';
+import { createReceiptLayout } from '../print/receiptLayout.js';
 
 export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables }) {
   const { currentTerminal } = useTerminal();
@@ -14,36 +15,54 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [lastOrder, setLastOrder] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [gstRate, setGstRate] = useState(settings.gstRate || 18);
+  const [gstEnabled, setGstEnabled] = useState(settings.gstEnabled !== false); // Default to true unless explicitly disabled
   
   // Initialize KOT manager
   const kotManager = getKOTManager();
   const kotPrinter = getKOTPrinter();
   
   useEffect(() => {
-    kotManager.initialize();
+    try {
+      kotManager.initialize();
+    } catch (error) {
+      console.error('Error initializing KOT manager:', error);
+    }
   }, [kotManager]);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [splitPayments, setSplitPayments] = useState([]); // Array of {method, amount}
+  const [splitByPeople, setSplitByPeople] = useState(0); // Number of people to split by
   
   // Filter staff based on terminal assignment
   const availableStaff = useMemo(() => {
+    if (!staff || !Array.isArray(staff)) return [];
     if (!currentTerminal || !currentTerminal.assignedStaff || currentTerminal.assignedStaff.length === 0) {
       return staff; // If no terminal or no assignment, show all staff
     }
     return staff.filter(s => currentTerminal.assignedStaff.includes(s.id));
   }, [staff, currentTerminal]);
-  
-  const [selectedEmployee, setSelectedEmployee] = useState(availableStaff.length > 0 ? availableStaff[0] : null);
+
+  const [selectedEmployee, setSelectedEmployee] = useState(() => {
+    if (!staff || !Array.isArray(staff) || staff.length === 0) return null;
+    if (!currentTerminal || !currentTerminal.assignedStaff || currentTerminal.assignedStaff.length === 0) {
+      return staff[0];
+    }
+    const filtered = staff.filter(s => currentTerminal.assignedStaff.includes(s.id));
+    return filtered.length > 0 ? filtered[0] : null;
+  });
   const [heldOrders, setHeldOrders] = useState([]);
   const [showSplitBillModal, setShowSplitBillModal] = useState(false);
   const [splitAmount, setSplitAmount] = useState('');
-  const [splitPayments, setSplitPayments] = useState([]);
   const [showModifiersModal, setShowModifiersModal] = useState(false);
   const [selectedItemForModifiers, setSelectedItemForModifiers] = useState(null);
   const [selectedModifiers, setSelectedModifiers] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
-  const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const [selectedOrderForView, setSelectedOrderForView] = useState(null);
   const [quickCodeInput, setQuickCodeInput] = useState('');
   const [showQuickActions, setShowQuickActions] = useState(true);
@@ -75,6 +94,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [splitMode, setSplitMode] = useState('equal'); // 'equal', 'custom', 'percentage'
   const [showTableSelector, setShowTableSelector] = useState(false);
   const [numpadSearch, setNumpadSearch] = useState('');
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
 
   // Order timer effect
   useEffect(() => {
@@ -121,7 +141,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const commonModifiers = [
+  // Combine regular orders with QR orders for order history
+  const allOrders = useMemo(() => {
+    const combinedOrders = [...(orders || [])];
+    
+    try {
+      const qrOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+      qrOrders.forEach(qrOrder => {
+        if (!combinedOrders.find(o => o.id === qrOrder.id)) {
+          combinedOrders.push({
+            ...qrOrder,
+            isQROrder: true
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error reading QR orders:', error);
+    }
+    
+    return combinedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [orders]);
+
+  // Common modifiers - could be made configurable in settings in the future
+  const commonModifiers = settings.commonModifiers || [
     { id: 'extra', name: 'Extra', price: 10 },
     { id: 'no', name: 'No', price: 0 },
     { id: 'spicy', name: 'Spicy', price: 5 },
@@ -130,22 +172,25 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     { id: 'cold', name: 'Cold', price: 0 }
   ];
 
-  const categories = ['All', 'Breads', 'Pastries', 'Cakes', 'Coffee', 'Beverages'];
+  // Categories - could be made configurable in settings in the future
+  const categories = settings.categories || ['All', 'Breads', 'Pastries', 'Cakes', 'Coffee', 'Beverages'];
 
   // Top 10 items for quick add shortcuts (0-9)
   const topItems = useMemo(() => {
+    if (!menuItems || !Array.isArray(menuItems)) return [];
     return menuItems
-      .filter(item => item.active && !item.eightySixed)
+      .filter(item => item && item.active && !item.eightySixed)
       .slice(0, 10);
   }, [menuItems]);
 
   // Fuzzy search for menu items
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
+    if (!menuItems || !Array.isArray(menuItems)) return [];
     const query = searchQuery.toLowerCase();
     return menuItems.filter(item => {
-      if (!item.active || item.eightySixed) return false;
-      const nameMatch = item.name.toLowerCase().includes(query);
+      if (!item || !item.active || item.eightySixed) return false;
+      const nameMatch = item.name && item.name.toLowerCase().includes(query);
       const codeMatch = item.code && item.code.toLowerCase().includes(query);
       const categoryMatch = item.category && item.category.toLowerCase().includes(query);
       return nameMatch || codeMatch || categoryMatch;
@@ -155,10 +200,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   // Numpad search results
   const numpadSearchResults = useMemo(() => {
     if (!numpadSearch.trim()) return [];
+    if (!menuItems || !Array.isArray(menuItems)) return [];
     const query = numpadSearch.toLowerCase();
     return menuItems.filter(item => {
-      if (!item.active || item.eightySixed) return false;
-      const nameMatch = item.name.toLowerCase().includes(query);
+      if (!item || !item.active || item.eightySixed) return false;
+      const nameMatch = item.name && item.name.toLowerCase().includes(query);
       const codeMatch = item.code && item.code.toLowerCase().includes(query);
       return nameMatch || codeMatch;
     }).slice(0, 5);
@@ -166,8 +212,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   // Customer lookup by phone
   const lookupCustomer = (phone) => {
-    if (!phone.trim()) return null;
-    return customers.find(c => c.phone === phone) || null;
+    if (!phone || !phone.trim()) return null;
+    if (!customers || !Array.isArray(customers)) return null;
+    return customers.find(c => c && c.phone === phone) || null;
   };
 
   // Smart category suggestion based on time of day
@@ -190,64 +237,78 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   // Auto-save cart to localStorage for recovery
   useEffect(() => {
     if (posMode === 'advanced' && cart.length > 0) {
-      localStorage.setItem('pos_cart_backup', JSON.stringify(cart));
+      try {
+        localStorage.setItem('pos_cart_backup', JSON.stringify(cart));
+      } catch (error) {
+        console.error('Failed to save cart backup:', error);
+      }
     }
   }, [cart, posMode]);
 
   // Restore cart on mount if available
   useEffect(() => {
     if (posMode === 'advanced') {
-      const savedCart = localStorage.getItem('pos_cart_backup');
-      if (savedCart && cart.length === 0) {
-        try {
+      try {
+        const savedCart = localStorage.getItem('pos_cart_backup');
+        if (savedCart && cart.length === 0) {
           const parsedCart = JSON.parse(savedCart);
-          if (confirm('Restore previous cart?')) {
+          if (parsedCart && parsedCart.length > 0) {
+            setAlertMessage('Previous cart found. Cart has been restored.');
             setCart(parsedCart);
+            setShowAlert(true);
           }
-        } catch (e) {
-          console.error('Failed to restore cart:', e);
         }
+      } catch (error) {
+        console.error('Failed to restore cart:', error);
       }
     }
   }, [posMode]);
 
   // Popular items for quick add
   const popularItems = useMemo(() => {
+    if (!menuItems || !Array.isArray(menuItems)) return [];
     return menuItems
-      .filter(item => item.active && !item.eightySixed)
+      .filter(item => item && item.active && !item.eightySixed)
       .slice(0, 6)
       .map(item => ({ ...item, popular: true }));
   }, [menuItems]);
 
-  const filteredItems = selectedCategory === 'All' 
-    ? menuItems 
-    : menuItems.filter(item => item.category === selectedCategory);
+  const filteredItems = useMemo(() => {
+    if (!menuItems || !Array.isArray(menuItems)) return [];
+    if (selectedCategory === 'All') return menuItems;
+    return menuItems.filter(item => item && item.category === selectedCategory);
+  }, [menuItems, selectedCategory]);
 
   const addToCart = (item, quantity) => {
+    if (!item) {
+      console.error('addToCart called with undefined item');
+      return;
+    }
     const qty = parseInt(quantity) || 1;
     setCart(prev => {
-      const existing = prev.find(i => i.id === item.id && JSON.stringify(i.modifiers) === JSON.stringify(selectedModifiers));
+      if (!prev || !Array.isArray(prev)) return [];
+      const existing = prev.find(i => i && i.id === item.id && JSON.stringify(i.modifiers) === JSON.stringify(selectedModifiers));
       if (existing) {
-        return prev.map(i => 
-          i.id === item.id && JSON.stringify(i.modifiers) === JSON.stringify(selectedModifiers)
+        return prev.map(i =>
+          i && i.id === item.id && JSON.stringify(i.modifiers) === JSON.stringify(selectedModifiers)
             ? { ...i, quantity: i.quantity + qty }
             : i
         );
       }
-      const modifierPrice = selectedModifiers.reduce((sum, m) => sum + m.price, 0);
-      const variantPrice = selectedVariant ? selectedVariant.priceAdjustment : 0;
-      return [...prev, { 
-        ...item, 
-        quantity: qty, 
-        modifiers: selectedModifiers, 
+      const modifierPrice = (selectedModifiers || []).reduce((sum, m) => sum + (m.price || 0), 0);
+      const variantPrice = selectedVariant ? (selectedVariant.priceAdjustment || 0) : 0;
+      return [...prev, {
+        ...item,
+        quantity: qty,
+        modifiers: selectedModifiers || [],
         variant: selectedVariant,
-        price: item.price + modifierPrice + variantPrice 
+        price: (item.price || 0) + modifierPrice + variantPrice
       }];
     });
     setQuantityInput('1');
     setSelectedModifiers([]);
     setSelectedVariant(null);
-    
+
     // Auto-focus quantity input for rapid entry
     if (posMode === 'advanced') {
       setTimeout(() => {
@@ -259,12 +320,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   // Add custom order
   const addCustomOrder = () => {
-    if (!customOrderName || !customOrderPrice) return;
-    
-    // Validate custom order
-    const validationError = validateCustomOrder();
-    if (validationError) {
-      alert(validationError);
+    if (!customOrderName || !customOrderPrice) {
+      setAlertMessage('Please fill in required fields');
+      setShowAlert(true);
       return;
     }
     
@@ -312,53 +370,67 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   };
 
   const removeFromCart = (index) => {
-    setCart(prev => prev.filter((_, i) => i !== index));
+    setCart(prev => {
+      if (!prev || !Array.isArray(prev)) return [];
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const updateQuantity = (itemId, delta) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const newQuantity = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    }));
+    setCart(prev => {
+      if (!prev || !Array.isArray(prev)) return [];
+      return prev.map(item => {
+        if (!item) return item;
+        if (item.id === itemId) {
+          const newQuantity = Math.max(1, (item.quantity || 1) + delta);
+          return { ...item, quantity: newQuantity };
+        }
+        return item;
+      });
+    });
   };
 
-  const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartSubtotal = cart.reduce((sum, item) => {
+    if (!item) return sum;
+    return sum + ((item.price || 0) * (item.quantity || 0));
+  }, 0);
+  const cartCount = cart.reduce((sum, item) => {
+    if (!item) return sum;
+    return sum + (item.quantity || 0);
+  }, 0);
   const discountAmount = (cartSubtotal * discount) / 100;
-  const taxAmount = ((cartSubtotal - discountAmount) * gstRate) / 100;
+  const taxAmount = gstEnabled ? ((cartSubtotal - discountAmount) * gstRate) / 100 : 0;
   const cartTotal = cartSubtotal - discountAmount + taxAmount;
 
   const handleCheckout = () => {
-    if (cart.length === 0) return;
-    
+    if (!cart || cart.length === 0) return;
+
     // Validate workflow requirements
     const validationError = validateWorkflow();
     if (validationError) {
-      alert(validationError);
+      setAlertMessage(validationError);
+      setShowAlert(true);
       return;
     }
-    
+
     setShowPaymentModal(true);
   };
 
   const validateWorkflow = () => {
     const workflowSteps = settings.workflowSteps || ['items', 'customer', 'table', 'payment'];
-    
+
     // Check if items are in cart (always required)
-    if (cart.length === 0) {
+    if (!cart || cart.length === 0) {
       return 'Cart is empty. Please add items before checkout.';
     }
-    
+
     // Check customer requirement
     if (workflowSteps.includes('customer') && settings.requireCustomer) {
       if (!selectedCustomer && !settings.allowWalkIn) {
         return 'Customer selection is required. Please select a customer or enable walk-in customers in settings.';
       }
     }
-    
+
     // Check table requirement
     if (workflowSteps.includes('table') && settings.requireTable) {
       if (!selectedTable && !settings.autoAssignTables) {
@@ -366,7 +438,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // Auto-assign table if enabled
       if (!selectedTable && settings.autoAssignTables) {
-        const availableTable = tables.find(t => t.status === 'available');
+        if (!tables || !Array.isArray(tables)) {
+          return 'No tables available for auto-assignment.';
+        }
+        const availableTable = tables.find(t => t && t.status === 'available');
         if (availableTable) {
           setSelectedTable(availableTable);
         } else {
@@ -414,8 +489,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     if (!settings.enableHoldOrders) {
       return 'Hold orders are not enabled in settings.';
     }
-    if (heldOrders.length >= settings.maxHoldOrders) {
-      return `Maximum hold orders (${settings.maxHoldOrders}) reached. Please complete or clear held orders.`;
+    if (!heldOrders || heldOrders.length >= (settings.maxHoldOrders || 10)) {
+      return `Maximum hold orders (${settings.maxHoldOrders || 10}) reached. Please complete or clear held orders.`;
     }
     return null;
   };
@@ -447,16 +522,34 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   const processPayment = (e) => {
     e.preventDefault();
-    if (cart.length === 0) return;
-    
+    if (!cart || cart.length === 0) return;
+
+    // Validate split payments if selected
+    if (paymentMethod === 'SPLIT') {
+      const splitTotal = splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      if (Math.abs(splitTotal - cartTotal) > 0.01) {
+        setAlertMessage(`Split payment total (₹${splitTotal.toFixed(2)}) must equal order total (₹${cartTotal.toFixed(2)})`);
+        setShowAlert(true);
+        return;
+      }
+    }
+
     // If payment method is CARD, UPI, or WALLET, use Razorpay
-    if (['CARD', 'UPI', 'WALLET'].includes(paymentMethod)) {
-      const razorpayKey = settings.razorpayKeyId || 'rzp_test_TNOHWmxS3Z0i8f';
-      
+    if (['CARD', 'UPI', 'WALLET'].includes(paymentMethod) && paymentMethod !== 'SPLIT') {
+      // Use environment variable or settings, fallback to test key
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || settings.razorpayKeyId;
+
+      if (!razorpayKey) {
+        setAlertMessage('Payment gateway not configured. Please contact administrator.');
+        setShowAlert(true);
+        console.error('Razorpay key not configured');
+        return;
+      }
+
       try {
         const options = {
           key: razorpayKey,
-          amount: cartTotal * 100, // Amount in paise
+          amount: Math.round(Math.abs(paymentAmount || cartTotal || 0) * 100), // Amount in paise, ensure it's an integer
           currency: 'INR',
           name: settings.storeName || 'BakeryPOS',
           description: 'Order Payment',
@@ -470,51 +563,65 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             email: selectedCustomer?.email || '',
             contact: selectedCustomer?.phone || ''
           },
-          theme: {
-            color: '#667eea'
-          },
           modal: {
             ondismiss: function() {
-              // Handle modal dismiss
               console.log('Payment modal dismissed');
-            }
+            },
+            escape: true,
+            confirm_close: true
+          },
+          notes: {
+            order_id: `ORD-${Date.now().toString().slice(-6)}`,
+            customer: selectedCustomer?.name || 'Walk-in'
           }
         };
-        
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-        
-        rzp.on('payment.failed', function(response) {
-          alert('Payment failed: ' + response.error.description);
-        });
+
+        if (typeof window !== 'undefined' && window.Razorpay) {
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+
+          rzp.on('payment.failed', function(response) {
+            console.error('Payment failed:', response.error);
+            setAlertMessage('Payment failed: ' + (response.error?.description || 'Unknown error'));
+            setShowAlert(true);
+          });
+        } else {
+          throw new Error('Razorpay SDK not loaded');
+        }
       } catch (error) {
         console.error('Razorpay error:', error);
-        alert('Payment initialization failed: ' + error.message);
+        setAlertMessage('Payment initialization failed: ' + (error.message || 'Unknown error'));
+        setShowAlert(true);
       }
     } else {
-      // Cash payment - complete directly
+      // Cash payment or split payment - complete directly
       completeOrder(null);
     }
   };
 
   const completeOrder = (paymentId) => {
+    if (!cart || !Array.isArray(cart)) {
+      console.error('completeOrder called with invalid cart');
+      return;
+    }
+
     const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
-    const tokenNumber = settings.enableTokenSystem 
-      ? `${settings.tokenPrefix || 'T'}-${Date.now().toString().slice(-4)}`
-      : null;
+    const tokenNumber = `${settings.tokenPrefix || 'T'}-${Date.now().toString().slice(-4)}`;
     const newOrder = {
       id: orderNumber,
       orderNumber: orderNumber,
       token: tokenNumber,
       items: cart,
-      total: cartTotal,
-      subtotal: cartSubtotal,
-      discount: discount,
-      discountAmount: discountAmount,
-      gstRate: gstRate,
-      taxAmount: taxAmount,
-      paymentMethod: paymentMethod,
+      total: cartTotal || 0,
+      subtotal: cartSubtotal || 0,
+      discount: discount || 0,
+      discountAmount: discountAmount || 0,
+      gstEnabled: gstEnabled,
+      gstRate: gstRate || 0,
+      taxAmount: taxAmount || 0,
+      paymentMethod: paymentMethod || 'CASH',
       paymentId: paymentId,
+      splitPayments: paymentMethod === 'SPLIT' ? splitPayments : null,
       customerId: selectedCustomer?.id || null,
       customerName: selectedCustomer?.name || 'Walk-in',
       customerPhone: selectedCustomer?.phone || null,
@@ -528,13 +635,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       auditTrail: {
         created: new Date().toISOString(),
         createdBy: selectedEmployee?.id || 'system',
-        paymentMethod: paymentMethod,
+        paymentMethod: paymentMethod || 'CASH',
         paymentId: paymentId,
         terminalId: currentTerminal?.id || 'terminal_1'
       }
     };
-    
-    setOrders([...orders, newOrder]);
+
+    setOrders(prev => [...(prev || []), newOrder]);
     setLastOrder(newOrder);
     setCart([]);
     setDiscount(0);
@@ -545,34 +652,59 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setShowReceipt(true);
 
     // Create KOT for kitchen based on workflow settings
-    if (settings.autoCreateKOT) {
+    console.log('Creating KOT - autoCreateKOT setting:', settings.autoCreateKOT);
+    if (settings.autoCreateKOT !== false) { // Default to true if not set
       // Check if payment is required before KOT
       if (settings.requirePaymentBeforeKOT && !paymentId) {
         console.log('Payment required before KOT, skipping KOT creation');
       } else {
-        const kotResult = kotManager.createKOT({
-          orderId: newOrder.id,
-          orderNumber: newOrder.orderNumber,
-          token: newOrder.token,
-          items: newOrder.items,
-          customerName: newOrder.customerName,
-          customerPhone: newOrder.customerPhone,
-          tableNumber: newOrder.tableNumber,
-          staffId: newOrder.staffId,
-          staffName: newOrder.staffName,
-          terminal: newOrder.terminal,
-          notes: newOrder.notes || ''
-        });
-
-        if (kotResult.success) {
-          console.log('KOT created:', kotResult.kot.kotId);
-          
-          // Auto-print KOT if enabled
-          if (settings.autoPrintKOT) {
-            kotPrinter.printKOTForAllStations(kotResult.kot);
+        try {
+          console.log('Creating KOT with data:', {
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            token: newOrder.token,
+            items: newOrder.items
+          });
+          if (!kotManager || !kotManager.createKOT) {
+            console.error('KOT manager not available');
+            return;
           }
+          const kotResult = kotManager.createKOT({
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            token: newOrder.token,
+            items: newOrder.items || [],
+            customerName: newOrder.customerName,
+            customerPhone: newOrder.customerPhone,
+            tableNumber: newOrder.tableNumber,
+            staffId: newOrder.staffId,
+            staffName: newOrder.staffName,
+            terminal: newOrder.terminal,
+            notes: newOrder.notes || ''
+          });
+
+          console.log('KOT creation result:', kotResult);
+
+          if (kotResult && kotResult.success) {
+            console.log('KOT created successfully:', kotResult.kot?.kotId);
+
+            // Auto-print KOT if enabled
+            if (settings.autoPrintKOT && kotPrinter && kotPrinter.printKOTForAllStations) {
+              try {
+                kotPrinter.printKOTForAllStations(kotResult.kot);
+              } catch (printError) {
+                console.error('Error printing KOT:', printError);
+              }
+            }
+          } else {
+            console.error('KOT creation failed:', kotResult?.error);
+          }
+        } catch (kotError) {
+          console.error('Error during KOT creation:', kotError);
         }
       }
+    } else {
+      console.log('KOT auto-creation disabled in settings');
     }
 
     // Auto-print receipt
@@ -586,7 +718,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     if (selectedTable) {
       setTables(tables.map(t => 
         t.id === selectedTable.id 
-          ? { ...t, status: 'occupied', currentToken: newOrder.token }
+          ? { ...t, status: 'occupied', currentToken: newOrder.token, currentOrderId: newOrder.id }
           : t
       ));
     }
@@ -788,25 +920,46 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setShowReceipt(true);
 
     // Create KOT for kitchen
-    const kotResult = kotManager.createKOT({
+    console.log('Creating KOT for split payment with data:', {
       orderId: newOrder.id,
       orderNumber: newOrder.orderNumber,
       token: newOrder.token,
-      items: newOrder.items,
-      customerName: newOrder.customerName,
-      customerPhone: selectedCustomer?.phone || null,
-      tableNumber: newOrder.tableName,
-      staffId: newOrder.staffId,
-      staffName: newOrder.staffName,
-      terminal: newOrder.terminal,
-      notes: ''
+      items: newOrder.items
     });
+    
+    try {
+      const kotResult = kotManager.createKOT({
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        token: newOrder.token,
+        items: newOrder.items,
+        customerName: newOrder.customerName,
+        customerPhone: selectedCustomer?.phone || null,
+        tableNumber: newOrder.tableName,
+        staffId: newOrder.staffId,
+        staffName: newOrder.staffName,
+        terminal: newOrder.terminal,
+        notes: ''
+      });
 
-    if (kotResult.success) {
-      console.log('KOT created for split payment:', kotResult.kot.kotId);
-      
-      // Auto-print KOT for all stations
-      kotPrinter.printKOTForAllStations(kotResult.kot);
+      console.log('Split payment KOT creation result:', kotResult);
+
+      if (kotResult.success) {
+        console.log('KOT created for split payment:', kotResult.kot.kotId);
+        
+        // Auto-print KOT if enabled
+        if (settings.autoPrintKOT) {
+          try {
+            kotPrinter.printKOTForAllStations(kotResult.kot);
+          } catch (printError) {
+            console.error('Error printing KOT:', printError);
+          }
+        }
+      } else {
+        console.error('KOT creation failed for split payment:', kotResult.error);
+      }
+    } catch (kotError) {
+      console.error('Error during KOT creation for split payment:', kotError);
     }
 
     // Update table status to occupied with token
@@ -839,93 +992,127 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     const discountAmt = lastOrder.discountAmount || (subtotal * (lastOrder.discount || 0)) / 100;
     const taxAmt = lastOrder.taxAmount || ((subtotal - discountAmt) * (lastOrder.gstRate || 0)) / 100;
     
-    const template = settings.receiptTemplate || 'standard';
-    const fontSize = settings.receiptFontSize || '12';
+    const fontSize = parseInt(settings.receiptFontSize || 12);
+    const maxWidth = settings.receiptTemplate === 'thermal' ? '240px' : '280px';
     
-    // Build header based on template
-    let headerHTML = '';
-    if (template === 'custom' && settings.customReceiptHeader) {
-      headerHTML = settings.customReceiptHeader
-        .replace(/{storeName}/g, settings.storeName || '🥐 BakeryPOS')
-        .replace(/{storeAddress}/g, settings.storeAddress || '')
-        .replace(/{phone}/g, settings.phone || '');
-    } else if (settings.showLogoOnReceipt !== false) {
-      headerHTML = `
-        <div class="header">
-          <h1>${settings.storeName || '🥐 BakeryPOS'}</h1>
-          ${settings.storeAddress ? `<p>${settings.storeAddress}</p>` : ''}
-          ${settings.phone ? `<p>${settings.phone}</p>` : ''}
+    let receiptHTML = `
+      <div style="
+        font-family: monospace;
+        font-size: ${fontSize}px;
+        line-height: 1.4;
+        color: #000;
+        padding: 16px;
+        background: #fff;
+        max-width: ${maxWidth};
+        margin: 0 auto;
+      ">
+    `;
+    
+    // Header
+    receiptHTML += `
+      <div style="text-align: center; margin-bottom: 12px;">
+    `;
+    if (settings.showLogoOnReceipt !== false) {
+      receiptHTML += `<div style="font-size: ${fontSize + 4}px; font-weight: bold;">${settings.storeName || 'BakeryPOS'}</div>`;
+    }
+    if (settings.showLogoOnReceipt !== false && settings.storeAddress) {
+      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">${settings.storeAddress}</div>`;
+    }
+    if (settings.showLogoOnReceipt !== false && settings.phone) {
+      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">Tel: ${settings.phone}</div>`;
+    }
+    if (settings.showEmailOnReceipt !== false && settings.email) {
+      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">${settings.email}</div>`;
+    }
+    if (settings.gstin) {
+      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">GSTIN: ${settings.gstin}</div>`;
+    }
+    if (settings.fssaiLicense) {
+      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">FSSAI: ${settings.fssaiLicense}</div>`;
+    }
+    receiptHTML += `</div>`;
+    
+    // Order Info
+    receiptHTML += `
+      <div style="border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>Order #: ${lastOrder.id}</span>
+          <span>Token: ${lastOrder.token || 'N/A'}</span>
+        </div>
+        <div style="font-size: ${fontSize - 2}px;">${new Date(lastOrder.createdAt).toLocaleString()}</div>
+    `;
+    if (settings.showTableOnReceipt !== false && lastOrder.tableNumber) {
+      receiptHTML += `<div>Table: ${lastOrder.tableNumber}</div>`;
+    }
+    if (settings.showCustomerOnReceipt !== false) {
+      receiptHTML += `<div>Customer: ${lastOrder.customerName || 'Walk-in'}</div>`;
+    }
+    receiptHTML += `</div>`;
+
+    // Items
+    receiptHTML += `<div style="margin-bottom: 8px;">`;
+    lastOrder.items.forEach(item => {
+      receiptHTML += `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <div>
+            <div>${item.name}${item.isCustom ? ' (Custom)' : ''}</div>
+            <div style="font-size: ${fontSize - 2}px;">${item.quantity} x ₹${item.price}</div>
+          </div>
+          <div>₹${item.quantity * item.price}</div>
+        </div>
+      `;
+    });
+    receiptHTML += `</div>`;
+
+    // Totals
+    receiptHTML += `
+      <div style="border-top: 1px dashed #000; padding-top: 8px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span>Subtotal:</span>
+          <span>₹${subtotal.toFixed(2)}</span>
+        </div>
+    `;
+    if (settings.showGstOnReceipt !== false && (lastOrder.discount || 0) > 0) {
+      receiptHTML += `
+        <div style="display: flex; justify-content: space-between;">
+          <span>Discount (${lastOrder.discount}%):</span>
+          <span>-₹${discountAmt.toFixed(2)}</span>
         </div>
       `;
     }
-    
-    // Build order info
-    const orderInfoHTML = `
-      <p>Receipt #${lastOrder.id}</p>
-      <p>Token: <strong>${lastOrder.token || 'N/A'}</strong></p>
-      <p>${new Date(lastOrder.createdAt).toLocaleString()}</p>
-      ${settings.showTableOnReceipt !== false && lastOrder.tableNumber ? `<p>Table: ${lastOrder.tableNumber}</p>` : ''}
-      ${settings.showCustomerOnReceipt !== false ? `<p>Customer: ${lastOrder.customerName || 'Walk-in'}</p>` : ''}
-    `;
-    
-    // Build items
-    const itemsHTML = lastOrder.items.map(item => `
-      <div class="item">
-        <span>${item.name}${item.isCustom ? ' (Custom)' : ''} x${item.quantity}</span>
-        <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-      </div>
-      ${item.notes ? `<div class="item" style="font-size: 10px; color: #666; font-style: italic;">Note: ${item.notes}</div>` : ''}
-    `).join('');
-    
-    // Build totals
-    let totalsHTML = `
-      <div class="item">
-        <span>Subtotal</span>
-        <span>₹${subtotal.toFixed(2)}</span>
-      </div>
-    `;
-    
-    if (settings.showGstOnReceipt !== false) {
-      if ((lastOrder.discount || 0) > 0) {
-        totalsHTML += `
-          <div class="item discount">
-            <span>Discount (${lastOrder.discount}%)</span>
-            <span>-₹${discountAmt.toFixed(2)}</span>
-          </div>
-        `;
-      }
-      if ((lastOrder.gstRate || 0) > 0) {
-        totalsHTML += `
-          <div class="item tax">
-            <span>GST (${lastOrder.gstRate}%)</span>
-            <span>₹${taxAmt.toFixed(2)}</span>
-          </div>
-        `;
-      }
-    }
-    
-    totalsHTML += `
-      <div class="item" style="margin-top: 10px; font-size: 14px;">
-        <span>TOTAL</span>
-        <span>₹${lastOrder.total.toFixed(2)}</span>
-      </div>
-      <div class="item" style="margin-top: 5px; font-size: 12px;">
-        <span>Payment: ${lastOrder.paymentMethod}</span>
-      </div>
-    `;
-    
-    // Build footer
-    let footerHTML = '';
-    if (template === 'custom' && settings.customReceiptFooter) {
-      footerHTML = settings.customReceiptFooter.replace(/{receiptFooter}/g, settings.receiptFooter || 'Thank you for your order!');
-    } else {
-      footerHTML = `
-        <div class="footer">
-          <p>${settings.receiptFooter || 'Thank you for your order!'}</p>
-          <p>Visit us again soon</p>
+    if (settings.showGstOnReceipt !== false && lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0) {
+      receiptHTML += `
+        <div style="display: flex; justify-content: space-between;">
+          <span>GST (${lastOrder.gstRate}%):</span>
+          <span>₹${taxAmt.toFixed(2)}</span>
         </div>
       `;
     }
+    receiptHTML += `
+        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px;">
+          <span>TOTAL:</span>
+          <span>₹${lastOrder.total.toFixed(2)}</span>
+        </div>
+        <div style="margin-top: 4px; font-size: ${fontSize - 2}px;">
+          Paid: ${lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
+        </div>
+    `;
+    if (lastOrder.splitPayments && lastOrder.splitPayments.length > 0) {
+      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">`;
+      lastOrder.splitPayments.forEach(payment => {
+        receiptHTML += `<div>${payment.method}: ₹${payment.amount.toFixed(2)}</div>`;
+      });
+      receiptHTML += `</div>`;
+    }
+    receiptHTML += `</div>`;
+
+    // Footer
+    receiptHTML += `
+      <div style="text-align: center; margin-top: 12px; font-size: ${fontSize - 2}px;">
+        <div>${settings.receiptFooter || 'Thank you for your order!'}</div>
+        <div>Visit us again soon</div>
+      </div>
+    </div>`;
     
     const receiptWindow = window.open('', '_blank');
     receiptWindow.document.write(`
@@ -933,30 +1120,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         <head>
           <title>Receipt - ${lastOrder.id}</title>
           <style>
-            body { font-family: monospace; padding: 20px; max-width: 300px; margin: 0 auto; font-size: ${fontSize}px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; }
-            .header p { margin: 5px 0; font-size: 12px; }
-            .store-info { margin-bottom: 15px; font-size: 11px; color: #666; }
-            .items { margin: 20px 0; }
-            .item { display: flex; justify-content: space-between; margin: 5px 0; font-size: 12px; }
-            .total { border-top: 1px dashed #000; padding-top: 10px; margin-top: 20px; font-weight: bold; }
-            .footer { text-align: center; margin-top: 30px; font-size: 11px; }
-            .discount { color: green; }
-            .tax { color: orange; }
+            body { margin: 0; padding: 0; }
           </style>
         </head>
-        <body>
-          ${headerHTML}
-          ${orderInfoHTML}
-          <div class="items">
-            ${itemsHTML}
-          </div>
-          <div class="total">
-            ${totalsHTML}
-          </div>
-          ${footerHTML}
-        </body>
+        <body>${receiptHTML}</body>
       </html>
     `);
     receiptWindow.document.close();
@@ -1010,7 +1177,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       // F1 - Help/Shortcuts
       if (e.key === 'F1') {
         e.preventDefault();
-        alert('Keyboard Shortcuts:\nF1 - Help\nF2 - Checkout\nF3 - Hold Order\nF4 - Void Last Item\nF5 - Discount Toggle\nF6 - Tax Toggle\nF7 - Print Receipt\nF8 - Order History\nF9 - Quick Code Focus\nF10 - Clear Cart\nF11 - Fullscreen\nF12 - Settings\n1-6 - Quick Actions\nEscape - Close Modals\nEnter - Add Item (if selected)');
+        setAlertMessage('Keyboard Shortcuts:\nF1 - Help\nF2 - Checkout\nF3 - Hold Order\nF4 - Void Last Item\nF5 - Discount Toggle\nF6 - Tax Toggle\nF7 - Print Receipt\nF8 - Order History\nF9 - Quick Code Focus\nF10 - Clear Cart\nF11 - Fullscreen\nF12 - Settings\n1-6 - Quick Actions\nEscape - Close Modals\nEnter - Add Item (if selected)');
+        setShowAlert(true);
       }
       // F2 - Checkout
       else if (e.key === 'F2') {
@@ -1038,8 +1206,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       // F4 - Void Last Item
       else if (e.key === 'F4') {
         e.preventDefault();
-        if (cart.length > 0 && window.confirm('Are you sure you want to void the last item?')) {
-          setCart(cart.slice(0, -1));
+        if (cart.length > 0) {
+          setShowVoidConfirm(true);
         }
       }
       // F5 - Discount Toggle
@@ -1459,12 +1627,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{ 
             flex: 1,
             overflowY: 'auto',
-            padding: '16px'
+            padding: screenSize === 'small' ? '12px' : '16px'
           }}>
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-              gap: '12px'
+              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))', 
+              gap: screenSize === 'small' ? '10px' : '12px'
             }}>
               {filteredItems.map(item => {
                 const inventoryItem = inventory.find(inv => inv.name === item.name);
@@ -1476,8 +1644,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     onClick={() => addToCart(item, quantityInput)}
                     style={{
                       background: '#ffffff',
-                      borderRadius: '8px',
-                      padding: '16px',
+                      padding: screenSize === 'small' ? '12px' : '16px',
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
@@ -1489,7 +1656,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       cursor: item.active && !item.eightySixed ? 'pointer' : 'not-allowed',
                       transition: 'all 0.15s ease',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      minHeight: '120px'
+                      minHeight: screenSize === 'small' ? '100px' : '120px'
                     }}
                     onMouseEnter={(e) => {
                       if (item.active && !item.eightySixed) {
@@ -1521,9 +1688,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         Low
                       </div>
                     )}
-                    <span style={{ fontSize: '32px' }}>{item.emoji || '🥐'}</span>
+                    <span style={{ fontSize: screenSize === 'small' ? '28px' : '32px' }}>{item.emoji || '🥐'}</span>
                     <span style={{ 
-                      fontSize: '12px', 
+                      fontSize: screenSize === 'small' ? '11px' : '12px', 
                       fontWeight: '500', 
                       color: '#1f2937',
                       textAlign: 'center',
@@ -1532,7 +1699,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       {item.name}
                     </span>
                     <span style={{ 
-                      fontSize: '14px', 
+                      fontSize: screenSize === 'small' ? '13px' : '14px', 
                       fontWeight: '600', 
                       color: '#2563eb'
                     }}>
@@ -1561,31 +1728,31 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
           {/* Cart Header */}
           <div style={{
-            padding: '10px',
+            padding: screenSize === 'small' ? '8px' : '10px',
             borderBottom: '1px solid #e5e7eb',
             background: '#f9fafb',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1f2937' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: '#1f2937' }}>
               Cart ({cartCount})
             </div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: '#2563eb' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '700', color: '#2563eb' }}>
               ₹{cartTotal.toFixed(2)}
             </div>
           </div>
 
           {/* Cart Items */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: screenSize === 'small' ? '8px' : '10px' }}>
             {cart.length === 0 ? (
               <div style={{
                 textAlign: 'center',
-                padding: '30px 15px',
+                padding: screenSize === 'small' ? '24px 12px' : '30px 15px',
                 color: '#9ca3af',
-                fontSize: '12px'
+                fontSize: screenSize === 'small' ? '11px' : '12px'
               }}>
-                <div style={{ fontSize: '36px', marginBottom: '12px' }}>🛒</div>
+                <div style={{ fontSize: screenSize === 'small' ? '32px' : '36px', marginBottom: '12px' }}>🛒</div>
                 <div>Cart is empty</div>
               </div>
             ) : (
@@ -1593,28 +1760,28 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div key={`${item.id}-${index}`} style={{
                   background: '#f9fafb',
                   borderRadius: '6px',
-                  padding: '8px',
-                  marginBottom: '6px',
+                  padding: screenSize === 'small' ? '6px' : '8px',
+                  marginBottom: screenSize === 'small' ? '4px' : '6px',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px', fontWeight: '500', color: '#1f2937', marginBottom: '2px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '500', color: '#1f2937', marginBottom: '2px' }}>
                         {item.name}
                       </div>
-                      <div style={{ fontSize: '10px', color: '#6b7280' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: '#6b7280' }}>
                         ₹{item.price.toFixed(2)} × {item.quantity}
                       </div>
                     </div>
                     <button
                       onClick={() => removeFromCart(index)}
                       style={{
-                        padding: '3px 6px',
+                        padding: screenSize === 'small' ? '2px 5px' : '3px 6px',
                         background: '#fee2e2',
                         color: '#dc2626',
                         border: 'none',
                         borderRadius: '4px',
-                        fontSize: '12px',
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
                         cursor: 'pointer',
                         fontWeight: '600'
                       }}
@@ -1622,7 +1789,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       ✕
                     </button>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', color: '#1f2937' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: '#1f2937' }}>
                     <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 </div>
@@ -1631,7 +1798,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           </div>
 
           {/* Cart Footer */}
-          <div style={{ padding: '8px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
             {/* Customer Type Selection */}
             <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
               <button
@@ -1763,19 +1930,19 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            padding: '8px'
+            padding: screenSize === 'small' ? '6px' : '8px'
           }}>
-            <div style={{ fontSize: '11px', fontWeight: '600', color: '#1f2937', marginBottom: '6px' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: '#1f2937', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
               Quick Actions
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
               {[
                 { id: 'hold', label: 'Hold', icon: '⏸️' },
-                { id: 'split', label: 'Split', icon: '💸' },
+                { id: 'kitchen', label: 'Kitchen', icon: '👨‍🍳' },
                 { id: 'void', label: 'Void', icon: '❌' },
                 { id: 'discount', label: 'Disc', icon: '🏷️' },
-                { id: 'gst', label: 'GST', icon: '🧾' },
-                { id: 'print', label: 'Print', icon: '🖨️' }
+                { id: 'print', label: 'Print', icon: '🖨️' },
+                { id: 'table', label: 'Table', icon: '🪑' }
               ].map(action => (
                 <button
                   key={action.id}
@@ -1783,17 +1950,21 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     if (action.id === 'hold') handleHoldOrder();
                     if (action.id === 'void') handleVoidLastItem();
                     if (action.id === 'discount') setDiscount(discount === 0 ? 10 : 0);
-                    if (action.id === 'gst') setShowGstSettings(true);
                     if (action.id === 'print') setShowPrintSettings(true);
-                    if (action.id === 'split') setShowSplitBillModal(true);
+                    if (action.id === 'table') setShowTableSelector(true);
+                    if (action.id === 'kitchen') {
+                      // Show kitchen status - could be a modal or navigate to kitchen view
+                      setAlertMessage('Kitchen Status: All orders are being processed');
+                      setShowAlert(true);
+                    }
                   }}
                   style={{
-                    padding: '6px 4px',
+                    padding: screenSize === 'small' ? '5px 3px' : '6px 4px',
                     background: '#f3f4f6',
                     color: '#374151',
                     border: '1px solid #e5e7eb',
                     borderRadius: '4px',
-                    fontSize: '9px',
+                    fontSize: screenSize === 'small' ? '8px' : '9px',
                     fontWeight: '500',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1802,7 +1973,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     gap: '2px'
                   }}
                 >
-                  <span style={{ fontSize: '12px' }}>{action.icon}</span>
+                  <span style={{ fontSize: screenSize === 'small' ? '11px' : '12px' }}>{action.icon}</span>
                   {action.label}
                 </button>
               ))}
@@ -1814,23 +1985,23 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            padding: '8px',
+            padding: screenSize === 'small' ? '6px' : '8px',
             flex: 1
           }}>
             {/* Numpad Mode Toggle */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', gap: screenSize === 'small' ? '3px' : '4px', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
               {['quantity', 'discount', 'amount'].map(mode => (
                 <button
                   key={mode}
                   onClick={() => setNumpadMode(mode)}
                   style={{
                     flex: 1,
-                    padding: '4px',
+                    padding: screenSize === 'small' ? '3px' : '4px',
                     background: numpadMode === mode ? '#2563eb' : '#f3f4f6',
                     color: numpadMode === mode ? '#ffffff' : '#374151',
                     border: 'none',
                     borderRadius: '3px',
-                    fontSize: '10px',
+                    fontSize: screenSize === 'small' ? '9px' : '10px',
                     fontWeight: '500',
                     cursor: 'pointer'
                   }}
@@ -1841,7 +2012,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Numpad Search */}
-            <div style={{ marginBottom: '6px', position: 'relative' }}>
+            <div style={{ marginBottom: screenSize === 'small' ? '4px' : '6px', position: 'relative' }}>
               <input
                 type="text"
                 value={numpadSearch}
@@ -1849,12 +2020,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 placeholder="🔍 Search..."
                 style={{
                   width: '100%',
-                  padding: '6px 8px',
+                  padding: screenSize === 'small' ? '5px 6px' : '6px 8px',
                   background: '#f8fafc',
                   color: '#1e293b',
                   border: '1px solid #cbd5e1',
                   borderRadius: '4px',
-                  fontSize: '11px',
+                  fontSize: screenSize === 'small' ? '10px' : '11px',
                   outline: 'none',
                   transition: 'border-color 0.2s'
                 }}
@@ -1904,7 +2075,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               )}
             </div>
             
-            <div style={{ fontSize: '10px', fontWeight: '600', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', fontWeight: '600', color: '#64748b', marginBottom: screenSize === 'small' ? '3px' : '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               {numpadMode === 'quantity' ? 'Quantity' : numpadMode === 'discount' ? 'Discount %' : 'Amount'}
             </div>
             <input
@@ -1921,32 +2092,32 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               placeholder={numpadMode === 'quantity' ? 'Enter quantity' : numpadMode === 'discount' ? 'Enter discount %' : 'Enter amount'}
               style={{
                 width: '100%',
-                padding: '8px',
+                padding: screenSize === 'small' ? '6px' : '8px',
                 background: '#ffffff',
                 color: '#0f172a',
                 border: '2px solid #e2e8f0',
                 borderRadius: '6px',
-                fontSize: '16px',
+                fontSize: screenSize === 'small' ? '14px' : '16px',
                 fontWeight: '700',
                 textAlign: 'center',
-                marginBottom: '6px',
+                marginBottom: screenSize === 'small' ? '4px' : '6px',
                 fontFamily: 'monospace',
                 outline: 'none',
                 boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
               }}
             />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
               {['7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '⌫'].map(key => (
                 <button
                   key={key}
                   onClick={() => handleNumpadClick(key)}
                   style={{
-                    padding: '10px',
+                    padding: screenSize === 'small' ? '8px' : '10px',
                     background: key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6',
                     color: key === 'C' || key === '⌫' ? '#dc2626' : '#1f2937',
                     border: 'none',
                     borderRadius: '4px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
                     fontWeight: '600',
                     cursor: 'pointer',
                     transition: 'all 0.1s ease'
@@ -1969,23 +2140,28 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            padding: '12px'
+            padding: screenSize === 'small' ? '8px' : '12px'
           }}>
             <button
               onClick={() => setShowCustomOrder(true)}
               style={{
                 width: '100%',
-                padding: '10px',
-                background: '#f3f4f6',
-                color: '#374151',
-                border: '1px solid #e5e7eb',
+                padding: screenSize === 'small' ? '8px' : '10px',
+                background: '#8b5cf6',
+                color: '#ffffff',
+                border: 'none',
                 borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer'
+                fontSize: screenSize === 'small' ? '12px' : '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              + Custom Order
+              <span style={{ fontSize: screenSize === 'small' ? '14px' : '16px' }}>✨</span>
+              Custom Order
             </button>
           </div>
         </div>
@@ -2228,21 +2404,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
             width: '500px',
-            maxWidth: '90vw'
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
                 Custom Order
               </h3>
               <button
@@ -2256,11 +2433,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 }}
                 style={{
                   padding: '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
                 }}
               >
                 ×
@@ -2269,7 +2447,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
             {/* Quick Presets */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Quick Presets
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -2287,13 +2465,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}
                     style={{
                       padding: '8px 12px',
-                      background: '#f3f4f6',
-                      color: '#374151',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
+                      background: '#2d2d44',
+                      color: '#e0e0e0',
+                      border: '1px solid #3d3d5c',
+                      borderRadius: '8px',
                       fontSize: '12px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
                     }}
+                    onMouseEnter={(e) => e.target.style.background = '#3d3d5c'}
+                    onMouseLeave={(e) => e.target.style.background = '#2d2d44'}
                   >
                     {preset.name} (₹{preset.price})
                   </button>
@@ -2302,9 +2483,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Order Name */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
-                Order Name *
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
+                Order Name
               </label>
               <input
                 type="text"
@@ -2314,20 +2495,21 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: '#f9fafb',
-                  color: '#1f2937',
-                  border: '1px solid #e5e7eb',
+                  background: '#1a1a2e',
+                  color: '#ffffff',
+                  border: '1px solid #2d2d44',
                   borderRadius: '8px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  outline: 'none'
                 }}
               />
             </div>
 
             {/* Price and Quantity Row */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
-                  Price (₹) *
+                <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
+                  Price (₹)
                 </label>
                 <input
                   type="number"
@@ -2337,16 +2519,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#f9fafb',
-                    color: '#1f2937',
-                    border: '1px solid #e5e7eb',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
                     borderRadius: '8px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    outline: 'none'
                   }}
                 />
               </div>
               <div style={{ width: '100px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+                <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
                   Qty
                 </label>
                 <input
@@ -2357,19 +2540,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#f9fafb',
-                    color: '#1f2937',
-                    border: '1px solid #e5e7eb',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
                     borderRadius: '8px',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    outline: 'none'
                   }}
                 />
               </div>
             </div>
 
             {/* Category */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
                 Category
               </label>
               <select
@@ -2378,11 +2562,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: '#f9fafb',
-                  color: '#1f2937',
-                  border: '1px solid #e5e7eb',
+                  background: '#1a1a2e',
+                  color: '#ffffff',
+                  border: '1px solid #2d2d44',
                   borderRadius: '8px',
-                  fontSize: '14px'
+                  fontSize: '14px',
+                  outline: 'none'
                 }}
               >
                 <option value="">Select category...</option>
@@ -2395,8 +2580,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Notes */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
                 Notes (Optional)
               </label>
               <textarea
@@ -2407,12 +2592,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: '#f9fafb',
-                  color: '#1f2937',
-                  border: '1px solid #e5e7eb',
+                  background: '#1a1a2e',
+                  color: '#ffffff',
+                  border: '1px solid #2d2d44',
                   borderRadius: '8px',
                   fontSize: '14px',
-                  resize: 'vertical'
+                  resize: 'vertical',
+                  outline: 'none'
                 }}
               />
             </div>
@@ -2420,16 +2606,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {/* Preview */}
             {customOrderName && customOrderPrice && (
               <div style={{
-                background: '#dbeafe',
+                background: '#2d2d44',
                 padding: '12px',
                 borderRadius: '8px',
-                marginBottom: '16px',
-                border: '1px solid #93c5fd'
+                marginBottom: '24px',
+                border: '1px solid #3d3d5c'
               }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e40af', marginBottom: '4px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#e0e0e0', marginBottom: '4px' }}>
                   Preview
                 </div>
-                <div style={{ fontSize: '14px', color: '#1e40af' }}>
+                <div style={{ fontSize: '14px', color: '#e0e0e0' }}>
                   {customOrderName} × {customOrderQuantity} = ₹{(parseFloat(customOrderPrice) * parseInt(customOrderQuantity || 1)).toFixed(2)}
                 </div>
               </div>
@@ -2449,29 +2635,51 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '14px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
+                  fontWeight: '600',
                   cursor: 'pointer'
                 }}
               >
                 Cancel
               </button>
               <button
-                onClick={addCustomOrder}
-                disabled={!customOrderName || !customOrderPrice}
+                onClick={() => {
+                  if (!customOrderName || !customOrderPrice) {
+                    setAlertMessage('Please fill in required fields');
+                    setShowAlert(true);
+                    return;
+                  }
+                  const customItem = {
+                    id: `custom-${Date.now()}`,
+                    name: customOrderName,
+                    price: parseFloat(customOrderPrice),
+                    quantity: parseInt(customOrderQuantity) || 1,
+                    category: customOrderCategory || 'Custom',
+                    notes: customOrderNotes,
+                    isCustom: true
+                  };
+                  setCart([...cart, customItem]);
+                  setShowCustomOrder(false);
+                  setCustomOrderName('');
+                  setCustomOrderPrice('');
+                  setCustomOrderQuantity('1');
+                  setCustomOrderNotes('');
+                  setCustomOrderCategory('');
+                }}
                 style={{
                   flex: 1,
                   padding: '14px',
-                  background: customOrderName && customOrderPrice ? '#2563eb' : '#d1d5db',
+                  background: '#6366f1',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  cursor: customOrderName && customOrderPrice ? 'pointer' : 'not-allowed'
+                  cursor: 'pointer'
                 }}
               >
                 Add to Cart
@@ -2897,22 +3105,23 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
-            width: '500px',
-            maxWidth: '90vw'
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '600px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                Payment
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                Checkout
               </h3>
               <button
                 onClick={() => {
@@ -2921,11 +3130,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 }}
                 style={{
                   padding: '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
                 }}
               >
                 ×
@@ -2933,66 +3143,300 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Order Summary */}
-            <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ background: '#1a1a2e', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', color: '#6b7280' }}>Subtotal</span>
-                <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>₹{cartSubtotal.toFixed(2)}</span>
+                <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Subtotal</span>
+                <span style={{ fontSize: '16px', fontWeight: '500', color: '#ffffff' }}>₹{cartSubtotal.toFixed(2)}</span>
               </div>
               {discount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#6b7280' }}>Discount ({discount}%)</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#059669' }}>-₹{discountAmount.toFixed(2)}</span>
+                  <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Discount ({discount}%)</span>
+                  <span style={{ fontSize: '16px', fontWeight: '500', color: '#10b981' }}>-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              {gstRate > 0 && (
+              {gstEnabled && taxAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#6b7280' }}>GST ({gstRate}%)</span>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>₹{taxAmount.toFixed(2)}</span>
+                  <span style={{ fontSize: '14px', color: '#8b8b9e' }}>GST ({gstRate}%)</span>
+                  <span style={{ fontSize: '16px', fontWeight: '500', color: '#ffffff' }}>₹{taxAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                <span style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>Total</span>
-                <span style={{ fontSize: '20px', fontWeight: '700', color: '#2563eb' }}>₹{cartTotal.toFixed(2)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #2d2d44' }}>
+                <span style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>Total</span>
+                <span style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>₹{cartTotal.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Settings Row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <button
+                onClick={() => setDiscount(discount === 0 ? 10 : 0)}
+                style={{
+                  padding: '12px',
+                  background: discount > 0 ? '#10b981' : '#2d2d44',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                🏷️ {discount > 0 ? `${discount}% Off` : 'No Discount'}
+              </button>
+              <button
+                onClick={() => setGstEnabled(!gstEnabled)}
+                style={{
+                  padding: '12px',
+                  background: gstEnabled ? '#6366f1' : '#2d2d44',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                🧾 GST: {gstEnabled ? 'On' : 'Off'}
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
+                <input
+                  type="number"
+                  value={gstRate}
+                  onChange={(e) => setGstRate(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                  disabled={!gstEnabled}
+                  style={{
+                    width: '50px',
+                    padding: '8px 0',
+                    background: 'transparent',
+                    color: gstEnabled ? '#ffffff' : '#8b8b9e',
+                    border: 'none',
+                    borderRadius: '0',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    outline: 'none',
+                    textAlign: 'center'
+                  }}
+                />
+                <span style={{ color: '#8b8b9e', fontSize: '13px' }}>%</span>
               </div>
             </div>
 
             {/* Payment Methods */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px', display: 'block' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e', marginBottom: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Payment Method
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                 {[
-                  { id: 'CASH', label: '💵 Cash', icon: '💵' },
-                  { id: 'CARD', label: '💳 Card', icon: '💳' },
-                  { id: 'UPI', label: '📱 UPI', icon: '📱' },
-                  { id: 'WALLET', label: '👛 Wallet', icon: '👛' }
+                  { id: 'CASH', label: 'Cash', icon: '💵' },
+                  { id: 'CARD', label: 'Card', icon: '💳' },
+                  { id: 'UPI', label: 'UPI', icon: '📱' },
+                  { id: 'WALLET', label: 'Wallet', icon: '👛' },
+                  { id: 'SPLIT', label: 'Split', icon: '💰' }
                 ].map(method => (
                   <button
                     key={method.id}
-                    onClick={() => setPaymentMethod(method.id)}
+                    onClick={() => {
+                      setPaymentMethod(method.id);
+                      if (method.id === 'SPLIT') {
+                        setSplitPayments([{ method: 'CASH', amount: cartTotal }]);
+                      }
+                    }}
                     style={{
-                      padding: '16px',
-                      background: paymentMethod === method.id ? '#2563eb' : '#f3f4f6',
-                      color: paymentMethod === method.id ? '#ffffff' : '#374151',
-                      border: paymentMethod === method.id ? '2px solid #2563eb' : '1px solid #e5e7eb',
+                      padding: '16px 12px',
+                      background: paymentMethod === method.id ? '#6366f1' : '#1a1a2e',
+                      color: paymentMethod === method.id ? '#ffffff' : '#e0e0e0',
+                      border: paymentMethod === method.id ? '2px solid #6366f1' : '1px solid #2d2d44',
                       borderRadius: '8px',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: '500',
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease'
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                   >
-                    {method.icon} {method.label}
+                    <span style={{ fontSize: '20px' }}>{method.icon}</span>
+                    {method.label}
                   </button>
                 ))}
               </div>
             </div>
 
+            {/* Split Payment Interface */}
+            {paymentMethod === 'SPLIT' && (
+              <div style={{ marginBottom: '24px', background: '#1a1a2e', padding: '16px', borderRadius: '8px', border: '1px solid #2d2d44' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#8b8b9e' }}>
+                    Split Payment Details
+                  </label>
+                  <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
+                    Remaining: ₹{(cartTotal - splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0)).toFixed(2)}
+                  </div>
+                </div>
+                
+                {/* Split by People */}
+                <div style={{ marginBottom: '12px', padding: '12px', background: '#2d2d44', borderRadius: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#8b8b9e' }}>Split equally among:</span>
+                    <input
+                      type="number"
+                      value={splitByPeople}
+                      onChange={(e) => setSplitByPeople(parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      min="1"
+                      max="20"
+                      style={{
+                        width: '60px',
+                        padding: '6px 8px',
+                        background: '#1a1a2e',
+                        color: '#ffffff',
+                        border: '1px solid #3d3d5c',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        outline: 'none'
+                      }}
+                    />
+                    <span style={{ fontSize: '13px', color: '#8b8b9e' }}>people</span>
+                    <button
+                      onClick={() => {
+                        if (splitByPeople > 0) {
+                          const amountPerPerson = cartTotal / splitByPeople;
+                          const newPayments = [];
+                          for (let i = 0; i < splitByPeople; i++) {
+                            newPayments.push({ method: 'CASH', amount: amountPerPerson });
+                          }
+                          setSplitPayments(newPayments);
+                        }
+                      }}
+                      disabled={splitByPeople < 1}
+                      style={{
+                        padding: '6px 12px',
+                        background: splitByPeople >= 1 ? '#6366f1' : '#2d2d44',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: splitByPeople >= 1 ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Apply Split
+                    </button>
+                  </div>
+                  {splitByPeople > 0 && (
+                    <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
+                      Each person pays: ₹{(cartTotal / splitByPeople).toFixed(2)}
+                    </div>
+                  )}
+                </div>
+
+                {splitPayments.map((payment, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                    <select
+                      value={payment.method}
+                      onChange={(e) => {
+                        const updated = [...splitPayments];
+                        updated[index].method = e.target.value;
+                        setSplitPayments(updated);
+                      }}
+                      style={{
+                        padding: '10px',
+                        background: '#2d2d44',
+                        color: '#ffffff',
+                        border: '1px solid #3d3d5c',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        flex: 1
+                      }}
+                    >
+                      <option value="CASH">💵 Cash</option>
+                      <option value="CARD">💳 Card</option>
+                      <option value="UPI">📱 UPI</option>
+                      <option value="WALLET">👛 Wallet</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={payment.amount}
+                      onChange={(e) => {
+                        const newAmount = parseFloat(e.target.value) || 0;
+                        const updated = [...splitPayments];
+                        updated[index].amount = newAmount;
+                        
+                        // Auto-fill remaining amount in the next payment row
+                        const currentTotal = updated.reduce((sum, p) => sum + (p.amount || 0), 0);
+                        const remaining = cartTotal - currentTotal;
+                        
+                        // Find the next payment row that's empty or has 0 amount
+                        const nextEmptyIndex = updated.findIndex((p, i) => i > index && (!p.amount || p.amount === 0));
+                        if (nextEmptyIndex !== -1 && remaining > 0) {
+                          updated[nextEmptyIndex].amount = remaining;
+                        } else if (remaining > 0 && index === splitPayments.length - 1) {
+                          // If this is the last row and there's remaining, add a new row
+                          updated.push({ method: 'CASH', amount: remaining });
+                        }
+                        
+                        setSplitPayments(updated);
+                      }}
+                      placeholder="Amount"
+                      style={{
+                        padding: '10px',
+                        background: '#2d2d44',
+                        color: '#ffffff',
+                        border: '1px solid #3d3d5c',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        width: '100px'
+                      }}
+                    />
+                    {splitPayments.length > 1 && (
+                      <button
+                        onClick={() => {
+                          setSplitPayments(splitPayments.filter((_, i) => i !== index));
+                        }}
+                        style={{
+                          padding: '8px',
+                          background: '#ef4444',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={() => setSplitPayments([...splitPayments, { method: 'CASH', amount: 0 }])}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: '#2d2d44',
+                    color: '#e0e0e0',
+                    border: '1px dashed #3d3d5c',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    marginTop: '8px'
+                  }}
+                >
+                  + Add Payment Method
+                </button>
+                <div style={{ marginTop: '12px', fontSize: '13px', color: '#8b8b9e' }}>
+                  Total: ₹{splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)} / ₹{cartTotal.toFixed(2)}
+                </div>
+              </div>
+            )}
+
             {/* Payment Amount Input for Card/UPI/Wallet */}
             {paymentMethod !== 'CASH' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
                   Enter Amount
                 </label>
                 <input
@@ -3002,13 +3446,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   placeholder={`₹${cartTotal.toFixed(2)}`}
                   style={{
                     width: '100%',
-                    padding: '12px',
-                    background: '#f9fafb',
-                    color: '#1f2937',
-                    border: '1px solid #e5e7eb',
+                    padding: '14px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
                     borderRadius: '8px',
                     fontSize: '16px',
-                    fontWeight: '600'
+                    fontWeight: '600',
+                    outline: 'none'
                   }}
                 />
               </div>
@@ -3016,11 +3461,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
             {/* Customer Info */}
             {selectedCustomer && (
-              <div style={{ background: '#dbeafe', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af' }}>
+              <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px', marginBottom: '24px', border: '1px solid #2d2d44' }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>
                   {selectedCustomer.name}
                 </div>
-                <div style={{ fontSize: '12px', color: '#1e40af' }}>
+                <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
                   {selectedCustomer.phone}
                 </div>
               </div>
@@ -3035,13 +3480,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 }}
                 style={{
                   flex: 1,
-                  padding: '14px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  padding: '16px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
-                  fontWeight: '500',
+                  fontWeight: '600',
                   cursor: 'pointer'
                 }}
               >
@@ -3052,14 +3497,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 disabled={paymentMethod !== 'CASH' && (!paymentAmount || parseFloat(paymentAmount) < cartTotal)}
                 style={{
                   flex: 1,
-                  padding: '14px',
-                  background: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? '#2563eb' : '#d1d5db',
+                  padding: '16px',
+                  background: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? '#6366f1' : '#2d2d44',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
                   fontWeight: '600',
-                  cursor: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? 'pointer' : 'not-allowed'
+                  cursor: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? 'pointer' : 'not-allowed',
+                  opacity: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? 1 : 0.5
                 }}
               >
                 Complete Payment
@@ -3534,12 +3980,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
             </div>
             <div style={{ padding: '20px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
-              {orders.length === 0 ? (
+              {allOrders.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#8b7355', fontFamily: 'Georgia, serif' }}>
                   No orders yet
                 </div>
               ) : (
-                orders.slice().reverse().slice(0, 20).map(order => (
+                allOrders.slice(0, 20).map(order => (
                   <div
                     key={order.id}
                     onClick={() => {
@@ -3548,15 +3994,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}
                     style={{
                       background: '#f5f0e6',
-                      border: '1px solid #d4c4a8',
+                      border: order.isQROrder ? '2px solid #8b5cf6' : '1px solid #d4c4a8',
                       borderRadius: '8px',
                       padding: '16px',
                       marginBottom: '12px',
                       cursor: 'pointer'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>Order #{order.id.split('-')[1]}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>Order #{order.id.split('-')[1]}</span>
+                        {order.isQROrder && (
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            background: '#8b5cf6',
+                            color: '#ffffff'
+                          }}>
+                            QR
+                          </span>
+                        )}
+                      </div>
                       <span style={{ fontSize: '13px', color: '#8b7355' }}>{new Date(order.createdAt).toLocaleString()}</span>
                     </div>
                     <div style={{ fontSize: '13px', color: '#8b7355' }}>
@@ -3639,11 +4099,391 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 ))}
               </div>
               <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px solid #c9a227' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#8b7355', fontFamily: 'Georgia, serif', marginBottom: '8px' }}>
+                  <span>Subtotal</span>
+                  <span style={{ fontFamily: '"Courier New", monospace' }}>₹{selectedOrderForView.subtotal?.toFixed(2) || '0.00'}</span>
+                </div>
+                {selectedOrderForView.discount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#8b7355', fontFamily: 'Georgia, serif', marginBottom: '8px' }}>
+                    <span>Discount ({selectedOrderForView.discount}%)</span>
+                    <span style={{ fontFamily: '"Courier New", monospace' }}>-₹{selectedOrderForView.discountAmount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                )}
+                {selectedOrderForView.gstEnabled !== false && selectedOrderForView.taxAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#8b7355', fontFamily: 'Georgia, serif', marginBottom: '8px' }}>
+                    <span>GST ({selectedOrderForView.gstRate}%)</span>
+                    <span style={{ fontFamily: '"Courier New", monospace' }}>₹{selectedOrderForView.taxAmount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                )}
+                {selectedOrderForView.splitPayments && selectedOrderForView.splitPayments.length > 0 && (
+                  <div style={{ marginTop: '12px', marginBottom: '12px', padding: '12px', background: '#f5f0e6', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif', marginBottom: '8px' }}>
+                      Split Payment
+                    </div>
+                    {selectedOrderForView.splitPayments.map((payment, index) => (
+                      <div key={index} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#8b7355', fontFamily: 'Georgia, serif', marginBottom: '4px' }}>
+                        <span>{payment.method}</span>
+                        <span style={{ fontFamily: '"Courier New", monospace' }}>₹{payment.amount?.toFixed(2) || '0.00'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif', marginTop: '12px' }}>
                   <span>Total</span>
                   <span style={{ fontFamily: '"Courier New", monospace' }}>₹{selectedOrderForView.total?.toFixed(2) || '0.00'}</span>
                 </div>
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#8b7355', fontFamily: 'Georgia, serif' }}>
+                  Payment: {selectedOrderForView.paymentMethod || 'CASH'}
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Void Confirmation Modal */}
+      {showVoidConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Void Last Item
+            </h3>
+            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+              Are you sure you want to remove the last item from the cart?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowVoidConfirm(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setCart(cart.slice(0, -1));
+                  setShowVoidConfirm(false);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Void Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceipt && lastOrder && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '400px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                Receipt
+              </h3>
+              <button
+                onClick={() => setShowReceipt(false)}
+                style={{
+                  padding: '8px 12px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <div 
+              id="receipt-preview"
+              style={{ 
+                fontFamily: 'monospace',
+                fontSize: `${settings.receiptFontSize || 12}px`,
+                lineHeight: '1.4',
+                color: '#000',
+                padding: '16px',
+                background: '#fff',
+                borderRadius: '4px',
+                border: '1px solid #e5e7eb',
+                maxWidth: settings.receiptTemplate === 'thermal' ? '240px' : '280px',
+                margin: '0 auto'
+              }}
+            >
+              {(() => {
+                const subtotal = lastOrder.subtotal || lastOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const discountAmt = lastOrder.discountAmount || (subtotal * (lastOrder.discount || 0)) / 100;
+                const taxAmt = lastOrder.taxAmount || ((subtotal - discountAmt) * (lastOrder.gstRate || 0)) / 100;
+                
+                const fontSize = parseInt(settings.receiptFontSize || 12);
+                
+                return (
+                  <>
+                    {/* Header */}
+                    <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                      {settings.showLogoOnReceipt !== false && (
+                        <div style={{ fontSize: `${fontSize + 4}px`, fontWeight: 'bold' }}>
+                          {settings.storeName || 'BakeryPOS'}
+                        </div>
+                      )}
+                      {settings.showLogoOnReceipt !== false && settings.storeAddress && (
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>
+                          {settings.storeAddress}
+                        </div>
+                      )}
+                      {settings.showLogoOnReceipt !== false && settings.phone && (
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>
+                          Tel: {settings.phone}
+                        </div>
+                      )}
+                      {settings.showEmailOnReceipt !== false && settings.email && (
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>
+                          {settings.email}
+                        </div>
+                      )}
+                      {settings.gstin && (
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>
+                          GSTIN: {settings.gstin}
+                        </div>
+                      )}
+                      {settings.fssaiLicense && (
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>
+                          FSSAI: {settings.fssaiLicense}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Order Info */}
+                    <div style={{ borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Order #: {lastOrder.id}</span>
+                        <span>Token: {lastOrder.token || 'N/A'}</span>
+                      </div>
+                      <div style={{ fontSize: `${fontSize - 2}px` }}>{new Date(lastOrder.createdAt).toLocaleString()}</div>
+                      {settings.showTableOnReceipt !== false && lastOrder.tableNumber && (
+                        <div>Table: {lastOrder.tableNumber}</div>
+                      )}
+                      {settings.showCustomerOnReceipt !== false && (
+                        <div>Customer: {lastOrder.customerName || 'Walk-in'}</div>
+                      )}
+                    </div>
+
+                    {/* Items */}
+                    <div style={{ marginBottom: '8px' }}>
+                      {lastOrder.items.map((item, index) => (
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <div>
+                            <div>{item.name}{item.isCustom ? ' (Custom)' : ''}</div>
+                            <div style={{ fontSize: `${fontSize - 2}px` }}>
+                              {item.quantity} x ₹{item.price}
+                            </div>
+                          </div>
+                          <div>₹{item.quantity * item.price}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Totals */}
+                    <div style={{ borderTop: '1px dashed #000', paddingTop: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Subtotal:</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
+                      </div>
+                      {settings.showGstOnReceipt !== false && (lastOrder.discount || 0) > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Discount ({lastOrder.discount}%):</span>
+                          <span>-₹{discountAmt.toFixed(2)}</span>
+                        </div>
+                      )}
+                      {settings.showGstOnReceipt !== false && lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>GST ({lastOrder.gstRate}%):</span>
+                          <span>₹{taxAmt.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '4px' }}>
+                        <span>TOTAL:</span>
+                        <span>₹{lastOrder.total.toFixed(2)}</span>
+                      </div>
+                      <div style={{ marginTop: '4px', fontSize: `${fontSize - 2}px` }}>
+                        Paid: {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
+                      </div>
+                      {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 && (
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>
+                          {lastOrder.splitPayments.map((payment, idx) => (
+                            <div key={idx}>{payment.method}: ₹{payment.amount.toFixed(2)}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{ textAlign: 'center', marginTop: '12px', fontSize: `${fontSize - 2}px` }}>
+                      <div>{settings.receiptFooter || 'Thank you for your order!'}</div>
+                      <div>Visit us again soon</div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button
+                onClick={printReceipt}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Print
+              </button>
+              <button
+                onClick={() => {
+                  setShowReceipt(false);
+                  if (window.location.pathname.includes('dashboard')) {
+                    window.dispatchEvent(new CustomEvent('navigateToTokens'));
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                View Token
+              </button>
+              <button
+                onClick={() => setShowReceipt(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Notice
+            </h3>
+            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+              {alertMessage}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowAlert(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>

@@ -1,11 +1,30 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 export default function SimpleReports({ orders = [], menuItems = [], staff = [], customers = [], inventory = [], onNavigate }) {
   const [selectedReport, setSelectedReport] = useState('sales');
   const [dateRange, setDateRange] = useState('today');
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Export functions
   const exportToPDF = () => {
@@ -40,7 +59,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       ['GST Collected', `₹${reportData.totalGST.toLocaleString()}`]
     ];
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: 52,
       head: [['Metric', 'Value']],
       body: summaryData,
@@ -61,7 +80,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       `₹${item.revenue.toLocaleString()}`
     ]);
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 20,
       head: [['Rank', 'Item Name', 'Quantity', 'Revenue']],
       body: itemsData,
@@ -80,7 +99,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       return [method, `₹${amount.toLocaleString()}`, `${percentage}%`];
     });
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 20,
       head: [['Method', 'Amount', 'Percentage']],
       body: paymentData,
@@ -100,7 +119,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       `₹${data.revenue.toLocaleString()}`
     ]);
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 20,
       head: [['Category', 'Quantity', 'Revenue']],
       body: categoryData,
@@ -120,7 +139,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       ['Growth Rate', '+12.5%']
     ];
     
-    doc.autoTable({
+    autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 20,
       head: [['Insight', 'Value']],
       body: insightsData,
@@ -389,30 +408,32 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       {/* Header */}
       <div style={{
         background: '#ffffff',
-        padding: '24px 32px',
+        padding: screenSize === 'small' ? '16px' : '24px 32px',
         borderBottom: '1px solid #e5e7eb',
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
           <div>
             <div style={{
               color: '#1e293b',
-              fontSize: '28px',
+              fontSize: screenSize === 'small' ? '22px' : '28px',
               fontWeight: '800',
               marginBottom: '6px',
               letterSpacing: '-0.5px'
             }}>
               📊 Analytics Hub
             </div>
-            <div style={{ color: '#64748b', fontSize: '14px' }}>
+            <div style={{ color: '#64748b', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
               Real-time business intelligence & insights
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '10px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={(e) => {
@@ -420,28 +441,18 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
                 exportToPDF();
               }}
               style={{
-                padding: '12px 24px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
                 background: '#3b82f6',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '10px',
-                fontSize: '14px',
+                fontSize: screenSize === 'small' ? '13px' : '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-              }}
+              onMouseEnter={(e) => e.target.style.background = '#2563eb'}
+              onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
             >
               📄 Export PDF
             </button>
@@ -452,50 +463,36 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
                 exportToExcel();
               }}
               style={{
-                padding: '12px 24px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
                 background: '#10b981',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '10px',
-                fontSize: '14px',
+                fontSize: screenSize === 'small' ? '13px' : '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 4px 6px rgba(16, 185, 129, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.2)';
-              }}
+              onMouseEnter={(e) => e.target.style.background = '#059669'}
+              onMouseLeave={(e) => e.target.style.background = '#10b981'}
             >
               📊 Export Excel
             </button>
             <button
               onClick={() => onNavigate?.('dashboard')}
               style={{
-                padding: '12px 24px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
                 background: '#f1f5f9',
-                color: '#1e293b',
+                color: '#475569',
                 border: '1px solid #e2e8f0',
                 borderRadius: '10px',
-                fontSize: '14px',
+                fontSize: screenSize === 'small' ? '13px' : '14px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
-                e.target.style.background = '#e2e8f0';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = '#f1f5f9';
-              }}
+              onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
+              onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
             >
               ← Back
             </button>
@@ -503,56 +500,56 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '24px 32px', overflow: 'auto', flex: 1 }}>
-        {/* Date Range & Filters */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '20px',
-          marginBottom: '28px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-        }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>Period:</span>
-            {['today', 'yesterday', 'week', 'month'].map(range => (
-              <button
-                key={range}
-                onClick={() => setDateRange(range)}
-                style={{
-                  padding: '10px 24px',
-                  background: dateRange === range ? '#3b82f6' : '#ffffff',
-                  color: dateRange === range ? '#ffffff' : '#64748b',
-                  border: dateRange === range ? 'none' : '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  textTransform: 'capitalize',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (dateRange !== range) {
-                    e.target.style.background = '#f1f5f9';
-                    e.target.style.color = '#1e293b';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (dateRange !== range) {
-                    e.target.style.background = '#ffffff';
-                    e.target.style.color = '#64748b';
-                  }
-                }}
-              >
-                {range}
-              </button>
-            ))}
+    {/* Content */}
+    <div style={{ padding: screenSize === 'small' ? '16px' : '24px 32px', overflow: 'auto', flex: 1 }}>
+      {/* Date Range & Filters */}
+      <div style={{
+        background: '#ffffff',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '28px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>Period:</span>
+          {['today', 'yesterday', 'week', 'month'].map(range => (
+            <button
+              key={range}
+              onClick={() => setDateRange(range)}
+              style={{
+                padding: '10px 24px',
+                background: dateRange === range ? '#3b82f6' : '#ffffff',
+                color: dateRange === range ? '#ffffff' : '#64748b',
+                border: dateRange === range ? 'none' : '1px solid #e2e8f0',
+                borderRadius: '10px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textTransform: 'capitalize',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (dateRange !== range) {
+                  e.target.style.background = '#f1f5f9';
+                  e.target.style.color = '#1e293b';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (dateRange !== range) {
+                  e.target.style.background = '#ffffff';
+                  e.target.style.color = '#64748b';
+                }
+              }}
+            >
+              {range}
+            </button>
+          ))}
           </div>
-          <div style={{ color: '#94a3b8', fontSize: '13px' }}>
+          <div style={{ color: '#94a3b8', fontSize: screenSize === 'small' ? '12px' : '13px' }}>
             Last updated: {new Date().toLocaleString()}
           </div>
         </div>
@@ -560,9 +557,9 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
         {/* Hero Stats */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '20px',
-          marginBottom: '28px'
+          gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: screenSize === 'small' ? '16px' : '20px',
+          marginBottom: screenSize === 'small' ? '20px' : '28px'
         }}>
           <HeroStatCard
             label="Total Revenue"
@@ -601,9 +598,9 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
         {/* Main Charts Section */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '24px',
-          marginBottom: '28px'
+          gridTemplateColumns: screenSize === 'small' ? '1fr' : '2fr 1fr',
+          gap: screenSize === 'small' ? '16px' : '24px',
+          marginBottom: screenSize === 'small' ? '20px' : '28px'
         }}>
           {/* Revenue Trend Chart */}
           <div style={{

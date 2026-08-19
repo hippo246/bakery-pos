@@ -1,7 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate }) {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Calculate key metrics
   const metrics = useMemo(() => {
@@ -79,475 +99,889 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#f8fafc',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      background: '#1a1a2e',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* Content */}
-      <div style={{ padding: '20px', overflow: 'auto', flex: 1 }}>
-        {/* Top Row - Circular Progress Stats */}
+      {/* Header */}
+      <div style={{
+        padding: screenSize === 'small' ? '16px' : '28px 32px',
+        borderBottom: '1px solid #2d2d44'
+      }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: '16px',
-          marginBottom: '24px'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
-          <CircularStatCard
-            label="Revenue"
-            value={`₹${metrics.totalSales.toLocaleString()}`}
-            icon="💰"
-            color="#3b82f6"
-            percentage={83}
-          />
-          <CircularStatCard
-            label="Orders"
-            value={metrics.totalOrders}
-            icon="📦"
-            color="#10b981"
-            percentage={78}
-          />
-          <CircularStatCard
-            label="Items"
-            value={metrics.topItems.reduce((sum, item) => sum + item.qty, 0)}
-            icon="🛒"
-            color="#f59e0b"
-            percentage={92}
-          />
-          <CircularStatCard
-            label="Customers"
-            value={new Set(orders.map(o => o.customerId)).size}
-            icon="👥"
-            color="#8b5cf6"
-            percentage={46}
-          />
-          <CircularStatCard
-            label="Avg Time"
-            value="2.3h"
-            icon="⏱️"
-            color="#ef4444"
-            percentage={77}
-          />
-        </div>
-
-        {/* Middle Row - Donut Chart + Top Items */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '20px',
-          marginBottom: '24px'
-        }}>
-          {/* Donut Chart */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
+          <div>
             <div style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: '#1e293b',
-              marginBottom: '20px',
-              paddingBottom: '12px',
-              borderBottom: '1px solid #e5e7eb'
+              fontSize: screenSize === 'small' ? '20px' : '28px',
+              fontWeight: '700',
+              color: '#ffffff',
+              letterSpacing: '-0.5px'
             }}>
-              📊 Category Breakdown
+              {activeTab === 'overview' ? 'Overview' : 'Billing & Orders'}
             </div>
-            
-            {metrics.categoryBreakdown.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
-                <div style={{ fontSize: '13px' }}>No category data yet</div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                <div style={{
-                  width: '180px',
-                  height: '180px',
-                  position: 'relative'
-                }}>
-                  <svg width="180" height="180" viewBox="0 0 180 180">
-                    {metrics.categoryBreakdown.map((cat, index) => {
-                      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
-                      const startAngle = index === 0 ? 0 : metrics.categoryBreakdown.slice(0, index).reduce((sum, c) => sum + parseFloat(c.percentage), 0) * 3.6;
-                      const endAngle = startAngle + parseFloat(cat.percentage) * 3.6;
-                      const largeArcFlag = parseFloat(cat.percentage) > 50 ? 1 : 0;
-                      
-                      const x1 = 90 + 80 * Math.cos((startAngle - 90) * Math.PI / 180);
-                      const y1 = 90 + 80 * Math.sin((startAngle - 90) * Math.PI / 180);
-                      const x2 = 90 + 80 * Math.cos((endAngle - 90) * Math.PI / 180);
-                      const y2 = 90 + 80 * Math.sin((endAngle - 90) * Math.PI / 180);
-                      
-                      return (
-                        <path
-                          key={cat.category}
-                          d={`M 90 90 L ${x1} ${y1} A 80 80 0 ${largeArcFlag} 1 ${x2} ${y2} Z`}
-                          fill={colors[index % colors.length]}
-                          opacity="0.9"
-                        />
-                      );
-                    })}
-                    <circle cx="90" cy="90" r="50" fill="#ffffff" />
-                  </svg>
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b' }}>
-                      {metrics.categoryBreakdown.length}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>
-                      Categories
-                    </div>
-                  </div>
-                </div>
-                
-                <div style={{ flex: 1 }}>
-                  {metrics.categoryBreakdown.map((cat, index) => {
-                    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
-                    return (
-                      <div key={cat.category} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                        <div style={{
-                          width: '16px',
-                          height: '16px',
-                          borderRadius: '4px',
-                          background: colors[index % colors.length]
-                        }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '14px', fontWeight: '500', color: '#1e293b' }}>
-                            {cat.category}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>
-                            {cat.percentage}%
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Top Items */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
             <div style={{
-              fontSize: '16px',
-              fontWeight: '600',
-              color: '#1e293b',
-              marginBottom: '20px',
-              paddingBottom: '12px',
-              borderBottom: '1px solid #e5e7eb'
+              fontSize: screenSize === 'small' ? '12px' : '14px',
+              color: '#8b8b9e',
+              marginTop: '4px'
             }}>
-              🥧 Top Selling Items
+              {activeTab === 'overview' ? "Today's performance metrics" : 'Track all orders and billing information'}
             </div>
-            
-            {metrics.topItems.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>🥐</div>
-                <div style={{ fontSize: '13px' }}>No sales data yet</div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {metrics.topItems.map((item, index) => (
-                  <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      background: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#e2e8f0',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      flexShrink: 0
-                    }}>
-                      {index + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
-                        {item.name}
-                      </div>
-                      <div style={{ 
-                        height: '8px',
-                        background: '#e2e8f0',
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          height: '100%',
-                          width: `${(item.qty / (metrics.topItems[0]?.qty || 1)) * 100}%`,
-                          background: '#3b82f6',
-                          borderRadius: '4px'
-                        }} />
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b', minWidth: '50px', textAlign: 'right' }}>
-                      {item.qty}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* Bottom Row - Recent Orders Compact Cards */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          marginBottom: '20px'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-            paddingBottom: '12px',
-            borderBottom: '1px solid #e5e7eb'
-          }}>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>
-              ⏰ Recent Orders
-            </span>
+          
+          {/* Tab Navigation */}
+          <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={() => onNavigate?.('orders')}
+              onClick={() => setActiveTab('overview')}
               style={{
-                padding: '8px 16px',
-                background: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
+                padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+                background: activeTab === 'overview' ? '#6366f1' : 'transparent',
+                color: activeTab === 'overview' ? '#ffffff' : '#8b8b9e',
+                border: activeTab === 'overview' ? 'none' : '1px solid #2d2d44',
+                borderRadius: '8px',
+                fontSize: screenSize === 'small' ? '12px' : '14px',
                 fontWeight: '500',
                 cursor: 'pointer'
               }}
             >
-              View All
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              style={{
+                padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+                background: activeTab === 'billing' ? '#6366f1' : 'transparent',
+                color: activeTab === 'billing' ? '#ffffff' : '#8b8b9e',
+                border: activeTab === 'billing' ? 'none' : '1px solid #2d2d44',
+                borderRadius: '8px',
+                fontSize: screenSize === 'small' ? '12px' : '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Billing & Orders
             </button>
           </div>
-          
-          {recentOrders.length === 0 ? (
-            <div style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>📋</div>
-              <div style={{ fontSize: '14px', fontWeight: '500' }}>No orders yet today</div>
-            </div>
-          ) : (
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: screenSize === 'small' ? '16px' : '28px 32px', overflow: 'auto', flex: 1 }}>
+        {activeTab === 'overview' ? (
+          <>
+            {/* Stats Grid */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '12px'
+              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: screenSize === 'small' ? '12px' : '20px',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
-              {recentOrders.map(order => (
-                <div
-                  key={order.id}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '16px',
-                    textAlign: 'center',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', marginBottom: '4px' }}>
-                    {order.orderNumber || order.id.slice(-6)}
-                  </div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b', marginBottom: '4px' }}>
-                    ₹{(order.total || 0).toFixed(0)}
-                  </div>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: order.status === 'COMPLETED' ? '#dcfce7' : order.status === 'PENDING' ? '#fef3c7' : '#dbeafe',
-                    color: order.status === 'COMPLETED' ? '#16a34a' : order.status === 'PENDING' ? '#d97706' : '#2563eb',
-                    fontSize: '12px',
-                    marginBottom: '4px'
-                  }}>
-                    {order.status === 'COMPLETED' ? '✓' : order.status === 'PENDING' ? '⏳' : '⚡'}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    {order.tableName || 'Walk'}
-                  </div>
-                </div>
-              ))}
+              <StatCard
+                label="Total Revenue"
+                value={`₹${metrics.totalSales.toLocaleString()}`}
+                change="+12.5%"
+                trend="up"
+                color="#6366f1"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Orders"
+                value={metrics.totalOrders}
+                change="+8.2%"
+                trend="up"
+                color="#22c55e"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Avg Order"
+                value={`₹${Math.round(metrics.avgOrderValue)}`}
+                change="-2.1%"
+                trend="down"
+                color="#f59e0b"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Active Items"
+                value={metrics.activeMenuItems}
+                change="+5"
+                trend="up"
+                color="#ec4899"
+                screenSize={screenSize}
+              />
             </div>
-          )}
-        </div>
 
-        {/* Quick Actions */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '12px'
-        }}>
-          <QuickActionCard
-            label="New Order"
-            icon="🛒"
-            color="#3b82f6"
-            onClick={() => onNavigate?.('orders')}
-          />
-          <QuickActionCard
-            label="View Menu"
-            icon="📋"
-            color="#10b981"
-            onClick={() => onNavigate?.('menu')}
-          />
-          <QuickActionCard
-            label="Inventory"
-            icon="📦"
-            color="#f59e0b"
-            onClick={() => onNavigate?.('inventory')}
-          />
-          <QuickActionCard
-            label="Reports"
-            icon="📊"
-            color="#8b5cf6"
-            onClick={() => onNavigate?.('reports')}
-          />
-        </div>
-        
-        {metrics.lowStockItems > 0 && (
-          <div style={{
-            marginTop: '16px',
-            padding: '12px 16px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <span style={{ fontSize: '20px' }}>⚠️</span>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: '#dc2626' }}>
-                Low Stock Alert
+            {/* Middle Row - Category Chart + Top Items */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1fr',
+              gap: screenSize === 'small' ? '16px' : '20px',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
+            }}>
+              {/* Category Chart */}
+              <div style={{
+                background: '#252538',
+                borderRadius: '16px',
+                padding: screenSize === 'small' ? '16px' : '24px',
+                border: '1px solid #2d2d44'
+              }}>
+                <div style={{
+                  fontSize: screenSize === 'small' ? '16px' : '18px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  marginBottom: screenSize === 'small' ? '16px' : '24px'
+                }}>
+                  Sales by Category
+                </div>
+                
+                {metrics.categoryBreakdown.length === 0 ? (
+                  <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No data available</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '16px' : '32px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
+                    <div style={{
+                      width: screenSize === 'small' ? '120px' : '160px',
+                      height: screenSize === 'small' ? '120px' : '160px',
+                      position: 'relative'
+                    }}>
+                      <svg width={screenSize === 'small' ? '120' : '160'} height={screenSize === 'small' ? '120' : '160'} viewBox="0 0 160 160">
+                        {metrics.categoryBreakdown.map((cat, index) => {
+                          const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4'];
+                          const startAngle = index === 0 ? 0 : metrics.categoryBreakdown.slice(0, index).reduce((sum, c) => sum + parseFloat(c.percentage), 0) * 3.6;
+                          const endAngle = startAngle + parseFloat(cat.percentage) * 3.6;
+                          const largeArcFlag = parseFloat(cat.percentage) > 50 ? 1 : 0;
+                          
+                          const x1 = 80 + 70 * Math.cos((startAngle - 90) * Math.PI / 180);
+                          const y1 = 80 + 70 * Math.sin((startAngle - 90) * Math.PI / 180);
+                          const x2 = 80 + 70 * Math.cos((endAngle - 90) * Math.PI / 180);
+                          const y2 = 80 + 70 * Math.sin((endAngle - 90) * Math.PI / 180);
+                          
+                          return (
+                            <path
+                              key={cat.category}
+                              d={`M 80 80 L ${x1} ${y1} A 70 70 0 ${largeArcFlag} 1 ${x2} ${y2} Z`}
+                              fill={colors[index % colors.length]}
+                              opacity="0.85"
+                            />
+                          );
+                        })}
+                        <circle cx="80" cy="80" r="40" fill="#252538" />
+                      </svg>
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '16px' : '20px', fontWeight: '700', color: '#ffffff' }}>
+                          {metrics.categoryBreakdown.length}
+                        </div>
+                        <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: '#8b8b9e' }}>
+                          Cats
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ flex: 1, width: '100%' }}>
+                      {metrics.categoryBreakdown.map((cat, index) => {
+                        const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4'];
+                        return (
+                          <div key={cat.category} style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px', marginBottom: screenSize === 'small' ? '10px' : '14px' }}>
+                            <div style={{
+                              width: screenSize === 'small' ? '10px' : '12px',
+                              height: screenSize === 'small' ? '10px' : '12px',
+                              borderRadius: '3px',
+                              background: colors[index % colors.length]
+                            }} />
+                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>{cat.category}</span>
+                              <span style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>{cat.percentage}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: '12px', color: '#991b1b' }}>
-                {metrics.lowStockItems} items need restocking
+
+              {/* Top Items */}
+              <div style={{
+                background: '#252538',
+                borderRadius: '16px',
+                padding: screenSize === 'small' ? '16px' : '24px',
+                border: '1px solid #2d2d44'
+              }}>
+                <div style={{
+                  fontSize: screenSize === 'small' ? '16px' : '18px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  marginBottom: screenSize === 'small' ? '16px' : '24px'
+                }}>
+                  Top Selling Items
+                </div>
+                
+                {metrics.topItems.length === 0 ? (
+                  <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No data available</div>
+                  </div>
+                ) : (
+                  <div>
+                    {metrics.topItems.map((item, index) => (
+                      <div key={item.name} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: screenSize === 'small' ? '10px 0' : '14px 0',
+                        borderBottom: index < metrics.topItems.length - 1 ? '1px solid #2d2d44' : 'none'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px' }}>
+                          <div style={{
+                            width: screenSize === 'small' ? '28px' : '32px',
+                            height: screenSize === 'small' ? '28px' : '32px',
+                            borderRadius: '8px',
+                            background: '#2d2d44',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: screenSize === 'small' ? '12px' : '14px',
+                            fontWeight: '600',
+                            color: '#8b8b9e'
+                          }}>
+                            {index + 1}
+                          </div>
+                          <span style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>{item.name}</span>
+                        </div>
+                        <span style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '600', color: '#ffffff' }}>
+                          {item.qty}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+
+            {/* Recent Orders */}
+            <div style={{
+              background: '#252538',
+              borderRadius: '16px',
+              padding: screenSize === 'small' ? '16px' : '24px',
+              border: '1px solid #2d2d44'
+            }}>
+              <div style={{
+                fontSize: screenSize === 'small' ? '16px' : '18px',
+                fontWeight: '600',
+                color: '#ffffff',
+                marginBottom: screenSize === 'small' ? '16px' : '24px'
+              }}>
+                Recent Orders
+              </div>
+              
+              {recentOrders.length === 0 ? (
+                <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No recent orders</div>
+                </div>
+              ) : (
+                <div>
+                  {recentOrders.map(order => (
+                    <div key={order.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: screenSize === 'small' ? '12px 0' : '16px 0',
+                      borderBottom: '1px solid #2d2d44',
+                      flexDirection: screenSize === 'small' ? 'column' : 'row',
+                      alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+                      gap: screenSize === 'small' ? '8px' : '0'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '16px', width: screenSize === 'small' ? '100%' : 'auto' }}>
+                        <div style={{
+                          padding: screenSize === 'small' ? '6px 10px' : '8px 14px',
+                          borderRadius: '8px',
+                          background: order.status === 'COMPLETED' ? '#22c55e20' : '#f59e0b20',
+                          color: order.status === 'COMPLETED' ? '#22c55e' : '#f59e0b',
+                          fontSize: screenSize === 'small' ? '10px' : '12px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          {order.status}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0', fontWeight: '500' }}>
+                            Order #{order.id?.slice(-6)}
+                          </div>
+                          <div style={{ fontSize: screenSize === 'small' ? '10px' : '12px', color: '#8b8b9e', marginTop: '2px' }}>
+                            {order.tableName || 'Counter'}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: screenSize === 'small' ? 'left' : 'right', width: screenSize === 'small' ? '100%' : 'auto' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '600', color: '#ffffff' }}>
+                          ₹{order.total?.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: screenSize === 'small' ? '10px' : '12px', color: '#8b8b9e', marginTop: '2px' }}>
+                          {formatTimeAgo(order.createdAt)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <BillingTab orders={orders} screenSize={screenSize} />
         )}
       </div>
     </div>
   );
 }
 
-function CircularStatCard({ label, value, icon, color, percentage }) {
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
-  
-  return (
-    <div style={{
-      background: '#ffffff',
-      borderRadius: '12px',
-      padding: '20px',
-      border: '1px solid #e5e7eb',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      position: 'relative'
-    }}>
-      <div style={{ position: 'relative', marginBottom: '12px' }}>
-        <svg width="100" height="100" viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth="8"
-          />
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            transform="rotate(-90 50 50)"
-            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-          />
-        </svg>
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          fontSize: '24px'
-        }}>
-          {icon}
+// Billing Tab Component
+function BillingTab({ orders, screenSize }) {
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+
+  const filteredOrders = orders.filter(order => {
+    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
+    const matchesSearch = searchTerm === '' || 
+      order.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.tableNumber?.toString().includes(searchTerm);
+    return matchesStatus && matchesSearch;
+  }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const totalOrders = filteredOrders.length;
+
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setShowOrderModal(true);
+  };
+
+  const handlePrintOrder = (order) => {
+    const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountAmt = order.discountAmount || (subtotal * (order.discount || 0)) / 100;
+    const taxAmt = order.taxAmount || ((subtotal - discountAmt) * (order.gstRate || 0)) / 100;
+    
+    let receiptHTML = `
+      <div style="
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #000;
+        padding: 16px;
+        background: #fff;
+        max-width: 280px;
+        margin: 0 auto;
+      ">
+        <div style="text-align: center; margin-bottom: 12px;">
+          <div style="font-size: 16px; font-weight: bold;">BakeryPOS</div>
+          ${order.storeAddress ? `<div style="font-size: 10px;">${order.storeAddress}</div>` : ''}
+          ${order.phone ? `<div style="font-size: 10px;">Tel: ${order.phone}</div>` : ''}
+        </div>
+        <div style="border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Order #: ${order.id}</span>
+            <span>Token: ${order.token || 'N/A'}</span>
+          </div>
+          <div style="font-size: 10px;">${new Date(order.createdAt).toLocaleString()}</div>
+          ${order.tableNumber ? `<div>Table: ${order.tableNumber}</div>` : ''}
+          <div>Customer: ${order.customerName || 'Walk-in'}</div>
+        </div>
+        <div style="margin-bottom: 8px;">
+          ${order.items.map(item => `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <div>
+                <div>${item.name}${item.isCustom ? ' (Custom)' : ''}</div>
+                <div style="font-size: 10px;">${item.quantity} x ₹${item.price}</div>
+              </div>
+              <div>₹${item.quantity * item.price}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="border-top: 1px dashed #000; padding-top: 8px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Subtotal:</span>
+            <span>₹${subtotal.toFixed(2)}</span>
+          </div>
+          ${(order.discount || 0) > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span>Discount (${order.discount}%):</span>
+              <span>-₹${discountAmt.toFixed(2)}</span>
+            </div>
+          ` : ''}
+          ${(order.gstRate || 0) > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span>GST (${order.gstRate}%):</span>
+              <span>₹${taxAmt.toFixed(2)}</span>
+            </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px;">
+            <span>TOTAL:</span>
+            <span>₹${order.total.toFixed(2)}</span>
+          </div>
+          <div style="margin-top: 4px; font-size: 10px;">
+            Paid: ${order.splitPayments && order.splitPayments.length > 0 ? 'Split' : order.paymentMethod}
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 12px; font-size: 10px;">
+          <div>Thank you for your order!</div>
+          <div>Visit us again soon</div>
         </div>
       </div>
-      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        {label}
+    `;
+    
+    const receiptWindow = window.open('', '_blank');
+    receiptWindow.document.write(`
+      <html>
+        <head>
+          <title>Receipt - ${order.id}</title>
+          <style>
+            body { margin: 0; padding: 0; }
+          </style>
+        </head>
+        <body>${receiptHTML}</body>
+      </html>
+    `);
+    receiptWindow.document.close();
+    receiptWindow.print();
+  };
+
+  return (
+    <div>
+      {/* Summary Stats */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: screenSize === 'small' ? '12px' : '20px',
+        marginBottom: screenSize === 'small' ? '16px' : '24px'
+      }}>
+        <div style={{
+          background: '#252538',
+          borderRadius: '12px',
+          padding: screenSize === 'small' ? '16px' : '20px',
+          border: '1px solid #2d2d44'
+        }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+            Total Revenue
+          </div>
+          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff' }}>
+            ₹{totalRevenue.toLocaleString()}
+          </div>
+        </div>
+        <div style={{
+          background: '#252538',
+          borderRadius: '12px',
+          padding: screenSize === 'small' ? '16px' : '20px',
+          border: '1px solid #2d2d44'
+        }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+            Total Orders
+          </div>
+          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff' }}>
+            {totalOrders}
+          </div>
+        </div>
+        <div style={{
+          background: '#252538',
+          borderRadius: '12px',
+          padding: screenSize === 'small' ? '16px' : '20px',
+          border: '1px solid #2d2d44'
+        }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+            Completed
+          </div>
+          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#22c55e' }}>
+            {filteredOrders.filter(o => o.status === 'COMPLETED').length}
+          </div>
+        </div>
+        <div style={{
+          background: '#252538',
+          borderRadius: '12px',
+          padding: screenSize === 'small' ? '16px' : '20px',
+          border: '1px solid #2d2d44'
+        }}>
+          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+            Pending
+          </div>
+          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#f59e0b' }}>
+            {filteredOrders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length}
+          </div>
+        </div>
       </div>
-      <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '2px' }}>
-        {value}
+
+      {/* Filters */}
+      <div style={{
+        display: 'flex',
+        gap: screenSize === 'small' ? '12px' : '16px',
+        marginBottom: screenSize === 'small' ? '16px' : '24px',
+        flexWrap: 'wrap'
+      }}>
+        <input
+          type="text"
+          placeholder="Search orders..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            flex: 1,
+            minWidth: '200px',
+            padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
+            background: '#252538',
+            border: '1px solid #2d2d44',
+            borderRadius: '8px',
+            color: '#ffffff',
+            fontSize: screenSize === 'small' ? '12px' : '14px',
+            outline: 'none'
+          }}
+        />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          style={{
+            padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
+            background: '#252538',
+            border: '1px solid #2d2d44',
+            borderRadius: '8px',
+            color: '#ffffff',
+            fontSize: screenSize === 'small' ? '12px' : '14px',
+            outline: 'none'
+          }}
+        >
+          <option value="all">All Status</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="PENDING">Pending</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
       </div>
-      <div style={{ fontSize: '12px', fontWeight: '600', color: color }}>
-        {percentage}%
+
+      {/* Orders Table */}
+      <div style={{
+        background: '#252538',
+        borderRadius: '16px',
+        border: '1px solid #2d2d44',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          padding: screenSize === 'small' ? '16px' : '20px',
+          borderBottom: '1px solid #2d2d44',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#ffffff' }}>
+            All Orders
+          </div>
+          <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>
+            {filteredOrders.length} orders
+          </div>
+        </div>
+
+        {filteredOrders.length === 0 ? (
+          <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No orders found</div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #2d2d44' }}>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Order ID
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Date
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Customer
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Table
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Items
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Total
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Payment
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Status
+                  </th>
+                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((order, index) => (
+                  <tr key={order.id} style={{ borderBottom: index < filteredOrders.length - 1 ? '1px solid #2d2d44' : 'none' }}>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
+                      {order.id?.slice(-8) || 'N/A'}
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
+                      {order.customerName || 'Walk-in'}
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
+                      {order.tableNumber || 'Counter'}
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>
+                      {order.items?.length || 0} items
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', fontWeight: '600', color: '#ffffff' }}>
+                      ₹{order.total?.toLocaleString() || '0'}
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
+                      {order.splitPayments && order.splitPayments.length > 0 ? 'Split' : order.paymentMethod || 'N/A'}
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px' }}>
+                      <span style={{
+                        padding: screenSize === 'small' ? '4px 8px' : '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: screenSize === 'small' ? '10px' : '11px',
+                        fontWeight: '600',
+                        background: order.status === 'COMPLETED' ? '#22c55e20' : order.status === 'CANCELLED' ? '#ef444420' : '#f59e0b20',
+                        color: order.status === 'COMPLETED' ? '#22c55e' : order.status === 'CANCELLED' ? '#ef4444' : '#f59e0b'
+                      }}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleViewOrder(order)}
+                          style={{
+                            padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
+                            background: '#6366f1',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: screenSize === 'small' ? '11px' : '12px',
+                            fontWeight: '500',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => handlePrintOrder(order)}
+                          style={{
+                            padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
+                            background: '#252538',
+                            color: '#ffffff',
+                            border: '1px solid #2d2d44',
+                            borderRadius: '6px',
+                            fontSize: screenSize === 'small' ? '11px' : '12px',
+                            fontWeight: '500',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Print
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
+      {/* Order Detail Modal */}
+      {showOrderModal && selectedOrder && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: '#1a1a2e',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '20px' : '32px',
+            maxWidth: screenSize === 'small' ? '90%' : '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            border: '1px solid #2d2d44'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: screenSize === 'small' ? '16px' : '24px'
+            }}>
+              <div style={{ fontSize: screenSize === 'small' ? '18px' : '24px', fontWeight: '700', color: '#ffffff' }}>
+                Order Details
+              </div>
+              <button
+                onClick={() => setShowOrderModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#252538',
+                  color: '#ffffff',
+                  border: '1px solid #2d2d44',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Order ID</div>
+              <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0', fontWeight: '500' }}>{selectedOrder.id}</div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: screenSize === 'small' ? '12px' : '16px', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Date</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{new Date(selectedOrder.createdAt).toLocaleString()}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Token</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.token || 'N/A'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Customer</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.customerName || 'Walk-in'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Table</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.tableNumber || 'Counter'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Payment Method</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.splitPayments && selectedOrder.splitPayments.length > 0 ? 'Split' : selectedOrder.paymentMethod || 'N/A'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Status</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: selectedOrder.status === 'COMPLETED' ? '#22c55e' : selectedOrder.status === 'CANCELLED' ? '#ef4444' : '#f59e0b', fontWeight: '600' }}>{selectedOrder.status}</div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '600', color: '#ffffff', marginBottom: screenSize === 'small' ? '12px' : '16px' }}>Items</div>
+              <div style={{ background: '#252538', borderRadius: '12px', padding: screenSize === 'small' ? '12px' : '16px', border: '1px solid #2d2d44' }}>
+                {selectedOrder.items?.map((item, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: screenSize === 'small' ? '10px 0' : '12px 0',
+                    borderBottom: index < selectedOrder.items.length - 1 ? '1px solid #2d2d44' : 'none'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#e0e0e0' }}>{item.name}{item.isCustom ? ' (Custom)' : ''}</div>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>{item.quantity} x ₹{item.price}</div>
+                    </div>
+                    <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '600', color: '#ffffff' }}>₹{item.quantity * item.price}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: screenSize === 'small' ? '12px' : '16px', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Subtotal</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>₹{(selectedOrder.subtotal || selectedOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)).toFixed(2)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Total</div>
+                <div style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#22c55e' }}>₹{selectedOrder.total?.toFixed(2) || '0'}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: screenSize === 'small' ? '16px' : '24px' }}>
+              <button
+                onClick={() => handlePrintOrder(selectedOrder)}
+                style={{
+                  flex: 1,
+                  padding: screenSize === 'small' ? '12px' : '14px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Print Receipt
+              </button>
+              <button
+                onClick={() => setShowOrderModal(false)}
+                style={{
+                  flex: 1,
+                  padding: screenSize === 'small' ? '12px' : '14px',
+                  background: '#252538',
+                  color: '#ffffff',
+                  border: '1px solid #2d2d44',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function QuickActionCard({ label, icon, color, onClick }) {
+// Stat Card Component
+function StatCard({ label, value, change, trend, color, screenSize }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '16px',
-        background: '#ffffff',
-        color: '#1e293b',
-        border: '1px solid #e2e8f0',
-        borderRadius: '10px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        transition: 'all 0.2s',
-        textAlign: 'left',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-      }}
-      onMouseEnter={(e) => {
-        e.target.style.background = color + '10';
-        e.target.style.borderColor = color;
-        e.target.style.transform = 'translateY(-2px)';
-        e.target.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.target.style.background = '#ffffff';
-        e.target.style.borderColor = '#e2e8f0';
-        e.target.style.transform = 'translateY(0)';
-        e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-      }}
-    >
-      <span style={{ fontSize: '24px' }}>{icon}</span>
-      <span style={{ fontSize: '14px', fontWeight: '600' }}>{label}</span>
-    </button>
+    <div style={{
+      background: '#252538',
+      borderRadius: '16px',
+      padding: screenSize === 'small' ? '16px' : '24px',
+      border: '1px solid #2d2d44'
+    }}>
+      <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: screenSize === 'small' ? '24px' : '32px', fontWeight: '700', color: '#ffffff', marginBottom: screenSize === 'small' ? '8px' : '12px' }}>
+        {value}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{
+          fontSize: screenSize === 'small' ? '11px' : '13px',
+          fontWeight: '600',
+          color: trend === 'up' ? '#22c55e' : '#ef4444'
+        }}>
+          {change}
+        </span>
+        <span style={{ fontSize: screenSize === 'small' ? '10px' : '12px', color: '#6b6b7e' }}>
+          vs yesterday
+        </span>
+      </div>
+    </div>
   );
 }

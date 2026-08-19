@@ -69,6 +69,7 @@ export const DEFAULT_KOT_CONFIG = {
  * @returns {object} KOT object
  */
 export function createKOT(orderData, config = DEFAULT_KOT_CONFIG) {
+  console.log('createKOT called with orderData:', orderData);
   const kotId = generateKOTId();
   const timestamp = new Date().toISOString();
   
@@ -78,7 +79,7 @@ export function createKOT(orderData, config = DEFAULT_KOT_CONFIG) {
   // Calculate estimated preparation time
   const estimatedPrepTime = calculatePreparationTime(orderData.items, config);
   
-  return {
+  const kot = {
     kotId,
     orderId: orderData.orderId,
     orderNumber: orderData.orderNumber,
@@ -114,6 +115,9 @@ export function createKOT(orderData, config = DEFAULT_KOT_CONFIG) {
     modifications: orderData.modifications || [],
     consolidated: config.consolidateItems
   };
+  
+  console.log('KOT object created:', kot);
+  return kot;
 }
 
 /**

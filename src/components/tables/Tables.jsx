@@ -1,8 +1,89 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import QROrdering from '../qrodering/QROrdering';
 
-export default function Tables({ onNavigate, orders = [], setOrders, tables: externalTables = [], setTables: setExternalTables, menuItems = [] }) {
-  const [localTables, setLocalTables] = useState([
+export default function Tables({ onNavigate, orders = [], setOrders, tables: externalTables = [], setTables: setExternalTables, menuItems = [], settings = {} }) {
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+  const [lastCallCount, setLastCallCount] = useState(0);
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Poll for waiter calls
+  useEffect(() => {
+    const playChime = () => {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (error) {
+        console.error('Error playing chime:', error);
+      }
+    };
+    
+    const checkWaiterCalls = () => {
+      try {
+        const calls = JSON.parse(localStorage.getItem('waiter_calls') || '[]');
+        const pendingCalls = calls.filter(call => call.status === 'PENDING');
+        
+        // Play chime if new calls came in
+        if (pendingCalls.length > lastCallCount && lastCallCount >= 0) {
+          playChime();
+        }
+        
+        setLastCallCount(pendingCalls.length);
+        setWaiterCalls(pendingCalls);
+      } catch (error) {
+        console.error('Error reading waiter calls:', error);
+      }
+    };
+
+    checkWaiterCalls();
+    const interval = setInterval(checkWaiterCalls, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [lastCallCount]);
+
+  const handleDismissWaiterCall = (callId) => {
+    try {
+      const calls = JSON.parse(localStorage.getItem('waiter_calls') || '[]');
+      const updatedCalls = calls.map(call => 
+        call.id === callId ? { ...call, status: 'ACKNOWLEDGED' } : call
+      );
+      localStorage.setItem('waiter_calls', JSON.stringify(updatedCalls));
+      setWaiterCalls(prev => prev.filter(call => call.id !== callId));
+    } catch (error) {
+      console.error('Error dismissing waiter call:', error);
+    }
+  };
+  // Default tables - can be overridden by settings or external tables
+  const defaultTables = settings.defaultTables || [
     { id: 1, name: 'T1', status: 'available', capacity: 4 },
     { id: 2, name: 'T2', status: 'available', capacity: 4 },
     { id: 3, name: 'T3', status: 'occupied', capacity: 6 },
@@ -11,10 +92,12 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
     { id: 6, name: 'T6', status: 'occupied', capacity: 4 },
     { id: 7, name: 'T7', status: 'available', capacity: 4 },
     { id: 8, name: 'T8', status: 'available', capacity: 6 }
-  ]);
+  ];
+  
+  const [localTables, setLocalTables] = useState(defaultTables);
 
   // Use external tables if provided, otherwise use local state
-  const tables = externalTables.length > 0 ? externalTables : localTables;
+  const tables = (externalTables && Array.isArray(externalTables) && externalTables.length > 0) ? externalTables : localTables;
   const setTables = setExternalTables || setLocalTables;
   const [showModal, setShowModal] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -23,7 +106,16 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
   const [selectedTableForQR, setSelectedTableForQR] = useState(null);
   const [showOrdersModal, setShowOrdersModal] = useState(false);
   const [selectedTableForOrders, setSelectedTableForOrders] = useState(null);
+  const [ordersDateFilter, setOrdersDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'custom'
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [showQRDemoModal, setShowQRDemoModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tableToDelete, setTableToDelete] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [waiterCalls, setWaiterCalls] = useState([]);
+  const [showWaiterCalls, setShowWaiterCalls] = useState(false);
   const [filters, setFilters] = useState({
     status: 'all',
     dateFrom: '',
@@ -31,28 +123,95 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
     tableId: 'all'
   });
 
+  // Get filtered orders for the selected table
+  const getFilteredTableOrders = (tableId) => {
+    const tableOrdersList = tableOrders[tableId] || [];
+    
+    if (ordersDateFilter === 'all') return tableOrdersList;
+    
+    const today = new Date().toDateString();
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const weekAgo = new Date(Date.now() - 7 * 86400000);
+    
+    return tableOrdersList.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      
+      switch (ordersDateFilter) {
+        case 'today':
+          return orderDate.toDateString() === today;
+        case 'yesterday':
+          return orderDate.toDateString() === yesterday;
+        case 'week':
+          return orderDate >= weekAgo;
+        case 'custom':
+          if (!customDateFrom || !customDateTo) return true;
+          const fromDate = new Date(customDateFrom);
+          const toDate = new Date(customDateTo);
+          toDate.setHours(23, 59, 59, 999);
+          return orderDate >= fromDate && orderDate <= toDate;
+        default:
+          return true;
+      }
+    });
+  };
+
   // Get orders for each table with filters applied
   const tableOrders = useMemo(() => {
     const ordersByTable = {};
+    
+    if (!orders || !Array.isArray(orders)) return ordersByTable;
+    
     orders.forEach(order => {
-      if (order.tableId && order.status !== 'CANCELLED') {
+      if (!order) return;
+      
+      // Check both tableId and tableName for compatibility
+      const tableId = order.tableId || (order.tableName && tables ? tables.find(t => t.name === order.tableName)?.id : null);
+      
+      if (tableId && order.status !== 'CANCELLED') {
         // Apply filters
         if (filters.status !== 'all' && order.status !== filters.status) return;
-        if (filters.tableId !== 'all' && order.tableId !== filters.tableId) return;
-        if (filters.dateFrom && new Date(order.createdAt) < new Date(filters.dateFrom)) return;
-        if (filters.dateTo && new Date(order.createdAt) > new Date(filters.dateTo)) return;
+        if (filters.tableId !== 'all' && tableId !== filters.tableId) return;
+        if (filters.dateFrom && order.createdAt && new Date(order.createdAt) < new Date(filters.dateFrom)) return;
+        if (filters.dateTo && order.createdAt && new Date(order.createdAt) > new Date(filters.dateTo)) return;
         
-        if (!ordersByTable[order.tableId]) {
-          ordersByTable[order.tableId] = [];
+        if (!ordersByTable[tableId]) {
+          ordersByTable[tableId] = [];
         }
-        ordersByTable[order.tableId].push(order);
+        ordersByTable[tableId].push(order);
       }
     });
+
+    // Also include QR orders from localStorage
+    try {
+      const qrOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+      qrOrders.forEach(qrOrder => {
+        if (qrOrder.status === 'PENDING') {
+          const tableId = qrOrder.tableId || (qrOrder.tableName && tables ? tables.find(t => t.name === qrOrder.tableName)?.id : null);
+          if (tableId) {
+            if (!ordersByTable[tableId]) {
+              ordersByTable[tableId] = [];
+            }
+            // Add QR order if not already in the list
+            if (!ordersByTable[tableId].find(o => o.id === qrOrder.id)) {
+              ordersByTable[tableId].push({
+                ...qrOrder,
+                isQROrder: true
+              });
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error reading QR orders:', error);
+    }
+
     return ordersByTable;
-  }, [orders, filters]);
+  }, [orders, filters, tables]);
 
   // Auto-occupy tables based on active orders
   const tablesWithStatus = useMemo(() => {
+    if (!tables || !Array.isArray(tables)) return [];
+    
     return tables.map(table => {
       const tableOrderCount = tableOrders[table.id]?.length || 0;
       const hasActiveOrder = tableOrders[table.id]?.some(o => o.status === 'IN_PROGRESS' || o.status === 'PENDING');
@@ -88,8 +247,8 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
     if (!formData.name.trim()) return;
 
     if (selectedTable) {
-      setTables(tables.map(t => 
-        t.id === selectedTable.id 
+      setTables((prevTables) => (prevTables || []).map(t =>
+        t.id === selectedTable.id
           ? { ...t, ...formData }
           : t
       ));
@@ -99,596 +258,350 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
         ...formData,
         status: 'available'
       };
-      setTables([...tables, newTable]);
+      setTables((prevTables) => [...(prevTables || []), newTable]);
     }
     setShowModal(false);
   };
 
   const handleDeleteTable = (tableId) => {
-    if (confirm('Are you sure you want to delete this table?')) {
-      setTables(tables.filter(t => t.id !== tableId));
+    setTableToDelete(tableId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTable = () => {
+    if (tableToDelete) {
+      setTables((prevTables) => (prevTables || []).filter(t => t.id !== tableToDelete));
+      setShowDeleteConfirm(false);
+      setTableToDelete(null);
     }
   };
 
   const handleStatusToggle = (table) => {
     const newStatus = table.status === 'available' ? 'occupied' : 'available';
-    setTables(tables.map(t => 
-      t.id === table.id 
+    setTables((prevTables) => (prevTables || []).map(t =>
+      t.id === table.id
         ? { ...t, status: newStatus }
         : t
     ));
   };
 
-  const availableCount = tablesWithStatus.filter(t => t.status === 'available').length;
-  const occupiedCount = tablesWithStatus.filter(t => t.status === 'occupied').length;
+  const availableCount = (tablesWithStatus || []).filter(t => t.status === 'available').length;
+  const occupiedCount = (tablesWithStatus || []).filter(t => t.status === 'occupied').length;
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      background: '#1a1a2e',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       {/* Header */}
       <div style={{
-        background: '#ffffff',
-        padding: '20px 24px',
-        borderBottom: '1px solid #e5e7eb'
+        background: '#252538',
+        padding: screenSize === 'small' ? '16px' : '28px 32px',
+        borderBottom: '1px solid #2d2d44'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
           <div>
             <div style={{
-              color: '#111827',
-              fontSize: '20px',
-              fontWeight: '600'
+              color: '#ffffff',
+              fontSize: screenSize === 'small' ? '20px' : '28px',
+              fontWeight: '700',
+              letterSpacing: '-0.5px',
+              marginBottom: '4px'
             }}>
               Tables
             </div>
-            <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
-              Manage your restaurant tables
+            <div style={{ color: '#8b8b9e', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
+              Manage restaurant tables and seating
             </div>
           </div>
-          <button
-            onClick={() => onNavigate?.('dashboard')}
-            style={{
-              padding: '10px 20px',
-              background: '#f9fafb',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back
-          </button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {waiterCalls.length > 0 && (
+              <button
+                onClick={() => setShowWaiterCalls(true)}
+                style={{
+                  padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  animation: 'pulse 2s infinite'
+                }}
+              >
+                <span style={{ fontSize: screenSize === 'small' ? '16px' : '18px' }}>🔔</span>
+                {waiterCalls.length} Waiter Call{waiterCalls.length > 1 ? 's' : ''}
+              </button>
+            )}
+            <button
+              onClick={() => onNavigate?.('dashboard')}
+              style={{
+                padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+                background: '#2d2d44',
+                color: '#e0e0e0',
+                border: '1px solid #3d3d5c',
+                borderRadius: '8px',
+                fontSize: screenSize === 'small' ? '12px' : '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#3d3d5c'}
+              onMouseLeave={(e) => e.target.style.background = '#2d2d44'}
+            >
+              ← Back
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ padding: '24px', overflow: 'auto', flex: 1 }}>
+      <div style={{ padding: screenSize === 'small' ? '16px' : '28px 32px', overflow: 'auto', flex: 1 }}>
+        {/* Stats */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: screenSize === 'small' ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)',
+          gap: screenSize === 'small' ? '12px' : '20px',
+          marginBottom: screenSize === 'small' ? '16px' : '28px'
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            border: '1px solid #2d2d44'
+          }}>
+            <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Available
+            </div>
+            <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#22c55e' }}>
+              {availableCount}
+            </div>
+          </div>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            border: '1px solid #2d2d44'
+          }}>
+            <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Occupied
+            </div>
+            <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#f59e0b' }}>
+              {occupiedCount}
+            </div>
+          </div>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            border: '1px solid #2d2d44'
+          }}>
+            <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Total
+            </div>
+            <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#6366f1' }}>
+              {tablesWithStatus.length}
+            </div>
+          </div>
+        </div>
+
         {/* Controls */}
         <div style={{
-          background: '#ffffff',
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '20px',
-          border: '1px solid #e5e7eb'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: screenSize === 'small' ? '16px' : '24px',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-              Available: <span style={{ color: '#111827', fontWeight: '600' }}>{availableCount}</span> | Occupied: <span style={{ color: '#111827', fontWeight: '600' }}>{occupiedCount}</span>
-            </div>
-            <button
-              onClick={handleAddTable}
-              style={{
-                padding: '12px 24px',
-                background: '#111827',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              + Add Table
-            </button>
-          </div>
-          
-          {/* Filters */}
-          <div style={{ 
-            background: '#f9fafb', 
-            border: '1px solid #e5e7eb', 
-            padding: '16px',
-            borderRadius: '6px'
-          }}>
-            <div style={{ fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '12px' }}>
-              Filters
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Status
-                </label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    background: '#ffffff',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="all">All Status</option>
-                  <option value="PENDING">Pending</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="COMPLETED">Completed</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Table
-                </label>
-                <select
-                  value={filters.tableId}
-                  onChange={(e) => setFilters({ ...filters, tableId: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    background: '#ffffff',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="all">All Tables</option>
-                  {tables.map(table => (
-                    <option key={table.id} value={table.id}>{table.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  From Date
-                </label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  To Date
-                </label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-              <button
-                onClick={() => setFilters({ status: 'all', dateFrom: '', dateTo: '', tableId: 'all' })}
-                style={{
-                  padding: '10px 20px',
-                  background: '#ffffff',
-                  color: '#111827',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Clear Filters
-              </button>
-              <button
-                onClick={() => window.print()}
-                style={{
-                  padding: '10px 20px',
-                  background: '#ffffff',
-                  color: '#111827',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Export PDF
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={handleAddTable}
+            style={{
+              padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+              background: '#6366f1',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              width: screenSize === 'small' ? '100%' : 'auto'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#5558e3'}
+            onMouseLeave={(e) => e.target.style.background = '#6366f1'}
+          >
+            + Add Table
+          </button>
+          <button
+            onClick={() => setShowQRDemoModal(true)}
+            style={{
+              padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+              background: '#2d2d44',
+              color: '#e0e0e0',
+              border: '1px solid #3d3d5c',
+              borderRadius: '8px',
+              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              width: screenSize === 'small' ? '100%' : 'auto'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#3d3d5c'}
+            onMouseLeave={(e) => e.target.style.background = '#2d2d44'}
+          >
+            QR Ordering
+          </button>
         </div>
 
         {/* Tables Grid */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-          gap: '16px',
-          width: '100%'
+          gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
+          gap: screenSize === 'small' ? '12px' : '20px'
         }}>
-          {tablesWithStatus.map(table => (
+          {(tablesWithStatus || []).map(table => (
             <div
               key={table.id}
+              onClick={() => {
+                setSelectedTableForOrders(table);
+                setShowOrdersModal(true);
+              }}
               style={{
-                background: '#ffffff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-                width: '100%'
+                background: '#252538',
+                borderRadius: '16px',
+                padding: screenSize === 'small' ? '16px' : '24px',
+                border: table.status === 'occupied' ? '2px solid #f59e0b' : '2px solid #2d2d44',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                position: 'relative'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
             >
               <div style={{
-                width: '80px',
-                height: '80px',
-                background: table.status === 'available' ? '#f0fdf4' : '#fef2f2',
-                border: '2px solid',
-                borderColor: table.status === 'available' ? '#059669' : '#dc2626',
+                position: 'absolute',
+                top: screenSize === 'small' ? '12px' : '16px',
+                right: screenSize === 'small' ? '12px' : '16px',
+                width: '12px',
+                height: '12px',
                 borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                fontWeight: '600',
-                color: table.status === 'available' ? '#059669' : '#dc2626',
-                cursor: 'pointer'
-              }}
-                onClick={() => {
-                  setSelectedTableForOrders(table);
-                  setShowOrdersModal(true);
-                }}
-                title="Click to view orders"
-              >
+                background: table.status === 'occupied' ? '#f59e0b' : '#22c55e'
+              }} />
+              <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff', marginBottom: '8px' }}>
                 {table.name}
               </div>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                {table.name}
-              </div>
-              <div style={{ fontSize: '13px', color: '#6b7280' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '12px' }}>
                 Capacity: {table.capacity}
               </div>
-              <div style={{ 
-                fontSize: '12px', 
-                fontWeight: '500',
-                color: table.status === 'available' ? '#059669' : '#dc2626',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                background: table.status === 'available' ? '#f0fdf4' : '#fef2f2'
+              <div style={{
+                fontSize: screenSize === 'small' ? '11px' : '12px',
+                color: table.status === 'occupied' ? '#f59e0b' : '#22c55e',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                marginBottom: '12px'
               }}>
-                {table.status === 'available' ? 'Available' : 'Occupied'}
+                {table.status}
               </div>
-              {table.orderCount > 0 && (
-                <button
-                  onClick={() => {
-                    setSelectedTableForOrders(table);
-                    setShowOrdersModal(true);
-                  }}
-                  style={{
-                    background: '#f9fafb',
-                    color: '#111827',
-                    border: '1px solid #e5e7eb',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    borderRadius: '6px'
-                  }}
-                >
-                  {table.orderCount} Order{table.orderCount > 1 ? 's' : ''}
-                </button>
-              )}
+              
+              {/* Order Details */}
               {tableOrders[table.id] && tableOrders[table.id].length > 0 && (
-                <div style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
-                  Latest: ₹{tableOrders[table.id][tableOrders[table.id].length - 1].total?.toLocaleString() || 0}
+                <div style={{ marginTop: '12px' }}>
+                  {tableOrders[table.id].slice(0, 2).map((order, idx) => (
+                    <div
+                      key={order.id || idx}
+                      style={{
+                        padding: '8px',
+                        background: '#1a1a2e',
+                        borderRadius: '6px',
+                        marginBottom: idx < tableOrders[table.id].slice(0, 2).length - 1 ? '8px' : '0',
+                        border: '1px solid #2d2d44'
+                      }}
+                    >
+                      {order.token && (
+                        <div style={{
+                          fontSize: screenSize === 'small' ? '14px' : '16px',
+                          fontWeight: '700',
+                          color: '#6366f1',
+                          marginBottom: '4px'
+                        }}>
+                          {order.token}
+                        </div>
+                      )}
+                      <div style={{
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
+                        color: '#e0e0e0',
+                        marginBottom: '4px'
+                      }}>
+                        {order.customerName || 'Walk-in'}
+                      </div>
+                      <div style={{
+                        fontSize: screenSize === 'small' ? '10px' : '11px',
+                        color: '#8b8b9e',
+                        marginBottom: '4px'
+                      }}>
+                        {order.items?.length || 0} items • ₹{(order.total || 0).toFixed(2)}
+                      </div>
+                      <div style={{
+                        fontSize: screenSize === 'small' ? '10px' : '11px',
+                        color: order.status === 'PENDING' ? '#f59e0b' : order.status === 'IN_PROGRESS' ? '#3b82f6' : '#22c55e',
+                        fontWeight: '500'
+                      }}>
+                        {order.status}
+                      </div>
+                    </div>
+                  ))}
+                  {tableOrders[table.id].length > 2 && (
+                    <div style={{
+                      fontSize: screenSize === 'small' ? '10px' : '11px',
+                      color: '#8b8b9e',
+                      marginTop: '8px',
+                      textAlign: 'center'
+                    }}>
+                      +{tableOrders[table.id].length - 2} more
+                    </div>
+                  )}
                 </div>
               )}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', width: '100%', justifyContent: 'center' }}>
-                <button
-                  onClick={() => {
-                    setSelectedTableForQR(table);
-                    setShowQRModal(true);
-                  }}
-                  style={{
-                    background: '#ffffff',
-                    color: '#111827',
-                    border: '1px solid #d1d5db',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    borderRadius: '6px',
-                    flex: 1
-                  }}
-                >
-                  QR
-                </button>
-                <button
-                  onClick={() => handleEditTable(table)}
-                  style={{
-                    background: '#ffffff',
-                    color: '#111827',
-                    border: '1px solid #d1d5db',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    borderRadius: '6px',
-                    flex: 1
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteTable(table.id)}
-                  style={{
-                    background: '#ffffff',
-                    color: '#ef4444',
-                    border: '1px solid #fecaca',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    borderRadius: '6px',
-                    flex: 1
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
+              
+              {table.orderCount > 0 && !tableOrders[table.id] && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '6px 12px',
+                  background: '#2d2d44',
+                  borderRadius: '6px',
+                  fontSize: screenSize === 'small' ? '11px' : '12px',
+                  color: '#e0e0e0'
+                }}>
+                  {table.orderCount} order{table.orderCount > 1 ? 's' : ''}
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* QR Code Modal */}
-      {showQRModal && selectedTableForQR && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            width: '90%',
-            maxWidth: '320px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              background: '#111827',
-              color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span>QR Code - {selectedTableForQR.name}</span>
-              <button
-                onClick={() => setShowQRModal(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
-                  cursor: 'pointer',
-                  borderRadius: '6px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ padding: '24px', textAlign: 'center', background: '#ffffff' }}>
-              <img 
-                src={generateQRCode(selectedTableForQR)} 
-                alt={`QR Code for ${selectedTableForQR.name}`}
-                style={{ width: '150px', height: '150px', marginBottom: '16px', maxWidth: '100%' }}
-              />
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
-                {selectedTableForQR.name}
-              </div>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
-                Capacity: {selectedTableForQR.capacity}
-              </div>
-              <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
-                Scan to order from this table
-              </div>
-              <button
-                onClick={() => {
-                  setShowQRModal(false);
-                  setShowQRDemoModal(true);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#8B4513',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                📱 Demo QR Menu View
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Orders Modal */}
-      {showOrdersModal && selectedTableForOrders && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            width: '90%',
-            maxWidth: '700px',
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }}>
-            <div style={{
-              background: '#111827',
-              color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10
-            }}>
-              <span>Orders - {selectedTableForOrders.name}</span>
-              <button
-                onClick={() => setShowOrdersModal(false)}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
-                  cursor: 'pointer',
-                  borderRadius: '6px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ padding: '24px', background: '#ffffff' }}>
-              {tableOrders[selectedTableForOrders.id] && tableOrders[selectedTableForOrders.id].length > 0 ? (
-                tableOrders[selectedTableForOrders.id].map((order, index) => (
-                  <div key={order.id} style={{
-                    background: '#f9fafb',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    marginBottom: '12px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                        Order #{order.id.split('-')[1]}
-                      </span>
-                      <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                        {new Date(order.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '6px' }}>
-                      Status: <span style={{ fontWeight: '500', color: order.status === 'COMPLETED' ? '#059669' : order.status === 'CANCELLED' ? '#dc2626' : '#d97706' }}>
-                        {order.status}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '6px' }}>
-                      Staff: <span style={{ fontWeight: '500', color: '#111827' }}>
-                        {order.employeeName || 'Unknown'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '6px' }}>
-                      Customer: <span style={{ fontWeight: '500', color: '#111827' }}>
-                        {order.customerName || 'Walk-in'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '6px' }}>
-                      Payment: <span style={{ fontWeight: '500', color: '#111827' }}>
-                        {order.paymentMethod}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
-                      Total: <span style={{ fontWeight: '600', color: '#111827' }}>
-                        ₹{order.total?.toLocaleString() || 0}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                      Items:
-                    </div>
-                    {order.items && order.items.map((item, itemIndex) => (
-                      <div key={itemIndex} style={{
-                        fontSize: '13px',
-                        color: '#6b7280',
-                        padding: '4px 0',
-                        borderBottom: itemIndex < order.items.length - 1 ? '1px solid #e5e7eb' : 'none'
-                      }}>
-                        {item.name} x {item.qty} - ₹{((item.price || 0) * (item.qty || 1)).toLocaleString()}
-                      </div>
-                    ))}
-                  </div>
-                ))
-              ) : (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                  No orders for this table
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add/Edit Modal */}
+      {/* Modals */}
       {showModal && (
         <div style={{
           position: 'fixed',
@@ -696,111 +609,103 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '20px'
+          padding: screenSize === 'small' ? '16px' : '0'
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            width: '90%',
-            maxWidth: '400px',
-            overflow: 'hidden'
+            background: '#252538',
+           borderRadius: '16px',
+            padding: screenSize === 'small' ? '24px' : '32px',
+            width: screenSize === 'small' ? '100%' : '400px',
+            maxWidth: screenSize === 'small' ? '100%' : '90vw',
+            border: '1px solid #2d2d44'
           }}>
-            <div style={{
-              background: '#111827',
-              color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
-              fontWeight: '600'
-            }}>
+            <div style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
               {selectedTable ? 'Edit Table' : 'Add Table'}
             </div>
-            <div style={{ padding: '24px' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Table Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., T9"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                  Capacity
-                </label>
-                <input
-                  type="number"
-                  value={formData.capacity}
-                  onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 1 })}
-                  min="1"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#f9fafb',
-                    color: '#111827',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveTable}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#111827',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Save
-                </button>
-              </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                Table Name
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: screenSize === 'small' ? '10px' : '12px',
+                  background: '#1a1a2e',
+                  border: '1px solid #2d2d44',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: screenSize === 'small' ? '14px' : '14px',
+                  outline: 'none'
+                }}
+                placeholder="e.g., T1"
+              />
+            </div>
+            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                Capacity
+              </label>
+              <input
+                type="number"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+                style={{
+                  width: '100%',
+                  padding: screenSize === 'small' ? '10px' : '12px',
+                  background: '#1a1a2e',
+                  border: '1px solid #2d2d44',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: screenSize === 'small' ? '14px' : '14px',
+                  outline: 'none'
+                }}
+                min="1"
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTable}
+                style={{
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* QR Demo Modal */}
-      {showQRDemoModal && selectedTableForQR && (
+      {showQRDemoModal && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -808,107 +713,498 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
           right: 0,
           bottom: 0,
           background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '20px'
+          padding: screenSize === 'small' ? '16px' : '0'
         }}>
           <div style={{
-            background: '#1a1a1a',
-            borderRadius: '40px',
-            padding: '12px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            width: '100%',
-            maxWidth: '380px'
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '16px' : '32px',
+            width: '90%',
+            maxWidth: screenSize === 'small' ? '100%' : '800px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            border: '1px solid #2d2d44'
           }}>
-            {/* Phone Frame */}
-            <div style={{
-              background: '#000',
-              borderRadius: '32px',
-              overflow: 'hidden',
-              position: 'relative'
-            }}>
-              {/* Phone Notch */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '120px',
-                height: '28px',
-                background: '#000',
-                borderRadius: '0 0 16px 16px',
-                zIndex: 10
-              }} />
-              
-              {/* Status Bar */}
-              <div style={{
-                background: '#8B4513',
-                color: '#fff',
-                padding: '12px 20px 8px',
-                fontSize: '12px',
-                fontWeight: '600',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingTop: '36px'
-              }}>
-                <span>9:41</span>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <span>📶</span>
-                  <span>🔋</span>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff' }}>
+                QR Ordering
               </div>
-
-              {/* Phone Screen Content */}
-              <div style={{
-                height: '600px',
-                overflow: 'auto',
-                background: '#f5f5f5'
-              }}>
-                <QROrdering 
-                  menuItems={menuItems} 
-                  onPlaceOrder={(order) => {
-                    setOrders([...orders, order]);
-                    setShowQRDemoModal(false);
-                  }} 
-                />
-              </div>
-
-              {/* Home Indicator */}
-              <div style={{
-                position: 'absolute',
-                bottom: '8px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: '120px',
-                height: '4px',
-                background: 'rgba(255, 255, 255, 0.3)',
-                borderRadius: '2px',
-                zIndex: 10
-              }} />
+              <button
+                onClick={() => setShowQRDemoModal(false)}
+                style={{
+                  padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
             </div>
+            <QROrdering tables={tables} menuItems={menuItems} onPlaceOrder={(order) => {
+              // Handle QR order - add to orders
+              setOrders(prev => [...(prev || []), order]);
+              setAlertMessage('QR order received!');
+              setShowAlert(true);
+            }} />
+          </div>
+        </div>
+      )}
 
-            {/* Close Button */}
-            <button
-              onClick={() => setShowQRDemoModal(false)}
-              style={{
-                width: '100%',
-                marginTop: '12px',
-                padding: '12px',
-                background: '#333',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Close Phone View
-            </button>
+      {showOrdersModal && selectedTableForOrders && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: screenSize === 'small' ? '16px' : '0'
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '16px' : '32px',
+            width: '90%',
+            maxWidth: screenSize === 'small' ? '100%' : '600px',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            border: '1px solid #2d2d44'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff' }}>
+                Orders for {selectedTableForOrders.name}
+              </div>
+              <button
+                onClick={() => setShowOrdersModal(false)}
+                style={{
+                  padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+            
+            {/* Date Filter */}
+            <div style={{
+              background: '#1a1a2e',
+              borderRadius: '8px',
+              padding: screenSize === 'small' ? '12px' : '16px',
+              marginBottom: screenSize === 'small' ? '16px' : '24px'
+            }}>
+              <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '12px' }}>
+                Filter by Date
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {['all', 'today', 'yesterday', 'week', 'custom'].map(filter => (
+                  <button
+                    key={filter}
+                    onClick={() => setOrdersDateFilter(filter)}
+                    style={{
+                      padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
+                      background: ordersDateFilter === filter ? '#6366f1' : '#2d2d44',
+                      color: ordersDateFilter === filter ? '#ffffff' : '#e0e0e0',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: screenSize === 'small' ? '11px' : '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      textTransform: 'capitalize'
+                    }}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+              {ordersDateFilter === 'custom' && (
+                <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '150px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>
+                      From
+                    </label>
+                    <input
+                      type="date"
+                      value={customDateFrom}
+                      onChange={(e) => setCustomDateFrom(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#252538',
+                        border: '1px solid #2d2d44',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: '150px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>
+                      To
+                    </label>
+                    <input
+                      type="date"
+                      value={customDateTo}
+                      onChange={(e) => setCustomDateTo(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        background: '#252538',
+                        border: '1px solid #2d2d44',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        fontSize: '12px'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {(!getFilteredTableOrders(selectedTableForOrders?.id) || getFilteredTableOrders(selectedTableForOrders?.id)?.length === 0) ? (
+              <div style={{ padding: screenSize === 'small' ? '24px' : '40px', textAlign: 'center', color: '#8b8b9e', fontSize: screenSize === 'small' ? '14px' : 'inherit' }}>
+                No orders for this table
+              </div>
+            ) : (
+              <div>
+                {getFilteredTableOrders(selectedTableForOrders?.id).map(order => (
+                  <div key={order.id} style={{
+                    background: '#1a1a2e',
+                    borderRadius: '12px',
+                    padding: screenSize === 'small' ? '12px' : '16px',
+                    marginBottom: '12px',
+                    border: order.isQROrder ? '1px solid #8b5cf6' : '1px solid #2d2d44'
+                  }}>
+                    {/* Order Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff' }}>
+                          Order #{order.id?.slice(-6)}
+                        </span>
+                        {order.token && (
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: screenSize === 'small' ? '12px' : '13px',
+                            fontWeight: '700',
+                            background: '#6366f1',
+                            color: '#ffffff'
+                          }}>
+                            {order.token}
+                          </span>
+                        )}
+                        {order.isQROrder && (
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '600',
+                            background: '#8b5cf6',
+                            color: '#ffffff'
+                          }}>
+                            QR
+                          </span>
+                        )}
+                      </div>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '6px',
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
+                        fontWeight: '600',
+                        background: order.status === 'COMPLETED' ? '#22c55e20' : order.status === 'PENDING' ? '#f59e0b20' : '#3b82f620',
+                        color: order.status === 'COMPLETED' ? '#22c55e' : order.status === 'PENDING' ? '#f59e0b' : '#3b82f6'
+                      }}>
+                        {order.status}
+                      </span>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#e0e0e0', marginBottom: '4px' }}>
+                        {order.customerName || 'Walk-in'}
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                        {new Date(order.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Order Items */}
+                    {order.items && order.items.length > 0 && (
+                      <div style={{
+                        background: '#252538',
+                        borderRadius: '8px',
+                        padding: screenSize === 'small' ? '10px' : '12px',
+                        marginBottom: '12px'
+                      }}>
+                        {order.items.map((item, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              padding: '6px 0',
+                              borderBottom: idx < order.items.length - 1 ? '1px solid #2d2d44' : 'none'
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#e0e0e0' }}>
+                                {item.name}
+                              </div>
+                              <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: '#8b8b9e' }}>
+                                Qty: {item.qty || 1}
+                              </div>
+                            </div>
+                            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: '#e0e0e0' }}>
+                              ₹{((item.price || 0) * (item.qty || 1)).toFixed(2)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Order Footer */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                        {order.paymentMethod || 'CASH'}
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '15px' : '16px', fontWeight: '700', color: '#ffffff' }}>
+                        ₹{(order.total || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: screenSize === 'small' ? '16px' : '0'
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '24px' : '32px',
+            width: screenSize === 'small' ? '100%' : '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Delete Table
+            </h3>
+            <p style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#8b8b9e', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              Are you sure you want to delete this table?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setTableToDelete(null);
+                }}
+                style={{
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteTable}
+                style={{
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Waiter Calls Modal */}
+      {showWaiterCalls && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: screenSize === 'small' ? '16px' : '0'
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '24px' : '32px',
+            width: screenSize === 'small' ? '100%' : '500px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                Waiter Calls
+              </h3>
+              <button
+                onClick={() => setShowWaiterCalls(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#8b8b9e',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '0'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            {waiterCalls.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#8b8b9e' }}>
+                No pending waiter calls
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {waiterCalls.map(call => (
+                  <div key={call.id} style={{
+                    background: '#2d2d44',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid #3d3d5c'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                          {call.tableName || 'Unknown Table'}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#8b8b9e' }}>
+                          {call.customerName || 'Guest'}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                        {new Date(call.createdAt).toLocaleTimeString()}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDismissWaiterCall(call.id)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 16px',
+                        background: '#22c55e',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        marginTop: '8px'
+                      }}
+                    >
+                      Acknowledge & Dismiss
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: screenSize === 'small' ? '16px' : '0'
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: screenSize === 'small' ? '24px' : '32px',
+            width: screenSize === 'small' ? '100%' : '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Notice
+            </h3>
+            <p style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#8b8b9e', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              {alertMessage}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowAlert(false)}
+                style={{
+                  padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}

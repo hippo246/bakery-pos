@@ -38,12 +38,16 @@ export class KOTManager {
    */
   createKOT(orderData) {
     try {
+      console.log('KOTManager.createKOT called with:', orderData);
       const kot = createKOT(orderData, this.config);
+      console.log('KOT created:', kot);
       
       this.kots.set(kot.kotId, kot);
       this.saveState();
+      console.log('KOT saved to manager, total KOTs:', this.kots.size);
       
       this.emit('kotCreated', kot);
+      console.log('kotCreated event emitted');
       
       return { success: true, kot };
     } catch (error) {

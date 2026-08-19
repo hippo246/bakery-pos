@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function SimpleStaff({ staff = [], setStaff, onNavigate }) {
   const [showModal, setShowModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [formData, setFormData] = useState({
     name: '',
     role: '',
     phone: '',
     status: 'active'
   });
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleAddStaff = () => {
     setSelectedStaff(null);
@@ -49,8 +72,15 @@ export default function SimpleStaff({ staff = [], setStaff, onNavigate }) {
   };
 
   const handleDeleteStaff = (staffId) => {
-    if (confirm('Are you sure you want to remove this staff member?')) {
-      setStaff(staff.filter(s => s.id !== staffId));
+    setStaffToDelete(staffId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteStaff = () => {
+    if (staffToDelete) {
+      setStaff(staff.filter(s => s.id !== staffToDelete));
+      setShowDeleteConfirm(false);
+      setStaffToDelete(null);
     }
   };
 
@@ -76,35 +106,37 @@ export default function SimpleStaff({ staff = [], setStaff, onNavigate }) {
       {/* Header */}
       <div style={{
         background: '#ffffff',
-        padding: '20px 24px',
+        padding: screenSize === 'small' ? '16px' : '20px 24px',
         borderBottom: '1px solid #e5e7eb'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexDirection: screenSize === 'small' ? 'column' : 'row',
+          gap: screenSize === 'small' ? '12px' : '0'
         }}>
           <div>
             <div style={{
               color: '#111827',
-              fontSize: '20px',
+              fontSize: screenSize === 'small' ? '18px' : '20px',
               fontWeight: '600'
             }}>
               Staff Management
             </div>
-            <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
+            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
               Manage your team members
             </div>
           </div>
           <button
             onClick={() => onNavigate?.('dashboard')}
             style={{
-              padding: '10px 20px',
+              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: '#f9fafb',
               color: '#111827',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
-              fontSize: '13px',
+              fontSize: screenSize === 'small' ? '12px' : '13px',
               fontWeight: '500',
               cursor: 'pointer'
             }}
@@ -115,30 +147,32 @@ export default function SimpleStaff({ staff = [], setStaff, onNavigate }) {
       </div>
 
       {/* Content */}
-      <div style={{ padding: '24px', overflow: 'auto', flex: 1 }}>
+      <div style={{ padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', flex: 1 }}>
         {/* Controls */}
         <div style={{
           background: '#ffffff',
           borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '20px',
+          padding: screenSize === 'small' ? '12px' : '16px',
+          marginBottom: screenSize === 'small' ? '16px' : '20px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexWrap: 'wrap',
+          gap: screenSize === 'small' ? '12px' : '0',
           border: '1px solid #e5e7eb'
         }}>
-          <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#111827' }}>
             <span style={{ color: '#111827', fontWeight: '600' }}>{activeStaffCount}</span> of <span style={{ color: '#111827', fontWeight: '600' }}>{staff.length}</span> active
           </div>
           <button
             onClick={handleAddStaff}
             style={{
-              padding: '12px 24px',
+              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
               background: '#111827',
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
-              fontSize: '14px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
               fontWeight: '500',
               cursor: 'pointer'
             }}
@@ -151,14 +185,14 @@ export default function SimpleStaff({ staff = [], setStaff, onNavigate }) {
         <div style={{
           background: '#ffffff',
           borderRadius: '8px',
-          padding: '20px',
+          padding: screenSize === 'small' ? '16px' : '20px',
           border: '1px solid #e5e7eb',
           overflow: 'auto'
         }}>
           {staff.length === 0 ? (
-            <div style={{ padding: '60px 20px', textAlign: 'center', color: '#9ca3af' }}>
-              <div style={{ fontSize: '48px', marginBottom: '12px' }}>👨‍🍳</div>
-              <div style={{ fontSize: '14px', fontWeight: '500' }}>
+            <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#9ca3af' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '40px' : '48px', marginBottom: '12px' }}>👨‍🍳</div>
+              <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500' }}>
                 No staff members yet. Add your first team member!
               </div>
             </div>
@@ -184,168 +218,258 @@ export default function SimpleStaff({ staff = [], setStaff, onNavigate }) {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
+          background: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '500px',
-            width: '90%',
-            overflow: 'hidden'
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '500px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
           }}>
-            {/* Title Bar */}
-            <div style={{
-              background: '#111827',
-              color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <span>{selectedStaff ? 'Edit Staff' : 'Add Staff'}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                {selectedStaff ? 'Edit Staff' : 'Add Staff'}
+              </h3>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
+                  padding: '8px 12px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  borderRadius: '6px'
+                  fontSize: '16px'
                 }}
               >
                 ×
               </button>
             </div>
             
-            {/* Content */}
-            <div style={{ padding: '24px', background: '#ffffff' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Role *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    placeholder="e.g., Baker, Cashier, Manager"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      background: '#ffffff',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button
-                  onClick={() => setShowModal(false)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   style={{
-                    flex: 1,
+                    width: '100%',
                     padding: '12px',
-                    background: '#f9fafb',
-                    color: '#111827',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveStaff}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: '#111827',
+                    background: '#1a1a2e',
                     color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
                     fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
+                    outline: 'none'
+                  }}
+                  placeholder="Enter staff name..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Role
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
                   }}
                 >
-                  {selectedStaff ? 'Update Staff' : 'Add Staff'}
-                </button>
+                  <option value="">Select role...</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Waiter">Waiter</option>
+                  <option value="Chef">Chef</option>
+                  <option value="Cashier">Cashier</option>
+                  <option value="Server">Server</option>
+                </select>
               </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: '#1a1a2e',
+                    color: '#ffffff',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                  placeholder="Enter phone number..."
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveStaff}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Remove Staff
+            </h3>
+            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+              Are you sure you want to remove this staff member?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setStaffToDelete(null);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  background: '#2d2d44',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteStaff}
+                style={{
+                  padding: '12px 24px',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alert Modal */}
+      {showAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#252538',
+            borderRadius: '16px',
+            padding: '32px',
+            width: '400px',
+            maxWidth: '90vw',
+            border: '1px solid #2d2d44'
+          }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+              Notice
+            </h3>
+            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+              {alertMessage}
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowAlert(false)}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>

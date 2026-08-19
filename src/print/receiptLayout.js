@@ -1,8 +1,6 @@
 // CafeOS Receipt Layout System
 // Handles paper sizes, scaling, margins, and layout rendering
 
-import { _PAPER_SIZES } from "./printEngine.js";
-
 // Layout configurations for each paper size
 const LAYOUT_CONFIGS = {
   "58mm": {
@@ -299,8 +297,9 @@ class ReceiptLayout {
       line-height: ${this.config.lineHeight};
       color: #000;
       background: #fff;
-      padding: ${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px;
+      padding: ${margins.top}px ${margins.left}px ${margins.bottom}px ${margins.left}px;
       box-sizing: border-box;
+      overflow: hidden;
     ">`;
 
     this.content.forEach(item => {
@@ -309,12 +308,18 @@ class ReceiptLayout {
           const textAlign = item.align === "center" ? "center" : item.align === "right" ? "right" : "left";
           const fontWeight = item.style === FONT_STYLE.BOLD ? "bold" : "normal";
           const itemFontSize = this.config.fontSize[item.size] || fontSize;
+          // Truncate text if it exceeds character width
+          const maxChars = this.config.charWidth;
+          const truncatedText = item.text.length > maxChars ? item.text.substring(0, maxChars) : item.text;
           html += `<div style="
             text-align: ${textAlign};
             font-weight: ${fontWeight};
             font-size: ${itemFontSize}px;
             margin-bottom: ${this.spacingConfig.lineGap}px;
-          ">${this.escapeHTML(item.text)}</div>`;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          ">${this.escapeHTML(truncatedText)}</div>`;
           break;
         }
 

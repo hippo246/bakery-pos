@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { REPORT_CATEGORIES, REPORTS } from "../../dashboard/biEngine/ReportRegistry";
 import { calculateReportData } from "../../dashboard/biEngine/ReportCalculations";
 import ReportViewer from "./ReportViewer";
@@ -31,6 +31,25 @@ export default function Analytics({ orders, customers, inventory, staff }) {
   const [activeReportId, setActiveReportId] = useState("fin_01");
   const [dateRange, setDateRange] = useState("today"); // today, week, month
   const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
+  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+
+  // Screen size detection
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('small');
+      } else if (width < 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('large');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const filteredReports = useMemo(() => {
     if (!search.trim()) return REPORTS;
@@ -68,28 +87,41 @@ export default function Analytics({ orders, customers, inventory, staff }) {
   return (
     <div style={S.container}>
       {/* Header */}
-      <div style={S.header}>
-        <div style={S.title}>CafeOS Analytics Engine</div>
-        <div style={{ display: "flex", gap: 12 }}>
+      <div style={{
+        ...S.header,
+        padding: screenSize === 'small' ? '12px 16px' : '16px 24px',
+        flexDirection: screenSize === 'small' ? 'column' : 'row',
+        alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+        gap: screenSize === 'small' ? '12px' : '0'
+      }}>
+        <div style={{ ...S.title, fontSize: screenSize === 'small' ? '18px' : '24px' }}>CafeOS Analytics Engine</div>
+        <div style={{ display: "flex", gap: screenSize === 'small' ? '8px' : '12', flexWrap: 'wrap' }}>
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            style={{ background: "rgba(255,255,255,0.05)", color: "var(--cafe-text-primary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 12px", outline: "none" }}>
+            style={{ background: "rgba(255,255,255,0.05)", color: "var(--cafe-text-primary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: screenSize === 'small' ? '6px 10px' : '8px 12px', outline: "none", fontSize: screenSize === 'small' ? '12px' : '13px' }}>
             <option value="today">Today</option>
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="year">This Year</option>
           </select>
-          <button onClick={handleExport} style={{ background: "var(--cafe-primary)", color: "var(--cafe-text-primary)", border: "none", borderRadius: 6, padding: "8px 16px", fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={handleExport} style={{ background: "var(--cafe-primary)", color: "var(--cafe-text-primary)", border: "none", borderRadius: 6, padding: screenSize === 'small' ? '6px 12px' : '8px 16px', fontWeight: 700, cursor: "pointer", fontSize: screenSize === 'small' ? '12px' : '13px' }}>
             Export Report
           </button>
         </div>
       </div>
 
       {/* Main Layout */}
-      <div style={S.main}>
+      <div style={{
+        ...S.main,
+        flexDirection: screenSize === 'small' ? 'column' : 'row'
+      }}>
         {/* Sidebar Explorer */}
-        <div style={S.sidebar}>
+        <div style={{
+          ...S.sidebar,
+          width: screenSize === 'small' ? '100%' : 280,
+          display: screenSize === 'small' ? 'none' : 'flex'
+        }}>
           <div style={S.searchBar}>
             <input 
               type="text" 
