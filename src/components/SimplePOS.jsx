@@ -37,7 +37,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [splitPayments, setSplitPayments] = useState([]); // Array of {method, amount}
   const [splitByPeople, setSplitByPeople] = useState(0); // Number of people to split by
-  const [receiptType, setReceiptType] = useState('thermal'); // thermal, simple, custom
   const [receiptDelivery, setReceiptDelivery] = useState('none'); // none, email, sms, both
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptPhone, setReceiptPhone] = useState('');
@@ -951,50 +950,80 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     const taxAmt = order.taxAmount || ((subtotal - discountAmt) * (order.gstRate || 0)) / 100;
     
     return `
-      <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
-        <h2 style="text-align: center; color: #333;">${settings.storeName || 'BakeryPOS'}</h2>
-        <p style="text-align: center; color: #666;">Order #${order.id}</p>
-        <p style="text-align: center; color: #666;">${new Date(order.createdAt).toLocaleString()}</p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+      <div style="font-family: 'Courier New', monospace; max-width: 80mm; margin: 0 auto; padding: 10px; font-size: 12px;">
+        <div style="text-align: center; margin-bottom: 10px; border-bottom: 2px dashed #000; padding-bottom: 10px;">
+          ${settings.storeLogo ? `<img src="${settings.storeLogo}" alt="Store Logo" style="width: 60px; height: 60px; margin: 0 auto 8px; display: block; object-fit: contain;" />` : ''}
+          <h2 style="margin: 0; font-size: 16px; font-weight: bold;">${settings.storeName || 'BakeryPOS'}</h2>
+          ${settings.address ? `<div style="font-size: 10px;">${settings.address}</div>` : ''}
+          ${settings.phone ? `<div style="font-size: 10px;">Tel: ${settings.phone}</div>` : ''}
+          <div style="font-size: 10px;">GSTIN: ${settings.gstin || 'N/A'}</div>
+          <div style="font-size: 10px;">FSSAI: ${settings.fssaiLicense || 'N/A'}</div>
+          <div style="font-size: 10px;">Tariff: ${settings.tariffCode || 'N/A'}</div>
+        </div>
+        <div style="border-bottom: 1px dashed #000; margin: 10px 0; padding-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>Order #${order.id}</span>
+            <span>Token: ${order.token || 'N/A'}</span>
+          </div>
+          <div style="font-size: 10px;">${new Date(order.createdAt).toLocaleString()}</div>
+          ${order.table ? `<div style="font-size: 10px;">Table: ${order.table}</div>` : ''}
+          <div style="font-size: 10px;">Customer: ${order.customerName || 'Walk-in'}</div>
+          <div style="font-size: 10px;">Staff: ${order.staffName || 'N/A'}</div>
+        </div>
         ${order.items.map(item => `
-          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <span>${item.name} x${item.quantity}</span>
-            <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+          <div style="margin-bottom: 8px; border-bottom: 1px dashed #000; padding-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+              <span style="font-weight: 500;">${item.name}</span>
+              <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+            <div style="font-size: 10px; color: #666;">${item.quantity} x ₹${item.price.toFixed(2)}</div>
+            ${item.isCustom ? `
+              <div style="font-size: 10px; color: #92400e; margin-top: 2px;">
+                ⚙️ Custom
+                ${item.baseItemName ? ` (Base: ${item.baseItemName})` : ''}
+              </div>
+            ` : ''}
+            ${item.notes ? `
+              <div style="font-size: 10px; color: ${item.noteType === 'allergy' ? '#dc2626' : '#666'}; margin-top: 2px; ${item.noteType === 'allergy' ? 'font-weight: bold;' : ''}">
+                ${item.noteType === 'allergy' ? '⚠️ ' : '📝 '}${item.notes}
+              </div>
+            ` : ''}
           </div>
-          ${item.isCustom ? `
-            <div style="font-size: 11px; color: #92400e; margin-bottom: 10px; padding-left: 10px;">
-              ⚙️ Custom Order
-              ${item.baseItemName ? `<br><span style="font-style: italic;">Base: ${item.baseItemName}</span>` : ''}
-            </div>
-          ` : ''}
-          ${item.notes ? `
-            <div style="font-size: 11px; color: ${item.noteType === 'allergy' ? '#dc2626' : '#666'}; margin-bottom: 10px; padding-left: 10px; ${item.noteType === 'allergy' ? 'font-weight: bold;' : ''}">
-              ${item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 Note: '}${item.notes}
-            </div>
-          ` : ''}
         `).join('')}
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-          <span>Subtotal:</span>
-          <span>₹${subtotal.toFixed(2)}</span>
-        </div>
-        ${(order.discount || 0) > 0 && `
-          <div style="display: flex; justify-content: space-between; margin-bottom: 5px; color: #10b981;">
-            <span>Discount (${order.discount}%):</span>
-            <span>-₹${discountAmt.toFixed(2)}</span>
-          </div>
-        `}
-        ${order.gstEnabled !== false && (order.gstRate || 0) > 0 && `
+        <div style="border-top: 2px solid #000; margin: 10px 0; padding-top: 8px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-            <span>GST (${order.gstRate}%):</span>
-            <span>₹${taxAmt.toFixed(2)}</span>
+            <span>Subtotal:</span>
+            <span>₹${subtotal.toFixed(2)}</span>
           </div>
-        `}
-        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; font-size: 18px;">
-          <span>TOTAL:</span>
-          <span>₹${order.total.toFixed(2)}</span>
+          ${(order.discount || 0) > 0 && `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span>Discount (${order.discount}%):</span>
+              <span>-₹${discountAmt.toFixed(2)}</span>
+            </div>
+          `}
+          ${order.gstEnabled !== false && (order.gstRate || 0) > 0 && `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span>GST (${order.gstRate}%):</span>
+              <span>₹${taxAmt.toFixed(2)}</span>
+            </div>
+          `}
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 8px; border-top: 1px solid #000; padding-top: 8px;">
+            <span>TOTAL:</span>
+            <span>₹${order.total.toFixed(2)}</span>
+          </div>
+          <div style="font-size: 10px; margin-top: 4px;">
+            Paid: ${order.splitPayments && order.splitPayments.length > 0 ? 'Split' : order.paymentMethod}
+          </div>
         </div>
-        <p style="text-align: center; color: #666; margin-top: 20px;">${settings.receiptFooter || 'Thank you for your order!'}</p>
+        <div style="text-align: center; margin-top: 10px; border-top: 1px dashed #000; padding-top: 10px;">
+          <div style="font-size: 11px; margin-bottom: 8px;">${settings.receiptFooter || 'Thank you for your order!'}</div>
+          ${settings.googleReviewUrl ? `
+            <div style="margin-top: 12px;">
+              <div style="font-size: 10px; margin-bottom: 6px;">Scan to review us:</div>
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(settings.googleReviewUrl.trim())}" alt="Google Review QR" style="width: 80px; height: 80px; margin: 0 auto; display: block; border: 1px solid #000;" />
+            </div>
+          ` : ''}
+        </div>
       </div>
     `;
   };
@@ -1005,25 +1034,37 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     const taxAmt = order.taxAmount || ((subtotal - discountAmt) * (order.gstRate || 0)) / 100;
     
     let text = `${settings.storeName || 'BakeryPOS'}\n`;
+    if (settings.address) text += `${settings.address}\n`;
+    if (settings.phone) text += `Tel: ${settings.phone}\n`;
+    text += `GSTIN: ${settings.gstin || 'N/A'}\n`;
+    text += `FSSAI: ${settings.fssaiLicense || 'N/A'}\n`;
+    text += `Tariff: ${settings.tariffCode || 'N/A'}\n`;
+    text += '================================\n';
     text += `Order #${order.id}\n`;
+    text += `Token: ${order.token || 'N/A'}\n`;
     text += `${new Date(order.createdAt).toLocaleString()}\n`;
-    text += '------------------------\n';
+    if (order.table) text += `Table: ${order.table}\n`;
+    text += `Customer: ${order.customerName || 'Walk-in'}\n`;
+    text += `Staff: ${order.staffName || 'N/A'}\n`;
+    text += '--------------------------------\n';
     
     order.items.forEach(item => {
       text += `${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}\n`;
+      text += `  ${item.quantity} x ₹${item.price.toFixed(2)}\n`;
       if (item.isCustom) {
-        text += `⚙️ Custom Order\n`;
+        text += `  ⚙️ Custom`;
         if (item.baseItemName) {
-          text += `  Base: ${item.baseItemName}\n`;
+          text += ` (Base: ${item.baseItemName})`;
         }
+        text += '\n';
       }
       if (item.notes) {
-        text += `${item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 Note: '}${item.notes}\n`;
+        text += `  ${item.noteType === 'allergy' ? '⚠️ ' : '📝 '}${item.notes}\n`;
       }
+      text += '--------------------------------\n';
     });
     
-    text += '------------------------\n';
-    text += `Subtotal: ₹${subtotal.toFixed(2)}\n`;
+    text += 'Subtotal: ₹' + subtotal.toFixed(2) + '\n';
     
     if ((order.discount || 0) > 0) {
       text += `Discount (${order.discount}%): -₹${discountAmt.toFixed(2)}\n`;
@@ -1033,8 +1074,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       text += `GST (${order.gstRate}%): ₹${taxAmt.toFixed(2)}\n`;
     }
     
+    text += '================================\n';
     text += `TOTAL: ₹${order.total.toFixed(2)}\n`;
+    text += `Paid: ${order.splitPayments && order.splitPayments.length > 0 ? 'Split' : order.paymentMethod}\n`;
+    text += '================================\n';
     text += `\n${settings.receiptFooter || 'Thank you for your order!'}`;
+    
+    if (settings.googleReviewUrl) {
+      text += `\n\nScan to review us:\n${settings.googleReviewUrl}`;
+    }
     
     return text;
   };
@@ -1062,7 +1110,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       paymentMethod: paymentMethod || 'CASH',
       paymentId: paymentId,
       splitPayments: paymentMethod === 'SPLIT' ? splitPayments : null,
-      receiptType: receiptType,
+      receiptType: 'thermal',
       receiptDelivery: receiptDelivery,
       receiptEmail: receiptEmail,
       receiptPhone: receiptPhone,
@@ -1516,113 +1564,114 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     const discountAmt = lastOrder.discountAmount || (subtotal * (lastOrder.discount || 0)) / 100;
     const taxAmt = lastOrder.taxAmount || ((subtotal - discountAmt) * (lastOrder.gstRate || 0)) / 100;
     
-    const fontSize = parseInt(settings.receiptFontSize || 12);
-    const maxWidth = settings.receiptTemplate === 'thermal' ? '240px' : '280px';
-    
     let receiptHTML = `
       <div style="
-        font-family: monospace;
-        font-size: ${fontSize}px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
         line-height: 1.4;
         color: #000;
         padding: 16px;
         background: #fff;
-        max-width: ${maxWidth};
+        max-width: 280px;
         margin: 0 auto;
+        border: 2px solid #000;
       ">
     `;
     
-    // Header
+    // Header with logo and store info
     receiptHTML += `
-      <div style="text-align: center; margin-bottom: 12px;">
+      <div style="text-align: center; margin-bottom: 12px; border-bottom: 2px dashed #000; padding-bottom: 12px;">
     `;
-    if (settings.showLogoOnReceipt !== false) {
-      receiptHTML += `<div style="font-size: ${fontSize + 4}px; font-weight: bold;">${settings.storeName || 'BakeryPOS'}</div>`;
+    if (settings.storeLogo) {
+      receiptHTML += `<img src="${settings.storeLogo}" alt="Store Logo" style="width: 60px; height: 60px; margin: 0 auto 8px; display: block; object-fit: contain;" />`;
     }
-    if (settings.showLogoOnReceipt !== false && settings.storeAddress) {
-      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">${settings.storeAddress}</div>`;
+    receiptHTML += `<div style="font-size: 16px; font-weight: bold; margin-bottom: 4px;">${settings.storeName || 'BakeryPOS'}</div>`;
+    if (settings.storeAddress) {
+      receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">${settings.storeAddress}</div>`;
     }
-    if (settings.showLogoOnReceipt !== false && settings.phone) {
-      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">Tel: ${settings.phone}</div>`;
+    if (settings.phone) {
+      receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Tel: ${settings.phone}</div>`;
     }
-    if (settings.showEmailOnReceipt !== false && settings.email) {
-      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">${settings.email}</div>`;
-    }
-    if (settings.gstin) {
-      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">GSTIN: ${settings.gstin}</div>`;
-    }
-    if (settings.fssaiLicense) {
-      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">FSSAI: ${settings.fssaiLicense}</div>`;
-    }
+    receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">GSTIN: ${settings.gstin || 'N/A'}</div>`;
+    receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">FSSAI: ${settings.fssaiLicense || 'N/A'}</div>`;
+    receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Tariff: ${settings.tariffCode || 'N/A'}</div>`;
     receiptHTML += `</div>`;
     
     // Order Info
     receiptHTML += `
-      <div style="border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between;">
+      <div style="margin-bottom: 12px; border-bottom: 1px dashed #000; padding-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <span>Order #: ${lastOrder.id}</span>
           <span>Token: ${lastOrder.token || 'N/A'}</span>
         </div>
-        <div style="font-size: ${fontSize - 2}px;">${new Date(lastOrder.createdAt).toLocaleString()}</div>
+        <div style="font-size: 10px; margin-bottom: 2px;">${new Date(lastOrder.createdAt).toLocaleString()}</div>
     `;
-    if (settings.showTableOnReceipt !== false && lastOrder.tableNumber) {
-      receiptHTML += `<div>Table: ${lastOrder.tableNumber}</div>`;
+    if (lastOrder.tableNumber) {
+      receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Table: ${lastOrder.tableNumber}</div>`;
     }
-    if (settings.showCustomerOnReceipt !== false) {
-      receiptHTML += `<div>Customer: ${lastOrder.customerName || 'Walk-in'}</div>`;
-    }
+    receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Customer: ${lastOrder.customerName || 'Walk-in'}</div>`;
+    receiptHTML += `<div style="font-size: 10px;">Staff: ${lastOrder.staffName || 'N/A'}</div>`;
     receiptHTML += `</div>`;
 
     // Items
-    receiptHTML += `<div style="margin-bottom: 8px;">`;
+    receiptHTML += `<div style="margin-bottom: 12px; border-bottom: 1px dashed #000; padding-bottom: 8px;">`;
     lastOrder.items.forEach(item => {
       receiptHTML += `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <div>
-            <div>${item.name}${item.isCustom ? ' (Custom)' : ''}</div>
-            <div style="font-size: ${fontSize - 2}px;">${item.quantity} x ₹${item.price}</div>
+        <div style="margin-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+            <span style="font-weight: 500;">${item.name}</span>
+            <span>₹${(item.quantity * item.price).toFixed(2)}</span>
           </div>
-          <div>₹${item.quantity * item.price}</div>
-        </div>
+          <div style="font-size: 10px; color: #666;">${item.quantity} x ₹${item.price.toFixed(2)}</div>
       `;
+      if (item.isCustom) {
+        receiptHTML += `<div style="font-size: 10px; color: #92400e; margin-top: 2px;">⚙️ Custom${item.baseItemName ? ` (Base: ${item.baseItemName})` : ''}</div>`;
+      }
+      if (item.notes) {
+        const noteColor = item.noteType === 'allergy' ? '#dc2626' : '#666';
+        const noteWeight = item.noteType === 'allergy' ? 'bold' : 'normal';
+        const notePrefix = item.noteType === 'allergy' ? '⚠️ ' : '📝 ';
+        receiptHTML += `<div style="font-size: 10px; color: ${noteColor}; margin-top: 2px; font-weight: ${noteWeight};">${notePrefix}${item.notes}</div>`;
+      }
+      receiptHTML += `</div>`;
     });
     receiptHTML += `</div>`;
 
     // Totals
     receiptHTML += `
-      <div style="border-top: 1px dashed #000; padding-top: 8px;">
-        <div style="display: flex; justify-content: space-between;">
+      <div style="border-top: 2px solid #000; padding-top: 8px; margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <span>Subtotal:</span>
           <span>₹${subtotal.toFixed(2)}</span>
         </div>
     `;
-    if (settings.showGstOnReceipt !== false && (lastOrder.discount || 0) > 0) {
+    if ((lastOrder.discount || 0) > 0) {
       receiptHTML += `
-        <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <span>Discount (${lastOrder.discount}%):</span>
           <span>-₹${discountAmt.toFixed(2)}</span>
         </div>
       `;
     }
-    if (settings.showGstOnReceipt !== false && lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0) {
+    if (lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0) {
       receiptHTML += `
-        <div style="display: flex; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
           <span>GST (${lastOrder.gstRate}%):</span>
           <span>₹${taxAmt.toFixed(2)}</span>
         </div>
       `;
     }
     receiptHTML += `
-        <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px;">
+        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 8px; border-top: 1px solid #000; padding-top: 8px;">
           <span>TOTAL:</span>
           <span>₹${lastOrder.total.toFixed(2)}</span>
         </div>
-        <div style="margin-top: 4px; font-size: ${fontSize - 2}px;">
+        <div style="font-size: 10px; margin-top: 4px;">
           Paid: ${lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
         </div>
     `;
     if (lastOrder.splitPayments && lastOrder.splitPayments.length > 0) {
-      receiptHTML += `<div style="font-size: ${fontSize - 2}px;">`;
+      receiptHTML += `<div style="font-size: 10px;">`;
       lastOrder.splitPayments.forEach(payment => {
         receiptHTML += `<div>${payment.method}: ₹${payment.amount.toFixed(2)}</div>`;
       });
@@ -1630,13 +1679,21 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     }
     receiptHTML += `</div>`;
 
-    // Footer
+    // Footer with QR code
     receiptHTML += `
-      <div style="text-align: center; margin-top: 12px; font-size: ${fontSize - 2}px;">
-        <div>${settings.receiptFooter || 'Thank you for your order!'}</div>
-        <div>Visit us again soon</div>
-      </div>
-    </div>`;
+      <div style="text-align: center; margin-top: 12px; border-top: 1px dashed #000; padding-top: 12px;">
+        <div style="font-size: 11px; margin-bottom: 8px;">${settings.receiptFooter || 'Thank you for your order!'}</div>
+    `;
+    if (settings.googleReviewUrl) {
+      receiptHTML += `
+        <div style="margin-top: 12px;">
+          <div style="font-size: 10px; margin-bottom: 6px;">Scan to review us:</div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(settings.googleReviewUrl.trim())}" alt="Google Review QR" style="width: 80px; height: 80px; margin: 0 auto; display: block; border: 1px solid #000;" />
+        </div>
+      `;
+    }
+    receiptHTML += `</div>`;
+    receiptHTML += `</div>`;
     
     const receiptWindow = window.open('', '_blank');
     receiptWindow.document.write(`
@@ -1645,6 +1702,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <title>Receipt - ${lastOrder.id}</title>
           <style>
             body { margin: 0; padding: 0; }
+            @media print {
+              body { margin: 0; padding: 0; }
+            }
           </style>
         </head>
         <body>${receiptHTML}</body>
@@ -4444,29 +4504,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <label style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e', marginBottom: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Receipt Options
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
-                  <select
-                    value={receiptType}
-                    onChange={(e) => setReceiptType(e.target.value)}
-                    style={{
-                      padding: '8px 0',
-                      background: 'transparent',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '0',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      flex: 1
-                    }}
-                  >
-                    <option value="thermal">Thermal</option>
-                    <option value="simple">Simple</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
                   <select
                     value={receiptDelivery}
@@ -5540,8 +5578,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             padding: '24px',
-            width: '400px',
-            maxWidth: '90vw',
+            width: '500px',
+            maxWidth: '95vw',
             maxHeight: '90vh',
             overflow: 'auto'
           }}>
@@ -5567,264 +5605,135 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div 
               id="receipt-preview"
               style={{ 
-                fontFamily: lastOrder.receiptType === 'thermal' ? 'monospace' : 'Arial, sans-serif',
-                fontSize: `${settings.receiptFontSize || 12}px`,
+                fontFamily: 'Courier New, monospace',
+                fontSize: '12px',
                 lineHeight: '1.4',
                 color: '#000',
                 padding: '16px',
                 background: '#fff',
                 borderRadius: '4px',
-                border: '1px solid #e5e7eb',
-                maxWidth: lastOrder.receiptType === 'thermal' ? '240px' : lastOrder.receiptType === 'simple' ? '320px' : '360px',
-                margin: '0 auto'
+                border: '2px solid #000',
+                maxWidth: '280px',
+                margin: '0 auto',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
               }}
             >
               {(() => {
                 const subtotal = lastOrder.subtotal || lastOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
                 const discountAmt = lastOrder.discountAmount || (subtotal * (lastOrder.discount || 0)) / 100;
                 const taxAmt = lastOrder.taxAmount || ((subtotal - discountAmt) * (lastOrder.gstRate || 0)) / 100;
-                
-                const fontSize = parseInt(settings.receiptFontSize || 12);
-                const receiptType = lastOrder.receiptType || 'thermal';
 
-                // Thermal Receipt
-                if (receiptType === 'thermal') {
-                  return (
-                    <>
-                      <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                        {settings.showLogoOnReceipt !== false && (
-                          <div style={{ fontSize: `${fontSize + 4}px`, fontWeight: 'bold' }}>
-                            {settings.storeName || 'BakeryPOS'}
-                          </div>
-                        )}
-                        {settings.showLogoOnReceipt !== false && settings.storeAddress && (
-                          <div style={{ fontSize: `${fontSize - 2}px` }}>{settings.storeAddress}</div>
-                        )}
-                        {settings.showLogoOnReceipt !== false && settings.phone && (
-                          <div style={{ fontSize: `${fontSize - 2}px` }}>Tel: {settings.phone}</div>
-                        )}
-                        {settings.gstin && (
-                          <div style={{ fontSize: `${fontSize - 2}px` }}>GSTIN: {settings.gstin}</div>
-                        )}
-                      </div>
-                      
-                      <div style={{ borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Order #: {lastOrder.id}</span>
-                          <span>Token: {lastOrder.token || 'N/A'}</span>
-                        </div>
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>{new Date(lastOrder.createdAt).toLocaleString()}</div>
-                        {lastOrder.tableNumber && <div>Table: {lastOrder.tableNumber}</div>}
-                        <div>Customer: {lastOrder.customerName || 'Walk-in'}</div>
-                      </div>
-
-                      <div style={{ marginBottom: '8px' }}>
-                        {lastOrder.items.map((item, index) => (
-                          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <div>
-                              <div>{item.name}</div>
-                              <div style={{ fontSize: `${fontSize - 2}px` }}>{item.quantity} x ₹{item.price}</div>
-                            </div>
-                            <div>₹{item.quantity * item.price}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ borderTop: '1px dashed #000', paddingTop: '8px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Subtotal:</span>
-                          <span>₹{subtotal.toFixed(2)}</span>
-                        </div>
-                        {(lastOrder.discount || 0) > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Discount ({lastOrder.discount}%):</span>
-                            <span>-₹{discountAmt.toFixed(2)}</span>
-                          </div>
-                        )}
-                        {lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>GST ({lastOrder.gstRate}%):</span>
-                            <span>₹{taxAmt.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '4px' }}>
-                          <span>TOTAL:</span>
-                          <span>₹{lastOrder.total.toFixed(2)}</span>
-                        </div>
-                        <div style={{ marginTop: '4px', fontSize: `${fontSize - 2}px` }}>
-                          Paid: {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: `${fontSize - 2}px` }}>
-                        <div>{settings.receiptFooter || 'Thank you!'}</div>
-                      </div>
-                    </>
-                  );
-                }
-
-                // Simple Receipt
-                if (receiptType === 'simple') {
-                  return (
-                    <>
-                      <div style={{ textAlign: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #000' }}>
-                        <div style={{ fontSize: `${fontSize + 6}px`, fontWeight: 'bold', marginBottom: '4px' }}>
-                          {settings.storeName || 'BakeryPOS'}
-                        </div>
-                        <div style={{ fontSize: `${fontSize}px`, color: '#666' }}>{settings.storeAddress || ''}</div>
-                        <div style={{ fontSize: `${fontSize}px`, color: '#666' }}>{settings.phone || ''}</div>
-                      </div>
-                      
-                      <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: '600' }}>Order #:</span>
-                          <span>{lastOrder.id}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: '600' }}>Date:</span>
-                          <span>{new Date(lastOrder.createdAt).toLocaleString()}</span>
-                        </div>
-                        {lastOrder.tableNumber && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ fontWeight: '600' }}>Table:</span>
-                            <span>{lastOrder.tableNumber}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ marginBottom: '16px' }}>
-                        <div style={{ fontWeight: '600', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid #ddd' }}>Items</div>
-                        {lastOrder.items.map((item, index) => (
-                          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '8px', background: '#fafafa', borderRadius: '4px' }}>
-                            <div>
-                              <div style={{ fontWeight: '500' }}>{item.name}</div>
-                              <div style={{ fontSize: `${fontSize - 2}px`, color: '#666' }}>{item.quantity} x ₹{item.price}</div>
-                            </div>
-                            <div style={{ fontWeight: '600' }}>₹{item.quantity * item.price}</div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div style={{ padding: '12px', background: '#f0f0f0', borderRadius: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span>Subtotal:</span>
-                          <span>₹{subtotal.toFixed(2)}</span>
-                        </div>
-                        {(lastOrder.discount || 0) > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#10b981' }}>
-                            <span>Discount ({lastOrder.discount}%):</span>
-                            <span>-₹{discountAmt.toFixed(2)}</span>
-                          </div>
-                        )}
-                        {lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span>GST ({lastOrder.gstRate}%):</span>
-                            <span>₹{taxAmt.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: `${fontSize + 2}px`, paddingTop: '8px', borderTop: '1px solid #ccc' }}>
-                          <span>TOTAL:</span>
-                          <span>₹{lastOrder.total.toFixed(2)}</span>
-                        </div>
-                        <div style={{ marginTop: '8px', fontSize: `${fontSize}px`, color: '#666' }}>
-                          Payment: {lastOrder.paymentMethod}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'center', marginTop: '16px', fontSize: `${fontSize}px`, color: '#666' }}>
-                        <div>{settings.receiptFooter || 'Thank you for your order!'}</div>
-                      </div>
-                    </>
-                  );
-                }
-
-                // Custom Receipt
                 return (
                   <>
-                    <div style={{ textAlign: 'center', marginBottom: '20px', padding: '16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', borderRadius: '8px' }}>
-                      <div style={{ fontSize: `${fontSize + 8}px`, fontWeight: 'bold', marginBottom: '4px' }}>
+                    <div style={{ textAlign: 'center', marginBottom: '12px', borderBottom: '2px dashed #000', paddingBottom: '12px' }}>
+                      {settings.storeLogo && (
+                        <img 
+                          src={settings.storeLogo} 
+                          alt="Store Logo" 
+                          style={{ width: '60px', height: '60px', margin: '0 auto 8px', display: 'block', objectFit: 'contain' }} 
+                        />
+                      )}
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
                         {settings.storeName || 'BakeryPOS'}
                       </div>
-                      <div style={{ fontSize: `${fontSize}px`, opacity: 0.9 }}>{settings.storeAddress || 'Premium Bakery'}</div>
-                      <div style={{ fontSize: `${fontSize}px`, opacity: 0.9 }}>{settings.phone || '+91 XXXXXXXXXX'}</div>
+                      {settings.storeAddress && (
+                        <div style={{ fontSize: '10px', marginBottom: '2px' }}>{settings.storeAddress}</div>
+                      )}
+                      {settings.phone && (
+                        <div style={{ fontSize: '10px', marginBottom: '2px' }}>Tel: {settings.phone}</div>
+                      )}
+                      <div style={{ fontSize: '10px', marginBottom: '2px' }}>GSTIN: {settings.gstin || 'N/A'}</div>
+                      <div style={{ fontSize: '10px', marginBottom: '2px' }}>FSSAI: {settings.fssaiLicense || 'N/A'}</div>
+                      <div style={{ fontSize: '10px', marginBottom: '2px' }}>Tariff: {settings.tariffCode || 'N/A'}</div>
                     </div>
                     
-                    <div style={{ marginBottom: '16px', padding: '16px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Order #</div>
-                          <div style={{ fontWeight: '600' }}>{lastOrder.id}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Token</div>
-                          <div style={{ fontWeight: '600' }}>{lastOrder.token || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Date</div>
-                          <div>{new Date(lastOrder.createdAt).toLocaleDateString()}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Time</div>
-                          <div>{new Date(lastOrder.createdAt).toLocaleTimeString()}</div>
-                        </div>
+                    <div style={{ marginBottom: '12px', borderBottom: '1px dashed #000', paddingBottom: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span>Order #: {lastOrder.id}</span>
+                        <span>Token: {lastOrder.token || 'N/A'}</span>
                       </div>
-                      {lastOrder.tableNumber && (
-                        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dee2e6' }}>
-                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Table</div>
-                          <div style={{ fontWeight: '600' }}>{lastOrder.tableNumber}</div>
-                        </div>
-                      )}
-                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dee2e6' }}>
-                        <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Customer</div>
-                        <div style={{ fontWeight: '600' }}>{lastOrder.customerName || 'Walk-in'}</div>
-                      </div>
+                      <div style={{ fontSize: '10px', marginBottom: '2px' }}>{new Date(lastOrder.createdAt).toLocaleString()}</div>
+                      {lastOrder.tableNumber && <div style={{ fontSize: '10px', marginBottom: '2px' }}>Table: {lastOrder.tableNumber}</div>}
+                      <div style={{ fontSize: '10px', marginBottom: '2px' }}>Customer: {lastOrder.customerName || 'Walk-in'}</div>
+                      <div style={{ fontSize: '10px' }}>Staff: {lastOrder.staffName || 'N/A'}</div>
                     </div>
 
-                    <div style={{ marginBottom: '16px' }}>
-                      <div style={{ fontWeight: '600', marginBottom: '12px', fontSize: `${fontSize + 2}px`, color: '#495057' }}>Order Items</div>
+                    <div style={{ marginBottom: '12px', borderBottom: '1px dashed #000', paddingBottom: '8px' }}>
                       {lastOrder.items.map((item, index) => (
-                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '12px', background: '#fff', border: '1px solid #e9ecef', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '500', color: '#212529' }}>{item.name}</div>
-                            <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginTop: '2px' }}>{item.quantity} x ₹{item.price}</div>
+                        <div key={index} style={{ marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                            <span style={{ fontWeight: '500' }}>{item.name}</span>
+                            <span>₹{(item.quantity * item.price).toFixed(2)}</span>
                           </div>
-                          <div style={{ fontWeight: '600', color: '#495057', fontSize: `${fontSize + 2}px` }}>₹{item.quantity * item.price}</div>
+                          <div style={{ fontSize: '10px', color: '#666' }}>{item.quantity} x ₹{item.price.toFixed(2)}</div>
+                          {item.isCustom && (
+                            <div style={{ fontSize: '10px', color: '#92400e', marginTop: '2px' }}>
+                              ⚙️ Custom{item.baseItemName ? ` (Base: ${item.baseItemName})` : ''}
+                            </div>
+                          )}
+                          {item.notes && (
+                            <div style={{ 
+                              fontSize: '10px', 
+                              color: item.noteType === 'allergy' ? '#dc2626' : '#666',
+                              marginTop: '2px',
+                              fontWeight: item.noteType === 'allergy' ? 'bold' : 'normal'
+                            }}>
+                              {item.noteType === 'allergy' ? '⚠️ ' : '📝 '}{item.notes}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
 
-                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', borderRadius: '8px', border: '1px solid #dee2e6' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ color: '#6c757d' }}>Subtotal</span>
-                        <span style={{ fontWeight: '500' }}>₹{subtotal.toFixed(2)}</span>
+                    <div style={{ borderTop: '2px solid #000', paddingTop: '8px', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span>Subtotal:</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
                       </div>
                       {(lastOrder.discount || 0) > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ color: '#10b981' }}>Discount ({lastOrder.discount}%)</span>
-                          <span style={{ color: '#10b981', fontWeight: '500' }}>-₹{discountAmt.toFixed(2)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span>Discount ({lastOrder.discount}%):</span>
+                          <span>-₹{discountAmt.toFixed(2)}</span>
                         </div>
                       )}
                       {lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ color: '#6c757d' }}>GST ({lastOrder.gstRate}%)</span>
-                          <span style={{ fontWeight: '500' }}>₹{taxAmt.toFixed(2)}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span>GST ({lastOrder.gstRate}%):</span>
+                          <span>₹{taxAmt.toFixed(2)}</span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: `${fontSize + 4}px`, paddingTop: '12px', marginTop: '8px', borderTop: '2px solid #dee2e6', color: '#212529' }}>
-                        <span>TOTAL</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px', marginTop: '8px', borderTop: '1px solid #000', paddingTop: '8px' }}>
+                        <span>TOTAL:</span>
                         <span>₹{lastOrder.total.toFixed(2)}</span>
                       </div>
-                      <div style={{ marginTop: '12px', padding: '8px', background: '#fff', borderRadius: '4px', textAlign: 'center' }}>
-                        <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Payment Method</div>
-                        <div style={{ fontWeight: '600', color: '#495057' }}>{lastOrder.paymentMethod}</div>
+                      <div style={{ fontSize: '10px', marginTop: '4px' }}>
+                        Paid: {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'center', marginTop: '20px', padding: '16px', background: '#f8f9fa', borderRadius: '8px' }}>
-                      <div style={{ fontWeight: '600', color: '#495057', marginBottom: '4px' }}>{settings.receiptFooter || 'Thank you for your order!'}</div>
-                      <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d' }}>Visit us again soon</div>
-                      {settings.gstin && (
-                        <div style={{ marginTop: '8px', fontSize: `${fontSize - 2}px`, color: '#6c757d' }}>GSTIN: {settings.gstin}</div>
+                    <div style={{ textAlign: 'center', marginTop: '12px', borderTop: '1px dashed #000', paddingTop: '12px' }}>
+                      <div style={{ fontSize: '11px', marginBottom: '8px' }}>{settings.receiptFooter || 'Thank you for your order!'}</div>
+                      {settings.googleReviewUrl && (
+                        <div style={{ marginTop: '12px' }}>
+                          <div style={{ fontSize: '10px', marginBottom: '6px' }}>Scan to review us:</div>
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(settings.googleReviewUrl.trim())}`} 
+                            alt="Google Review QR" 
+                            style={{ width: '80px', height: '80px', margin: '0 auto', display: 'block', border: '1px solid #000' }} 
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'block';
+                            }}
+                          />
+                          <div style={{ display: 'none', fontSize: '9px', color: '#dc2626', marginTop: '4px' }}>
+                            QR Error - Check URL
+                          </div>
+                        </div>
+                      )}
+                      {!settings.googleReviewUrl && (
+                        <div style={{ fontSize: '10px', marginTop: '8px', color: '#666' }}>
+                          (Configure Google Review URL in Settings)
+                        </div>
                       )}
                     </div>
                   </>
@@ -5847,7 +5756,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   cursor: 'pointer'
                 }}
               >
-                Print
+                Print Receipt
               </button>
               <button
                 onClick={() => {

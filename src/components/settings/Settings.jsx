@@ -47,6 +47,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     gstin: settings.gstin || '',
     gstRegistered: settings.gstRegistered !== false,
     fssaiLicense: settings.fssaiLicense || '',
+    tariffCode: settings.tariffCode || '',
+    googleReviewUrl: settings.googleReviewUrl || '',
     dataRetentionDays: settings.dataRetentionDays || '365',
     posMode: settings.posMode || 'basic',
     receiptTemplate: settings.receiptTemplate || 'standard',
@@ -291,6 +293,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       gstin: settings.gstin || '',
       gstRegistered: settings.gstRegistered !== false,
       fssaiLicense: settings.fssaiLicense || '',
+      tariffCode: settings.tariffCode || '',
+      googleReviewUrl: settings.googleReviewUrl || '',
       dataRetentionDays: settings.dataRetentionDays || '365',
       posMode: settings.posMode || 'basic',
       receiptTemplate: settings.receiptTemplate || 'standard',
@@ -353,8 +357,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       group: 'Business',
       items: [
         { id: 'business', label: 'Business', icon: '🏪' },
-        { id: 'tax', label: 'Tax & Pricing', icon: '💰' },
-        { id: 'compliance', label: 'Compliance', icon: '📋' }
+        { id: 'tax', label: 'Tax & Pricing', icon: '💰' }
       ]
     },
     { 
@@ -367,8 +370,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     { 
       group: 'Receipts',
       items: [
-        { id: 'receipt', label: 'Receipts', icon: '🧾' },
-        { id: 'receipttemplate', label: 'Receipt Template', icon: '📄' }
+        { id: 'receipt', label: 'Receipts', icon: '🧾' }
       ]
     },
     { 
@@ -917,8 +919,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               </div>
             )}
 
-            {activeSection === 'compliance' && (
+
+            {activeSection === 'receipt' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Legal Compliance */}
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
@@ -967,13 +971,48 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         }}
                       />
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Tariff Code
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.tariffCode}
+                        onChange={(e) => handleInputChange('tariffCode', e.target.value)}
+                        placeholder="996311"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Google Review URL
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.googleReviewUrl}
+                        onChange={(e) => handleInputChange('googleReviewUrl', e.target.value)}
+                        placeholder="https://g.page/r/..."
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {activeSection === 'receipt' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Receipt Settings */}
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
@@ -986,11 +1025,49 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                        Printer Type
+                        Store Logo URL
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.storeLogo}
+                        onChange={(e) => handleInputChange('storeLogo', e.target.value)}
+                        placeholder="https://example.com/logo.png"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Receipt Footer
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.receiptFooter}
+                        onChange={(e) => handleInputChange('receiptFooter', e.target.value)}
+                        placeholder="Thank you for your order!"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        Receipt Font Size
                       </label>
                       <select
-                        value={formData.printerType}
-                        onChange={(e) => handleInputChange('printerType', e.target.value)}
+                        value={formData.receiptFontSize}
+                        onChange={(e) => handleInputChange('receiptFontSize', e.target.value)}
                         style={{
                           width: '100%',
                           padding: '10px 12px',
@@ -1001,8 +1078,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           outline: 'none'
                         }}
                       >
-                        <option value="thermal">Thermal Printer</option>
-                        <option value="standard">Standard Printer</option>
+                        <option value="10">10px (Small)</option>
+                        <option value="12">12px (Medium)</option>
+                        <option value="14">14px (Large)</option>
                       </select>
                     </div>
                     <div>
@@ -1018,11 +1096,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {activeSection === 'receipttemplate' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Display Options */}
                 <div style={{
                   padding: '16px',
                   background: '#f9fafb',
@@ -1030,36 +1105,86 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   border: '1px solid #e5e7eb'
                 }}>
                   <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                    📄 Receipt Template
+                    👁️ Display Options
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
-                        Template Style
-                      </label>
-                      <select
-                        value={formData.receiptTemplate}
-                        onChange={(e) => handleInputChange('receiptTemplate', e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          fontSize: '14px',
-                          background: '#ffffff',
-                          outline: 'none'
-                        }}
-                      >
-                        <option value="standard">Standard</option>
-                        <option value="thermal">Thermal</option>
-                        <option value="simple">Simple</option>
-                        <option value="custom">Custom</option>
-                      </select>
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showLogoOnReceipt}
+                        onChange={(e) => handleInputChange('showLogoOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Store Logo
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showGstOnReceipt}
+                        onChange={(e) => handleInputChange('showGstOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show GST on Receipt
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showTableOnReceipt}
+                        onChange={(e) => handleInputChange('showTableOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Table on Receipt
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showCustomerOnReceipt}
+                        onChange={(e) => handleInputChange('showCustomerOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Customer on Receipt
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showCashierOnReceipt}
+                        onChange={(e) => handleInputChange('showCashierOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Cashier/Staff on Receipt
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showEmailOnReceipt}
+                        onChange={(e) => handleInputChange('showEmailOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Email on Receipt
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showPaymentDetailsOnReceipt}
+                        onChange={(e) => handleInputChange('showPaymentDetailsOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Payment Details on Receipt
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.showBillIdOnReceipt}
+                        onChange={(e) => handleInputChange('showBillIdOnReceipt', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Show Bill ID on Receipt
+                    </label>
                   </div>
                 </div>
               </div>
             )}
+
 
             {activeSection === 'pos' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
