@@ -732,6 +732,15 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
     allergens: ''
   });
 
+  // Sync menu items to localStorage for QR ordering and other components
+  useEffect(() => {
+    try {
+      localStorage.setItem('bakery_menu', JSON.stringify(menuItems));
+    } catch (error) {
+      console.error('Error saving menu to localStorage:', error);
+    }
+  }, [menuItems]);
+
   const categories = ['ALL', 'Breads', 'Pastries', 'Cakes', 'Coffee', 'Beverages'];
 
   const filteredItems = useMemo(() => {

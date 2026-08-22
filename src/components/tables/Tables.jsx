@@ -997,13 +997,42 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                             <div>
                               <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#e0e0e0' }}>
                                 {item.name}
+                                {item.isCustom && (
+                                  <span style={{ 
+                                    marginLeft: '4px', 
+                                    fontSize: '10px', 
+                                    padding: '1px 4px', 
+                                    borderRadius: '3px',
+                                    background: '#fef3c7',
+                                    color: '#92400e',
+                                    border: '1px solid #f59e0b',
+                                    fontWeight: '600'
+                                  }}>
+                                    Custom
+                                  </span>
+                                )}
                               </div>
                               <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: '#8b8b9e' }}>
-                                Qty: {item.qty || 1}
+                                Qty: {item.qty || item.quantity || 1}
                               </div>
+                              {item.baseItemName && (
+                                <div style={{ fontSize: '10px', color: '#92400e', fontStyle: 'italic' }}>
+                                  Base: {item.baseItemName}
+                                </div>
+                              )}
+                              {item.notes && (
+                                <div style={{ 
+                                  fontSize: '10px', 
+                                  color: item.noteType === 'allergy' ? '#ef4444' : '#8b8b9e',
+                                  fontStyle: 'italic',
+                                  marginTop: '2px'
+                                }}>
+                                  {item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 '}{item.notes}
+                                </div>
+                              )}
                             </div>
                             <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: '#e0e0e0' }}>
-                              ₹{((item.price || 0) * (item.qty || 1)).toFixed(2)}
+                              ₹{((item.price || 0) * (item.qty || item.quantity || 1)).toFixed(2)}
                             </div>
                           </div>
                         ))}

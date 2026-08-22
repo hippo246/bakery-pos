@@ -11,6 +11,8 @@ import WarningDialog from "../common/WarningDialog";
 import PromptDialog from "../common/PromptDialog";
 import SelectionDialog from "../common/SelectionDialog";
 import { useAppContext } from "../../context/AppContext.jsx";
+import SpeakButton from "../voice/SpeakButton";
+import textToSpeechService from "../../services/voice/TextToSpeechService";
 
 const DELIVERY_PARTNERS = {
   DIRECT_DELIVERY: { id: "direct", name: "Direct Delivery", color: "#4CAF50", icon: "🟢", commission: 0, settlementDays: 0, features: ["custom"] },
@@ -944,6 +946,10 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
                         {p.name.split(" ")[0]}
                       </span>
                     </div>
+                    <SpeakButton
+                      onGenerateText={() => textToSpeechService.generateDeliverySpeechText(o)}
+                      size="small"
+                    />
                     {elapsedMin !== null && (
                       <span style={{ fontSize: isMobile ? "var(--cafe-font-xs)" : "var(--cafe-font-xs)", color: "var(--cafe-text-tertiary)" }}>
                         {elapsedMin}m waiting

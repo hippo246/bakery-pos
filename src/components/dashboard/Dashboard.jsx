@@ -1,9 +1,23 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import SpeakButton from '../voice/SpeakButton';
+import textToSpeechService from '../../services/voice/TextToSpeechService';
 
 export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate }) {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
   const [activeTab, setActiveTab] = useState('overview');
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [orderFilter, setOrderFilter] = useState('all'); // 'all', 'pending', 'preparing', 'completed', 'cancelled'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+  // Real-time clock update
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Screen size detection
   useEffect(() => {
@@ -23,18 +37,48 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Calculate key metrics
+  // Calculate key metrics with real-time data
   const metrics = useMemo(() => {
     const today = new Date().toDateString();
     const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today);
     const completedOrders = todayOrders.filter(o => o.status === 'COMPLETED');
+    const activeOrders = orders.filter(o => o.status === 'PREPARING' || o.status === 'PENDING');
+    const pendingOrders = orders.filter(o => o.status === 'PENDING');
     
-    const totalSales = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalSales = completedOrders.reduce((sum, o) => {
+      const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+      const subtotal = o.subtotal || calculatedSubtotal;
+      const tax = o.tax || 0;
+      const discount = o.discount || 0;
+      const total = o.total || (subtotal + tax - discount);
+      return sum + total;
+    }, 0);
     const totalOrders = completedOrders.length;
     const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
     
     const activeMenuItems = menuItems.filter(m => m.active && !m.eightySixed).length;
     const lowStockItems = inventory.filter(i => i.quantity <= i.minStock).length;
+    const outOfStockItems = inventory.filter(i => i.quantity === 0).length;
+    
+    // Calculate hourly sales for real-time chart
+    const hourlySales = {};
+    const currentHour = currentTime.getHours();
+    for (let i = 0; i <= currentHour; i++) {
+      hourlySales[i] = { orders: 0, revenue: 0 };
+    }
+    
+    completedOrders.forEach(order => {
+      const hour = new Date(order.createdAt).getHours();
+      if (hourlySales[hour]) {
+        hourlySales[hour].orders += 1;
+        const calculatedSubtotal = order.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+        const subtotal = order.subtotal || calculatedSubtotal;
+        const tax = order.tax || 0;
+        const discount = order.discount || 0;
+        const total = order.total || (subtotal + tax - discount);
+        hourlySales[hour].revenue += total;
+      }
+    });
     
     // Calculate top selling items
     const itemSales = {};
@@ -65,21 +109,72 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       }))
       .sort((a, b) => b.sales - a.sales);
     
+    // Payment method breakdown
+    const paymentMethods = {};
+    completedOrders.forEach(order => {
+      const method = order.paymentMethod || 'CASH';
+      const calculatedSubtotal = order.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+      const subtotal = order.subtotal || calculatedSubtotal;
+      const tax = order.tax || 0;
+      const discount = order.discount || 0;
+      const total = order.total || (subtotal + tax - discount);
+      paymentMethods[method] = (paymentMethods[method] || 0) + total;
+    });
+    
     return {
       totalSales,
       totalOrders,
       avgOrderValue,
       activeMenuItems,
       lowStockItems,
+      outOfStockItems,
       topItems,
-      categoryBreakdown
+      categoryBreakdown,
+      hourlySales,
+      activeOrders: activeOrders.length,
+      pendingOrders: pendingOrders.length,
+      paymentMethods
     };
-  }, [orders, menuItems, inventory]);
+  }, [orders, menuItems, inventory, currentTime]);
 
   const recentOrders = orders
     .filter(o => o.status !== 'CANCELLED')
     .slice(0, 8)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // Filter orders for billing tab
+  const filteredOrders = useMemo(() => {
+    let filtered = orders;
+    
+    // Apply date range filter
+    if (dateRange.start) {
+      const startDate = new Date(dateRange.start);
+      filtered = filtered.filter(o => new Date(o.createdAt) >= startDate);
+    }
+    if (dateRange.end) {
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59);
+      filtered = filtered.filter(o => new Date(o.createdAt) <= endDate);
+    }
+    
+    // Apply status filter
+    if (orderFilter !== 'all') {
+      filtered = filtered.filter(o => o.status === orderFilter.toUpperCase());
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(o => 
+        o.id?.toString().includes(query) ||
+        o.items?.some(item => item.name?.toLowerCase().includes(query)) ||
+        o.customer?.name?.toLowerCase().includes(query) ||
+        o.table?.toString().includes(query)
+      );
+    }
+    
+    return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [orders, orderFilter, searchQuery, dateRange]);
 
   const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
@@ -92,6 +187,472 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return date.toLocaleDateString();
+  };
+
+  const handleViewOrder = (order) => {
+    const calculatedSubtotal = order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+    const subtotal = order.subtotal || calculatedSubtotal;
+    const tax = order.tax || 0;
+    const discount = order.discount || 0;
+    const total = order.total || (subtotal + tax - discount);
+    
+    setSelectedOrder({
+      ...order,
+      _calculated: {
+        subtotal,
+        tax,
+        discount,
+        total
+      }
+    });
+    setShowOrderModal(true);
+  };
+
+  const handlePrintOrder = (order) => {
+    const calculatedSubtotal = order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+    const subtotal = order.subtotal || calculatedSubtotal;
+    const tax = order.tax || 0;
+    const discount = order.discount || 0;
+    const total = order.total || (subtotal + tax - discount);
+    
+    const printContent = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Order #${order.id}</h2>
+        <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
+        <p><strong>Status:</strong> ${order.status}</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod || 'CASH'}</p>
+        ${order.table ? `<p><strong>Table:</strong> ${order.table}</p>` : ''}
+        ${order.customer ? `<p><strong>Customer:</strong> ${order.customer.name}</p>` : ''}
+        <h3>Items:</h3>
+        <ul>
+          ${order.items?.map(item => `<li>${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}</li>`).join('') || '<li>No items</li>'}
+        </ul>
+        <p><strong>Subtotal:</strong> ₹${subtotal.toFixed(2)}</p>
+        <p><strong>Tax:</strong> ₹${tax.toFixed(2)}</p>
+        <p><strong>Discount:</strong> ₹${discount.toFixed(2)}</p>
+        <h3><strong>Total:</strong> ₹${total.toFixed(2)}</h3>
+      </div>
+    `;
+    
+    const printWindow = window.open('', '', 'width=600,height=600');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const handleExportOrders = () => {
+    const csvContent = [
+      ['Order ID', 'Date', 'Status', 'Customer', 'Table', 'Items', 'Subtotal', 'Tax', 'Discount', 'Total', 'Payment Method'],
+      ...filteredOrders.map(o => {
+        const calculatedSubtotal = o.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+        const subtotal = o.subtotal || calculatedSubtotal;
+        const tax = o.tax || 0;
+        const discount = o.discount || 0;
+        const total = o.total || (subtotal + tax - discount);
+        
+        return [
+          o.id,
+          new Date(o.createdAt).toLocaleString(),
+          o.status,
+          o.customer?.name || 'N/A',
+          o.table || 'N/A',
+          o.items?.map(i => `${i.name} x${i.quantity}`).join('; ') || 'N/A',
+          subtotal.toFixed(2),
+          tax.toFixed(2),
+          discount.toFixed(2),
+          total.toFixed(2),
+          o.paymentMethod || 'CASH'
+        ];
+      })
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPDF = () => {
+    const storeName = settings.storeName || 'BakeryPOS';
+    const storeAddress = settings.storeAddress || '';
+    const storePhone = settings.phone || '';
+    const storeEmail = settings.email || '';
+    const gstin = settings.gstin || '';
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Orders Report - ${storeName}</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+          
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          
+          body { 
+            font-family: 'Inter', Arial, sans-serif; 
+            padding: 40px;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            line-height: 1.6;
+          }
+          
+          .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          
+          .header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #6366f1;
+            margin-bottom: 30px;
+          }
+          
+          .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+          }
+          
+          .header .subtitle {
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 20px;
+          }
+          
+          .company-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 14px;
+            color: #6b7280;
+            flex-wrap: wrap;
+          }
+          
+          .company-info span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          
+          .report-meta {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+          }
+          
+          .report-meta h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+          }
+          
+          .report-meta .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            font-size: 14px;
+          }
+          
+          .report-meta .meta-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 6px;
+          }
+          
+          .report-meta .meta-item label {
+            display: block;
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+          }
+          
+          .report-meta .meta-item span {
+            font-weight: 600;
+            font-size: 15px;
+          }
+          
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          }
+          
+          thead {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+          }
+          
+          th { 
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          td { 
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+          }
+          
+          tr:nth-child(even) { background-color: #f9fafb; }
+          
+          tr:hover { background-color: #f3f4f6; }
+          
+          .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          
+          .status-completed { background: #d1fae5; color: #065f46; }
+          .status-pending { background: #fef3c7; color: #92400e; }
+          .status-cancelled { background: #fee2e2; color: #991b1b; }
+          
+          .payment-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #e0e7ff;
+            color: #4338ca;
+          }
+          
+          .items-cell {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          
+          .summary { 
+            margin-top: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+          }
+          
+          .summary h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #6366f1;
+          }
+          
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+          }
+          
+          .summary-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          }
+          
+          .summary-item label {
+            display: block;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 500;
+          }
+          
+          .summary-item .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a2e;
+          }
+          
+          .summary-item .value.highlight {
+            color: #10b981;
+            font-size: 28px;
+          }
+          
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+          }
+          
+          .footer .page-number {
+            margin-top: 8px;
+            font-weight: 600;
+          }
+          
+          @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📊 Orders Report</h1>
+            <div class="subtitle">${storeName}</div>
+            <div class="company-info">
+              ${storeAddress ? `<span>📍 ${storeAddress}</span>` : ''}
+              ${storePhone ? `<span>📞 ${storePhone}</span>` : ''}
+              ${storeEmail ? `<span>✉️ ${storeEmail}</span>` : ''}
+              ${gstin ? `<span>🏷️ GSTIN: ${gstin}</span>` : ''}
+            </div>
+          </div>
+          
+          <div class="report-meta">
+            <h2>📅 Report Details</h2>
+            <div class="meta-grid">
+              <div class="meta-item">
+                <label>Generated On</label>
+                <span>${new Date().toLocaleString()}</span>
+              </div>
+              <div class="meta-item">
+                <label>Date Range</label>
+                <span>${dateRange.start ? new Date(dateRange.start).toLocaleDateString() : 'All'} - ${dateRange.end ? new Date(dateRange.end).toLocaleDateString() : 'Present'}</span>
+              </div>
+              <div class="meta-item">
+                <label>Total Orders</label>
+                <span>${filteredOrders.length}</span>
+              </div>
+              <div class="meta-item">
+                <label>Report Type</label>
+                <span>Detailed Analysis</span>
+              </div>
+            </div>
+          </div>
+        
+          <table>
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Date & Time</th>
+                <th>Status</th>
+                <th>Customer</th>
+                <th>Table</th>
+                <th>Items</th>
+                <th>Subtotal</th>
+                <th>Tax</th>
+                <th>Discount</th>
+                <th>Total</th>
+                <th>Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredOrders.map(o => {
+                const calculatedSubtotal = o.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+                const subtotal = o.subtotal || calculatedSubtotal;
+                const tax = o.tax || 0;
+                const discount = o.discount || 0;
+                const total = o.total || (subtotal + tax - discount);
+                const statusClass = o.status?.toLowerCase() === 'completed' ? 'status-completed' : 
+                                   o.status?.toLowerCase() === 'pending' ? 'status-pending' : 'status-cancelled';
+                
+                return `
+                  <tr>
+                    <td><strong>${o.id}</strong></td>
+                    <td>${new Date(o.createdAt).toLocaleString()}</td>
+                    <td><span class="status-badge ${statusClass}">${o.status}</span></td>
+                    <td>${o.customer?.name || 'Walk-in'}</td>
+                    <td>${o.table || 'N/A'}</td>
+                    <td class="items-cell">${o.items?.map(i => `${i.name} x${i.quantity}`).join(', ') || 'N/A'}</td>
+                    <td><strong>₹${subtotal.toFixed(2)}</strong></td>
+                    <td>₹${tax.toFixed(2)}</td>
+                    <td style="color: #10b981;">-₹${discount.toFixed(2)}</td>
+                    <td style="font-weight: 700; color: #6366f1;">₹${total.toFixed(2)}</td>
+                    <td><span class="payment-badge">${o.paymentMethod || 'CASH'}</span></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+
+          <div class="summary">
+            <h3>📈 Financial Summary</h3>
+            <div class="summary-grid">
+              <div class="summary-item">
+                <label>Total Orders</label>
+                <div class="value">${filteredOrders.length}</div>
+              </div>
+              <div class="summary-item">
+                <label>Total Revenue</label>
+                <div class="value">₹${filteredOrders.reduce((sum, o) => {
+                  const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+                  const subtotal = o.subtotal || calculatedSubtotal;
+                  const tax = o.tax || 0;
+                  const discount = o.discount || 0;
+                  const total = o.total || (subtotal + tax - discount);
+                  return sum + total;
+                }, 0).toFixed(2)}</div>
+              </div>
+              <div class="summary-item">
+                <label>Total Discounts</label>
+                <div class="value" style="color: #10b981;">₹${filteredOrders.reduce((sum, o) => sum + (o.discount || 0), 0).toFixed(2)}</div>
+              </div>
+              <div class="summary-item">
+                <label>Average Order Value</label>
+                <div class="value">₹${filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
+                  const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+                  const subtotal = o.subtotal || calculatedSubtotal;
+                  const tax = o.tax || 0;
+                  const discount = o.discount || 0;
+                  const total = o.total || (subtotal + tax - discount);
+                  return sum + total;
+                }, 0) / filteredOrders.length).toFixed(2) : '0.00'}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>Report generated by ${storeName} POS System</p>
+            <p>© ${new Date().getFullYear()} ${storeName}. All rights reserved.</p>
+            <div class="page-number">Page 1 of 1</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   return (
@@ -133,7 +694,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
           </div>
           
           {/* Tab Navigation */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <button
               onClick={() => setActiveTab('overview')}
               style={{
@@ -162,8 +723,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 cursor: 'pointer'
               }}
             >
-              Billing & Orders
+              Billing
             </button>
+            <SpeakButton
+              onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
+              size="medium"
+            />
           </div>
         </div>
       </div>
@@ -175,7 +740,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             {/* Stats Grid */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)',
               gap: screenSize === 'small' ? '12px' : '20px',
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
@@ -192,177 +757,229 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 value={metrics.totalOrders}
                 change="+8.2%"
                 trend="up"
-                color="#22c55e"
+                color="#10b981"
                 screenSize={screenSize}
               />
               <StatCard
-                label="Avg Order"
-                value={`₹${Math.round(metrics.avgOrderValue)}`}
-                change="-2.1%"
-                trend="down"
+                label="Active Orders"
+                value={metrics.activeOrders}
+                change="Live"
+                trend="neutral"
                 color="#f59e0b"
                 screenSize={screenSize}
               />
               <StatCard
-                label="Active Items"
-                value={metrics.activeMenuItems}
-                change="+5"
-                trend="up"
-                color="#ec4899"
+                label="Pending"
+                value={metrics.pendingOrders}
+                change="Live"
+                trend="neutral"
+                color="#ef4444"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Low Stock"
+                value={metrics.lowStockItems}
+                change="Alert"
+                trend="down"
+                color="#f97316"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Out of Stock"
+                value={metrics.outOfStockItems}
+                change="Alert"
+                trend="down"
+                color="#dc2626"
                 screenSize={screenSize}
               />
             </div>
 
-            {/* Middle Row - Category Chart + Top Items */}
+            {/* Real-time Clock & Status */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1fr',
-              gap: screenSize === 'small' ? '16px' : '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '28px',
+              padding: '20px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              borderRadius: '16px'
+            }}>
+              <div>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
+                  Current Time
+                </div>
+                <div style={{ fontSize: '32px', fontWeight: '700', color: '#ffffff' }}>
+                  {currentTime.toLocaleTimeString()}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
+                  System Status
+                </div>
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '8px 16px',
+                  background: 'rgba(255,255,255,0.2)',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#ffffff'
+                }}>
+                  <span style={{ 
+                    width: '8px', 
+                    height: '8px', 
+                    background: '#10b981', 
+                    borderRadius: '50%',
+                    animation: 'pulse 2s infinite'
+                  }}></span>
+                  Live
+                </div>
+              </div>
+            </div>
+
+            {/* Real-time Hourly Sales Chart */}
+            <div style={{
+              background: '#252538',
+              borderRadius: '16px',
+              padding: screenSize === 'small' ? '16px' : '24px',
+              border: '1px solid #2d2d44',
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
-              {/* Category Chart */}
               <div style={{
-                background: '#252538',
-                borderRadius: '16px',
-                padding: screenSize === 'small' ? '16px' : '24px',
-                border: '1px solid #2d2d44'
+                fontSize: screenSize === 'small' ? '16px' : '18px',
+                fontWeight: '600',
+                color: '#ffffff',
+                marginBottom: screenSize === 'small' ? '16px' : '24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
               }}>
-                <div style={{
-                  fontSize: screenSize === 'small' ? '16px' : '18px',
-                  fontWeight: '600',
-                  color: '#ffffff',
-                  marginBottom: screenSize === 'small' ? '16px' : '24px'
+                <span>📊 Real-time Hourly Sales</span>
+                <span style={{ 
+                  fontSize: '12px', 
+                  color: '#10b981',
+                  padding: '4px 12px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  borderRadius: '12px'
                 }}>
-                  Sales by Category
-                </div>
-                
-                {metrics.categoryBreakdown.length === 0 ? (
-                  <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
-                    <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No data available</div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '16px' : '32px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
-                    <div style={{
-                      width: screenSize === 'small' ? '120px' : '160px',
-                      height: screenSize === 'small' ? '120px' : '160px',
-                      position: 'relative'
-                    }}>
-                      <svg width={screenSize === 'small' ? '120' : '160'} height={screenSize === 'small' ? '120' : '160'} viewBox="0 0 160 160">
-                        {metrics.categoryBreakdown.map((cat, index) => {
-                          const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4'];
-                          const startAngle = index === 0 ? 0 : metrics.categoryBreakdown.slice(0, index).reduce((sum, c) => sum + parseFloat(c.percentage), 0) * 3.6;
-                          const endAngle = startAngle + parseFloat(cat.percentage) * 3.6;
-                          const largeArcFlag = parseFloat(cat.percentage) > 50 ? 1 : 0;
-                          
-                          const x1 = 80 + 70 * Math.cos((startAngle - 90) * Math.PI / 180);
-                          const y1 = 80 + 70 * Math.sin((startAngle - 90) * Math.PI / 180);
-                          const x2 = 80 + 70 * Math.cos((endAngle - 90) * Math.PI / 180);
-                          const y2 = 80 + 70 * Math.sin((endAngle - 90) * Math.PI / 180);
-                          
-                          return (
-                            <path
-                              key={cat.category}
-                              d={`M 80 80 L ${x1} ${y1} A 70 70 0 ${largeArcFlag} 1 ${x2} ${y2} Z`}
-                              fill={colors[index % colors.length]}
-                              opacity="0.85"
-                            />
-                          );
-                        })}
-                        <circle cx="80" cy="80" r="40" fill="#252538" />
-                      </svg>
-                      <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        textAlign: 'center'
-                      }}>
-                        <div style={{ fontSize: screenSize === 'small' ? '16px' : '20px', fontWeight: '700', color: '#ffffff' }}>
-                          {metrics.categoryBreakdown.length}
-                        </div>
-                        <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: '#8b8b9e' }}>
-                          Cats
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div style={{ flex: 1, width: '100%' }}>
-                      {metrics.categoryBreakdown.map((cat, index) => {
-                        const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ec4899', '#06b6d4'];
-                        return (
-                          <div key={cat.category} style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px', marginBottom: screenSize === 'small' ? '10px' : '14px' }}>
-                            <div style={{
-                              width: screenSize === 'small' ? '10px' : '12px',
-                              height: screenSize === 'small' ? '10px' : '12px',
-                              borderRadius: '3px',
-                              background: colors[index % colors.length]
-                            }} />
-                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>{cat.category}</span>
-                              <span style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>{cat.percentage}%</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  Live
+                </span>
               </div>
-
-              {/* Top Items */}
-              <div style={{
-                background: '#252538',
-                borderRadius: '16px',
-                padding: screenSize === 'small' ? '16px' : '24px',
-                border: '1px solid #2d2d44'
+              
+              <div style={{ 
+                height: '200px',
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: '8px',
+                padding: '20px 0'
               }}>
-                <div style={{
-                  fontSize: screenSize === 'small' ? '16px' : '18px',
-                  fontWeight: '600',
-                  color: '#ffffff',
-                  marginBottom: screenSize === 'small' ? '16px' : '24px'
-                }}>
-                  Top Selling Items
-                </div>
-                
-                {metrics.topItems.length === 0 ? (
-                  <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
-                    <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No data available</div>
-                  </div>
-                ) : (
-                  <div>
-                    {metrics.topItems.map((item, index) => (
-                      <div key={item.name} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: screenSize === 'small' ? '10px 0' : '14px 0',
-                        borderBottom: index < metrics.topItems.length - 1 ? '1px solid #2d2d44' : 'none'
+                {Object.entries(metrics.hourlySales).map(([hour, data], index) => {
+                  const maxRevenue = Math.max(...Object.values(metrics.hourlySales).map(d => d.revenue), 1);
+                  const height = (data.revenue / maxRevenue) * 160;
+                  const isCurrentHour = parseInt(hour) === currentTime.getHours();
+                  
+                  return (
+                    <div key={hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ 
+                        width: '100%',
+                        height: `${Math.max(height, 4)}px`,
+                        background: isCurrentHour ? '#6366f1' : '#3b3b5c',
+                        borderRadius: '4px',
+                        transition: 'all 0.3s ease',
+                        position: 'relative'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px' }}>
+                        {data.revenue > 0 && (
                           <div style={{
-                            width: screenSize === 'small' ? '28px' : '32px',
-                            height: screenSize === 'small' ? '28px' : '32px',
-                            borderRadius: '8px',
-                            background: '#2d2d44',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: screenSize === 'small' ? '12px' : '14px',
-                            fontWeight: '600',
-                            color: '#8b8b9e'
+                            position: 'absolute',
+                            top: '-20px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            fontSize: '10px',
+                            color: '#8b8b9e',
+                            whiteSpace: 'nowrap'
                           }}>
-                            {index + 1}
+                            ₹{Math.round(data.revenue)}
                           </div>
-                          <span style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>{item.name}</span>
-                        </div>
-                        <span style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '600', color: '#ffffff' }}>
-                          {item.qty}
-                        </span>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div style={{ 
+                        fontSize: '10px', 
+                        color: isCurrentHour ? '#6366f1' : '#6b6b7e',
+                        fontWeight: isCurrentHour ? '600' : '400'
+                      }}>
+                        {parseInt(hour)}:00
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Payment Methods Breakdown */}
+            <div style={{
+              background: '#252538',
+              borderRadius: '16px',
+              padding: screenSize === 'small' ? '16px' : '24px',
+              border: '1px solid #2d2d44',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
+            }}>
+              <div style={{
+                fontSize: screenSize === 'small' ? '16px' : '18px',
+                fontWeight: '600',
+                color: '#ffffff',
+                marginBottom: screenSize === 'small' ? '16px' : '24px'
+              }}>
+                💳 Payment Methods
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                {Object.entries(metrics.paymentMethods).map(([method, amount]) => {
+                  const total = Object.values(metrics.paymentMethods).reduce((sum, val) => sum + val, 0);
+                  const percentage = total > 0 ? (amount / total * 100).toFixed(1) : 0;
+                  const colors = {
+                    'CASH': '#10b981',
+                    'CARD': '#3b82f6',
+                    'UPI': '#f59e0b',
+                    'default': '#8b5cf6'
+                  };
+                  const icons = {
+                    'CASH': '💵',
+                    'CARD': '💳',
+                    'UPI': '📱',
+                    'default': '💰'
+                  };
+                  
+                  return (
+                    <div key={method} style={{
+                      background: '#1a1a2e',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      border: '1px solid #2d2d44'
+                    }}>
+                      <div style={{ 
+                        fontSize: '24px', 
+                        marginBottom: '8px' 
+                      }}>
+                        {icons[method] || icons.default}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>
+                        {method}
+                      </div>
+                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
+                        ₹{amount.toLocaleString()}
+                      </div>
+                      <div style={{ 
+                        fontSize: '12px', 
+                        color: colors[method] || colors.default,
+                        fontWeight: '500'
+                      }}>
+                        {percentage}%
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -379,54 +996,43 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 color: '#ffffff',
                 marginBottom: screenSize === 'small' ? '16px' : '24px'
               }}>
-                Recent Orders
+                📋 Recent Orders
               </div>
               
               {recentOrders.length === 0 ? (
-                <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No recent orders</div>
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                  <div style={{ fontSize: '14px' }}>No orders yet</div>
                 </div>
               ) : (
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {recentOrders.map(order => (
                     <div key={order.id} style={{
                       display: 'flex',
-                      alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: screenSize === 'small' ? '12px 0' : '16px 0',
-                      borderBottom: '1px solid #2d2d44',
-                      flexDirection: screenSize === 'small' ? 'column' : 'row',
-                      alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-                      gap: screenSize === 'small' ? '8px' : '0'
+                      alignItems: 'center',
+                      padding: '16px',
+                      background: '#1a1a2e',
+                      borderRadius: '12px',
+                      border: '1px solid #2d2d44'
                     }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '16px', width: screenSize === 'small' ? '100%' : 'auto' }}>
-                        <div style={{
-                          padding: screenSize === 'small' ? '6px 10px' : '8px 14px',
-                          borderRadius: '8px',
-                          background: order.status === 'COMPLETED' ? '#22c55e20' : '#f59e0b20',
-                          color: order.status === 'COMPLETED' ? '#22c55e' : '#f59e0b',
-                          fontSize: screenSize === 'small' ? '10px' : '12px',
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}>
-                          {order.status}
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                          Order #{order.id}
                         </div>
-                        <div>
-                          <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0', fontWeight: '500' }}>
-                            Order #{order.id?.slice(-6)}
-                          </div>
-                          <div style={{ fontSize: screenSize === 'small' ? '10px' : '12px', color: '#8b8b9e', marginTop: '2px' }}>
-                            {order.tableName || 'Counter'}
-                          </div>
+                        <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
+                          {order.items?.map(item => item.name).join(', ') || 'No items'}
                         </div>
                       </div>
-                      <div style={{ textAlign: screenSize === 'small' ? 'left' : 'right', width: screenSize === 'small' ? '100%' : 'auto' }}>
-                        <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '600', color: '#ffffff' }}>
-                          ₹{order.total?.toLocaleString()}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>
+                          ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
                         </div>
-                        <div style={{ fontSize: screenSize === 'small' ? '10px' : '12px', color: '#8b8b9e', marginTop: '2px' }}>
-                          {formatTimeAgo(order.createdAt)}
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: order.status === 'COMPLETED' ? '#10b981' : order.status === 'PREPARING' ? '#f59e0b' : '#ef4444',
+                          fontWeight: '500'
+                        }}>
+                          {order.status}
                         </div>
                       </div>
                     </div>
@@ -436,368 +1042,307 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             </div>
           </>
         ) : (
-          <BillingTab orders={orders} screenSize={screenSize} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Billing Tab Component
-function BillingTab({ orders, screenSize }) {
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [showOrderModal, setShowOrderModal] = useState(false);
-
-  const filteredOrders = orders.filter(order => {
-    const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
-    const matchesSearch = searchTerm === '' || 
-      order.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.tableNumber?.toString().includes(searchTerm);
-    return matchesStatus && matchesSearch;
-  }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-  const totalOrders = filteredOrders.length;
-
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
-    setShowOrderModal(true);
-  };
-
-  const handlePrintOrder = (order) => {
-    const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discountAmt = order.discountAmount || (subtotal * (order.discount || 0)) / 100;
-    const taxAmt = order.taxAmount || ((subtotal - discountAmt) * (order.gstRate || 0)) / 100;
-    
-    let receiptHTML = `
-      <div style="
-        font-family: monospace;
-        font-size: 12px;
-        line-height: 1.4;
-        color: #000;
-        padding: 16px;
-        background: #fff;
-        max-width: 280px;
-        margin: 0 auto;
-      ">
-        <div style="text-align: center; margin-bottom: 12px;">
-          <div style="font-size: 16px; font-weight: bold;">BakeryPOS</div>
-          ${order.storeAddress ? `<div style="font-size: 10px;">${order.storeAddress}</div>` : ''}
-          ${order.phone ? `<div style="font-size: 10px;">Tel: ${order.phone}</div>` : ''}
-        </div>
-        <div style="border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Order #: ${order.id}</span>
-            <span>Token: ${order.token || 'N/A'}</span>
-          </div>
-          <div style="font-size: 10px;">${new Date(order.createdAt).toLocaleString()}</div>
-          ${order.tableNumber ? `<div>Table: ${order.tableNumber}</div>` : ''}
-          <div>Customer: ${order.customerName || 'Walk-in'}</div>
-        </div>
-        <div style="margin-bottom: 8px;">
-          ${order.items.map(item => `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <div>
-                <div>${item.name}${item.isCustom ? ' (Custom)' : ''}</div>
-                <div style="font-size: 10px;">${item.quantity} x ₹${item.price}</div>
+          <>
+            {/* Billing & Orders Tab */}
+            <div style={{ marginBottom: '24px' }}>
+              {/* Filters */}
+              <div style={{
+                display: 'flex',
+                gap: '12px',
+                marginBottom: '20px',
+                flexWrap: 'wrap'
+              }}>
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    flex: 1,
+                    minWidth: '200px',
+                    padding: '12px 16px',
+                    background: '#252538',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px'
+                  }}
+                />
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                  style={{
+                    padding: '12px 16px',
+                    background: '#252538',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                  style={{
+                    padding: '12px 16px',
+                    background: '#252538',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <select
+                  value={orderFilter}
+                  onChange={(e) => setOrderFilter(e.target.value)}
+                  style={{
+                    padding: '12px 16px',
+                    background: '#252538',
+                    border: '1px solid #2d2d44',
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="all">All Orders</option>
+                  <option value="pending">Pending</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+                <button
+                  onClick={handleExportOrders}
+                  style={{
+                    padding: '12px 16px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📥 Export CSV
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  style={{
+                    padding: '12px 16px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📄 Export PDF
+                </button>
+                {(dateRange.start || dateRange.end) && (
+                  <button
+                    onClick={() => setDateRange({ start: '', end: '' })}
+                    style={{
+                      padding: '12px 16px',
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear Date Filter
+                  </button>
+                )}
               </div>
-              <div>₹${item.quantity * item.price}</div>
-            </div>
-          `).join('')}
-        </div>
-        <div style="border-top: 1px dashed #000; padding-top: 8px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Subtotal:</span>
-            <span>₹${subtotal.toFixed(2)}</span>
-          </div>
-          ${(order.discount || 0) > 0 ? `
-            <div style="display: flex; justify-content: space-between;">
-              <span>Discount (${order.discount}%):</span>
-              <span>-₹${discountAmt.toFixed(2)}</span>
-            </div>
-          ` : ''}
-          ${(order.gstRate || 0) > 0 ? `
-            <div style="display: flex; justify-content: space-between;">
-              <span>GST (${order.gstRate}%):</span>
-              <span>₹${taxAmt.toFixed(2)}</span>
-            </div>
-          ` : ''}
-          <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 4px;">
-            <span>TOTAL:</span>
-            <span>₹${order.total.toFixed(2)}</span>
-          </div>
-          <div style="margin-top: 4px; font-size: 10px;">
-            Paid: ${order.splitPayments && order.splitPayments.length > 0 ? 'Split' : order.paymentMethod}
-          </div>
-        </div>
-        <div style="text-align: center; margin-top: 12px; font-size: 10px;">
-          <div>Thank you for your order!</div>
-          <div>Visit us again soon</div>
-        </div>
-      </div>
-    `;
-    
-    const receiptWindow = window.open('', '_blank');
-    receiptWindow.document.write(`
-      <html>
-        <head>
-          <title>Receipt - ${order.id}</title>
-          <style>
-            body { margin: 0; padding: 0; }
-          </style>
-        </head>
-        <body>${receiptHTML}</body>
-      </html>
-    `);
-    receiptWindow.document.close();
-    receiptWindow.print();
-  };
 
-  return (
-    <div>
-      {/* Summary Stats */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-        gap: screenSize === 'small' ? '12px' : '20px',
-        marginBottom: screenSize === 'small' ? '16px' : '24px'
-      }}>
-        <div style={{
-          background: '#252538',
-          borderRadius: '12px',
-          padding: screenSize === 'small' ? '16px' : '20px',
-          border: '1px solid #2d2d44'
-        }}>
-          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-            Total Revenue
-          </div>
-          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff' }}>
-            ₹{totalRevenue.toLocaleString()}
-          </div>
-        </div>
-        <div style={{
-          background: '#252538',
-          borderRadius: '12px',
-          padding: screenSize === 'small' ? '16px' : '20px',
-          border: '1px solid #2d2d44'
-        }}>
-          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-            Total Orders
-          </div>
-          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff' }}>
-            {totalOrders}
-          </div>
-        </div>
-        <div style={{
-          background: '#252538',
-          borderRadius: '12px',
-          padding: screenSize === 'small' ? '16px' : '20px',
-          border: '1px solid #2d2d44'
-        }}>
-          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-            Completed
-          </div>
-          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#22c55e' }}>
-            {filteredOrders.filter(o => o.status === 'COMPLETED').length}
-          </div>
-        </div>
-        <div style={{
-          background: '#252538',
-          borderRadius: '12px',
-          padding: screenSize === 'small' ? '16px' : '20px',
-          border: '1px solid #2d2d44'
-        }}>
-          <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-            Pending
-          </div>
-          <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#f59e0b' }}>
-            {filteredOrders.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED').length}
-          </div>
-        </div>
-      </div>
+              {/* Order Stats */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                gap: '16px',
+                marginBottom: '24px'
+              }}>
+                <div style={{
+                  background: '#252538',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: '1px solid #2d2d44'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Orders</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff' }}>
+                    {filteredOrders.length}
+                  </div>
+                </div>
+                <div style={{
+                  background: '#252538',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: '1px solid #2d2d44'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Revenue</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
+                    ₹{filteredOrders.reduce((sum, o) => {
+                      const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+                      const subtotal = o.subtotal || calculatedSubtotal;
+                      const tax = o.tax || 0;
+                      const discount = o.discount || 0;
+                      const total = o.total || (subtotal + tax - discount);
+                      return sum + total;
+                    }, 0).toLocaleString()}
+                  </div>
+                </div>
+                <div style={{
+                  background: '#252538',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: '1px solid #2d2d44'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Avg Order Value</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>
+                    ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
+                      const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+                      const subtotal = o.subtotal || calculatedSubtotal;
+                      const tax = o.tax || 0;
+                      const discount = o.discount || 0;
+                      const total = o.total || (subtotal + tax - discount);
+                      return sum + total;
+                    }, 0) / filteredOrders.length).toFixed(0) : 0}
+                  </div>
+                </div>
+                <div style={{
+                  background: '#252538',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: '1px solid #2d2d44'
+                }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Pending</div>
+                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>
+                    {filteredOrders.filter(o => o.status === 'PENDING').length}
+                  </div>
+                </div>
+              </div>
 
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: screenSize === 'small' ? '12px' : '16px',
-        marginBottom: screenSize === 'small' ? '16px' : '24px',
-        flexWrap: 'wrap'
-      }}>
-        <input
-          type="text"
-          placeholder="Search orders..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            flex: 1,
-            minWidth: '200px',
-            padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
-            background: '#252538',
-            border: '1px solid #2d2d44',
-            borderRadius: '8px',
-            color: '#ffffff',
-            fontSize: screenSize === 'small' ? '12px' : '14px',
-            outline: 'none'
-          }}
-        />
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={{
-            padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
-            background: '#252538',
-            border: '1px solid #2d2d44',
-            borderRadius: '8px',
-            color: '#ffffff',
-            fontSize: screenSize === 'small' ? '12px' : '14px',
-            outline: 'none'
-          }}
-        >
-          <option value="all">All Status</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="PENDING">Pending</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
-      </div>
-
-      {/* Orders Table */}
-      <div style={{
-        background: '#252538',
-        borderRadius: '16px',
-        border: '1px solid #2d2d44',
-        overflow: 'hidden'
-      }}>
-        <div style={{
-          padding: screenSize === 'small' ? '16px' : '20px',
-          borderBottom: '1px solid #2d2d44',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#ffffff' }}>
-            All Orders
-          </div>
-          <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>
-            {filteredOrders.length} orders
-          </div>
-        </div>
-
-        {filteredOrders.length === 0 ? (
-          <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#6b6b7e' }}>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px' }}>No orders found</div>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #2d2d44' }}>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Order ID
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Date
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Customer
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Table
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Items
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Total
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Payment
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Status
-                  </th>
-                  <th style={{ padding: screenSize === 'small' ? '12px' : '16px', textAlign: 'left', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', fontWeight: '600', textTransform: 'uppercase' }}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((order, index) => (
-                  <tr key={order.id} style={{ borderBottom: index < filteredOrders.length - 1 ? '1px solid #2d2d44' : 'none' }}>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
-                      {order.id?.slice(-8) || 'N/A'}
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
-                      {order.customerName || 'Walk-in'}
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
-                      {order.tableNumber || 'Counter'}
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#8b8b9e' }}>
-                      {order.items?.length || 0} items
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', fontWeight: '600', color: '#ffffff' }}>
-                      ₹{order.total?.toLocaleString() || '0'}
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#e0e0e0' }}>
-                      {order.splitPayments && order.splitPayments.length > 0 ? 'Split' : order.paymentMethod || 'N/A'}
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px' }}>
-                      <span style={{
-                        padding: screenSize === 'small' ? '4px 8px' : '6px 12px',
-                        borderRadius: '6px',
-                        fontSize: screenSize === 'small' ? '10px' : '11px',
-                        fontWeight: '600',
-                        background: order.status === 'COMPLETED' ? '#22c55e20' : order.status === 'CANCELLED' ? '#ef444420' : '#f59e0b20',
-                        color: order.status === 'COMPLETED' ? '#22c55e' : order.status === 'CANCELLED' ? '#ef4444' : '#f59e0b'
+              {/* Orders List */}
+              <div style={{
+                background: '#252538',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid #2d2d44'
+              }}>
+                <div style={{
+                  fontSize: '18px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  marginBottom: '20px'
+                }}>
+                  📋 Orders ({filteredOrders.length})
+                </div>
+                
+                {filteredOrders.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                    <div style={{ fontSize: '14px' }}>No orders found</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {filteredOrders.map(order => (
+                      <div key={order.id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '16px',
+                        background: '#1a1a2e',
+                        borderRadius: '12px',
+                        border: '1px solid #2d2d44'
                       }}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: screenSize === 'small' ? '12px' : '16px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          onClick={() => handleViewOrder(order)}
-                          style={{
-                            padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
-                            background: '#6366f1',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: screenSize === 'small' ? '11px' : '12px',
-                            fontWeight: '500',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => handlePrintOrder(order)}
-                          style={{
-                            padding: screenSize === 'small' ? '6px 12px' : '8px 16px',
-                            background: '#252538',
-                            color: '#ffffff',
-                            border: '1px solid #2d2d44',
-                            borderRadius: '6px',
-                            fontSize: screenSize === 'small' ? '11px' : '12px',
-                            fontWeight: '500',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Print
-                        </button>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>
+                              Order #{order.id}
+                            </div>
+                            {order.table && (
+                              <div style={{
+                                fontSize: '12px',
+                                padding: '4px 8px',
+                                background: '#3b3b5c',
+                                borderRadius: '4px',
+                                color: '#8b8b9e'
+                              }}>
+                                Table {order.table}
+                              </div>
+                            )}
+                            <div style={{ 
+                              fontSize: '12px', 
+                              color: order.status === 'COMPLETED' ? '#10b981' : 
+                                     order.status === 'PREPARING' ? '#f59e0b' : 
+                                     order.status === 'PENDING' ? '#ef4444' : '#6b6b7e',
+                              fontWeight: '500'
+                            }}>
+                              {order.status}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>
+                            {order.items?.map(item => item.name).join(', ') || 'No items'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#6b6b7e' }}>
+                            {formatTimeAgo(order.createdAt)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', marginLeft: '16px' }}>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#ffffff' }}>
+                            ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
+                            {order.paymentMethod || 'CASH'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+                          <button
+                            onClick={() => handleViewOrder(order)}
+                            style={{
+                              padding: '8px 12px',
+                              background: '#6366f1',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                            title="View Order Details"
+                          >
+                            👁️ View
+                          </button>
+                          <button
+                            onClick={() => handlePrintOrder(order)}
+                            style={{
+                              padding: '8px 12px',
+                              background: '#10b981',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                            title="Print Order"
+                          >
+                            🖨️ Print
+                          </button>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -809,144 +1354,171 @@ function BillingTab({ orders, screenSize }) {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
+          background: 'rgba(0,0,0,0.7)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#1a1a2e',
             borderRadius: '16px',
-            padding: screenSize === 'small' ? '20px' : '32px',
-            maxWidth: screenSize === 'small' ? '90%' : '600px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto',
+            padding: '24px',
+            width: '600px',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            overflowY: 'auto',
             border: '1px solid #2d2d44'
           }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: screenSize === 'small' ? '16px' : '24px'
-            }}>
-              <div style={{ fontSize: screenSize === 'small' ? '18px' : '24px', fontWeight: '700', color: '#ffffff' }}>
-                Order Details
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
+                Order #{selectedOrder.id}
+              </h3>
               <button
                 onClick={() => setShowOrderModal(false)}
                 style={{
-                  padding: '8px 16px',
-                  background: '#252538',
+                  padding: '8px 12px',
+                  background: '#2d2d44',
                   color: '#ffffff',
-                  border: '1px solid #2d2d44',
-                  borderRadius: '8px',
-                  fontSize: '14px',
+                  border: 'none',
+                  borderRadius: '6px',
                   cursor: 'pointer'
                 }}
               >
                 ×
               </button>
             </div>
-
-            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
-              <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Order ID</div>
-              <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0', fontWeight: '500' }}>{selectedOrder.id}</div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: screenSize === 'small' ? '12px' : '16px', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Date</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{new Date(selectedOrder.createdAt).toLocaleString()}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Token</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.token || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Customer</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.customerName || 'Walk-in'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Table</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.tableNumber || 'Counter'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Payment Method</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>{selectedOrder.splitPayments && selectedOrder.splitPayments.length > 0 ? 'Split' : selectedOrder.paymentMethod || 'N/A'}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Status</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: selectedOrder.status === 'COMPLETED' ? '#22c55e' : selectedOrder.status === 'CANCELLED' ? '#ef4444' : '#f59e0b', fontWeight: '600' }}>{selectedOrder.status}</div>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
-              <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '600', color: '#ffffff', marginBottom: screenSize === 'small' ? '12px' : '16px' }}>Items</div>
-              <div style={{ background: '#252538', borderRadius: '12px', padding: screenSize === 'small' ? '12px' : '16px', border: '1px solid #2d2d44' }}>
-                {selectedOrder.items?.map((item, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: screenSize === 'small' ? '10px 0' : '12px 0',
-                    borderBottom: index < selectedOrder.items.length - 1 ? '1px solid #2d2d44' : 'none'
-                  }}>
-                    <div>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#e0e0e0' }}>{item.name}{item.isCustom ? ' (Custom)' : ''}</div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>{item.quantity} x ₹{item.price}</div>
-                    </div>
-                    <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '600', color: '#ffffff' }}>₹{item.quantity * item.price}</div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Date</div>
+                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                    {new Date(selectedOrder.createdAt).toLocaleString()}
                   </div>
-                ))}
+                </div>
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Status</div>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: selectedOrder.status === 'COMPLETED' ? '#10b981' : 
+                           selectedOrder.status === 'PREPARING' ? '#f59e0b' : 
+                           selectedOrder.status === 'PENDING' ? '#ef4444' : '#6b6b7e',
+                    fontWeight: '500'
+                  }}>
+                    {selectedOrder.status}
+                  </div>
+                </div>
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Payment Method</div>
+                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                    {selectedOrder.paymentMethod || 'CASH'}
+                  </div>
+                </div>
+                {selectedOrder.table && (
+                  <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Table</div>
+                    <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                      {selectedOrder.table}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: screenSize === 'small' ? '12px' : '16px', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Subtotal</div>
-                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', color: '#e0e0e0' }}>₹{(selectedOrder.subtotal || selectedOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0)).toFixed(2)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '4px' }}>Total</div>
-                <div style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#22c55e' }}>₹{selectedOrder.total?.toFixed(2) || '0'}</div>
-              </div>
-            </div>
+              {selectedOrder.customer && (
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Customer</div>
+                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                    {selectedOrder.customer.name}
+                    {selectedOrder.customer.phone && ` (${selectedOrder.customer.phone})`}
+                  </div>
+                </div>
+              )}
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: screenSize === 'small' ? '16px' : '24px' }}>
-              <button
-                onClick={() => handlePrintOrder(selectedOrder)}
-                style={{
-                  flex: 1,
-                  padding: screenSize === 'small' ? '12px' : '14px',
-                  background: '#6366f1',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: screenSize === 'small' ? '13px' : '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Print Receipt
-              </button>
-              <button
-                onClick={() => setShowOrderModal(false)}
-                style={{
-                  flex: 1,
-                  padding: screenSize === 'small' ? '12px' : '14px',
-                  background: '#252538',
-                  color: '#ffffff',
-                  border: '1px solid #2d2d44',
-                  borderRadius: '8px',
-                  fontSize: screenSize === 'small' ? '13px' : '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
+              <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '8px' }}>Items</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {selectedOrder.items?.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                          {item.name} x{item.quantity}
+                        </div>
+                        {item.variant && (
+                          <div style={{ fontSize: '12px', color: '#6b6b7e' }}>
+                            {item.variant}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: '500' }}>
+                        ₹{(item.price * item.quantity).toFixed(2)}
+                      </div>
+                    </div>
+                  )) || <div style={{ fontSize: '14px', color: '#6b6b7e' }}>No items</div>}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Subtotal</div>
+                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                    ₹{(selectedOrder._calculated?.subtotal || selectedOrder.subtotal || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Tax</div>
+                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                    ₹{(selectedOrder._calculated?.tax || selectedOrder.tax || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Discount</div>
+                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                    ₹{(selectedOrder._calculated?.discount || selectedOrder.discount || 0).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ background: '#10b981', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#ffffff', marginBottom: '4px' }}>Total</div>
+                  <div style={{ fontSize: '18px', color: '#ffffff', fontWeight: '700' }}>
+                    ₹{(selectedOrder._calculated?.total || selectedOrder.total || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button
+                  onClick={() => handlePrintOrder(selectedOrder)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🖨️ Print Order
+                </button>
+                <button
+                  onClick={() => setShowOrderModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#2d2d44',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -955,32 +1527,22 @@ function BillingTab({ orders, screenSize }) {
   );
 }
 
-// Stat Card Component
 function StatCard({ label, value, change, trend, color, screenSize }) {
   return (
     <div style={{
       background: '#252538',
-      borderRadius: '16px',
-      padding: screenSize === 'small' ? '16px' : '24px',
+      borderRadius: '12px',
+      padding: screenSize === 'small' ? '16px' : '20px',
       border: '1px solid #2d2d44'
     }}>
-      <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: '#8b8b9e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+      <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#8b8b9e', marginBottom: '8px' }}>
         {label}
       </div>
-      <div style={{ fontSize: screenSize === 'small' ? '24px' : '32px', fontWeight: '700', color: '#ffffff', marginBottom: screenSize === 'small' ? '8px' : '12px' }}>
+      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: '#ffffff', marginBottom: '8px' }}>
         {value}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={{
-          fontSize: screenSize === 'small' ? '11px' : '13px',
-          fontWeight: '600',
-          color: trend === 'up' ? '#22c55e' : '#ef4444'
-        }}>
-          {change}
-        </span>
-        <span style={{ fontSize: screenSize === 'small' ? '10px' : '12px', color: '#6b6b7e' }}>
-          vs yesterday
-        </span>
+      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#8b8b9e' }}>
+        {change}
       </div>
     </div>
   );

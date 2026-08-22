@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export default function TokenManagement({ orders, onNavigate }) {
+export default function TokenManagement({ orders, setOrders, onNavigate }) {
   const [displayMode, setDisplayMode] = useState('display'); // 'display' or 'history'
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [selectedToken, setSelectedToken] = useState(null);
@@ -60,8 +60,17 @@ export default function TokenManagement({ orders, onNavigate }) {
   const completedToday = tokens.filter(t => t.status === 'COMPLETED' && new Date(t.createdAt).toDateString() === new Date().toDateString()).length;
 
   const updateOrderStatus = (orderId, newStatus) => {
-    // This would need to be passed in as a prop or handled through a state management system
-    console.log('Update order status:', orderId, newStatus);
+    if (setOrders) {
+      setOrders(prevOrders => {
+        const updatedOrders = prevOrders.map(order => {
+          if (order.id === orderId) {
+            return { ...order, status: newStatus };
+          }
+          return order;
+        });
+        return updatedOrders;
+      });
+    }
   };
 
   const handleViewToken = (token) => {
@@ -104,10 +113,10 @@ export default function TokenManagement({ orders, onNavigate }) {
     // Order Items
     if (token.items && token.items.length > 0) {
       const itemsData = token.items.map(item => [
-        item.name,
-        item.qty || 1,
+        item.name + (item.isCustom ? ' (Custom)' : ''),
+        item.qty || item.quantity || 1,
         `₹${(item.price || 0).toFixed(2)}`,
-        `₹${((item.price || 0) * (item.qty || 1)).toFixed(2)}`
+        `₹${((item.price || 0) * (item.qty || item.quantity || 1)).toFixed(2)}`
       ]);
       
       autoTable(doc, {
@@ -117,6 +126,24 @@ export default function TokenManagement({ orders, onNavigate }) {
         theme: 'striped',
         headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
         styles: { fontSize: 10 }
+      });
+
+      // Add notes below the table
+      let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 115;
+      token.items.forEach(item => {
+        if (item.notes) {
+          doc.setFontSize(9);
+          doc.setTextColor(item.noteType === 'allergy' ? 220 : 100, item.noteType === 'allergy' ? 38 : 100, item.noteType === 'allergy' ? 38 : 100);
+          const notePrefix = item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 Note: ';
+          doc.text(`${notePrefix}${item.notes}`, 20, finalY);
+          finalY += 7;
+        }
+        if (item.baseItemName) {
+          doc.setFontSize(8);
+          doc.setTextColor(146, 64, 14);
+          doc.text(`Base: ${item.baseItemName}`, 20, finalY);
+          finalY += 5;
+        }
       });
     }
     
@@ -140,14 +167,15 @@ export default function TokenManagement({ orders, onNavigate }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
+      background: '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Header */}
       <div style={{
         background: '#ffffff',
         padding: screenSize === 'small' ? '16px' : '20px 24px',
-        borderBottom: '1px solid #e5e7eb'
+        borderBottom: '1px solid #e5e7eb',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
       }}>
         <div style={{
           display: 'flex',
@@ -187,7 +215,7 @@ export default function TokenManagement({ orders, onNavigate }) {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f9fafb' }}>
+      <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f1f5f9' }}>
         {/* Stats Cards */}
         <div style={{
           display: 'flex',
@@ -201,7 +229,8 @@ export default function TokenManagement({ orders, onNavigate }) {
             background: '#ffffff',
             padding: screenSize === 'small' ? '16px' : '20px',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#6b7280', marginBottom: '8px' }}>
               Pending
@@ -216,7 +245,8 @@ export default function TokenManagement({ orders, onNavigate }) {
             background: '#ffffff',
             padding: screenSize === 'small' ? '16px' : '20px',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#6b7280', marginBottom: '8px' }}>
               Preparing
@@ -231,7 +261,8 @@ export default function TokenManagement({ orders, onNavigate }) {
             background: '#ffffff',
             padding: screenSize === 'small' ? '16px' : '20px',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#6b7280', marginBottom: '8px' }}>
               Ready
@@ -246,7 +277,8 @@ export default function TokenManagement({ orders, onNavigate }) {
             background: '#ffffff',
             padding: screenSize === 'small' ? '16px' : '20px',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb'
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}>
             <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: '#6b7280', marginBottom: '8px' }}>
               Completed Today
@@ -271,7 +303,8 @@ export default function TokenManagement({ orders, onNavigate }) {
               color: '#6b7280',
               background: '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb'
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
             }}>
               No active tokens
             </div>
@@ -283,6 +316,7 @@ export default function TokenManagement({ orders, onNavigate }) {
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
                   padding: screenSize === 'small' ? '16px' : '20px',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer'
@@ -484,46 +518,49 @@ export default function TokenManagement({ orders, onNavigate }) {
               </button>
             </div>
 
+            {/* Token Number */}
             <div style={{
               textAlign: 'center',
               padding: '20px',
-              background: '#f9fafb',
-              borderRadius: '12px',
+              background: '#f3f4f6',
+              borderRadius: '8px',
               marginBottom: '20px'
             }}>
-              <div style={{
-                fontSize: '48px',
-                fontWeight: '700',
-                color: '#3b82f6',
-                marginBottom: '8px'
-              }}>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                Token Number
+              </div>
+              <div style={{ fontSize: '36px', fontWeight: '700', color: '#3b82f6' }}>
                 {selectedToken.token}
               </div>
-              <div style={{
-                padding: '6px 16px',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: '600',
-                display: 'inline-block',
-                background: selectedToken.status === 'PENDING' ? '#fef3c7' : selectedToken.status === 'PREPARING' ? '#dbeafe' : selectedToken.status === 'READY' ? '#d1fae5' : '#f3f4f6',
-                color: selectedToken.status === 'PENDING' ? '#92400e' : selectedToken.status === 'PREPARING' ? '#1e40af' : selectedToken.status === 'READY' ? '#065f46' : '#374151'
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: '500', 
+                color: '#10b981',
+                marginTop: '8px'
               }}>
                 {selectedToken.status}
               </div>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+            {/* Customer Info */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
                 Customer
               </div>
               <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
                 {selectedToken.customerName || 'Walk-in'}
               </div>
+              {selectedToken.customerPhone && (
+                <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                  {selectedToken.customerPhone}
+                </div>
+              )}
             </div>
 
+            {/* Table */}
             {selectedToken.tableNumber && (
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
                   Table
                 </div>
                 <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
@@ -532,102 +569,91 @@ export default function TokenManagement({ orders, onNavigate }) {
               </div>
             )}
 
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
-                Order Time
-              </div>
-              <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827' }}>
-                {new Date(selectedToken.createdAt).toLocaleString()}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+            {/* Order Items */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
                 Order Items
               </div>
-              {selectedToken.items && selectedToken.items.length > 0 ? (
-                <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px' }}>
-                  {selectedToken.items.map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '8px 0',
-                        borderBottom: index < selectedToken.items.length - 1 ? '1px solid #e5e7eb' : 'none'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                          {item.name}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                          Qty: {item.qty || 1} × ₹{(item.price || 0).toFixed(2)}
-                        </div>
+              {selectedToken.items && selectedToken.items.map((item, index) => (
+                <div 
+                  key={index}
+                  style={{
+                    padding: '12px',
+                    background: '#f9fafb',
+                    borderRadius: '8px',
+                    marginBottom: '8px',
+                    border: '1px solid #e5e7eb'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '500', color: '#111827' }}>
+                        {item.name}
+                        {item.isCustom && (
+                          <span style={{ 
+                            marginLeft: '4px', 
+                            fontSize: '10px', 
+                            padding: '1px 4px', 
+                            borderRadius: '3px',
+                            background: '#fef3c7',
+                            color: '#92400e',
+                            border: '1px solid #f59e0b',
+                            fontWeight: '600'
+                          }}>
+                            Custom
+                          </span>
+                        )}
                       </div>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                        ₹{((item.price || 0) * (item.qty || 1)).toFixed(2)}
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        Qty: {item.quantity || item.qty} × ₹{(item.price || 0).toFixed(2)}
                       </div>
+                      {item.baseItemName && (
+                        <div style={{ fontSize: '11px', color: '#92400e', fontStyle: 'italic' }}>
+                          Base: {item.baseItemName}
+                        </div>
+                      )}
+                      {item.notes && (
+                        <div style={{ 
+                          fontSize: '11px', 
+                          color: item.noteType === 'allergy' ? '#dc2626' : '#6b7280',
+                          fontStyle: 'italic',
+                          marginTop: '4px',
+                          padding: '4px',
+                          background: item.noteType === 'allergy' ? '#fef2f2' : '#f3f4f6',
+                          borderRadius: '4px'
+                        }}>
+                          {item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 Note: '}{item.notes}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    <div style={{ fontWeight: '600', color: '#111827' }}>
+                      ₹{((item.price || 0) * (item.quantity || item.qty || 1)).toFixed(2)}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                  No items
-                </div>
-              )}
+              ))}
             </div>
 
+            {/* Total */}
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
               padding: '16px',
-              background: '#f9fafb',
+              background: '#f3f4f6',
               borderRadius: '8px',
-              marginBottom: '20px'
+              marginBottom: '16px'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+              <div style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>
                 Total
               </div>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: '#111827' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>
                 ₹{(selectedToken.total || 0).toFixed(2)}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => handlePrintToken(selectedToken)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  background: '#10b981',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Print Receipt
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  background: '#f3f4f6',
-                  color: '#111827',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
+            {/* Date */}
+            <div style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
+              {new Date(selectedToken.createdAt).toLocaleString()}
             </div>
           </div>
         </div>

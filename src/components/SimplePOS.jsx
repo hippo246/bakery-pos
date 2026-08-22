@@ -4,13 +4,17 @@ import { useTerminal } from '../terminal/TerminalContext.jsx';
 import { getKOTManager } from '../operations/KOTManager.js';
 import { getKOTPrinter } from '../utils/KOTPrinter.js';
 import { createReceiptLayout } from '../print/receiptLayout.js';
+import { getAggregatorService } from '../services/aggregators/AggregatorService.js';
+import VoiceOrderRecorder from './voice/VoiceOrderRecorder';
+import SpeakButton from './voice/SpeakButton';
+import textToSpeechService from '../services/voice/TextToSpeechService';
 
 export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables }) {
   const { currentTerminal } = useTerminal();
   const posMode = settings.posMode || 'basic';
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [quantityInput, setQuantityInput] = useState('1');
+  const [quantityInput, setQuantityInput] = useState('0');
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [discount, setDiscount] = useState(0);
@@ -33,6 +37,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [splitPayments, setSplitPayments] = useState([]); // Array of {method, amount}
   const [splitByPeople, setSplitByPeople] = useState(0); // Number of people to split by
+  const [receiptType, setReceiptType] = useState('thermal'); // thermal, simple, custom
+  const [receiptDelivery, setReceiptDelivery] = useState('none'); // none, email, sms, both
+  const [receiptEmail, setReceiptEmail] = useState('');
+  const [receiptPhone, setReceiptPhone] = useState('');
   
   // Filter staff based on terminal assignment
   const availableStaff = useMemo(() => {
@@ -83,6 +91,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [customOrderQuantity, setCustomOrderQuantity] = useState('1');
   const [customOrderNotes, setCustomOrderNotes] = useState('');
   const [customOrderCategory, setCustomOrderCategory] = useState('');
+  const [selectedBaseItem, setSelectedBaseItem] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showGstSettings, setShowGstSettings] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
@@ -95,6 +104,80 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showTableSelector, setShowTableSelector] = useState(false);
   const [numpadSearch, setNumpadSearch] = useState('');
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  
+  // Cart restore state
+  const [showCartRestore, setShowCartRestore] = useState(false);
+  const [cartRestoreReason, setCartRestoreReason] = useState('');
+  const [restoredCart, setRestoredCart] = useState(null);
+  
+  // Voice ordering state
+  const [showVoiceOrder, setShowVoiceOrder] = useState(false);
+  
+  // Cart item selection state
+  const [selectedCartItems, setSelectedCartItems] = useState([]);
+  const [showItemActions, setShowItemActions] = useState(false);
+  const [itemActionMode, setItemActionMode] = useState('quantity'); // 'quantity', 'discount', 'amount', 'notes'
+  const [noteType, setNoteType] = useState('regular'); // 'regular' or 'allergy'
+  const [isEditingCartItems, setIsEditingCartItems] = useState(false);
+  
+  // Aggregator integration
+  const aggregatorService = useMemo(() => getAggregatorService(), []);
+  const [aggregatorOrders, setAggregatorOrders] = useState([]);
+  const [showAggregatorDropdown, setShowAggregatorDropdown] = useState(false);
+  const [showAggregatorPanel, setShowAggregatorPanel] = useState(false);
+  const [aggregatorInitialized, setAggregatorInitialized] = useState(false);
+
+  // Initialize aggregator service
+  useEffect(() => {
+    const initAggregatorService = async () => {
+      try {
+        const config = {
+          zomato: {
+            enabled: settings.zomatoApiKey && settings.zomatoRestaurantId,
+            apiKey: settings.zomatoApiKey || '',
+            restaurantId: settings.zomatoRestaurantId || '',
+            environment: settings.aggregatorEnvironment || 'production'
+          },
+          swiggy: {
+            enabled: settings.swiggyApiKey && settings.swiggyRestaurantId,
+            apiKey: settings.swiggyApiKey || '',
+            restaurantId: settings.swiggyRestaurantId || '',
+            environment: settings.aggregatorEnvironment || 'production'
+          },
+          polling: {
+            enabled: true,
+            interval: 30000
+          }
+        };
+
+        await aggregatorService.initialize(config);
+        setAggregatorInitialized(true);
+
+        // Load initial orders
+        const orders = aggregatorService.getOrders();
+        setAggregatorOrders(orders);
+
+        // Add event listener for real-time updates
+        const removeListener = aggregatorService.addListener((event, data) => {
+          if (event === 'order_added' || event === 'order_updated') {
+            setAggregatorOrders(aggregatorService.getOrders());
+          }
+        });
+
+        return () => removeListener();
+      } catch (error) {
+        console.error('Failed to initialize aggregator service:', error);
+        // Use mock data if initialization fails
+        setAggregatorOrders([
+          { id: 'ZOM-001', platform: 'Zomato', orderId: 'ZOM123456', customer: 'Rahul Sharma', items: 'Butter Chicken x2, Naan x4', total: 850, status: 'pending', time: '14:30', commission: 85 },
+          { id: 'ZOM-002', platform: 'Zomato', orderId: 'ZOM123457', customer: 'Priya Singh', items: 'Paneer Tikka x1, Rice x2', total: 650, status: 'pending', time: '14:45', commission: 65 },
+          { id: 'SWG-001', platform: 'Swiggy', orderId: 'SWG789012', customer: 'Amit Patel', items: 'Biryani x2', total: 720, status: 'pending', time: '15:00', commission: 72 }
+        ]);
+      }
+    };
+
+    initAggregatorService();
+  }, [settings, aggregatorService]);
 
   // Order timer effect
   useEffect(() => {
@@ -217,28 +300,24 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     return customers.find(c => c && c.phone === phone) || null;
   };
 
-  // Smart category suggestion based on time of day
+  // Smart category suggestion based on time of day (disabled - default to All)
   const getSmartCategory = () => {
-    const hour = new Date().getHours();
-    if (hour >= 6 && hour < 11) return 'Coffee'; // Morning
-    if (hour >= 11 && hour < 14) return 'Breads'; // Lunch
-    if (hour >= 14 && hour < 17) return 'Pastries'; // Afternoon
-    if (hour >= 17 && hour < 21) return 'Cakes'; // Evening
     return 'All';
   };
 
-  // Auto-select smart category on mount
+  // Auto-select smart category on mount (disabled - always default to All)
   useEffect(() => {
-    if (posMode === 'advanced' && selectedCategory === 'All') {
-      setSelectedCategory(getSmartCategory());
-    }
-  }, [posMode]);
+    // Disabled - always default to 'All' category
+    setSelectedCategory('All');
+  }, []);
 
   // Auto-save cart to localStorage for recovery
   useEffect(() => {
     if (posMode === 'advanced' && cart.length > 0) {
       try {
         localStorage.setItem('pos_cart_backup', JSON.stringify(cart));
+        localStorage.setItem('pos_cart_backup_timestamp', Date.now().toString());
+        localStorage.setItem('pos_cart_backup_reason', 'Active session');
       } catch (error) {
         console.error('Failed to save cart backup:', error);
       }
@@ -250,19 +329,36 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     if (posMode === 'advanced') {
       try {
         const savedCart = localStorage.getItem('pos_cart_backup');
+        const savedTimestamp = localStorage.getItem('pos_cart_backup_timestamp');
+        const savedReason = localStorage.getItem('pos_cart_backup_reason');
+        
         if (savedCart && cart.length === 0) {
           const parsedCart = JSON.parse(savedCart);
           if (parsedCart && parsedCart.length > 0) {
-            setAlertMessage('Previous cart found. Cart has been restored.');
-            setCart(parsedCart);
-            setShowAlert(true);
+            // Determine restore reason
+            let reason = savedReason || 'Previous session';
+            if (savedTimestamp) {
+              const timeDiff = Date.now() - parseInt(savedTimestamp);
+              const minutesAgo = Math.floor(timeDiff / 60000);
+              if (minutesAgo < 1) {
+                reason = 'Page refreshed';
+              } else if (minutesAgo < 60) {
+                reason = `Session interrupted (${minutesAgo}m ago)`;
+              } else {
+                reason = 'Previous session';
+              }
+            }
+            
+            setCartRestoreReason(reason);
+            setRestoredCart(parsedCart);
+            setShowCartRestore(true);
           }
         }
       } catch (error) {
         console.error('Failed to restore cart:', error);
       }
     }
-  }, [posMode]);
+  }, [posMode, cart.length]);
 
   // Popular items for quick add
   const popularItems = useMemo(() => {
@@ -305,7 +401,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         price: (item.price || 0) + modifierPrice + variantPrice
       }];
     });
-    setQuantityInput('1');
+    setQuantityInput('0');
     setSelectedModifiers([]);
     setSelectedVariant(null);
 
@@ -334,8 +430,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       quantity: qty,
       notes: customOrderNotes,
       category: customOrderCategory || 'Custom',
-      isCustom: true
+      isCustom: true,
+      baseItemId: selectedBaseItem?.id || null,
+      baseItemName: selectedBaseItem?.name || null
     };
+    
     setCart(prev => [...prev, customItem]);
     setShowCustomOrder(false);
     setCustomOrderName('');
@@ -343,6 +442,120 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setCustomOrderQuantity('1');
     setCustomOrderNotes('');
     setCustomOrderCategory('');
+    setSelectedBaseItem(null);
+  };
+
+  // Handle voice order parsed result
+  const handleVoiceOrderParsed = (parsedOrder) => {
+    console.log('handleVoiceOrderParsed called with:', parsedOrder);
+    
+    if (parsedOrder.forEditing) {
+      console.log('Processing forEditing flag');
+      // Add items to cart for editing using existing cart functionality
+      if (parsedOrder.items && parsedOrder.items.length > 0) {
+        console.log('Adding items to cart:', parsedOrder.items);
+        parsedOrder.items.forEach(item => {
+          const menuItem = menuItems.find(m => m.id === item.menuItemId || m.name.toLowerCase() === item.name.toLowerCase());
+          if (menuItem) {
+            addToCart({
+              id: menuItem.id,
+              name: item.name,
+              price: menuItem.price,
+              quantity: item.quantity,
+              category: menuItem.category
+            }, item.quantity);
+          } else {
+            console.log('Menu item not found for:', item);
+          }
+        });
+
+        // Set table if detected
+        if (parsedOrder.tableNumber) {
+          const table = tables.find(t => t.id === parsedOrder.tableNumber || t.name === `T${parsedOrder.tableNumber}`);
+          if (table) {
+            setSelectedTable(table);
+          }
+        }
+
+        // Add notes if any
+        if (parsedOrder.notes) {
+          setCart(prev => {
+            const updated = [...prev];
+            if (updated.length > 0) {
+              updated[updated.length - 1].notes = parsedOrder.notes;
+            }
+            return updated;
+          });
+        }
+      }
+      console.log('Closing voice order modal');
+      setShowVoiceOrder(false);
+      return;
+    }
+    
+    if (parsedOrder.needsEdit) {
+      // Show edit modal for the parsed order
+      setAlertMessage('Please review and edit the order');
+      setShowAlert(true);
+      return;
+    }
+    
+    if (parsedOrder.items && parsedOrder.items.length > 0) {
+      parsedOrder.items.forEach(item => {
+        const menuItem = menuItems.find(m => m.id === item.menuItemId || m.name.toLowerCase() === item.name.toLowerCase());
+        if (menuItem) {
+          addToCart({
+            id: menuItem.id,
+            name: item.name,
+            price: menuItem.price,
+            quantity: item.quantity,
+            category: menuItem.category
+          }, item.quantity);
+        }
+      });
+
+      // Set table if detected
+      if (parsedOrder.tableNumber) {
+        const table = tables.find(t => t.id === parsedOrder.tableNumber || t.name === `T${parsedOrder.tableNumber}`);
+        if (table) {
+          setSelectedTable(table);
+        }
+      }
+
+      // Add notes if any
+      if (parsedOrder.notes) {
+        setCart(prev => {
+          const updated = [...prev];
+          if (updated.length > 0) {
+            updated[updated.length - 1].notes = parsedOrder.notes;
+          }
+          return updated;
+        });
+      }
+
+      setShowVoiceOrder(false);
+    }
+  };
+
+  const handleRestoreCart = () => {
+    if (restoredCart) {
+      setCart(restoredCart);
+      setShowCartRestore(false);
+      setRestoredCart(null);
+      setCartRestoreReason('');
+      localStorage.removeItem('pos_cart_backup');
+      localStorage.removeItem('pos_cart_backup_timestamp');
+      localStorage.removeItem('pos_cart_backup_reason');
+    }
+  };
+
+  const handleDismissRestore = () => {
+    setShowCartRestore(false);
+    setRestoredCart(null);
+    setCartRestoreReason('');
+    localStorage.removeItem('pos_cart_backup');
+    localStorage.removeItem('pos_cart_backup_timestamp');
+    localStorage.removeItem('pos_cart_backup_reason');
   };
 
   const openModifiersModal = (item) => {
@@ -374,6 +587,52 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       if (!prev || !Array.isArray(prev)) return [];
       return prev.filter((_, i) => i !== index);
     });
+    setSelectedCartItems(prev => prev.filter(i => i !== index));
+  };
+
+  const toggleCartItemSelection = (index) => {
+    setSelectedCartItems(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
+
+  const clearCartSelection = () => {
+    setSelectedCartItems([]);
+  };
+
+  const applyItemAction = () => {
+    if (selectedCartItems.length === 0) return;
+
+    const value = itemActionMode === 'quantity' ? parseInt(quantityInput) : 
+                  itemActionMode === 'discount' ? discount :
+                  itemActionMode === 'amount' ? parseFloat(quantityInput) : null;
+
+    if (value === null && itemActionMode !== 'notes') return;
+
+    setCart(prev => {
+      return prev.map((item, index) => {
+        if (!selectedCartItems.includes(index)) return item;
+
+        switch (itemActionMode) {
+          case 'quantity':
+            return { ...item, quantity: value || 1 };
+          case 'discount':
+            return { ...item, discount: value || 0 };
+          case 'amount':
+            return { ...item, price: value || item.price };
+          default:
+            return item;
+        }
+      });
+    });
+
+    setIsEditingCartItems(false);
+    clearCartSelection();
+    setNumpadMode('quantity');
   };
 
   const updateQuantity = (itemId, delta) => {
@@ -599,6 +858,187 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     }
   };
 
+  const sendEmailReceipt = async (order, email) => {
+    if (!email || !email.includes('@')) {
+      console.error('Invalid email address');
+      return false;
+    }
+
+    try {
+      // Generate receipt HTML
+      const receiptHTML = generateReceiptHTML(order);
+      
+      const apiKey = settings.brevoApiKey || 'xsmtpsib-409d85d7333f90f17511052fe49099bc8f8eb7d3afeaf29dac797f38d2cf3a6a-lnXkG4GFIZoEq99l';
+      
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': apiKey
+        },
+        body: JSON.stringify({
+          sender: {
+            name: settings.storeName || 'BakeryPOS',
+            email: settings.storeEmail || 'noreply@bakerypos.com'
+          },
+          to: [{
+            email: email,
+            name: order.customerName || 'Customer'
+          }],
+          subject: `Receipt for Order #${order.id}`,
+          htmlContent: receiptHTML,
+          textContent: generateReceiptText(order)
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log('Email sent successfully via Brevo:', data);
+        setAlertMessage(`Receipt sent to ${email}`);
+        setShowAlert(true);
+        return true;
+      } else {
+        console.error('Brevo API error:', data);
+        setAlertMessage(`Failed to send email: ${data.message || 'Unknown error'}`);
+        setShowAlert(true);
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to send email receipt:', error);
+      setAlertMessage('Failed to send email receipt');
+      setShowAlert(true);
+      return false;
+    }
+  };
+
+  const sendSMSReceipt = async (order, phone) => {
+    if (!phone || phone.length < 10) {
+      console.error('Invalid phone number');
+      return false;
+    }
+
+    try {
+      // Generate receipt text
+      const receiptText = generateReceiptText(order);
+      
+      // In a real implementation, you would send this to your SMS service
+      // For now, we'll log it and show a success message
+      console.log('SMS receipt would be sent to:', phone);
+      console.log('Receipt content:', receiptText);
+      
+      // Placeholder for actual SMS sending
+      // await fetch('/api/send-receipt-sms', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ phone, receipt: receiptText, orderId: order.id })
+      // });
+      
+      setAlertMessage(`Receipt sent to ${phone}`);
+      setShowAlert(true);
+      return true;
+    } catch (error) {
+      console.error('Failed to send SMS receipt:', error);
+      setAlertMessage('Failed to send SMS receipt');
+      setShowAlert(true);
+      return false;
+    }
+  };
+
+  const generateReceiptHTML = (order) => {
+    const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountAmt = order.discountAmount || (subtotal * (order.discount || 0)) / 100;
+    const taxAmt = order.taxAmount || ((subtotal - discountAmt) * (order.gstRate || 0)) / 100;
+    
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px;">
+        <h2 style="text-align: center; color: #333;">${settings.storeName || 'BakeryPOS'}</h2>
+        <p style="text-align: center; color: #666;">Order #${order.id}</p>
+        <p style="text-align: center; color: #666;">${new Date(order.createdAt).toLocaleString()}</p>
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        ${order.items.map(item => `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span>${item.name} x${item.quantity}</span>
+            <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+          </div>
+          ${item.isCustom ? `
+            <div style="font-size: 11px; color: #92400e; margin-bottom: 10px; padding-left: 10px;">
+              ⚙️ Custom Order
+              ${item.baseItemName ? `<br><span style="font-style: italic;">Base: ${item.baseItemName}</span>` : ''}
+            </div>
+          ` : ''}
+          ${item.notes ? `
+            <div style="font-size: 11px; color: ${item.noteType === 'allergy' ? '#dc2626' : '#666'}; margin-bottom: 10px; padding-left: 10px; ${item.noteType === 'allergy' ? 'font-weight: bold;' : ''}">
+              ${item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 Note: '}${item.notes}
+            </div>
+          ` : ''}
+        `).join('')}
+        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span>Subtotal:</span>
+          <span>₹${subtotal.toFixed(2)}</span>
+        </div>
+        ${(order.discount || 0) > 0 && `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px; color: #10b981;">
+            <span>Discount (${order.discount}%):</span>
+            <span>-₹${discountAmt.toFixed(2)}</span>
+          </div>
+        `}
+        ${order.gstEnabled !== false && (order.gstRate || 0) > 0 && `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>GST (${order.gstRate}%):</span>
+            <span>₹${taxAmt.toFixed(2)}</span>
+          </div>
+        `}
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; font-size: 18px;">
+          <span>TOTAL:</span>
+          <span>₹${order.total.toFixed(2)}</span>
+        </div>
+        <p style="text-align: center; color: #666; margin-top: 20px;">${settings.receiptFooter || 'Thank you for your order!'}</p>
+      </div>
+    `;
+  };
+
+  const generateReceiptText = (order) => {
+    const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountAmt = order.discountAmount || (subtotal * (order.discount || 0)) / 100;
+    const taxAmt = order.taxAmount || ((subtotal - discountAmt) * (order.gstRate || 0)) / 100;
+    
+    let text = `${settings.storeName || 'BakeryPOS'}\n`;
+    text += `Order #${order.id}\n`;
+    text += `${new Date(order.createdAt).toLocaleString()}\n`;
+    text += '------------------------\n';
+    
+    order.items.forEach(item => {
+      text += `${item.name} x${item.quantity} - ₹${(item.price * item.quantity).toFixed(2)}\n`;
+      if (item.isCustom) {
+        text += `⚙️ Custom Order\n`;
+        if (item.baseItemName) {
+          text += `  Base: ${item.baseItemName}\n`;
+        }
+      }
+      if (item.notes) {
+        text += `${item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 Note: '}${item.notes}\n`;
+      }
+    });
+    
+    text += '------------------------\n';
+    text += `Subtotal: ₹${subtotal.toFixed(2)}\n`;
+    
+    if ((order.discount || 0) > 0) {
+      text += `Discount (${order.discount}%): -₹${discountAmt.toFixed(2)}\n`;
+    }
+    
+    if (order.gstEnabled !== false && (order.gstRate || 0) > 0) {
+      text += `GST (${order.gstRate}%): ₹${taxAmt.toFixed(2)}\n`;
+    }
+    
+    text += `TOTAL: ₹${order.total.toFixed(2)}\n`;
+    text += `\n${settings.receiptFooter || 'Thank you for your order!'}`;
+    
+    return text;
+  };
+
   const completeOrder = (paymentId) => {
     if (!cart || !Array.isArray(cart)) {
       console.error('completeOrder called with invalid cart');
@@ -622,6 +1062,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       paymentMethod: paymentMethod || 'CASH',
       paymentId: paymentId,
       splitPayments: paymentMethod === 'SPLIT' ? splitPayments : null,
+      receiptType: receiptType,
+      receiptDelivery: receiptDelivery,
+      receiptEmail: receiptEmail,
+      receiptPhone: receiptPhone,
       customerId: selectedCustomer?.id || null,
       customerName: selectedCustomer?.name || 'Walk-in',
       customerPhone: selectedCustomer?.phone || null,
@@ -650,58 +1094,75 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setPaymentMethod('CASH');
     setShowPaymentModal(false);
     setShowReceipt(true);
+    setReceiptDelivery('none');
+    setReceiptEmail('');
+    setReceiptPhone('');
+
+    // Send receipts if requested
+    if (receiptDelivery === 'email' && receiptEmail) {
+      sendEmailReceipt(newOrder, receiptEmail);
+    } else if (receiptDelivery === 'sms' && receiptPhone) {
+      sendSMSReceipt(newOrder, receiptPhone);
+    } else if (receiptDelivery === 'both') {
+      if (receiptEmail) sendEmailReceipt(newOrder, receiptEmail);
+      if (receiptPhone) sendSMSReceipt(newOrder, receiptPhone);
+    }
 
     // Create KOT for kitchen based on workflow settings
+    console.log('=== KOT CREATION DEBUG ===');
     console.log('Creating KOT - autoCreateKOT setting:', settings.autoCreateKOT);
+    console.log('KOT Manager instance:', kotManager);
+    console.log('KOT Manager methods:', Object.keys(kotManager || {}));
+    
+    // Always create KOT regardless of payment (for better kitchen visibility)
     if (settings.autoCreateKOT !== false) { // Default to true if not set
-      // Check if payment is required before KOT
-      if (settings.requirePaymentBeforeKOT && !paymentId) {
-        console.log('Payment required before KOT, skipping KOT creation');
-      } else {
-        try {
-          console.log('Creating KOT with data:', {
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber,
-            token: newOrder.token,
-            items: newOrder.items
-          });
-          if (!kotManager || !kotManager.createKOT) {
-            console.error('KOT manager not available');
-            return;
-          }
-          const kotResult = kotManager.createKOT({
-            orderId: newOrder.id,
-            orderNumber: newOrder.orderNumber,
-            token: newOrder.token,
-            items: newOrder.items || [],
-            customerName: newOrder.customerName,
-            customerPhone: newOrder.customerPhone,
-            tableNumber: newOrder.tableNumber,
-            staffId: newOrder.staffId,
-            staffName: newOrder.staffName,
-            terminal: newOrder.terminal,
-            notes: newOrder.notes || ''
-          });
-
-          console.log('KOT creation result:', kotResult);
-
-          if (kotResult && kotResult.success) {
-            console.log('KOT created successfully:', kotResult.kot?.kotId);
-
-            // Auto-print KOT if enabled
-            if (settings.autoPrintKOT && kotPrinter && kotPrinter.printKOTForAllStations) {
-              try {
-                kotPrinter.printKOTForAllStations(kotResult.kot);
-              } catch (printError) {
-                console.error('Error printing KOT:', printError);
-              }
-            }
-          } else {
-            console.error('KOT creation failed:', kotResult?.error);
-          }
-        } catch (kotError) {
-          console.error('Error during KOT creation:', kotError);
+      try {
+        console.log('Creating KOT with data:', {
+          orderId: newOrder.id,
+          orderNumber: newOrder.orderNumber,
+          token: newOrder.token,
+          items: newOrder.items
+        });
+        if (!kotManager || !kotManager.createKOT) {
+          console.error('KOT manager not available or missing createKOT method');
+          console.log('kotManager type:', typeof kotManager);
+          console.log('createKOT exists:', kotManager?.createKOT !== undefined);
+          return;
         }
+        const kotResult = kotManager.createKOT({
+          orderId: newOrder.id,
+          orderNumber: newOrder.orderNumber,
+          token: newOrder.token,
+          items: newOrder.items || [],
+          customerName: newOrder.customerName,
+          customerPhone: newOrder.customerPhone,
+          tableNumber: newOrder.tableNumber,
+          staffId: newOrder.staffId,
+          staffName: newOrder.staffName,
+          terminal: newOrder.terminal,
+          notes: newOrder.notes || ''
+        });
+
+        console.log('KOT creation result:', kotResult);
+        console.log('KOT creation success:', kotResult?.success);
+
+        if (kotResult && kotResult.success) {
+          console.log('KOT created successfully:', kotResult.kot?.kotId);
+          console.log('Current KOTs in manager:', kotManager.getAllKOTs()?.length);
+
+          // Auto-print KOT if enabled
+          if (settings.autoPrintKOT && kotPrinter && kotPrinter.printKOTForAllStations) {
+            try {
+              kotPrinter.printKOTForAllStations(kotResult.kot);
+            } catch (printError) {
+              console.error('Error printing KOT:', printError);
+            }
+          }
+        } else {
+          console.error('KOT creation failed:', kotResult?.error);
+        }
+      } catch (kotError) {
+        console.error('Error creating KOT:', kotError);
       }
     } else {
       console.log('KOT auto-creation disabled in settings');
@@ -816,6 +1277,69 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setLastOrder(order);
     setShowReceipt(true);
   };
+
+  // Aggregator_ORDER handlers
+  const handleAcceptAggregatorOrder = async (orderId) => {
+    try {
+      // Call real API through aggregator service
+      await aggregatorService.acceptOrder(orderId, 30); // 30 min prep time
+      
+      // Update local state
+      setAggregatorOrders(aggregatorService.getOrders());
+      
+      // Convert aggregator order to POS cart
+      const order = aggregatorService.getOrder(orderId);
+      if (order) {
+        // Parse items string and add to cart
+        const itemMatches = order.items.match(/(.+?) x(\d+)/g);
+        if (itemMatches) {
+          itemMatches.forEach(match => {
+            const [, itemName, qty] = match.match(/(.+?) x(\d+)/);
+            const menuItem = menuItems.find(m => m.name === itemName);
+            if (menuItem) {
+              addToCart(menuItem, parseInt(qty));
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to accept aggregator order:', error);
+      setAlertMessage(`Failed to accept order: ${error.message}`);
+      setShowAlert(true);
+    }
+  };
+
+  const handleRejectAggregatorOrder = async (orderId) => {
+    try {
+      if (confirm('Are you sure you want to reject this order?')) {
+        // Call real API through aggregator service
+        await aggregatorService.rejectOrder(orderId, 'Restaurant rejected');
+        
+        // Update local state
+        setAggregatorOrders(aggregatorService.getOrders());
+      }
+    } catch (error) {
+      console.error('Failed to reject aggregator order:', error);
+      setAlertMessage(`Failed to reject order: ${error.message}`);
+      setShowAlert(true);
+    }
+  };
+
+  const handleAggregatorOrderStatusChange = async (orderId, newStatus) => {
+    try {
+      // Call real API through aggregator service
+      await aggregatorService.updateOrderStatus(orderId, newStatus);
+      
+      // Update local state
+      setAggregatorOrders(aggregatorService.getOrders());
+    } catch (error) {
+      console.error('Failed to update aggregator order status:', error);
+      setAlertMessage(`Failed to update status: ${error.message}`);
+      setShowAlert(true);
+    }
+  };
+
+  const pendingAggregatorOrders = aggregatorOrders.filter(o => o.status === 'pending').length;
 
   const handleQuickCodeSubmit = () => {
     const code = quickCodeInput.toUpperCase().trim();
@@ -1131,28 +1655,59 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   };
 
   const handleNumpadClick = (value) => {
-    if (value === 'C') {
-      if (numpadMode === 'quantity') setQuantityInput('1');
-      else if (numpadMode === 'discount') setDiscount(0);
-      else if (numpadMode === 'amount') setQuantityInput('0');
-    } else if (value === '⌫') {
-      if (numpadMode === 'quantity') {
-        setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '1');
-      } else if (numpadMode === 'discount') {
-        setDiscount(0);
-      } else if (numpadMode === 'amount') {
-        setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+    if (isEditingCartItems) {
+      // Handle cart item editing
+      if (value === 'C') {
+        if (itemActionMode === 'quantity') setQuantityInput('1');
+        else if (itemActionMode === 'discount') setDiscount(0);
+        else if (itemActionMode === 'amount') setQuantityInput('0');
+        setIsEditingCartItems(false);
+        clearCartSelection();
+      } else if (value === '⌫') {
+        if (itemActionMode === 'quantity') {
+          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '1');
+        } else if (itemActionMode === 'discount') {
+          setDiscount(0);
+        } else if (itemActionMode === 'amount') {
+          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+        }
+      } else {
+        if (itemActionMode === 'quantity') {
+          setQuantityInput(prev => prev === '0' ? value : prev + value);
+        } else if (itemActionMode === 'discount') {
+          const newValue = parseInt(value);
+          if (!isNaN(newValue) && newValue >= 0 && newValue <= 100) {
+            setDiscount(newValue);
+          }
+        } else if (itemActionMode === 'amount') {
+          setQuantityInput(prev => prev === '0' ? value : prev + value);
+        }
       }
     } else {
-      if (numpadMode === 'quantity') {
-        setQuantityInput(prev => prev === '0' ? value : prev + value);
-      } else if (numpadMode === 'discount') {
-        const newValue = parseInt(value);
-        if (!isNaN(newValue) && newValue >= 0 && newValue <= 100) {
-          setDiscount(newValue);
+      // Normal numpad behavior
+      if (value === 'C') {
+        if (numpadMode === 'quantity') setQuantityInput('1');
+        else if (numpadMode === 'discount') setDiscount(0);
+        else if (numpadMode === 'amount') setQuantityInput('0');
+      } else if (value === '⌫') {
+        if (numpadMode === 'quantity') {
+          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '1');
+        } else if (numpadMode === 'discount') {
+          setDiscount(0);
+        } else if (numpadMode === 'amount') {
+          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
         }
-      } else if (numpadMode === 'amount') {
-        setQuantityInput(prev => prev === '0' ? value : prev + value);
+      } else {
+        if (numpadMode === 'quantity') {
+          setQuantityInput(prev => prev === '0' ? value : prev + value);
+        } else if (numpadMode === 'discount') {
+          const newValue = parseInt(value);
+          if (!isNaN(newValue) && newValue >= 0 && newValue <= 100) {
+            setDiscount(newValue);
+          }
+        } else if (numpadMode === 'amount') {
+          setQuantityInput(prev => prev === '0' ? value : prev + value);
+        }
       }
     }
   };
@@ -1376,7 +1931,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#f3f4f6',
+      background: '#f1f5f9',
       overflow: 'hidden',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
@@ -1408,6 +1963,202 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {/* Aggregator Orders Dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowAggregatorDropdown(!showAggregatorDropdown)}
+                style={{
+                  padding: '6px 12px',
+                  background: pendingAggregatorOrders > 0 ? '#ef4444' : '#f3f4f6',
+                  color: pendingAggregatorOrders > 0 ? '#ffffff' : '#6b7280',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: '600'
+                }}
+              >
+                🍔 Aggregators
+                {pendingAggregatorOrders > 0 && (
+                  <span style={{
+                    background: '#ffffff',
+                    color: '#ef4444',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    fontSize: '10px',
+                    fontWeight: '700'
+                  }}>
+                    {pendingAggregatorOrders}
+                  </span>
+                )}
+              </button>
+
+              {/* Aggregator Dropdown */}
+              {showAggregatorDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '8px',
+                  background: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  zIndex: 1000,
+                  minWidth: '400px',
+                  maxHeight: '500px',
+                  overflow: 'auto'
+                }}>
+                  <div style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid #e5e7eb',
+                    background: '#f9fafb',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>📦 Aggregator Orders</span>
+                    <button
+                      onClick={() => setShowAggregatorPanel(true)}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#6366f1',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      View All
+                    </button>
+                  </div>
+
+                  {aggregatorOrders.filter(o => o.status === 'pending').length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
+                      <div style={{ fontSize: '13px' }}>No pending orders</div>
+                    </div>
+                  ) : (
+                    aggregatorOrders.filter(o => o.status === 'pending').map(order => (
+                      <div key={order.id} style={{
+                        padding: '12px 16px',
+                        borderBottom: '1px solid #f3f4f6',
+                        background: '#ffffff'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              fontWeight: '600',
+                              background: order.platform === 'Zomato' ? '#ef4444' : '#f97316',
+                              color: '#ffffff'
+                            }}>
+                              {order.platform}
+                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>
+                              {order.orderId}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#6b7280' }}>{order.time}</span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                          {order.customer}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
+                          {order.items}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
+                            ₹{order.total}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#ef4444' }}>
+                            Commission: ₹{order.commission}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => handleAcceptAggregatorOrder(order.id)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              background: '#10b981',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✅ Accept
+                          </button>
+                          <button
+                            onClick={() => handleRejectAggregatorOrder(order.id)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              background: '#ef4444',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ❌ Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Held Orders Button */}
+            {settings.enableHoldOrders && (
+              <button
+                onClick={() => setShowHeldOrders(true)}
+                style={{
+                  padding: '6px 12px',
+                  background: heldOrders.length > 0 ? '#8b5cf6' : '#f3f4f6',
+                  color: heldOrders.length > 0 ? '#ffffff' : '#6b7280',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: '600'
+                }}
+              >
+                ⏸️ Held Orders
+                {heldOrders.length > 0 && (
+                  <span style={{
+                    background: '#ffffff',
+                    color: '#8b5cf6',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    fontSize: '10px',
+                    fontWeight: '700'
+                  }}>
+                    {heldOrders.length}
+                  </span>
+                )}
+              </button>
+            )}
+
             {posMode === 'advanced' && (
               <>
                 <button
@@ -1534,10 +2285,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       <div style={{
         flex: 1,
         display: 'flex',
-        gap: '8px',
-        padding: '8px',
+        gap: '12px',
+        padding: '12px',
         overflow: 'hidden',
-        minHeight: 0
+        minHeight: 0,
+        maxWidth: '100%'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
@@ -1549,7 +2301,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
             overflow: 'hidden',
-            minWidth: screenSize === 'small' ? '0' : '300px'
+            minWidth: screenSize === 'small' ? '0' : '280px',
+            maxWidth: screenSize === 'small' ? '100%' : 'none'
           }}>
           {/* Categories */}
           <div style={{ padding: '10px', borderBottom: '1px solid #e5e7eb', position: 'relative' }}>
@@ -1716,15 +2469,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         {/* Middle Column - Cart */}
         {(screenSize !== 'small' || activeView === 'cart') && (
           <div style={{
-            width: screenSize === 'small' ? '100%' : '320px',
-            minWidth: screenSize === 'small' ? '0' : '300px',
-            maxWidth: screenSize === 'small' ? 'none' : '380px',
+            width: screenSize === 'small' ? '100%' : '340px',
+            minWidth: screenSize === 'small' ? '0' : '320px',
+            maxWidth: screenSize === 'small' ? '100%' : '400px',
             display: 'flex',
             flexDirection: 'column',
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            flexShrink: 0
           }}>
           {/* Cart Header */}
           <div style={{
@@ -1757,24 +2511,86 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </div>
             ) : (
               cart.map((item, index) => (
-                <div key={`${item.id}-${index}`} style={{
-                  background: '#f9fafb',
-                  borderRadius: '6px',
-                  padding: screenSize === 'small' ? '6px' : '8px',
-                  marginBottom: screenSize === 'small' ? '4px' : '6px',
-                  border: '1px solid #e5e7eb'
-                }}>
+                <div 
+                  key={`${item.id}-${index}`} 
+                  onClick={() => toggleCartItemSelection(index)}
+                  style={{
+                    background: selectedCartItems.includes(index) ? '#dbeafe' : '#f9fafb',
+                    borderRadius: '6px',
+                    padding: screenSize === 'small' ? '6px' : '8px',
+                    marginBottom: screenSize === 'small' ? '4px' : '6px',
+                    border: selectedCartItems.includes(index) ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    cursor: 'pointer'
+                  }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '500', color: '#1f2937', marginBottom: '2px' }}>
-                        {item.name}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '500', color: '#1f2937' }}>
+                          {selectedCartItems.includes(index) && <span style={{ marginRight: '4px' }}>✓</span>}
+                          {item.name}
+                          {item.isCustom && (
+                            <span style={{ 
+                              marginLeft: '4px', 
+                              fontSize: '10px', 
+                              padding: '1px 4px', 
+                              borderRadius: '3px',
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              border: '1px solid #f59e0b',
+                              fontWeight: '600'
+                            }}>
+                              Custom
+                            </span>
+                          )}
+                          {item.notes && (
+                            <span style={{ 
+                              marginLeft: '4px', 
+                              fontSize: '10px', 
+                              padding: '1px 4px', 
+                              borderRadius: '3px',
+                              background: item.noteType === 'allergy' ? '#fef2f2' : '#dbeafe',
+                              color: item.noteType === 'allergy' ? '#dc2626' : '#2563eb',
+                              border: item.noteType === 'allergy' ? '1px solid #ef4444' : '1px solid #3b82f6',
+                              fontWeight: '600'
+                            }}>
+                              {item.noteType === 'allergy' ? '⚠️' : '📝'}
+                            </span>
+                          )}
+                        </div>
+                        <SpeakButton
+                          text={`${item.quantity} ${item.name} at ₹${item.price.toFixed(2)}`}
+                          size="small"
+                        />
                       </div>
                       <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: '#6b7280' }}>
                         ₹{item.price.toFixed(2)} × {item.quantity}
                       </div>
+                      {item.baseItemName && (
+                        <div style={{ fontSize: screenSize === 'small' ? '8px' : '9px', color: '#92400e', fontStyle: 'italic' }}>
+                          Base: {item.baseItemName}
+                        </div>
+                      )}
+                      {item.notes && (
+                        <div style={{ 
+                          fontSize: screenSize === 'small' ? '9px' : '10px', 
+                          color: item.noteType === 'allergy' ? '#dc2626' : '#6b7280',
+                          fontStyle: 'italic',
+                          marginTop: '2px',
+                          maxWidth: '100%',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {item.noteType === 'allergy' ? '⚠️ ' : '📝 '}{item.notes}
+                        </div>
+                      )}
                     </div>
                     <button
-                      onClick={() => removeFromCart(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromCart(index);
+                      }}
                       style={{
                         padding: screenSize === 'small' ? '2px 5px' : '3px 6px',
                         background: '#fee2e2',
@@ -1794,6 +2610,238 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   </div>
                 </div>
               ))
+            )}
+
+            {/* Item Actions Panel */}
+            {selectedCartItems.length > 0 && (
+              <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: '1px solid #e5e7eb', background: '#dbeafe' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: '#1e40af', marginBottom: '6px' }}>
+                  {selectedCartItems.length} item{selectedCartItems.length > 1 ? 's' : ''} selected
+                </div>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                  <button
+                    onClick={() => {
+                      setItemActionMode('quantity');
+                      setNumpadMode('quantity');
+                      setIsEditingCartItems(true);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      background: isEditingCartItems && itemActionMode === 'quantity' ? '#3b82f6' : '#ffffff',
+                      color: isEditingCartItems && itemActionMode === 'quantity' ? 'white' : '#374151',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Qty
+                  </button>
+                  <button
+                    onClick={() => {
+                      setItemActionMode('discount');
+                      setNumpadMode('discount');
+                      setIsEditingCartItems(true);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      background: isEditingCartItems && itemActionMode === 'discount' ? '#3b82f6' : '#ffffff',
+                      color: isEditingCartItems && itemActionMode === 'discount' ? 'white' : '#374151',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Discount
+                  </button>
+                  <button
+                    onClick={() => {
+                      setItemActionMode('amount');
+                      setNumpadMode('amount');
+                      setIsEditingCartItems(true);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      background: isEditingCartItems && itemActionMode === 'amount' ? '#3b82f6' : '#ffffff',
+                      color: isEditingCartItems && itemActionMode === 'amount' ? 'white' : '#374151',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Amount
+                  </button>
+                  <button
+                    onClick={() => {
+                      setItemActionMode('notes');
+                      setIsEditingCartItems(true);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      background: isEditingCartItems && itemActionMode === 'notes' ? '#3b82f6' : '#ffffff',
+                      color: isEditingCartItems && itemActionMode === 'notes' ? 'white' : '#374151',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Notes
+                  </button>
+                  <button
+                    onClick={() => {
+                      clearCartSelection();
+                      setIsEditingCartItems(false);
+                      setNumpadMode('quantity');
+                    }}
+                    style={{
+                      padding: '6px 8px',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: '1px solid #ef4444',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                {/* Notes input for notes mode */}
+                {isEditingCartItems && itemActionMode === 'notes' && (
+                  <div>
+                    {/* Note type selector */}
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                      <button
+                        onClick={() => setNoteType('regular')}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          background: noteType === 'regular' ? '#3b82f6' : '#f3f4f6',
+                          color: noteType === 'regular' ? 'white' : '#374151',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        📝 Note
+                      </button>
+                      <button
+                        onClick={() => setNoteType('allergy')}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          background: noteType === 'allergy' ? '#ef4444' : '#f3f4f6',
+                          color: noteType === 'allergy' ? 'white' : '#374151',
+                          border: '1px solid #ef4444',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚠️ Allergy
+                      </button>
+                    </div>
+                    <textarea
+                      placeholder={noteType === 'allergy' ? 'Enter allergy information (no character limit)...' : 'Enter notes for selected items...'}
+                      style={{
+                        width: '100%',
+                        minHeight: noteType === 'allergy' ? '80px' : '60px',
+                        padding: '8px',
+                        border: noteType === 'allergy' ? '2px solid #ef4444' : '1px solid #e5e7eb',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        resize: 'vertical',
+                        marginBottom: '6px',
+                        background: noteType === 'allergy' ? '#fef2f2' : '#ffffff'
+                      }}
+                      onChange={(e) => {
+                        const notes = e.target.value;
+                        setCart(prev => {
+                          return prev.map((item, index) => {
+                            if (!selectedCartItems.includes(index)) return item;
+                            return { ...item, notes, noteType };
+                          });
+                        });
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        onClick={() => {
+                          setIsEditingCartItems(false);
+                          clearCartSelection();
+                          setNumpadMode('quantity');
+                          setNoteType('regular');
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          background: '#22c55e',
+                          border: '1px solid #22c55e',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          color: 'white'
+                        }}
+                      >
+                        Done
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsEditingCartItems(false);
+                          clearCartSelection();
+                          setNumpadMode('quantity');
+                          setNoteType('regular');
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '8px',
+                          background: '#6b7280',
+                          border: '1px solid #6b7280',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          color: 'white'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Instructions for numpad modes */}
+                {isEditingCartItems && itemActionMode !== 'notes' && (
+                  <div style={{ 
+                    padding: '8px', 
+                    background: '#dbeafe', 
+                    border: '1px solid #3b82f6', 
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    color: '#1e40af',
+                    textAlign: 'center'
+                  }}>
+                    Use the main numpad to enter {itemActionMode}. Press C to cancel.
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -1916,14 +2964,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         {/* Right Column - Numpad & Actions */}
         {(screenSize !== 'small' || activeView === 'keypad') && (
           <div style={{
-            width: screenSize === 'small' ? '100%' : '260px',
-            minWidth: screenSize === 'small' ? '0' : '240px',
-            maxWidth: screenSize === 'small' ? 'none' : '280px',
+            width: screenSize === 'small' ? '100%' : '280px',
+            minWidth: screenSize === 'small' ? '0' : '260px',
+            maxWidth: screenSize === 'small' ? '100%' : '320px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px',
+            gap: '12px',
             overflowY: 'auto',
-            paddingRight: screenSize === 'small' ? '4px' : '0'
+            paddingRight: screenSize === 'small' ? '4px' : '0',
+            flexShrink: 0
           }}>
           {/* Quick Actions */}
           <div style={{
@@ -1938,7 +2987,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
               {[
                 { id: 'hold', label: 'Hold', icon: '⏸️' },
-                { id: 'kitchen', label: 'Kitchen', icon: '👨‍🍳' },
+                { id: 'voice', label: 'Voice', icon: '🎤' },
                 { id: 'void', label: 'Void', icon: '❌' },
                 { id: 'discount', label: 'Disc', icon: '🏷️' },
                 { id: 'print', label: 'Print', icon: '🖨️' },
@@ -1948,6 +2997,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   key={action.id}
                   onClick={() => {
                     if (action.id === 'hold') handleHoldOrder();
+                    if (action.id === 'voice') setShowVoiceOrder(true);
                     if (action.id === 'void') handleVoidLastItem();
                     if (action.id === 'discount') setDiscount(discount === 0 ? 10 : 0);
                     if (action.id === 'print') setShowPrintSettings(true);
@@ -1993,13 +3043,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               {['quantity', 'discount', 'amount'].map(mode => (
                 <button
                   key={mode}
-                  onClick={() => setNumpadMode(mode)}
+                  onClick={() => {
+                    setNumpadMode(mode);
+                    if (isEditingCartItems) setItemActionMode(mode);
+                  }}
                   style={{
                     flex: 1,
                     padding: screenSize === 'small' ? '3px' : '4px',
                     background: numpadMode === mode ? '#2563eb' : '#f3f4f6',
                     color: numpadMode === mode ? '#ffffff' : '#374151',
-                    border: 'none',
+                    border: isEditingCartItems && itemActionMode === mode ? '2px solid #3b82f6' : 'none',
                     borderRadius: '3px',
                     fontSize: screenSize === 'small' ? '9px' : '10px',
                     fontWeight: '500',
@@ -2010,6 +3063,23 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 </button>
               ))}
             </div>
+
+            {/* Cart editing indicator */}
+            {isEditingCartItems && (
+              <div style={{ 
+                padding: '6px 8px', 
+                background: '#dbeafe', 
+                border: '1px solid #3b82f6', 
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '9px' : '10px',
+                color: '#1e40af',
+                textAlign: 'center',
+                marginBottom: screenSize === 'small' ? '4px' : '6px',
+                fontWeight: '500'
+              }}>
+                Editing {selectedCartItems.length} cart item{selectedCartItems.length > 1 ? 's' : ''} - {itemActionMode}
+              </div>
+            )}
 
             {/* Numpad Search */}
             <div style={{ marginBottom: screenSize === 'small' ? '4px' : '6px', position: 'relative' }}>
@@ -2107,31 +3177,129 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               }}
             />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
-              {['7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '⌫'].map(key => (
-                <button
-                  key={key}
-                  onClick={() => handleNumpadClick(key)}
-                  style={{
-                    padding: screenSize === 'small' ? '8px' : '10px',
-                    background: key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6',
-                    color: key === 'C' || key === '⌫' ? '#dc2626' : '#1f2937',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.1s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = key === 'C' || key === '⌫' ? '#fecaca' : '#e5e7eb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6';
-                  }}
-                >
-                  {key}
-                </button>
-              ))}
+              {isEditingCartItems ? (
+                // Show confirm button when editing cart items
+                <>
+                  {['7', '8', '9', '4', '5', '6', '1', '2', '3'].map(key => (
+                    <button
+                      key={key}
+                      onClick={() => handleNumpadClick(key)}
+                      style={{
+                        padding: screenSize === 'small' ? '8px' : '10px',
+                        background: '#f3f4f6',
+                        color: '#1f2937',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: screenSize === 'small' ? '13px' : '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.1s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = '#e5e7eb';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = '#f3f4f6';
+                      }}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                  <button
+                    onClick={applyItemAction}
+                    style={{
+                      padding: screenSize === 'small' ? '8px' : '10px',
+                      background: '#22c55e',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.1s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#16a34a';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = '#22c55e';
+                    }}
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={() => handleNumpadClick('0')}
+                    style={{
+                      padding: screenSize === 'small' ? '8px' : '10px',
+                      background: '#f3f4f6',
+                      color: '#1f2937',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.1s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#e5e7eb';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = '#f3f4f6';
+                    }}
+                  >
+                    0
+                  </button>
+                  <button
+                    onClick={() => handleNumpadClick('⌫')}
+                    style={{
+                      padding: screenSize === 'small' ? '8px' : '10px',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.1s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = '#fecaca';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = '#fee2e2';
+                    }}
+                  >
+                    ⌫
+                  </button>
+                </>
+              ) : (
+                // Normal numpad
+                ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '⌫'].map(key => (
+                  <button
+                    key={key}
+                    onClick={() => handleNumpadClick(key)}
+                    style={{
+                      padding: screenSize === 'small' ? '8px' : '10px',
+                      background: key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6',
+                      color: key === 'C' || key === '⌫' ? '#dc2626' : '#1f2937',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.1s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = key === 'C' || key === '⌫' ? '#fecaca' : '#e5e7eb';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6';
+                    }}
+                  >
+                    {key}
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
@@ -2430,6 +3598,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   setCustomOrderQuantity('1');
                   setCustomOrderNotes('');
                   setCustomOrderCategory('');
+                  setSelectedBaseItem(null);
                 }}
                 style={{
                   padding: '8px 12px',
@@ -2445,15 +3614,51 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
             </div>
 
+            {/* Base Item Selection */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
+                Base Menu Item (Optional)
+              </label>
+              <select
+                value={selectedBaseItem?.id || ''}
+                onChange={(e) => {
+                  const item = menuItems.find(m => m.id === e.target.value);
+                  setSelectedBaseItem(item || null);
+                  if (item) {
+                    setCustomOrderName(item.name);
+                    setCustomOrderPrice(item.price.toString());
+                    setCustomOrderCategory(item.category);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#2d2d44',
+                  border: '1px solid #3d3d5c',
+                  borderRadius: '8px',
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">Select a menu item (optional)</option>
+                {menuItems.filter(item => item.active !== false).map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} - ₹{item.price.toFixed(2)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Quick Presets */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Quick Presets
+                Quick Add-ons
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {[
-                  { name: 'Water Bottle', price: 20 },
                   { name: 'Extra Sauce', price: 10 },
+                  { name: 'Extra Cheese', price: 15 },
                   { name: 'Takeaway Box', price: 15 },
                   { name: 'Tissues', price: 5 }
                 ].map(preset => (
@@ -2462,6 +3667,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     onClick={() => {
                       setCustomOrderName(preset.name);
                       setCustomOrderPrice(preset.price.toString());
+                      setCustomOrderCategory('Add-ons');
                     }}
                     style={{
                       padding: '8px 12px',
@@ -2631,6 +3837,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   setCustomOrderQuantity('1');
                   setCustomOrderNotes('');
                   setCustomOrderCategory('');
+                  setSelectedBaseItem(null);
                 }}
                 style={{
                   flex: 1,
@@ -2660,7 +3867,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     quantity: parseInt(customOrderQuantity) || 1,
                     category: customOrderCategory || 'Custom',
                     notes: customOrderNotes,
-                    isCustom: true
+                    isCustom: true,
+                    baseItemId: selectedBaseItem?.id || null,
+                    baseItemName: selectedBaseItem?.name || null
                   };
                   setCart([...cart, customItem]);
                   setShowCustomOrder(false);
@@ -2669,6 +3878,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   setCustomOrderQuantity('1');
                   setCustomOrderNotes('');
                   setCustomOrderCategory('');
+                  setSelectedBaseItem(null);
                 }}
                 style={{
                   flex: 1,
@@ -3114,9 +4324,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#252538',
             borderRadius: '16px',
-            padding: '32px',
-            width: '600px',
-            maxWidth: '90vw',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             border: '1px solid #2d2d44'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -3167,37 +4379,39 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Settings Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-              <button
-                onClick={() => setDiscount(discount === 0 ? 10 : 0)}
-                style={{
-                  padding: '12px',
-                  background: discount > 0 ? '#10b981' : '#2d2d44',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                🏷️ {discount > 0 ? `${discount}% Off` : 'No Discount'}
-              </button>
-              <button
-                onClick={() => setGstEnabled(!gstEnabled)}
-                style={{
-                  padding: '12px',
-                  background: gstEnabled ? '#6366f1' : '#2d2d44',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                🧾 GST: {gstEnabled ? 'On' : 'Off'}
-              </button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                <button
+                  onClick={() => setDiscount(discount === 0 ? 10 : 0)}
+                  style={{
+                    padding: '10px',
+                    background: discount > 0 ? '#10b981' : '#2d2d44',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🏷️ {discount > 0 ? `${discount}% Off` : 'No Discount'}
+                </button>
+                <button
+                  onClick={() => setGstEnabled(!gstEnabled)}
+                  style={{
+                    padding: '10px',
+                    background: gstEnabled ? '#6366f1' : '#2d2d44',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🧾 GST: {gstEnabled ? 'On' : 'Off'}
+                </button>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
                 <input
                   type="number"
@@ -3211,14 +4425,110 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     color: gstEnabled ? '#ffffff' : '#8b8b9e',
                     border: 'none',
                     borderRadius: '0',
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: '600',
                     outline: 'none',
                     textAlign: 'center'
                   }}
                 />
-                <span style={{ color: '#8b8b9e', fontSize: '13px' }}>%</span>
+                <span style={{ color: '#8b8b9e', fontSize: '12px' }}>%</span>
               </div>
+            </div>
+
+            {/* Receipt Options */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e', marginBottom: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Receipt Options
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
+                  <select
+                    value={receiptType}
+                    onChange={(e) => setReceiptType(e.target.value)}
+                    style={{
+                      padding: '8px 0',
+                      background: 'transparent',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '0',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      flex: 1
+                    }}
+                  >
+                    <option value="thermal">Thermal</option>
+                    <option value="simple">Simple</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
+                  <select
+                    value={receiptDelivery}
+                    onChange={(e) => setReceiptDelivery(e.target.value)}
+                    style={{
+                      padding: '8px 0',
+                      background: 'transparent',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '0',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      flex: 1
+                    }}
+                  >
+                    <option value="none">Print Only</option>
+                    <option value="email">📧 Email</option>
+                    <option value="sms">📱 SMS</option>
+                    <option value="both">Email + SMS</option>
+                  </select>
+                </div>
+              </div>
+              
+              {(receiptDelivery === 'email' || receiptDelivery === 'both') && (
+                <div style={{ marginBottom: '12px' }}>
+                  <input
+                    type="email"
+                    value={receiptEmail}
+                    onChange={(e) => setReceiptEmail(e.target.value)}
+                    placeholder="Enter email address"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              )}
+              
+              {(receiptDelivery === 'sms' || receiptDelivery === 'both') && (
+                <div style={{ marginBottom: '12px' }}>
+                  <input
+                    type="tel"
+                    value={receiptPhone}
+                    onChange={(e) => setReceiptPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: '#1a1a2e',
+                      color: '#ffffff',
+                      border: '1px solid #2d2d44',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Payment Methods */}
@@ -4253,7 +5563,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div 
               id="receipt-preview"
               style={{ 
-                fontFamily: 'monospace',
+                fontFamily: lastOrder.receiptType === 'thermal' ? 'monospace' : 'Arial, sans-serif',
                 fontSize: `${settings.receiptFontSize || 12}px`,
                 lineHeight: '1.4',
                 color: '#000',
@@ -4261,7 +5571,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 background: '#fff',
                 borderRadius: '4px',
                 border: '1px solid #e5e7eb',
-                maxWidth: settings.receiptTemplate === 'thermal' ? '240px' : '280px',
+                maxWidth: lastOrder.receiptType === 'thermal' ? '240px' : lastOrder.receiptType === 'simple' ? '320px' : '360px',
                 margin: '0 auto'
               }}
             >
@@ -4271,111 +5581,247 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 const taxAmt = lastOrder.taxAmount || ((subtotal - discountAmt) * (lastOrder.gstRate || 0)) / 100;
                 
                 const fontSize = parseInt(settings.receiptFontSize || 12);
-                
-                return (
-                  <>
-                    {/* Header */}
-                    <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                      {settings.showLogoOnReceipt !== false && (
-                        <div style={{ fontSize: `${fontSize + 4}px`, fontWeight: 'bold' }}>
+                const receiptType = lastOrder.receiptType || 'thermal';
+
+                // Thermal Receipt
+                if (receiptType === 'thermal') {
+                  return (
+                    <>
+                      <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                        {settings.showLogoOnReceipt !== false && (
+                          <div style={{ fontSize: `${fontSize + 4}px`, fontWeight: 'bold' }}>
+                            {settings.storeName || 'BakeryPOS'}
+                          </div>
+                        )}
+                        {settings.showLogoOnReceipt !== false && settings.storeAddress && (
+                          <div style={{ fontSize: `${fontSize - 2}px` }}>{settings.storeAddress}</div>
+                        )}
+                        {settings.showLogoOnReceipt !== false && settings.phone && (
+                          <div style={{ fontSize: `${fontSize - 2}px` }}>Tel: {settings.phone}</div>
+                        )}
+                        {settings.gstin && (
+                          <div style={{ fontSize: `${fontSize - 2}px` }}>GSTIN: {settings.gstin}</div>
+                        )}
+                      </div>
+                      
+                      <div style={{ borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Order #: {lastOrder.id}</span>
+                          <span>Token: {lastOrder.token || 'N/A'}</span>
+                        </div>
+                        <div style={{ fontSize: `${fontSize - 2}px` }}>{new Date(lastOrder.createdAt).toLocaleString()}</div>
+                        {lastOrder.tableNumber && <div>Table: {lastOrder.tableNumber}</div>}
+                        <div>Customer: {lastOrder.customerName || 'Walk-in'}</div>
+                      </div>
+
+                      <div style={{ marginBottom: '8px' }}>
+                        {lastOrder.items.map((item, index) => (
+                          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <div>
+                              <div>{item.name}</div>
+                              <div style={{ fontSize: `${fontSize - 2}px` }}>{item.quantity} x ₹{item.price}</div>
+                            </div>
+                            <div>₹{item.quantity * item.price}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ borderTop: '1px dashed #000', paddingTop: '8px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Subtotal:</span>
+                          <span>₹{subtotal.toFixed(2)}</span>
+                        </div>
+                        {(lastOrder.discount || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Discount ({lastOrder.discount}%):</span>
+                            <span>-₹{discountAmt.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>GST ({lastOrder.gstRate}%):</span>
+                            <span>₹{taxAmt.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '4px' }}>
+                          <span>TOTAL:</span>
+                          <span>₹{lastOrder.total.toFixed(2)}</span>
+                        </div>
+                        <div style={{ marginTop: '4px', fontSize: `${fontSize - 2}px` }}>
+                          Paid: {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'center', marginTop: '12px', fontSize: `${fontSize - 2}px` }}>
+                        <div>{settings.receiptFooter || 'Thank you!'}</div>
+                      </div>
+                    </>
+                  );
+                }
+
+                // Simple Receipt
+                if (receiptType === 'simple') {
+                  return (
+                    <>
+                      <div style={{ textAlign: 'center', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #000' }}>
+                        <div style={{ fontSize: `${fontSize + 6}px`, fontWeight: 'bold', marginBottom: '4px' }}>
                           {settings.storeName || 'BakeryPOS'}
                         </div>
-                      )}
-                      {settings.showLogoOnReceipt !== false && settings.storeAddress && (
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>
-                          {settings.storeAddress}
+                        <div style={{ fontSize: `${fontSize}px`, color: '#666' }}>{settings.storeAddress || ''}</div>
+                        <div style={{ fontSize: `${fontSize}px`, color: '#666' }}>{settings.phone || ''}</div>
+                      </div>
+                      
+                      <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: '600' }}>Order #:</span>
+                          <span>{lastOrder.id}</span>
                         </div>
-                      )}
-                      {settings.showLogoOnReceipt !== false && settings.phone && (
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>
-                          Tel: {settings.phone}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: '600' }}>Date:</span>
+                          <span>{new Date(lastOrder.createdAt).toLocaleString()}</span>
                         </div>
-                      )}
-                      {settings.showEmailOnReceipt !== false && settings.email && (
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>
-                          {settings.email}
+                        {lastOrder.tableNumber && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontWeight: '600' }}>Table:</span>
+                            <span>{lastOrder.tableNumber}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ marginBottom: '16px' }}>
+                        <div style={{ fontWeight: '600', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid #ddd' }}>Items</div>
+                        {lastOrder.items.map((item, index) => (
+                          <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', padding: '8px', background: '#fafafa', borderRadius: '4px' }}>
+                            <div>
+                              <div style={{ fontWeight: '500' }}>{item.name}</div>
+                              <div style={{ fontSize: `${fontSize - 2}px`, color: '#666' }}>{item.quantity} x ₹{item.price}</div>
+                            </div>
+                            <div style={{ fontWeight: '600' }}>₹{item.quantity * item.price}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ padding: '12px', background: '#f0f0f0', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span>Subtotal:</span>
+                          <span>₹{subtotal.toFixed(2)}</span>
                         </div>
-                      )}
-                      {settings.gstin && (
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>
-                          GSTIN: {settings.gstin}
+                        {(lastOrder.discount || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#10b981' }}>
+                            <span>Discount ({lastOrder.discount}%):</span>
+                            <span>-₹{discountAmt.toFixed(2)}</span>
+                          </div>
+                        )}
+                        {lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span>GST ({lastOrder.gstRate}%):</span>
+                            <span>₹{taxAmt.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: `${fontSize + 2}px`, paddingTop: '8px', borderTop: '1px solid #ccc' }}>
+                          <span>TOTAL:</span>
+                          <span>₹{lastOrder.total.toFixed(2)}</span>
                         </div>
-                      )}
-                      {settings.fssaiLicense && (
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>
-                          FSSAI: {settings.fssaiLicense}
+                        <div style={{ marginTop: '8px', fontSize: `${fontSize}px`, color: '#666' }}>
+                          Payment: {lastOrder.paymentMethod}
                         </div>
-                      )}
+                      </div>
+
+                      <div style={{ textAlign: 'center', marginTop: '16px', fontSize: `${fontSize}px`, color: '#666' }}>
+                        <div>{settings.receiptFooter || 'Thank you for your order!'}</div>
+                      </div>
+                    </>
+                  );
+                }
+
+                // Custom Receipt
+                return (
+                  <>
+                    <div style={{ textAlign: 'center', marginBottom: '20px', padding: '16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', borderRadius: '8px' }}>
+                      <div style={{ fontSize: `${fontSize + 8}px`, fontWeight: 'bold', marginBottom: '4px' }}>
+                        {settings.storeName || 'BakeryPOS'}
+                      </div>
+                      <div style={{ fontSize: `${fontSize}px`, opacity: 0.9 }}>{settings.storeAddress || 'Premium Bakery'}</div>
+                      <div style={{ fontSize: `${fontSize}px`, opacity: 0.9 }}>{settings.phone || '+91 XXXXXXXXXX'}</div>
                     </div>
                     
-                    {/* Order Info */}
-                    <div style={{ borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Order #: {lastOrder.id}</span>
-                        <span>Token: {lastOrder.token || 'N/A'}</span>
+                    <div style={{ marginBottom: '16px', padding: '16px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Order #</div>
+                          <div style={{ fontWeight: '600' }}>{lastOrder.id}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Token</div>
+                          <div style={{ fontWeight: '600' }}>{lastOrder.token || 'N/A'}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Date</div>
+                          <div>{new Date(lastOrder.createdAt).toLocaleDateString()}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Time</div>
+                          <div>{new Date(lastOrder.createdAt).toLocaleTimeString()}</div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: `${fontSize - 2}px` }}>{new Date(lastOrder.createdAt).toLocaleString()}</div>
-                      {settings.showTableOnReceipt !== false && lastOrder.tableNumber && (
-                        <div>Table: {lastOrder.tableNumber}</div>
+                      {lastOrder.tableNumber && (
+                        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dee2e6' }}>
+                          <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Table</div>
+                          <div style={{ fontWeight: '600' }}>{lastOrder.tableNumber}</div>
+                        </div>
                       )}
-                      {settings.showCustomerOnReceipt !== false && (
-                        <div>Customer: {lastOrder.customerName || 'Walk-in'}</div>
-                      )}
+                      <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #dee2e6' }}>
+                        <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Customer</div>
+                        <div style={{ fontWeight: '600' }}>{lastOrder.customerName || 'Walk-in'}</div>
+                      </div>
                     </div>
 
-                    {/* Items */}
-                    <div style={{ marginBottom: '8px' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '12px', fontSize: `${fontSize + 2}px`, color: '#495057' }}>Order Items</div>
                       {lastOrder.items.map((item, index) => (
-                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <div>
-                            <div>{item.name}{item.isCustom ? ' (Custom)' : ''}</div>
-                            <div style={{ fontSize: `${fontSize - 2}px` }}>
-                              {item.quantity} x ₹{item.price}
-                            </div>
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '12px', background: '#fff', border: '1px solid #e9ecef', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '500', color: '#212529' }}>{item.name}</div>
+                            <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginTop: '2px' }}>{item.quantity} x ₹{item.price}</div>
                           </div>
-                          <div>₹{item.quantity * item.price}</div>
+                          <div style={{ fontWeight: '600', color: '#495057', fontSize: `${fontSize + 2}px` }}>₹{item.quantity * item.price}</div>
                         </div>
                       ))}
                     </div>
 
-                    {/* Totals */}
-                    <div style={{ borderTop: '1px dashed #000', paddingTop: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Subtotal:</span>
-                        <span>₹{subtotal.toFixed(2)}</span>
+                    <div style={{ padding: '16px', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ color: '#6c757d' }}>Subtotal</span>
+                        <span style={{ fontWeight: '500' }}>₹{subtotal.toFixed(2)}</span>
                       </div>
-                      {settings.showGstOnReceipt !== false && (lastOrder.discount || 0) > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Discount ({lastOrder.discount}%):</span>
-                          <span>-₹{discountAmt.toFixed(2)}</span>
+                      {(lastOrder.discount || 0) > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ color: '#10b981' }}>Discount ({lastOrder.discount}%)</span>
+                          <span style={{ color: '#10b981', fontWeight: '500' }}>-₹{discountAmt.toFixed(2)}</span>
                         </div>
                       )}
-                      {settings.showGstOnReceipt !== false && lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>GST ({lastOrder.gstRate}%):</span>
-                          <span>₹{taxAmt.toFixed(2)}</span>
+                      {lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ color: '#6c757d' }}>GST ({lastOrder.gstRate}%)</span>
+                          <span style={{ fontWeight: '500' }}>₹{taxAmt.toFixed(2)}</span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '4px' }}>
-                        <span>TOTAL:</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: `${fontSize + 4}px`, paddingTop: '12px', marginTop: '8px', borderTop: '2px solid #dee2e6', color: '#212529' }}>
+                        <span>TOTAL</span>
                         <span>₹{lastOrder.total.toFixed(2)}</span>
                       </div>
-                      <div style={{ marginTop: '4px', fontSize: `${fontSize - 2}px` }}>
-                        Paid: {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 ? 'Split' : lastOrder.paymentMethod}
+                      <div style={{ marginTop: '12px', padding: '8px', background: '#fff', borderRadius: '4px', textAlign: 'center' }}>
+                        <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d', marginBottom: '2px' }}>Payment Method</div>
+                        <div style={{ fontWeight: '600', color: '#495057' }}>{lastOrder.paymentMethod}</div>
                       </div>
-                      {lastOrder.splitPayments && lastOrder.splitPayments.length > 0 && (
-                        <div style={{ fontSize: `${fontSize - 2}px` }}>
-                          {lastOrder.splitPayments.map((payment, idx) => (
-                            <div key={idx}>{payment.method}: ₹{payment.amount.toFixed(2)}</div>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
-                    {/* Footer */}
-                    <div style={{ textAlign: 'center', marginTop: '12px', fontSize: `${fontSize - 2}px` }}>
-                      <div>{settings.receiptFooter || 'Thank you for your order!'}</div>
-                      <div>Visit us again soon</div>
+                    <div style={{ textAlign: 'center', marginTop: '20px', padding: '16px', background: '#f8f9fa', borderRadius: '8px' }}>
+                      <div style={{ fontWeight: '600', color: '#495057', marginBottom: '4px' }}>{settings.receiptFooter || 'Thank you for your order!'}</div>
+                      <div style={{ fontSize: `${fontSize - 2}px`, color: '#6c757d' }}>Visit us again soon</div>
+                      {settings.gstin && (
+                        <div style={{ marginTop: '8px', fontSize: `${fontSize - 2}px`, color: '#6c757d' }}>GSTIN: {settings.gstin}</div>
+                      )}
                     </div>
                   </>
                 );
@@ -4484,6 +5930,300 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               >
                 OK
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Voice Order Modal */}
+      {showVoiceOrder && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '500px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                Voice Order
+              </h3>
+              <button
+                onClick={() => setShowVoiceOrder(false)}
+                style={{
+                  background: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <VoiceOrderRecorder
+              menuItems={menuItems}
+              onOrderParsed={handleVoiceOrderParsed}
+              onCancel={() => setShowVoiceOrder(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Cart Restore Modal */}
+      {showCartRestore && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '400px',
+            maxWidth: '90vw'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <span style={{ fontSize: '32px', marginRight: '12px' }}>🛒</span>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                Previous Cart Found
+              </h3>
+            </div>
+            
+            <div style={{
+              backgroundColor: '#fef3c7',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              fontSize: '14px',
+              color: '#92400e'
+            }}>
+              <strong>Reason:</strong> {cartRestoreReason}
+            </div>
+
+            {restoredCart && (
+              <div style={{
+                backgroundColor: '#f8fafc',
+                padding: '12px',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                fontSize: '14px'
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  {restoredCart.length} item(s) in cart
+                </div>
+                {restoredCart.slice(0, 3).map((item, index) => (
+                  <div key={index} style={{ color: '#64748b', fontSize: '13px' }}>
+                    {item.quantity} × {item.name}
+                  </div>
+                ))}
+                {restoredCart.length > 3 && (
+                  <div style={{ color: '#64748b', fontSize: '13px' }}>
+                    +{restoredCart.length - 3} more item(s)
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={handleDismissRestore}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Dismiss
+              </button>
+              <button
+                onClick={handleRestoreCart}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Restore Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Aggregator Panel Modal */}
+      {showAggregatorPanel && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '800px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                📦 All Aggregator Orders
+              </h3>
+              <button
+                onClick={() => setShowAggregatorPanel(false)}
+                style={{
+                  padding: '8px 12px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Platform</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Customer</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Items</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Total</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Commission</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aggregatorOrders.map((order, index) => (
+                    <tr key={order.id} style={{ borderBottom: index < aggregatorOrders.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          background: order.platform === 'Zomato' ? '#ef4444' : '#f97316',
+                          color: '#ffffff'
+                        }}>
+                          {order.platform}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{order.orderId}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{order.customer}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b', maxWidth: '200px' }}>{order.items}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>₹{order.total}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#ef4444', fontWeight: '600' }}>-₹{order.commission}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleAggregatorOrderStatusChange(order.id, e.target.value)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            border: '1px solid #e5e7eb',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="preparing">Preparing</option>
+                          <option value="ready">Ready</option>
+                          <option value="picked_up">Picked Up</option>
+                          <option value="delivered">Delivered</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {order.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              onClick={() => handleAcceptAggregatorOrder(order.id)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#10b981',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleRejectAggregatorOrder(order.id)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: '600',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

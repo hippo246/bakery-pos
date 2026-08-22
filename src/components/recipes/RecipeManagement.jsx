@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { getRecipeManager } from '../../services/recipes/RecipeManager.js';
 
 export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
+  const recipeManager = getRecipeManager();
   const [recipes, setRecipes] = useState([]);
+  const [ingredients, setIngredients] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showIngredientForm, setShowIngredientForm] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState(null);
-  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+  const [editingIngredient, setEditingIngredient] = useState(null);
+  const [showMenuEngineering, setShowMenuEngineering] = useState(false);
+  const [menuEngineeringData, setMenuEngineeringData] = useState([]);
+  const [screenSize, setScreenSize] = useState('large');
 
   // Screen size detection
   useEffect(() => {
@@ -26,16 +33,22 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
   }, []);
 
   useEffect(() => {
-    // Load recipes from localStorage
-    try {
-      const savedRecipes = localStorage.getItem('bakerypos_recipes');
-      if (savedRecipes) {
-        setRecipes(JSON.parse(savedRecipes));
+    // Load recipes and ingredients from RecipeManager
+    setRecipes(recipeManager.getAllRecipes());
+    setIngredients(recipeManager.getAllIngredients());
+
+    // Add event listener for real-time updates
+    const removeListener = recipeManager.addListener((event, data) => {
+      if (event === 'recipe_added' || event === 'recipe_updated' || event === 'recipe_deleted') {
+        setRecipes(recipeManager.getAllRecipes());
       }
-    } catch (e) {
-      console.error('Failed to load recipes:', e);
-    }
-  }, []);
+      if (event === 'ingredient_added' || event === 'ingredient_updated' || event === 'ingredient_deleted') {
+        setIngredients(recipeManager.getAllIngredients());
+      }
+    });
+
+    return () => removeListener();
+  }, [recipeManager]);
 
   const saveRecipes = (newRecipes) => {
     setRecipes(newRecipes);
@@ -47,26 +60,67 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
     setShowForm(true);
   };
 
+  const handleAddIngredient = () => {
+    setEditingIngredient(null);
+    setShowIngredientForm(true);
+  };
+
   const handleEditRecipe = (recipe) => {
     setEditingRecipe(recipe);
     setShowForm(true);
   };
 
-  const handleDeleteRecipe = (recipeId) => {
-    if (window.confirm('Are you sure you want to delete this recipe?')) {
-      saveRecipes(recipes.filter(r => r.id !== recipeId));
-    }
+  const handleEditIngredient = (ingredient) => {
+    setEditingIngredient(ingredient);
+    setShowIngredientForm(true);
   };
 
   const handleSaveRecipe = (recipeData) => {
     if (editingRecipe) {
-      saveRecipes(recipes.map(r => r.id === editingRecipe.id ? { ...recipeData, id: editingRecipe.id } : r));
+      recipeManager.updateRecipe(editingRecipe.id, recipeData);
     } else {
-      saveRecipes([...recipes, { ...recipeData, id: Date.now() }]);
+      recipeManager.addRecipe(recipeData);
     }
     setShowForm(false);
     setEditingRecipe(null);
   };
+
+  const handleDeleteRecipe = (recipeId) => {
+    if (confirm('Are you sure you want to delete this recipe?')) {
+      recipeManager.deleteRecipe(recipeId);
+    }
+  };
+
+  const handleSaveIngredient = (ingredientData) => {
+    if (editingIngredient) {
+      recipeManager.updateIngredient(editingIngredient.id, ingredientData);
+    } else {
+      recipeManager.addIngredient(ingredientData);
+    }
+    setShowIngredientForm(false);
+    setEditingIngredient(null);
+  };
+
+  const handleDeleteIngredient = (ingredientId) => {
+    if (confirm('Are you sure you want to delete this ingredient?')) {
+      recipeManager.deleteIngredient(ingredientId);
+    }
+  };
+
+  const handleMenuEngineering = () => {
+    // Mock sales data - in production this would come from actual sales
+    const mockSalesData = recipes.map(r => ({
+      menuItemId: r.menuItemId,
+      quantitySold: Math.floor(Math.random() * 100) + 10,
+      revenue: (r.foodCost * 2.5) * (Math.floor(Math.random() * 100) + 10)
+    }));
+    
+    const insights = recipeManager.getMenuEngineeringInsights(mockSalesData);
+    setMenuEngineeringData(insights);
+    setShowMenuEngineering(true);
+  };
+
+  const stats = recipeManager.getStatistics();
 
   return (
     <div style={{
@@ -136,43 +190,105 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
           <>
             {/* Stats Cards */}
             <div style={{
-              display: 'flex',
+              display: 'grid',
+              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
               gap: '16px',
-              marginBottom: '24px',
-              flexWrap: 'wrap'
+              marginBottom: '24px'
             }}>
-              <StatCard label="Total Recipes" value={recipes.length} icon="📖" />
-              <StatCard label="Active Recipes" value={recipes.filter(r => r.active).length} icon="✅" />
-              <StatCard label="Avg Cost" value={`₹${recipes.length > 0 ? Math.round(recipes.reduce((sum, r) => sum + (r.totalCost || 0), 0) / recipes.length) : 0}`} icon="💰" />
+              <div style={{
+                background: '#ffffff',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Total Recipes</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{stats.totalRecipes}</div>
+              </div>
+              <div style={{
+                background: '#ffffff',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Active Recipes</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{stats.activeRecipes}</div>
+              </div>
+              <div style={{
+                background: '#ffffff',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Ingredients</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>{stats.totalIngredients}</div>
+              </div>
+              <div style={{
+                background: '#ffffff',
+                padding: '16px',
+                borderRadius: '8px',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>High Margin Items</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>{stats.highMarginItems}</div>
+              </div>
             </div>
 
-            {/* Add Recipe Button */}
-            <button
-              onClick={handleAddRecipe}
-              style={{
-                padding: '12px 24px',
-                background: '#111827',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              + Create New Recipe
-            </button>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleAddRecipe}
+                style={{
+                  padding: '12px 24px',
+                  background: '#111827',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                + Create Recipe
+              </button>
+              <button
+                onClick={handleAddIngredient}
+                style={{
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                + Add Ingredient
+              </button>
+              <button
+                onClick={handleMenuEngineering}
+                style={{
+                  padding: '12px 24px',
+                  background: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                📊 Menu Engineering
+              </button>
+            </div>
 
             {/* Recipes List */}
             <div style={{
               background: '#ffffff',
               borderRadius: '8px',
               border: '1px solid #e5e7eb',
-              padding: '20px'
+              padding: '20px',
+              marginBottom: '24px'
             }}>
               <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
                 Recipe Library
@@ -197,6 +313,63 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
                 </div>
               )}
             </div>
+
+            {/* Ingredients List */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              padding: '20px'
+            }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+                Ingredients Database
+              </div>
+              {ingredients.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🥗</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500' }}>No ingredients yet</div>
+                  <div style={{ fontSize: '13px', marginTop: '8px' }}>Add ingredients to build recipes</div>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Name</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Unit</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Cost/Unit</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Supplier</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ingredients.map(ingredient => (
+                        <tr key={ingredient.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>{ingredient.name}</td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>{ingredient.unit}</td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>₹{ingredient.costPerUnit.toFixed(2)}</td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>{ingredient.supplier || '-'}</td>
+                          <td style={{ padding: '12px' }}>
+                            <button
+                              onClick={() => handleEditIngredient(ingredient)}
+                              style={{ padding: '6px 12px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', marginRight: '8px' }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteIngredient(ingredient.id)}
+                              style={{ padding: '6px 12px', background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -208,7 +381,278 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
           onClose={() => setSelectedRecipe(null)}
         />
       )}
+
+      {/* Ingredient Form Modal */}
+      {showIngredientForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '500px',
+            maxWidth: '90vw'
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '20px' }}>
+              {editingIngredient ? 'Edit Ingredient' : 'Add Ingredient'}
+            </h3>
+            <IngredientForm
+              ingredient={editingIngredient}
+              onSave={handleSaveIngredient}
+              onCancel={() => {
+                setShowIngredientForm(false);
+                setEditingIngredient(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Menu Engineering Modal */}
+      {showMenuEngineering && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '900px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', margin: 0 }}>
+                📊 Menu Engineering Insights
+              </h3>
+              <button
+                onClick={() => setShowMenuEngineering(false)}
+                style={{ padding: '8px 12px', background: '#f3f4f6', color: '#111827', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Item</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Sold</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Revenue</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Food Cost</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Cost %</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Margin</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Contribution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {menuEngineeringData.map((item, index) => (
+                    <tr key={item.menuItemId} style={{ borderBottom: index < menuEngineeringData.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>{item.name}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>{item.quantitySold}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>₹{item.revenue.toFixed(0)}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>₹{item.foodCost.toFixed(2)}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: item.foodCostPercentage > 35 ? '#ef4444' : '#10b981', fontWeight: '600' }}>{item.foodCostPercentage.toFixed(1)}%</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: item.profitMargin > 70 ? '#10b981' : item.profitMargin < 30 ? '#ef4444' : '#6b7280', fontWeight: '600' }}>{item.profitMargin.toFixed(1)}%</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>₹{item.totalContribution.toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function IngredientForm({ ingredient, onSave, onCancel }) {
+  const [name, setName] = useState(ingredient?.name || '');
+  const [unit, setUnit] = useState(ingredient?.unit || 'kg');
+  const [costPerUnit, setCostPerUnit] = useState(ingredient?.costPerUnit || '');
+  const [supplier, setSupplier] = useState(ingredient?.supplier || '');
+  const [category, setCategory] = useState(ingredient?.category || '');
+  const [isActive, setIsActive] = useState(ingredient?.isActive !== false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave({
+      name,
+      unit,
+      costPerUnit: parseFloat(costPerUnit) || 0,
+      supplier,
+      category,
+      isActive
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+            Ingredient Name *
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+            placeholder="e.g., All-Purpose Flour"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+            Unit *
+          </label>
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+          >
+            <option value="kg">Kilogram (kg)</option>
+            <option value="g">Gram (g)</option>
+            <option value="l">Liter (l)</option>
+            <option value="ml">Milliliter (ml)</option>
+            <option value="pcs">Pieces (pcs)</option>
+            <option value="dozen">Dozen</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+            Cost per Unit *
+          </label>
+          <input
+            type="number"
+            value={costPerUnit}
+            onChange={(e) => setCostPerUnit(e.target.value)}
+            required
+            min="0"
+            step="0.01"
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+            placeholder="e.g., 45.00"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+            Supplier
+          </label>
+          <input
+            type="text"
+            value={supplier}
+            onChange={(e) => setSupplier(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+            placeholder="e.g., Local Supplier"
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+            Category
+          </label>
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+            placeholder="e.g., Dry Goods"
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input
+            type="checkbox"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            style={{ width: '18px', height: '18px' }}
+          />
+          <label style={{ fontSize: '14px', color: '#111827' }}>Active Ingredient</label>
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={onCancel}
+          style={{
+            padding: '12px 24px',
+            background: '#f3f4f6',
+            color: '#111827',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          style={{
+            padding: '12px 24px',
+            background: '#6366f1',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer'
+          }}
+        >
+          {ingredient ? 'Update' : 'Add'} Ingredient
+        </button>
+      </div>
+    </form>
   );
 }
 

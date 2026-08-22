@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 
-export default function Waiters({ onNavigate, orders = [], staff = [] }) {
+export default function Waiters({ onNavigate, orders = [], setOrders, staff = [] }) {
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,6 +103,20 @@ export default function Waiters({ onNavigate, orders = [], staff = [] }) {
       setWaiterCalls(prev => prev.filter(call => call.id !== callId));
     } catch (error) {
       console.error('Error dismissing waiter call:', error);
+    }
+  };
+
+  const updateOrderStatus = (orderId, newStatus) => {
+    if (setOrders) {
+      setOrders(prevOrders => {
+        const updatedOrders = prevOrders.map(order => {
+          if (order.id === orderId) {
+            return { ...order, status: newStatus };
+          }
+          return order;
+        });
+        return updatedOrders;
+      });
     }
   };
 
@@ -597,10 +611,43 @@ export default function Waiters({ onNavigate, orders = [], staff = [] }) {
                       padding: '8px 0',
                       borderBottom: itemIndex < Math.min(order.items.length - 1, 2) ? '1px solid #334155' : 'none',
                       display: 'flex',
-                      justifyContent: 'space-between'
+                      justifyContent: 'space-between',
+                      flexDirection: 'column'
                     }}>
-                      <span>{item.name}</span>
-                      <span style={{ color: '#94a3b8' }}>x{item.qty}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {item.name}
+                          {item.isCustom && (
+                            <span style={{ 
+                              fontSize: '10px', 
+                              padding: '1px 4px', 
+                              borderRadius: '3px',
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              border: '1px solid #f59e0b',
+                              fontWeight: '600'
+                            }}>
+                              Custom
+                            </span>
+                          )}
+                        </span>
+                        <span style={{ color: '#94a3b8' }}>x{item.qty || item.quantity || 1}</span>
+                      </div>
+                      {item.baseItemName && (
+                        <div style={{ fontSize: '11px', color: '#92400e', fontStyle: 'italic' }}>
+                          Base: {item.baseItemName}
+                        </div>
+                      )}
+                      {item.notes && (
+                        <div style={{ 
+                          fontSize: '11px', 
+                          color: item.noteType === 'allergy' ? '#ef4444' : '#94a3b8',
+                          fontStyle: 'italic',
+                          marginTop: '2px'
+                        }}>
+                          {item.noteType === 'allergy' ? '⚠️ ALLERGY: ' : '📝 '}{item.notes}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {order.items && order.items.length > 3 && (

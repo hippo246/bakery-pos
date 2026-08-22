@@ -356,7 +356,59 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       inventoryAnalysis.categories[category].value += item.quantity * (item.cost || 0);
     });
 
-    // Financial analysis
+    // Cost vs Profit Analysis per menu item
+    const costProfitAnalysis = {};
+    completedOrders.forEach(order => {
+      order.items?.forEach(item => {
+        const itemName = item.name || item.itemName;
+        const menuItem = menuItems.find(m => m.name === itemName);
+        const cost = menuItem?.cost || 0;
+        const price = item.price || 0;
+        const quantity = item.qty || 1;
+        const revenue = price * quantity;
+        const totalCost = cost * quantity;
+        const profit = revenue - totalCost;
+        const margin = revenue > 0 ? (profit / revenue * 100).toFixed(1) : 0;
+
+        if (!costProfitAnalysis[itemName]) {
+          costProfitAnalysis[itemName] = {
+            cost,
+            price,
+            quantity: 0,
+            revenue: 0,
+            totalCost: 0,
+            profit: 0,
+            margin: 0
+          };
+        }
+
+        costProfitAnalysis[itemName].quantity += quantity;
+        costProfitAnalysis[itemName].revenue += revenue;
+        costProfitAnalysis[itemName].totalCost += totalCost;
+        costProfitAnalysis[itemName].profit += profit;
+        costProfitAnalysis[itemName].margin = margin;
+      });
+    });
+
+    const costProfitItems = Object.entries(costProfitAnalysis)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.profit - a.profit);
+
+    // Day-end report - Biller-wise sales
+    const billerWiseSales = Object.values(staffPerformance)
+      .sort((a, b) => b.revenue - a.revenue);
+
+    // Day-end report - Cash summary
+    const cashSummary = {
+      cash: paymentMethods['CASH'] || 0,
+      card: paymentMethods['CARD'] || 0,
+      upi: paymentMethods['UPI'] || 0,
+      total: Object.values(paymentMethods).reduce((sum, amount) => sum + amount, 0),
+      cashPercentage: 0
+    };
+    cashSummary.cashPercentage = cashSummary.total > 0 
+      ? (cashSummary.cash / cashSummary.total * 100).toFixed(1) 
+      : 0;
     const financialAnalysis = {
       totalRevenue: completedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
       totalCost: completedOrders.reduce((sum, o) => {
@@ -393,7 +445,10 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       staffPerformance,
       topCustomers,
       inventoryAnalysis,
-      financialAnalysis
+      financialAnalysis,
+      costProfitItems,
+      billerWiseSales,
+      cashSummary
     };
   }, [orders, dateRange, inventory, menuItems]);
 
@@ -783,7 +838,8 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
           borderRadius: '16px',
           padding: '28px',
           border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          marginBottom: '28px'
         }}>
           <div style={{
             fontSize: '18px',
@@ -819,6 +875,214 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
               description="vs previous period"
               color="#10b981"
             />
+          </div>
+        </div>
+
+        {/* Cost vs Profit Analysis */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          padding: '28px',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          marginBottom: '28px'
+        }}>
+          <div style={{
+            fontSize: '18px',
+            fontWeight: '700',
+            color: '#1e293b',
+            marginBottom: '20px'
+          }}>
+            💰 Cost vs Profit Analysis
+          </div>
+          <div style={{ overflow: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Item Name</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Cost</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Price</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Qty Sold</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Revenue</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Total Cost</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Profit</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Margin %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.costProfitItems.length > 0 ? reportData.costProfitItems.map((item, index) => (
+                  <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b', fontWeight: '500' }}>{item.name}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>₹{item.cost.toFixed(2)}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>₹{item.price.toFixed(2)}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{item.quantity}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>₹{item.revenue.toFixed(2)}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>₹{item.totalCost.toFixed(2)}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: item.profit >= 0 ? '#10b981' : '#ef4444', fontWeight: '700' }}>₹{item.profit.toFixed(2)}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: parseFloat(item.margin) >= 30 ? '#10b981' : parseFloat(item.margin) >= 20 ? '#f59e0b' : '#ef4444', fontWeight: '700' }}>{item.margin}%</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>No sales data available</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Day-end Report */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1fr',
+          gap: '24px',
+          marginBottom: '28px'
+        }}>
+          {/* Biller-wise Sales */}
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '28px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#1e293b',
+              marginBottom: '20px'
+            }}>
+              👤 Biller-wise Sales
+            </div>
+            {reportData.billerWiseSales.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {reportData.billerWiseSales.map((biller, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                        {biller.name}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        {biller.orders} orders
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
+                        ₹{biller.revenue.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: '#64748b', fontSize: '14px' }}>No biller data available</div>
+            )}
+          </div>
+
+          {/* Cash Summary */}
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            padding: '28px',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#1e293b',
+              marginBottom: '20px'
+            }}>
+              💵 Cash Summary
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px',
+                background: '#f0fdf4',
+                borderRadius: '12px',
+                border: '1px solid #bbf7d0'
+              }}>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#166534', fontWeight: '600', marginBottom: '4px' }}>
+                    💵 Cash
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#166534' }}>
+                    {reportData.cashSummary.cashPercentage}% of total
+                  </div>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#166534' }}>
+                  ₹{reportData.cashSummary.cash.toFixed(2)}
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px',
+                background: '#eff6ff',
+                borderRadius: '12px',
+                border: '1px solid #bfdbfe'
+              }}>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#1e40af', fontWeight: '600', marginBottom: '4px' }}>
+                    💳 Card
+                  </div>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e40af' }}>
+                  ₹{reportData.cashSummary.card.toFixed(2)}
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px',
+                background: '#fef9c3',
+                borderRadius: '12px',
+                border: '1px solid #fde047'
+              }}>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#854d0e', fontWeight: '600', marginBottom: '4px' }}>
+                    📱 UPI
+                  </div>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '800', color: '#854d0e' }}>
+                  ₹{reportData.cashSummary.upi.toFixed(2)}
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px',
+                background: '#1e293b',
+                borderRadius: '12px',
+                border: '1px solid #0f172a'
+              }}>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: '600', marginBottom: '4px' }}>
+                    📊 Total
+                  </div>
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: '#f1f5f9' }}>
+                  ₹{reportData.cashSummary.total.toFixed(2)}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

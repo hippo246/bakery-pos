@@ -4,6 +4,8 @@ export default function Reservations({ tables, customers, onNavigate }) {
   const [reservations, setReservations] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingReservation, setEditingReservation] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingReservation, setViewingReservation] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -52,6 +54,11 @@ export default function Reservations({ tables, customers, onNavigate }) {
   const handleEditReservation = (reservation) => {
     setEditingReservation(reservation);
     setShowForm(true);
+  };
+
+  const handleViewReservation = (reservation) => {
+    setViewingReservation(reservation);
+    setShowViewModal(true);
   };
 
   const handleDeleteReservation = (reservationId) => {
@@ -264,6 +271,7 @@ export default function Reservations({ tables, customers, onNavigate }) {
                       key={reservation.id}
                       reservation={reservation}
                       onEdit={() => handleEditReservation(reservation)}
+                      onView={() => handleViewReservation(reservation)}
                       onDelete={() => handleDeleteReservation(reservation.id)}
                       onStatusChange={handleStatusChange}
                     />
@@ -271,6 +279,153 @@ export default function Reservations({ tables, customers, onNavigate }) {
                 </div>
               )}
             </div>
+
+            {/* View Reservation Modal */}
+            {showViewModal && viewingReservation && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000
+              }}>
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                  maxWidth: '600px',
+                  width: '90%',
+                  maxHeight: '80vh',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <div style={{
+                    background: '#111827',
+                    color: '#ffffff',
+                    padding: '20px 24px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>📅 Reservation Details</span>
+                    <button
+                      onClick={() => setShowViewModal(false)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '20px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  
+                  <div style={{ padding: '24px', overflow: 'auto' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
+                        {viewingReservation.customerName}
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                        Reservation ID: {viewingReservation.id}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                      <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>📞 Phone</div>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                          {viewingReservation.phone || 'N/A'}
+                        </div>
+                      </div>
+                      <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>✉️ Email</div>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                          {viewingReservation.email || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                      <div style={{ background: '#dbeafe', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e40af' }}>{viewingReservation.date}</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280' }}>Date</div>
+                      </div>
+                      <div style={{ background: '#d1fae5', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#065f46' }}>{viewingReservation.time}</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280' }}>Time</div>
+                      </div>
+                      <div style={{ background: '#fef3c7', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#92400e' }}>{viewingReservation.guests}</div>
+                        <div style={{ fontSize: '11px', color: '#6b7280' }}>Guests</div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: '500' }}>🪑 Table</div>
+                      <div style={{ 
+                        background: '#f9fafb', 
+                        padding: '12px', 
+                        borderRadius: '8px', 
+                        fontSize: '14px', 
+                        fontWeight: '500',
+                        color: '#111827'
+                      }}>
+                        {viewingReservation.tableName || 'Not assigned'}
+                      </div>
+                    </div>
+
+                    {viewingReservation.notes && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: '500' }}>📝 Notes</div>
+                        <div style={{ 
+                          background: '#f9fafb', 
+                          padding: '12px', 
+                          borderRadius: '8px', 
+                          fontSize: '14px', 
+                          color: '#374151',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {viewingReservation.notes}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          handleEditReservation(viewingReservation);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          background: '#111827',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Edit Reservation
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -303,7 +458,7 @@ function StatCard({ label, value, icon, color = '#111827' }) {
   );
 }
 
-function ReservationCard({ reservation, onEdit, onDelete, onStatusChange }) {
+function ReservationCard({ reservation, onEdit, onView, onDelete, onStatusChange }) {
   const statusColors = {
     pending: '#d97706',
     confirmed: '#059669',
@@ -352,6 +507,21 @@ function ReservationCard({ reservation, onEdit, onDelete, onStatusChange }) {
         )}
       </div>
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <button
+          onClick={onView}
+          style={{
+            padding: '8px 16px',
+            background: '#f3f4f6',
+            color: '#374151',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '500',
+            cursor: 'pointer'
+          }}
+        >
+          👁️ View
+        </button>
         <select
           value={reservation.status}
           onChange={(e) => onStatusChange(reservation.id, e.target.value)}

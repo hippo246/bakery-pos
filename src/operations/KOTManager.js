@@ -133,14 +133,18 @@ export class KOTManager {
     const kot = this.kots.get(kotId);
     
     if (!kot) {
+      console.error('KOT not found for updateItemStatus:', kotId);
       return { success: false, error: 'KOT not found' };
     }
 
+    console.log('Updating item status in KOTManager:', kotId, kotItemId, status);
     const updatedKOT = updateKOTItemStatus(kot, kotItemId, status);
     this.kots.set(kotId, updatedKOT);
     this.saveState();
+    console.log('Item status updated and saved');
 
     this.emit('kotItemUpdated', { kotId, kotItemId, status, kot: updatedKOT });
+    console.log('kotItemUpdated event emitted');
 
     return { success: true, kot: updatedKOT };
   }
@@ -453,8 +457,9 @@ export class KOTManager {
         config: this.config
       };
       localStorage.setItem(this.storageKey, JSON.stringify(state));
+      console.log('[KOTManager] State saved successfully. KOT count:', this.kots.size);
     } catch (error) {
-      console.error('Failed to save KOT manager state:', error);
+      console.error('[KOTManager] Failed to save KOT manager state:', error);
     }
   }
 
@@ -464,13 +469,17 @@ export class KOTManager {
   loadState() {
     try {
       const state = localStorage.getItem(this.storageKey);
+      console.log('[KOTManager] Loading state from localStorage:', this.storageKey);
       if (state) {
         const parsed = JSON.parse(state);
         this.kots = new Map(parsed.kots || []);
         this.config = { ...DEFAULT_KOT_CONFIG, ...parsed.config };
+        console.log('[KOTManager] State loaded successfully. KOT count:', this.kots.size);
+      } else {
+        console.log('[KOTManager] No existing state found in localStorage');
       }
     } catch (error) {
-      console.error('Failed to load KOT manager state:', error);
+      console.error('[KOTManager] Failed to load KOT manager state:', error);
       this.kots = new Map();
     }
   }
