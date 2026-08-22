@@ -752,7 +752,7 @@ export default function BakeryPOS({
       </header>
 
       {/* Main Content */}
-      <main style={{ flex: 1, overflow: 'hidden', padding: '0' }}>
+      <main style={{ flex: 1, overflow: 'auto', padding: '0', minHeight: 0 }}>
         {renderContent()}
       </main>
     </div>

@@ -1932,7 +1932,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       flexDirection: 'column',
       height: '100%',
       background: '#f1f5f9',
-      overflow: 'hidden',
+      overflow: 'auto',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Professional Header */}
@@ -2008,8 +2008,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   borderRadius: '8px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
                   zIndex: 1000,
-                  minWidth: '400px',
-                  maxHeight: '500px',
+                  minWidth: screenSize === 'small' ? '280px' : '400px',
+                  maxWidth: screenSize === 'small' ? '90vw' : '500px',
+                  maxHeight: screenSize === 'small' ? '400px' : '500px',
                   overflow: 'auto'
                 }}>
                   <div style={{
@@ -2285,11 +2286,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       <div style={{
         flex: 1,
         display: 'flex',
-        gap: '12px',
-        padding: '12px',
-        overflow: 'hidden',
+        gap: screenSize === 'small' ? '8px' : '12px',
+        padding: screenSize === 'small' ? '8px' : '12px',
+        overflow: 'auto',
         minHeight: 0,
-        maxWidth: '100%'
+        maxWidth: '100%',
+        flexDirection: screenSize === 'small' ? 'column' : 'row'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
@@ -3353,9 +3355,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
-            padding: '24px',
-            width: '400px',
-            maxWidth: '90vw'
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '400px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
@@ -3463,9 +3465,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
-            padding: '24px',
-            width: '500px',
-            maxWidth: '90vw'
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '500px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
@@ -3581,9 +3583,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#252538',
             borderRadius: '16px',
-            padding: '32px',
-            width: '500px',
-            maxWidth: '90vw',
+            padding: screenSize === 'small' ? '16px' : '32px',
+            width: screenSize === 'small' ? '95vw' : '500px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             border: '1px solid #2d2d44'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -3916,9 +3920,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
-            padding: '24px',
-            width: '600px',
-            maxWidth: '90vw',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '600px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw',
             maxHeight: '80vh',
             overflowY: 'auto'
           }}>
@@ -4040,9 +4044,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
-            padding: '24px',
-            width: '400px',
-            maxWidth: '90vw'
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '400px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
@@ -4160,9 +4164,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
-            padding: '24px',
-            width: '400px',
-            maxWidth: '90vw'
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '400px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
@@ -4324,9 +4328,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#252538',
             borderRadius: '16px',
-            padding: '24px',
-            width: '100%',
-            maxWidth: '600px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '100%',
+            maxWidth: screenSize === 'small' ? '95vw' : '600px',
             maxHeight: '90vh',
             overflowY: 'auto',
             border: '1px solid #2d2d44'
@@ -4842,9 +4846,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{
             background: '#ffffff',
             borderRadius: '12px',
-            padding: '24px',
-            width: '500px',
-            maxWidth: '90vw'
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '500px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
