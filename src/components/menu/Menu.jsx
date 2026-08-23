@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import useScreenSize from '../../hooks/useScreenSize';
 
 function InventoryContent({ inventory = [], setInventory }) {
   const [search, setSearch] = useState('');
@@ -9,7 +10,7 @@ function InventoryContent({ inventory = [], setInventory }) {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+  const screenSize = useScreenSize();
   const [formData, setFormData] = useState({
     name: '',
     category: 'Ingredients',
@@ -27,24 +28,6 @@ function InventoryContent({ inventory = [], setInventory }) {
       console.error('Error saving menu to localStorage:', error);
     }
   }, [inventory]);
-
-  // Screen size detection
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setScreenSize('small');
-      } else if (width < 1200) {
-        setScreenSize('medium');
-      } else {
-        setScreenSize('large');
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   const categories = ['ALL', ...new Set(inventory.map(item => item.category))];
 
@@ -721,6 +704,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const screenSize = useScreenSize();
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -839,47 +823,6 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
       background: '#ffffff',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        background: '#ffffff',
-        padding: '20px 24px',
-        borderBottom: '1px solid #e5e7eb'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <div style={{
-              color: '#111827',
-              fontSize: '20px',
-              fontWeight: '600'
-            }}>
-              Menu & Stock Management
-            </div>
-            <div style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px' }}>
-              Manage your menu items and inventory
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate?.('dashboard')}
-            style={{
-              padding: '10px 20px',
-              background: '#f9fafb',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-
       {/* Sub-tabs */}
       <div style={{
         background: '#ffffff',

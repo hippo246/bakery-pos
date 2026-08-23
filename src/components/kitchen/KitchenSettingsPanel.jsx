@@ -67,82 +67,85 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
       left: 0,
       right: 0,
       bottom: 0,
-      background: localSettings.display?.darkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+      background: 'rgba(0, 0, 0, 0.9)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 10000
     }}>
       <div style={{
-        background: localSettings.display?.darkMode ? '#1e293b' : '#ffffff',
-        borderRadius: '16px',
+        background: '#000000',
+        border: '2px solid #00ff00',
         width: '90%',
         maxWidth: '900px',
         maxHeight: '90vh',
         overflow: 'auto',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: localSettings.display?.darkMode ? '1px solid #334155' : 'none'
+        fontFamily: '"Courier New", monospace'
       }}>
         {/* Header */}
         <div style={{
-          padding: '24px 32px',
-          borderBottom: localSettings.display?.darkMode ? '1px solid #334155' : '1px solid #e5e7eb',
+          padding: '20px 24px',
+          borderBottom: '2px solid #00ff00',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           position: 'sticky',
           top: 0,
-          background: localSettings.display?.darkMode ? '#1e293b' : '#ffffff',
+          background: '#000000',
           zIndex: 10
         }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: localSettings.display?.darkMode ? '#f8fafc' : '#111827' }}>
-              ⚙️ Kitchen Settings
+            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', color: '#00ff00' }}>
+              =================================
+              KITCHEN SETTINGS
+              =================================
             </h2>
-            <p style={{ margin: '4px 0 0 0', color: localSettings.display?.darkMode ? '#94a3b8' : '#6b7280', fontSize: '14px' }}>
-              Configure all kitchen display system features
+            <p style={{ margin: '4px 0 0 0', color: '#00ff00', fontSize: '12px' }}>
+              &gt; Configure display system features
             </p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={resetToDefaults}
               style={{
-                padding: '10px 20px',
-                background: localSettings.display?.darkMode ? '#334155' : '#f9fafb',
-                color: localSettings.display?.darkMode ? '#f1f5f9' : '#111827',
-                border: localSettings.display?.darkMode ? '1px solid #475569' : '1px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
+                padding: '8px 16px',
+                background: '#000000',
+                color: '#00ff00',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace'
               }}
             >
-              Reset Defaults
+              [ RESET ]
             </button>
             <button
               onClick={onClose}
               style={{
-                padding: '10px 20px',
-                background: localSettings.display?.darkMode ? '#3b82f6' : '#111827',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
+                padding: '8px 16px',
+                background: '#00ff00',
+                color: '#000000',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace'
               }}
             >
-              Close
+              [ CLOSE ]
             </button>
           </div>
         </div>
 
         {/* Settings Content */}
-        <div style={{ padding: '32px' }}>
+        <div style={{ padding: '24px' }}>
           {/* Display Settings */}
           <SettingsSection
-            title="Display Settings"
-            icon="🖥️"
+            title="DISPLAY SETTINGS"
+            icon="[D]"
             settings={localSettings.display}
             fullSettings={localSettings}
             onToggle={(key) => handleToggle('display', key)}
@@ -152,8 +155,8 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
 
           {/* Order Management */}
           <SettingsSection
-            title="Order Management"
-            icon="📋"
+            title="ORDER MANAGEMENT"
+            icon="[O]"
             settings={localSettings.orderManagement}
             fullSettings={localSettings}
             onToggle={(key) => handleToggle('orderManagement', key)}
@@ -163,8 +166,8 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
 
           {/* Station Settings */}
           <SettingsSection
-            title="Station Settings"
-            icon="🍳"
+            title="STATION SETTINGS"
+            icon="[S]"
             settings={localSettings.stations}
             fullSettings={localSettings}
             onToggle={(key) => handleToggle('stations', key)}
@@ -174,8 +177,8 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
 
           {/* Notifications */}
           <SettingsSection
-            title="Notifications & Alerts"
-            icon="🔔"
+            title="NOTIFICATIONS"
+            icon="[N]"
             settings={localSettings.notifications}
             fullSettings={localSettings}
             onToggle={(key) => handleToggle('notifications', key)}
@@ -185,8 +188,8 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
 
           {/* Performance */}
           <SettingsSection
-            title="Performance & Analytics"
-            icon="📊"
+            title="PERFORMANCE"
+            icon="[P]"
             settings={localSettings.performance}
             fullSettings={localSettings}
             onToggle={(key) => handleToggle('performance', key)}
@@ -196,8 +199,8 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
 
           {/* Advanced */}
           <SettingsSection
-            title="Advanced Settings"
-            icon="🔧"
+            title="ADVANCED"
+            icon="[A]"
             settings={localSettings.advanced}
             fullSettings={localSettings}
             onToggle={(key) => handleToggle('advanced', key)}
@@ -211,26 +214,23 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
 }
 
 function SettingsSection({ title, icon, settings, fullSettings, onToggle, onSliderChange, onSelectChange }) {
-  // Get dark mode from the full settings object
-  const isDarkMode = fullSettings?.display?.darkMode !== false; // Default to true if not set
-  
   return (
-    <div style={{ marginBottom: '32px' }}>
+    <div style={{ marginBottom: '24px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
-        marginBottom: '20px',
-        paddingBottom: '12px',
-        borderBottom: isDarkMode ? '2px solid #334155' : '2px solid #f3f4f6'
+        marginBottom: '16px',
+        paddingBottom: '8px',
+        borderBottom: '1px solid #00ff00'
       }}>
-        <span style={{ fontSize: '28px' }}>{icon}</span>
-        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: isDarkMode ? '#f8fafc' : '#111827' }}>
+        <span style={{ fontSize: '14px', color: '#00ff00', fontWeight: 'bold' }}>{icon}</span>
+        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#00ff00' }}>
           {title}
         </h3>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
         {Object.entries(settings).map(([key, value]) => (
           <SettingItem
             key={key}
@@ -239,7 +239,6 @@ function SettingsSection({ title, icon, settings, fullSettings, onToggle, onSlid
             onToggle={onToggle}
             onSliderChange={onSliderChange}
             onSelectChange={onSelectChange}
-            isDarkMode={isDarkMode}
           />
         ))}
       </div>
@@ -247,34 +246,46 @@ function SettingsSection({ title, icon, settings, fullSettings, onToggle, onSlid
   );
 }
 
-function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange, isDarkMode }) {
+function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange }) {
   const label = formatLabel(keyName);
   const description = getDescription(keyName);
 
   if (typeof value === 'boolean') {
     return (
       <div style={{
-        padding: '16px',
-        background: isDarkMode ? '#334155' : '#f9fafb',
-        borderRadius: '12px',
-        border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+        padding: '12px',
+        background: '#000000',
+        border: '1px solid #00ff00',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: isDarkMode ? '#f8fafc' : '#111827', marginBottom: '4px' }}>
-              {label}
-            </div>
-            {description && (
-              <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#6b7280', lineHeight: '1.4' }}>
-                {description}
-              </div>
-            )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#00ff00', marginBottom: '4px' }}>
+            {label}
           </div>
-          <ToggleSwitch
-            isOn={value}
-            onToggle={() => onToggle(keyName)}
-          />
+          {description && (
+            <div style={{ fontSize: '10px', color: '#00ff00', lineHeight: '1.4', opacity: 0.7 }}>
+              {description}
+            </div>
+          )}
         </div>
+        <button
+          onClick={() => onToggle(keyName)}
+          style={{
+            padding: '4px 12px',
+            background: value ? '#00ff00' : '#000000',
+            color: value ? '#000000' : '#00ff00',
+            border: '1px solid #00ff00',
+            borderRadius: '0px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontFamily: '"Courier New", monospace'
+          }}
+        >
+          {value ? 'ON' : 'OFF'}
+        </button>
       </div>
     );
   }
@@ -282,16 +293,15 @@ function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange,
   if (typeof value === 'number') {
     return (
       <div style={{
-        padding: '16px',
-        background: isDarkMode ? '#334155' : '#f9fafb',
-        borderRadius: '12px',
-        border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+        padding: '12px',
+        background: '#000000',
+        border: '1px solid #00ff00'
       }}>
-        <div style={{ fontSize: '14px', fontWeight: '600', color: isDarkMode ? '#f8fafc' : '#111827', marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#00ff00', marginBottom: '8px' }}>
           {label}
         </div>
         {description && (
-          <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#6b7280', marginBottom: '12px', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '10px', color: '#00ff00', marginBottom: '12px', lineHeight: '1.4', opacity: 0.7 }}>
             {description}
           </div>
         )}
@@ -303,7 +313,7 @@ function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange,
           onChange={(e) => onSliderChange(keyName, parseInt(e.target.value))}
           style={{ width: '100%' }}
         />
-        <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#6b7280', marginTop: '4px' }}>
+        <div style={{ fontSize: '10px', color: '#00ff00', marginTop: '4px' }}>
           {value} {keyName.includes('seconds') || keyName.includes('interval') ? 'seconds' : keyName.includes('minutes') ? 'minutes' : ''}
         </div>
       </div>
@@ -313,16 +323,15 @@ function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange,
   if (typeof value === 'string') {
     return (
       <div style={{
-        padding: '16px',
-        background: isDarkMode ? '#334155' : '#f9fafb',
-        borderRadius: '12px',
-        border: isDarkMode ? '1px solid #475569' : '1px solid #e5e7eb'
+        padding: '12px',
+        background: '#000000',
+        border: '1px solid #00ff00'
       }}>
-        <div style={{ fontSize: '14px', fontWeight: '600', color: isDarkMode ? '#f8fafc' : '#111827', marginBottom: '8px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#00ff00', marginBottom: '8px' }}>
           {label}
         </div>
         {description && (
-          <div style={{ fontSize: '12px', color: isDarkMode ? '#94a3b8' : '#6b7280', marginBottom: '12px', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '10px', color: '#00ff00', marginBottom: '12px', lineHeight: '1.4', opacity: 0.7 }}>
             {description}
           </div>
         )}
@@ -331,12 +340,13 @@ function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange,
           onChange={(e) => onSelectChange(keyName, e.target.value)}
           style={{
             width: '100%',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: isDarkMode ? '1px solid #475569' : '1px solid #d1d5db',
-            fontSize: '14px',
-            background: isDarkMode ? '#1e293b' : '#ffffff',
-            color: isDarkMode ? '#f8fafc' : '#111827'
+            padding: '6px 12px',
+            borderRadius: '0px',
+            border: '1px solid #00ff00',
+            fontSize: '12px',
+            background: '#000000',
+            color: '#00ff00',
+            fontFamily: '"Courier New", monospace'
           }}
         >
           {getOptions(keyName).map(option => (
@@ -350,37 +360,6 @@ function SettingItem({ keyName, value, onToggle, onSliderChange, onSelectChange,
   }
 
   return null;
-}
-
-function ToggleSwitch({ isOn, onToggle }) {
-  return (
-    <button
-      onClick={onToggle}
-      style={{
-        width: '48px',
-        height: '28px',
-        borderRadius: '14px',
-        background: isOn ? '#10b981' : '#d1d5db',
-        border: 'none',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'background 0.2s',
-        padding: 0
-      }}
-    >
-      <div style={{
-        width: '24px',
-        height: '24px',
-        borderRadius: '50%',
-        background: '#ffffff',
-        position: 'absolute',
-        top: '2px',
-        left: isOn ? '22px' : '2px',
-        transition: 'left 0.2s',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-      }} />
-    </button>
-  );
 }
 
 function formatLabel(key) {

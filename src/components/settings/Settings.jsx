@@ -1,27 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { KitchenStation } from '../../domain/kotTypes.js';
+import useScreenSize from '../../hooks/useScreenSize';
 
 export default function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables }) {
   const [activeSection, setActiveSection] = useState('general');
-  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
+  const screenSize = useScreenSize();
 
-  // Screen size detection
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setScreenSize('small');
-      } else if (width < 1200) {
-        setScreenSize('medium');
-      } else {
-        setScreenSize('large');
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
   const [formData, setFormData] = useState({
     storeName: settings.storeName || '',
     storeAddress: settings.storeAddress || '',
@@ -569,49 +553,6 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       background: '#ffffff',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        background: '#ffffff',
-        padding: screenSize === 'small' ? '16px' : '20px 24px',
-        borderBottom: '1px solid #e5e7eb'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
-        }}>
-          <div>
-            <div style={{
-              color: '#111827',
-              fontSize: screenSize === 'small' ? '18px' : '20px',
-              fontWeight: '600'
-            }}>
-              Settings
-            </div>
-            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
-              Configure your POS system preferences
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate?.('dashboard')}
-            style={{
-              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-              background: '#f9fafb',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: screenSize === 'small' ? '12px' : '13px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-
       {/* Content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
         {/* Sidebar */}

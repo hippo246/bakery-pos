@@ -347,8 +347,8 @@ export default function QROrdering({ menuItems = [], onPlaceOrder }) {
               </div>
 
               <div style={{ maxHeight: screenSize === 'small' ? '120px' : '150px', overflowY: 'auto', marginBottom: screenSize === 'small' ? '10px' : '12px' }}>
-                {cart.map(item => (
-                  <div key={item.id} style={{
+                {cart.map((item, index) => (
+                  <div key={`${item.id}-${index}`} style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',

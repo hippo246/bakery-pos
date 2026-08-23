@@ -24,8 +24,9 @@ body {
   font-family: 'Sora', 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--cafe-bg);
   color: var(--cafe-text-primary);
-  /* Body must NOT scroll — Layout owns all scroll internally */
-  overflow: hidden;
+  /* Allow body scroll on mobile for better UX */
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: none;
   /* Improve font rendering */
   -webkit-font-smoothing: antialiased;
@@ -40,7 +41,9 @@ body {
   /* Flex so the Layout div inside can stretch to full height */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* Allow root to scroll on mobile */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ── CafeOS Typography System ───────────────────────────────────── */

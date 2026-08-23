@@ -316,33 +316,12 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
       background: '#1a1a2e',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* Header */}
+      {/* Controls */}
       <div style={{
-        background: '#252538',
         padding: screenSize === 'small' ? '16px' : '28px 32px',
         borderBottom: '1px solid #2d2d44'
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
-        }}>
-          <div>
-            <div style={{
-              color: '#ffffff',
-              fontSize: screenSize === 'small' ? '20px' : '28px',
-              fontWeight: '700',
-              letterSpacing: '-0.5px',
-              marginBottom: '4px'
-            }}>
-              Tables
-            </div>
-            <div style={{ color: '#8b8b9e', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
-              Manage restaurant tables and seating
-            </div>
-          </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             {waiterCalls.length > 0 && (
               <button

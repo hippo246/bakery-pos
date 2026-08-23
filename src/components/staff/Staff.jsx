@@ -167,49 +167,6 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
       background: '#ffffff',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        background: '#ffffff',
-        padding: screenSize === 'small' ? '16px' : '20px 24px',
-        borderBottom: '1px solid #e5e7eb'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
-        }}>
-          <div>
-            <div style={{
-              color: '#111827',
-              fontSize: screenSize === 'small' ? '18px' : '20px',
-              fontWeight: '600'
-            }}>
-              Staff Management
-            </div>
-            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
-              Manage your team members
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate?.('dashboard')}
-            style={{
-              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-              background: '#f9fafb',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: screenSize === 'small' ? '12px' : '13px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-
       {/* Tabs */}
       <div style={{
         background: '#ffffff',

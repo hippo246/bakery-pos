@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import SpeakButton from '../voice/SpeakButton';
 import textToSpeechService from '../../services/voice/TextToSpeechService';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate }) {
+export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate, settings = {} }) {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
   const [activeTab, setActiveTab] = useState('overview');
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
@@ -12,6 +13,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   // Real-time clock update
   useEffect(() => {
@@ -45,7 +48,20 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     const activeOrders = orders.filter(o => o.status === 'PREPARING' || o.status === 'PENDING');
     const pendingOrders = orders.filter(o => o.status === 'PENDING');
     
-    const totalSales = completedOrders.reduce((sum, o) => {
+    // Apply chart filters if selected
+    let filteredForCharts = completedOrders;
+    if (selectedCategory) {
+      filteredForCharts = filteredForCharts.filter(order => 
+        order.items?.some(item => item.category === selectedCategory)
+      );
+    }
+    if (selectedPaymentMethod) {
+      filteredForCharts = filteredForCharts.filter(order => 
+        order.paymentMethod === selectedPaymentMethod
+      );
+    }
+    
+    const totalSales = filteredForCharts.reduce((sum, o) => {
       const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
       const subtotal = o.subtotal || calculatedSubtotal;
       const tax = o.tax || 0;
@@ -53,7 +69,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       const total = o.total || (subtotal + tax - discount);
       return sum + total;
     }, 0);
-    const totalOrders = completedOrders.length;
+    const totalOrders = filteredForCharts.length;
     const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
     
     const activeMenuItems = menuItems.filter(m => m.active && !m.eightySixed).length;
@@ -67,7 +83,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       hourlySales[i] = { orders: 0, revenue: 0 };
     }
     
-    completedOrders.forEach(order => {
+    filteredForCharts.forEach(order => {
       const hour = new Date(order.createdAt).getHours();
       if (hourlySales[hour]) {
         hourlySales[hour].orders += 1;
@@ -82,7 +98,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     
     // Calculate top selling items
     const itemSales = {};
-    completedOrders.forEach(order => {
+    filteredForCharts.forEach(order => {
       order.items?.forEach(item => {
         itemSales[item.name] = (itemSales[item.name] || 0) + (item.quantity || 0);
       });
@@ -94,7 +110,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     
     // Calculate category breakdown
     const categorySales = {};
-    completedOrders.forEach(order => {
+    filteredForCharts.forEach(order => {
       order.items?.forEach(item => {
         const category = item.category || 'Other';
         categorySales[category] = (categorySales[category] || 0) + (item.price * item.quantity || 0);
@@ -111,7 +127,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     
     // Payment method breakdown
     const paymentMethods = {};
-    completedOrders.forEach(order => {
+    filteredForCharts.forEach(order => {
       const method = order.paymentMethod || 'CASH';
       const calculatedSubtotal = order.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
       const subtotal = order.subtotal || calculatedSubtotal;
@@ -135,7 +151,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       pendingOrders: pendingOrders.length,
       paymentMethods
     };
-  }, [orders, menuItems, inventory, currentTime]);
+  }, [orders, menuItems, inventory, currentTime, selectedCategory, selectedPaymentMethod]);
 
   const recentOrders = orders
     .filter(o => o.status !== 'CANCELLED')
@@ -663,78 +679,71 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       background: '#1a1a2e',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        padding: screenSize === 'small' ? '16px' : '28px 32px',
-        borderBottom: '1px solid #2d2d44'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
-        }}>
-          <div>
-            <div style={{
-              fontSize: screenSize === 'small' ? '20px' : '28px',
-              fontWeight: '700',
-              color: '#ffffff',
-              letterSpacing: '-0.5px'
-            }}>
-              {activeTab === 'overview' ? 'Overview' : 'Billing & Orders'}
-            </div>
-            <div style={{
-              fontSize: screenSize === 'small' ? '12px' : '14px',
-              color: '#8b8b9e',
-              marginTop: '4px'
-            }}>
-              {activeTab === 'overview' ? "Today's performance metrics" : 'Track all orders and billing information'}
-            </div>
-          </div>
-          
-          {/* Tab Navigation */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              onClick={() => setActiveTab('overview')}
-              style={{
-                padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-                background: activeTab === 'overview' ? '#6366f1' : 'transparent',
-                color: activeTab === 'overview' ? '#ffffff' : '#8b8b9e',
-                border: activeTab === 'overview' ? 'none' : '1px solid #2d2d44',
-                borderRadius: '8px',
-                fontSize: screenSize === 'small' ? '12px' : '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('billing')}
-              style={{
-                padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-                background: activeTab === 'billing' ? '#6366f1' : 'transparent',
-                color: activeTab === 'billing' ? '#ffffff' : '#8b8b9e',
-                border: activeTab === 'billing' ? 'none' : '1px solid #2d2d44',
-                borderRadius: '8px',
-                fontSize: screenSize === 'small' ? '12px' : '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              Billing
-            </button>
-            <SpeakButton
-              onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
-              size="medium"
-            />
-          </div>
-        </div>
-      </div>
-
+      <style>
+        {`
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          @keyframes pulse {
+            0%, 100% {
+              opacity: 1;
+            }
+            50% {
+              opacity: 0.5;
+            }
+          }
+        `}
+      </style>
       {/* Content */}
-      <div style={{ padding: screenSize === 'small' ? '16px' : '28px 32px', overflow: 'auto', flex: 1 }}>
+      <div style={{
+        padding: screenSize === 'small' ? '16px' : '28px 32px'
+      }}>
+        {/* Tab Navigation */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+          <button
+            onClick={() => setActiveTab('overview')}
+            style={{
+              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+              background: activeTab === 'overview' ? '#6366f1' : 'transparent',
+              color: activeTab === 'overview' ? '#ffffff' : '#8b8b9e',
+              border: activeTab === 'overview' ? 'none' : '1px solid #2d2d44',
+              borderRadius: '8px',
+              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('billing')}
+            style={{
+              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+              background: activeTab === 'billing' ? '#6366f1' : 'transparent',
+              color: activeTab === 'billing' ? '#ffffff' : '#8b8b9e',
+              border: activeTab === 'billing' ? 'none' : '1px solid #2d2d44',
+              borderRadius: '8px',
+              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            Billing & Orders
+          </button>
+          <SpeakButton
+            onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
+            size="medium"
+          />
+        </div>
+
+        {/* Tab Content */}
         {activeTab === 'overview' ? (
           <>
             {/* Stats Grid */}
@@ -745,7 +754,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <StatCard
-                label="Total Revenue"
+                label="Revenue"
                 value={`₹${metrics.totalSales.toLocaleString()}`}
                 change="+12.5%"
                 trend="up"
@@ -761,7 +770,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 screenSize={screenSize}
               />
               <StatCard
-                label="Active Orders"
+                label="Active"
                 value={metrics.activeOrders}
                 change="Live"
                 trend="neutral"
@@ -839,6 +848,146 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               </div>
             </div>
 
+            {/* Charts Row */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)',
+              gap: screenSize === 'small' ? '16px' : '28px',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
+            }}>
+              {/* Category Pie Chart */}
+              <div style={{
+                background: '#252538',
+                borderRadius: '16px',
+                padding: screenSize === 'small' ? '16px' : '24px',
+                border: '1px solid #2d2d44'
+              }}>
+                <div style={{
+                  fontSize: screenSize === 'small' ? '14px' : '18px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  marginBottom: screenSize === 'small' ? '12px' : '24px'
+                }}>
+                  🥧 Sales by Category
+                </div>
+                <ResponsiveContainer width="100%" height={screenSize === 'small' ? 150 : 200}>
+                  <PieChart>
+                    <Pie
+                      data={metrics.categoryBreakdown}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={screenSize === 'small' ? false : ({ category, percentage }) => `${category} (${percentage}%)`}
+                      outerRadius={screenSize === 'small' ? 60 : 80}
+                      fill="#8884d8"
+                      dataKey="sales"
+                      onClick={(data) => setSelectedCategory(selectedCategory === data.category ? null : data.category)}
+                      cursor="pointer"
+                    >
+                      {metrics.categoryBreakdown.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={selectedCategory === entry.category ? '#8b5cf6' : ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} 
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                {selectedCategory && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '8px 12px',
+                    background: 'rgba(139, 92, 246, 0.1)',
+                    borderRadius: '8px',
+                    fontSize: screenSize === 'small' ? '11px' : '12px',
+                    color: '#8b5cf6',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>Filtering by: {selectedCategory}</span>
+                    <button 
+                      onClick={() => setSelectedCategory(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#8b5cf6',
+                        cursor: 'pointer',
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✕ Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Method Bar Chart */}
+              <div style={{
+                background: '#252538',
+                borderRadius: '16px',
+                padding: screenSize === 'small' ? '16px' : '24px',
+                border: '1px solid #2d2d44'
+              }}>
+                <div style={{
+                  fontSize: screenSize === 'small' ? '14px' : '18px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  marginBottom: screenSize === 'small' ? '12px' : '24px'
+                }}>
+                  💳 Payment Methods
+                </div>
+                <ResponsiveContainer width="100%" height={screenSize === 'small' ? 150 : 200}>
+                  <BarChart data={Object.entries(metrics.paymentMethods).map(([method, amount]) => ({ method, amount }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2d2d44" />
+                    <XAxis dataKey="method" stroke="#8b8b9e" fontSize={screenSize === 'small' ? 10 : 12} />
+                    <YAxis stroke="#8b8b9e" fontSize={screenSize === 'small' ? 10 : 12} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#252538', border: '1px solid #2d2d44', borderRadius: '8px' }}
+                      itemStyle={{ color: '#ffffff' }}
+                    />
+                    <Bar 
+                      dataKey="amount" 
+                      fill={selectedPaymentMethod ? '#8b5cf6' : '#6366f1'} 
+                      radius={[4, 4, 0, 0]}
+                      onClick={(data) => setSelectedPaymentMethod(selectedPaymentMethod === data.method ? null : data.method)}
+                      cursor="pointer"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+                {selectedPaymentMethod && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '8px 12px',
+                    background: 'rgba(139, 92, 246, 0.1)',
+                    borderRadius: '8px',
+                    fontSize: screenSize === 'small' ? '11px' : '12px',
+                    color: '#8b5cf6',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>Filtering by: {selectedPaymentMethod}</span>
+                    <button 
+                      onClick={() => setSelectedPaymentMethod(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#8b5cf6',
+                        cursor: 'pointer',
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ✕ Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Real-time Hourly Sales Chart */}
             <div style={{
               background: '#252538',
@@ -848,7 +997,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <div style={{
-                fontSize: screenSize === 'small' ? '16px' : '18px',
+                fontSize: screenSize === 'small' ? '14px' : '18px',
                 fontWeight: '600',
                 color: '#ffffff',
                 marginBottom: screenSize === 'small' ? '16px' : '24px',
@@ -856,9 +1005,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <span>📊 Real-time Hourly Sales</span>
+                <span>📊 Hourly Sales</span>
                 <span style={{ 
-                  fontSize: '12px', 
+                  fontSize: '11px', 
                   color: '#10b981',
                   padding: '4px 12px',
                   background: 'rgba(16, 185, 129, 0.1)',
@@ -869,19 +1018,19 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               </div>
               
               <div style={{ 
-                height: '200px',
+                height: screenSize === 'small' ? '150px' : '200px',
                 display: 'flex',
                 alignItems: 'flex-end',
-                gap: '8px',
+                gap: screenSize === 'small' ? '4px' : '8px',
                 padding: '20px 0'
               }}>
                 {Object.entries(metrics.hourlySales).map(([hour, data], index) => {
                   const maxRevenue = Math.max(...Object.values(metrics.hourlySales).map(d => d.revenue), 1);
-                  const height = (data.revenue / maxRevenue) * 160;
+                  const height = (data.revenue / maxRevenue) * (screenSize === 'small' ? 120 : 160);
                   const isCurrentHour = parseInt(hour) === currentTime.getHours();
                   
                   return (
-                    <div key={hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <div key={hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: screenSize === 'small' ? '4px' : '8px' }}>
                       <div style={{ 
                         width: '100%',
                         height: `${Math.max(height, 4)}px`,
@@ -890,7 +1039,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                         transition: 'all 0.3s ease',
                         position: 'relative'
                       }}>
-                        {data.revenue > 0 && (
+                        {data.revenue > 0 && screenSize !== 'small' && (
                           <div style={{
                             position: 'absolute',
                             top: '-20px',
@@ -905,77 +1054,11 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                         )}
                       </div>
                       <div style={{ 
-                        fontSize: '10px', 
+                        fontSize: screenSize === 'small' ? '9px' : '10px', 
                         color: isCurrentHour ? '#6366f1' : '#6b6b7e',
                         fontWeight: isCurrentHour ? '600' : '400'
                       }}>
                         {parseInt(hour)}:00
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Payment Methods Breakdown */}
-            <div style={{
-              background: '#252538',
-              borderRadius: '16px',
-              padding: screenSize === 'small' ? '16px' : '24px',
-              border: '1px solid #2d2d44',
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
-            }}>
-              <div style={{
-                fontSize: screenSize === 'small' ? '16px' : '18px',
-                fontWeight: '600',
-                color: '#ffffff',
-                marginBottom: screenSize === 'small' ? '16px' : '24px'
-              }}>
-                💳 Payment Methods
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                {Object.entries(metrics.paymentMethods).map(([method, amount]) => {
-                  const total = Object.values(metrics.paymentMethods).reduce((sum, val) => sum + val, 0);
-                  const percentage = total > 0 ? (amount / total * 100).toFixed(1) : 0;
-                  const colors = {
-                    'CASH': '#10b981',
-                    'CARD': '#3b82f6',
-                    'UPI': '#f59e0b',
-                    'default': '#8b5cf6'
-                  };
-                  const icons = {
-                    'CASH': '💵',
-                    'CARD': '💳',
-                    'UPI': '📱',
-                    'default': '💰'
-                  };
-                  
-                  return (
-                    <div key={method} style={{
-                      background: '#1a1a2e',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      border: '1px solid #2d2d44'
-                    }}>
-                      <div style={{ 
-                        fontSize: '24px', 
-                        marginBottom: '8px' 
-                      }}>
-                        {icons[method] || icons.default}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>
-                        {method}
-                      </div>
-                      <div style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
-                        ₹{amount.toLocaleString()}
-                      </div>
-                      <div style={{ 
-                        fontSize: '12px', 
-                        color: colors[method] || colors.default,
-                        fontWeight: '500'
-                      }}>
-                        {percentage}%
                       </div>
                     </div>
                   );
@@ -988,10 +1071,11 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               background: '#252538',
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
-              border: '1px solid #2d2d44'
+              border: '1px solid #2d2d44',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <div style={{
-                fontSize: screenSize === 'small' ? '16px' : '18px',
+                fontSize: screenSize === 'small' ? '14px' : '18px',
                 fontWeight: '600',
                 color: '#ffffff',
                 marginBottom: screenSize === 'small' ? '16px' : '24px'
@@ -999,57 +1083,212 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 📋 Recent Orders
               </div>
               
-              {recentOrders.length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b6b7e' }}>
-                  <div style={{ fontSize: '14px' }}>No orders yet</div>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {recentOrders.map(order => (
-                    <div key={order.id} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '16px',
-                      background: '#1a1a2e',
-                      borderRadius: '12px',
-                      border: '1px solid #2d2d44'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
-                          Order #{order.id}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
-                          {order.items?.map(item => item.name).join(', ') || 'No items'}
-                        </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {recentOrders.slice(0, 5).map((order, index) => (
+                  <div key={order.id} style={{
+                    background: '#1a1a2e',
+                    borderRadius: '12px',
+                    padding: screenSize === 'small' ? '12px' : '16px',
+                    border: '1px solid #2d2d44',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    animation: `fadeIn 0.5s ease ${index * 0.1}s both`,
+                    flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
+                    gap: screenSize === 'small' ? '8px' : '0'
+                  }}>
+                    <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                        Order #{order.id}
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>
-                          ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: order.status === 'COMPLETED' ? '#10b981' : order.status === 'PREPARING' ? '#f59e0b' : '#ef4444',
-                          fontWeight: '500'
-                        }}>
-                          {order.status}
-                        </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                        {formatTimeAgo(order.createdAt)}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div style={{ textAlign: 'right', minWidth: screenSize === 'small' ? '80px' : 'auto' }}>
+                      <div style={{
+                        padding: screenSize === 'small' ? '3px 10px' : '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
+                        fontWeight: '600',
+                        background: order.status === 'COMPLETED' ? '#d1fae5' : 
+                                   order.status === 'PREPARING' ? '#fef3c7' : 
+                                   order.status === 'PENDING' ? '#fee2e2' : '#e5e7eb',
+                        color: order.status === 'COMPLETED' ? '#065f46' : 
+                               order.status === 'PREPARING' ? '#92400e' : 
+                               order.status === 'PENDING' ? '#991b1b' : '#374151'
+                      }}>
+                        {order.status}
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: '#ffffff', marginTop: '4px' }}>
+                        ₹{order.total?.toFixed(2) || '0.00'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Kitchen Queue */}
+            <div style={{
+              background: '#252538',
+              borderRadius: '16px',
+              padding: screenSize === 'small' ? '16px' : '24px',
+              border: '1px solid #2d2d44',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
+            }}>
+              <div style={{
+                fontSize: screenSize === 'small' ? '14px' : '18px',
+                fontWeight: '600',
+                color: '#ffffff',
+                marginBottom: screenSize === 'small' ? '16px' : '24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>👨‍🍳 Kitchen Queue</span>
+                <span style={{ 
+                  fontSize: '11px', 
+                  color: '#10b981',
+                  padding: '4px 12px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  borderRadius: '12px'
+                }}>
+                  {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length} Active
+                </span>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').slice(0, 5).map((order, index) => (
+                  <div key={order.id} style={{
+                    background: order.status === 'PENDING' ? '#1a1a2e' : '#1e3a2e',
+                    borderRadius: '12px',
+                    padding: screenSize === 'small' ? '12px' : '16px',
+                    border: `1px solid ${order.status === 'PENDING' ? '#2d2d44' : '#10b981'}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    animation: `fadeIn 0.5s ease ${index * 0.1}s both`,
+                    flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
+                    gap: screenSize === 'small' ? '8px' : '0'
+                  }}>
+                    <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                        Order #{order.id}
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                        {order.items?.map(item => item.name).join(', ') || 'No items'}
+                      </div>
+                      {order.table && (
+                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#6b6b7e', marginTop: '4px' }}>
+                          Table {order.table}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right', minWidth: screenSize === 'small' ? '80px' : 'auto' }}>
+                      <div style={{
+                        padding: screenSize === 'small' ? '3px 10px' : '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: screenSize === 'small' ? '11px' : '12px',
+                        fontWeight: '600',
+                        background: order.status === 'PENDING' ? '#fef3c7' : '#d1fae5',
+                        color: order.status === 'PENDING' ? '#92400e' : '#065f46'
+                      }}>
+                        {order.status}
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginTop: '4px' }}>
+                        {formatTimeAgo(order.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length === 0 && (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                    <div style={{ fontSize: '14px' }}>No active orders in kitchen</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Table Management */}
+            <div style={{
+              background: '#252538',
+              borderRadius: '16px',
+              padding: screenSize === 'small' ? '16px' : '24px',
+              border: '1px solid #2d2d44',
+              marginBottom: screenSize === 'small' ? '16px' : '28px'
+            }}>
+              <div style={{
+                fontSize: screenSize === 'small' ? '14px' : '18px',
+                fontWeight: '600',
+                color: '#ffffff',
+                marginBottom: screenSize === 'small' ? '16px' : '24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>🪑 Table Management</span>
+                <span style={{ 
+                  fontSize: '11px', 
+                  color: '#6366f1',
+                  padding: '4px 12px',
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  borderRadius: '12px'
+                }}>
+                  {orders.filter(o => o.table && o.status !== 'COMPLETED').length} Occupied
+                </span>
+              </div>
+              
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)',
+                gap: screenSize === 'small' ? '10px' : '12px'
+              }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(tableNum => {
+                  const tableOrder = orders.find(o => o.table === tableNum && o.status !== 'COMPLETED');
+                  const isOccupied = !!tableOrder;
+                  
+                  return (
+                    <div key={tableNum} style={{
+                      background: isOccupied ? '#1e3a2e' : '#1a1a2e',
+                      borderRadius: '12px',
+                      padding: screenSize === 'small' ? '12px' : '16px',
+                      border: `1px solid ${isOccupied ? '#10b981' : '#2d2d44'}`,
+                      textAlign: 'center',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', marginBottom: '8px' }}>
+                        {isOccupied ? '🍽️' : '🪑'}
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
+                        T{tableNum}
+                      </div>
+                      <div style={{ 
+                        fontSize: screenSize === 'small' ? '11px' : '12px', 
+                        color: isOccupied ? '#10b981' : '#6b6b7e',
+                        fontWeight: '500'
+                      }}>
+                        {isOccupied ? 'Occupied' : 'Available'}
+                      </div>
+                      {isOccupied && tableOrder && (
+                        <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: '#8b8b9e', marginTop: '4px' }}>
+                          {formatTimeAgo(tableOrder.createdAt)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </>
         ) : (
           <>
             {/* Billing & Orders Tab */}
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
               {/* Filters */}
               <div style={{
                 display: 'flex',
-                gap: '12px',
-                marginBottom: '20px',
+                gap: screenSize === 'small' ? '8px' : '12px',
+                marginBottom: screenSize === 'small' ? '16px' : '20px',
                 flexWrap: 'wrap'
               }}>
                 <input
@@ -1059,13 +1298,13 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     flex: 1,
-                    minWidth: '200px',
-                    padding: '12px 16px',
+                    minWidth: screenSize === 'small' ? '100%' : '200px',
+                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                     background: '#252538',
                     border: '1px solid #2d2d44',
                     borderRadius: '8px',
                     color: '#ffffff',
-                    fontSize: '14px'
+                    fontSize: screenSize === 'small' ? '13px' : '14px'
                   }}
                 />
                 <input
@@ -1073,13 +1312,14 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   value={dateRange.start}
                   onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
                   style={{
-                    padding: '12px 16px',
+                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                     background: '#252538',
                     border: '1px solid #2d2d44',
                     borderRadius: '8px',
                     color: '#ffffff',
-                    fontSize: '14px',
-                    cursor: 'pointer'
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
+                    cursor: 'pointer',
+                    flex: screenSize === 'small' ? '1' : 'auto'
                   }}
                 />
                 <input
@@ -1087,26 +1327,28 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   value={dateRange.end}
                   onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                   style={{
-                    padding: '12px 16px',
+                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                     background: '#252538',
                     border: '1px solid #2d2d44',
                     borderRadius: '8px',
                     color: '#ffffff',
-                    fontSize: '14px',
-                    cursor: 'pointer'
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
+                    cursor: 'pointer',
+                    flex: screenSize === 'small' ? '1' : 'auto'
                   }}
                 />
                 <select
                   value={orderFilter}
                   onChange={(e) => setOrderFilter(e.target.value)}
                   style={{
-                    padding: '12px 16px',
+                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                     background: '#252538',
                     border: '1px solid #2d2d44',
                     borderRadius: '8px',
                     color: '#ffffff',
-                    fontSize: '14px',
-                    cursor: 'pointer'
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
+                    cursor: 'pointer',
+                    flex: screenSize === 'small' ? '1' : 'auto'
                   }}
                 >
                   <option value="all">All Orders</option>
@@ -1118,48 +1360,51 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 <button
                   onClick={handleExportOrders}
                   style={{
-                    padding: '12px 16px',
+                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                     background: '#10b981',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
                     fontWeight: '500',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    flex: screenSize === 'small' ? '1' : 'auto'
                   }}
                 >
-                  📥 Export CSV
+                  📥 CSV
                 </button>
                 <button
                   onClick={handleExportPDF}
                   style={{
-                    padding: '12px 16px',
+                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                     background: '#ef4444',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
                     fontWeight: '500',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    flex: screenSize === 'small' ? '1' : 'auto'
                   }}
                 >
-                  📄 Export PDF
+                  📄 PDF
                 </button>
                 {(dateRange.start || dateRange.end) && (
                   <button
                     onClick={() => setDateRange({ start: '', end: '' })}
                     style={{
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
                       background: '#ef4444',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '8px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
                       fontWeight: '500',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flex: screenSize === 'small' ? '1' : 'auto'
                     }}
                   >
-                    Clear Date Filter
+                    Clear
                   </button>
                 )}
               </div>
@@ -1168,28 +1413,28 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-                gap: '16px',
-                marginBottom: '24px'
+                gap: screenSize === 'small' ? '12px' : '16px',
+                marginBottom: screenSize === 'small' ? '16px' : '24px'
               }}>
                 <div style={{
                   background: '#252538',
-                  padding: '16px',
+                  padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
                   border: '1px solid #2d2d44'
                 }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Orders</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Orders</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff' }}>
                     {filteredOrders.length}
                   </div>
                 </div>
                 <div style={{
                   background: '#252538',
-                  padding: '16px',
+                  padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
                   border: '1px solid #2d2d44'
                 }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Revenue</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Revenue</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#10b981' }}>
                     ₹{filteredOrders.reduce((sum, o) => {
                       const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
                       const subtotal = o.subtotal || calculatedSubtotal;
@@ -1202,12 +1447,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 </div>
                 <div style={{
                   background: '#252538',
-                  padding: '16px',
+                  padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
                   border: '1px solid #2d2d44'
                 }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Avg Order Value</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Avg Order</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#6366f1' }}>
                     ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
                       const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
                       const subtotal = o.subtotal || calculatedSubtotal;
@@ -1220,12 +1465,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 </div>
                 <div style={{
                   background: '#252538',
-                  padding: '16px',
+                  padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
                   border: '1px solid #2d2d44'
                 }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Pending</div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Pending</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#f59e0b' }}>
                     {filteredOrders.filter(o => o.status === 'PENDING').length}
                   </div>
                 </div>
@@ -1235,14 +1480,14 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               <div style={{
                 background: '#252538',
                 borderRadius: '16px',
-                padding: '24px',
+                padding: screenSize === 'small' ? '16px' : '24px',
                 border: '1px solid #2d2d44'
               }}>
                 <div style={{
-                  fontSize: '18px',
+                  fontSize: screenSize === 'small' ? '14px' : '18px',
                   fontWeight: '600',
                   color: '#ffffff',
-                  marginBottom: '20px'
+                  marginBottom: screenSize === 'small' ? '16px' : '24px'
                 }}>
                   📋 Orders ({filteredOrders.length})
                 </div>
@@ -1252,93 +1497,125 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                     <div style={{ fontSize: '14px' }}>No orders found</div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {filteredOrders.map(order => (
-                      <div key={order.id} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '16px',
-                        background: '#1a1a2e',
-                        borderRadius: '12px',
-                        border: '1px solid #2d2d44'
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
+                      {filteredOrders.map(order => (
+                        <div key={order.id} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: screenSize === 'small' ? '12px' : '16px',
+                          background: '#1a1a2e',
+                          borderRadius: '12px',
+                          border: '1px solid #2d2d44',
+                          flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
+                          gap: screenSize === 'small' ? '8px' : '0',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleViewOrder(order)}
+                        >
+                          <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
+                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
                               Order #{order.id}
                             </div>
-                            {order.table && (
-                              <div style={{
-                                fontSize: '12px',
-                                padding: '4px 8px',
-                                background: '#3b3b5c',
-                                borderRadius: '4px',
-                                color: '#8b8b9e'
-                              }}>
-                                Table {order.table}
-                              </div>
-                            )}
-                            <div style={{ 
-                              fontSize: '12px', 
-                              color: order.status === 'COMPLETED' ? '#10b981' : 
-                                     order.status === 'PREPARING' ? '#f59e0b' : 
-                                     order.status === 'PENDING' ? '#ef4444' : '#6b6b7e',
-                              fontWeight: '500'
+                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>
+                              {new Date(order.createdAt).toLocaleString()}
+                            </div>
+                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#6b6b7e' }}>
+                              {order.items?.map(i => i.name).join(', ') || 'No items'}
+                            </div>
+                          </div>
+                          <div style={{ 
+                            textAlign: 'right', 
+                            minWidth: screenSize === 'small' ? '80px' : 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            alignItems: screenSize === 'small' ? 'flex-start' : 'flex-end'
+                          }}>
+                            <div style={{
+                              padding: screenSize === 'small' ? '3px 10px' : '4px 12px',
+                              borderRadius: '20px',
+                              fontSize: screenSize === 'small' ? '11px' : '12px',
+                              fontWeight: '600',
+                              background: order.status === 'COMPLETED' ? '#d1fae5' : 
+                                         order.status === 'PREPARING' ? '#fef3c7' : 
+                                         order.status === 'PENDING' ? '#fee2e2' : '#e5e7eb',
+                              color: order.status === 'COMPLETED' ? '#065f46' : 
+                                     order.status === 'PREPARING' ? '#92400e' : 
+                                     order.status === 'PENDING' ? '#991b1b' : '#374151'
                             }}>
                               {order.status}
                             </div>
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>
-                            {order.items?.map(item => item.name).join(', ') || 'No items'}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#6b6b7e' }}>
-                            {formatTimeAgo(order.createdAt)}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right', marginLeft: '16px' }}>
-                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#ffffff' }}>
-                            ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
-                            {order.paymentMethod || 'CASH'}
+                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: '#ffffff' }}>
+                              ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                              {order.paymentMethod || 'CASH'}
+                            </div>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
-                          <button
-                            onClick={() => handleViewOrder(order)}
-                            style={{
-                              padding: '8px 12px',
-                              background: '#6366f1',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
-                            title="View Order Details"
-                          >
-                            👁️ View
-                          </button>
-                          <button
-                            onClick={() => handlePrintOrder(order)}
-                            style={{
-                              padding: '8px 12px',
-                              background: '#10b981',
-                              color: '#ffffff',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              cursor: 'pointer'
-                            }}
-                            title="Print Order"
-                          >
-                            🖨️ Print
-                          </button>
+                      ))}
+                    </div>
+                    
+                    {/* Report Summary */}
+                    <div style={{
+                      background: '#252538',
+                      borderRadius: '16px',
+                      padding: screenSize === 'small' ? '16px' : '24px',
+                      border: '1px solid #2d2d44',
+                      marginTop: screenSize === 'small' ? '16px' : '24px'
+                    }}>
+                      <div style={{
+                        fontSize: screenSize === 'small' ? '14px' : '18px',
+                        fontWeight: '600',
+                        color: '#ffffff',
+                        marginBottom: screenSize === 'small' ? '16px' : '24px'
+                      }}>
+                        📊 Report Summary
+                      </div>
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(3, 1fr)',
+                        gap: '12px'
+                      }}>
+                        <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>Total Revenue</div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
+                            ₹{filteredOrders.reduce((sum, o) => {
+                              const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+                              const subtotal = o.subtotal || calculatedSubtotal;
+                              const tax = o.tax || 0;
+                              const discount = o.discount || 0;
+                              const total = o.total || (subtotal + tax - discount);
+                              return sum + total;
+                            }, 0).toLocaleString()}
+                          </div>
+                        </div>
+                        <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>Avg Order Value</div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#6366f1' }}>
+                            ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
+                              const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
+                              const subtotal = o.subtotal || calculatedSubtotal;
+                              const tax = o.tax || 0;
+                              const discount = o.discount || 0;
+                              const total = o.total || (subtotal + tax - discount);
+                              return sum + total;
+                            }, 0) / filteredOrders.length).toFixed(0) : 0}
+                          </div>
+                        </div>
+                        <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>Date Range</div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>
+                            {dateRange.start && dateRange.end ? 
+                              `${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}` : 
+                              'All time'}
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -1358,20 +1635,21 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 3000
+          zIndex: 3000,
+          padding: screenSize === 'small' ? '16px' : '0'
         }}>
           <div style={{
             background: '#1a1a2e',
             borderRadius: '16px',
-            padding: '24px',
-            width: '600px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '100%' : '600px',
             maxWidth: '90vw',
             maxHeight: '80vh',
             overflowY: 'auto',
             border: '1px solid #2d2d44'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
                 Order #{selectedOrder.id}
               </h3>
               <button
@@ -1382,7 +1660,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '14px' : '16px'
                 }}
               >
                 ×
@@ -1390,17 +1669,17 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Date</div>
-                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Date</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                     {new Date(selectedOrder.createdAt).toLocaleString()}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Status</div>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Status</div>
                   <div style={{ 
-                    fontSize: '14px', 
+                    fontSize: screenSize === 'small' ? '13px' : '14px', 
                     color: selectedOrder.status === 'COMPLETED' ? '#10b981' : 
                            selectedOrder.status === 'PREPARING' ? '#f59e0b' : 
                            selectedOrder.status === 'PENDING' ? '#ef4444' : '#6b6b7e',
@@ -1409,16 +1688,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                     {selectedOrder.status}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Payment Method</div>
-                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Payment Method</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                     {selectedOrder.paymentMethod || 'CASH'}
                   </div>
                 </div>
                 {selectedOrder.table && (
-                  <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Table</div>
-                    <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                  <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Table</div>
+                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                       {selectedOrder.table}
                     </div>
                   </div>
@@ -1426,31 +1705,31 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               </div>
 
               {selectedOrder.customer && (
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Customer</div>
-                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Customer</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                     {selectedOrder.customer.name}
                     {selectedOrder.customer.phone && ` (${selectedOrder.customer.phone})`}
                   </div>
                 </div>
               )}
 
-              <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '8px' }}>Items</div>
+              <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>Items</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                           {item.name} x{item.quantity}
                         </div>
                         {item.variant && (
-                          <div style={{ fontSize: '12px', color: '#6b6b7e' }}>
+                          <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#6b6b7e' }}>
                             {item.variant}
                           </div>
                         )}
                       </div>
-                      <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: '500' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff', fontWeight: '500' }}>
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </div>
                     </div>
@@ -1458,60 +1737,60 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Subtotal</div>
-                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Subtotal</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                     ₹{(selectedOrder._calculated?.subtotal || selectedOrder.subtotal || 0).toFixed(2)}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Tax</div>
-                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Tax</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                     ₹{(selectedOrder._calculated?.tax || selectedOrder.tax || 0).toFixed(2)}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>Discount</div>
-                  <div style={{ fontSize: '14px', color: '#ffffff' }}>
+                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Discount</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
                     ₹{(selectedOrder._calculated?.discount || selectedOrder.discount || 0).toFixed(2)}
                   </div>
                 </div>
-                <div style={{ background: '#10b981', padding: '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#ffffff', marginBottom: '4px' }}>Total</div>
-                  <div style={{ fontSize: '18px', color: '#ffffff', fontWeight: '700' }}>
+                <div style={{ background: '#10b981', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#ffffff', marginBottom: '4px' }}>Total</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', color: '#ffffff', fontWeight: '700' }}>
                     ₹{(selectedOrder._calculated?.total || selectedOrder.total || 0).toFixed(2)}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', marginTop: screenSize === 'small' ? '8px' : '12px' }}>
                 <button
                   onClick={() => handlePrintOrder(selectedOrder)}
                   style={{
                     flex: 1,
-                    padding: '12px',
+                    padding: screenSize === 'small' ? '10px' : '12px',
                     background: '#10b981',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
                     fontWeight: '500',
                     cursor: 'pointer'
                   }}
                 >
-                  🖨️ Print Order
+                  🖨️ Print
                 </button>
                 <button
                   onClick={() => setShowOrderModal(false)}
                   style={{
                     flex: 1,
-                    padding: '12px',
+                    padding: screenSize === 'small' ? '10px' : '12px',
                     background: '#2d2d44',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '13px' : '14px',
                     fontWeight: '500',
                     cursor: 'pointer'
                   }}

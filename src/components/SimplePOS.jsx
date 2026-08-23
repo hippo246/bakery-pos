@@ -2346,25 +2346,25 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       <div style={{
         flex: 1,
         display: 'flex',
-        gap: screenSize === 'small' ? '8px' : '12px',
-        padding: screenSize === 'small' ? '8px' : '12px',
+        gap: screenSize === 'small' ? '8px' : screenSize === 'medium' ? '8px' : '12px',
+        padding: screenSize === 'small' ? '8px' : screenSize === 'medium' ? '8px' : '12px',
         overflow: 'auto',
         minHeight: 0,
         maxWidth: '100%',
-        flexDirection: screenSize === 'small' ? 'column' : 'row'
+        flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
           <div style={{
-            flex: 1,
+            flex: screenSize === 'small' ? 1 : screenSize === 'medium' ? 1 : 1,
             display: 'flex',
             flexDirection: 'column',
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
             overflow: 'hidden',
-            minWidth: screenSize === 'small' ? '0' : '280px',
-            maxWidth: screenSize === 'small' ? '100%' : 'none'
+            minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '280px',
+            maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '40%' : 'none'
           }}>
           {/* Categories */}
           <div style={{ padding: '10px', borderBottom: '1px solid #e5e7eb', position: 'relative' }}>
@@ -2531,9 +2531,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         {/* Middle Column - Cart */}
         {(screenSize !== 'small' || activeView === 'cart') && (
           <div style={{
-            width: screenSize === 'small' ? '100%' : '340px',
-            minWidth: screenSize === 'small' ? '0' : '320px',
-            maxWidth: screenSize === 'small' ? '100%' : '400px',
+            width: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '280px' : '340px',
+            minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '240px' : '320px',
+            maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '320px' : '400px',
             display: 'flex',
             flexDirection: 'column',
             background: '#ffffff',
@@ -3026,12 +3026,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         {/* Right Column - Numpad & Actions */}
         {(screenSize !== 'small' || activeView === 'keypad') && (
           <div style={{
-            width: screenSize === 'small' ? '100%' : '280px',
-            minWidth: screenSize === 'small' ? '0' : '260px',
-            maxWidth: screenSize === 'small' ? '100%' : '320px',
+            width: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '240px' : '280px',
+            minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '260px',
+            maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '280px' : '320px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px',
+            gap: screenSize === 'small' ? '8px' : '12px',
             overflowY: 'auto',
             paddingRight: screenSize === 'small' ? '4px' : '0',
             flexShrink: 0

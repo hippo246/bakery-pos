@@ -27,6 +27,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-leaflet": "^5.0.0",
+    "recharts": "^3.10.1",
     "webdav": "^4.11.0",
     "xlsx": "^0.18.5"
   },

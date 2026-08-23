@@ -32,13 +32,15 @@ export default function BakeryPOS({
   settings = {},
   setSettings,
   tables = [],
-  setTables
+  setTables,
+  onNavigate
 }) {
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('bakerypos_active_tab');
     return savedTab || 'orders';
   });
   const [isMobile, setIsMobile] = useState(false);
+  const [isMedium, setIsMedium] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuDropdownOpen, setMenuDropdownOpen] = useState(false);
   const [customersDropdownOpen, setCustomersDropdownOpen] = useState(false);
@@ -46,7 +48,9 @@ export default function BakeryPOS({
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsMedium(width >= 768 && width < 1200);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -90,7 +94,7 @@ export default function BakeryPOS({
   const renderContent = () => {
     switch (activeTab) {
       case 'orders':
-        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} />;
+        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} />;
       case 'dashboard':
         return <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} onNavigate={handleNavigate} />;
       case 'reports':
@@ -120,7 +124,7 @@ export default function BakeryPOS({
       case 'settings':
         return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} />;
       default:
-        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} />;
+        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} />;
     }
   };
 
@@ -129,8 +133,11 @@ export default function BakeryPOS({
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
+      width: '100vw',
+      maxWidth: '100%',
       background: 'var(--cafe-bg)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
@@ -144,7 +151,7 @@ export default function BakeryPOS({
       {/* Header */}
       <header style={{
         background: 'var(--cafe-bg-elevated)',
-        padding: isMobile ? '12px 16px' : '16px 24px',
+        padding: isMobile ? '10px 12px' : isMedium ? '12px 16px' : '16px 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -152,18 +159,43 @@ export default function BakeryPOS({
         boxShadow: 'var(--cafe-shadow-sm)',
         position: 'relative',
         transition: 'all 0.25s ease',
-        zIndex: 50
+        zIndex: 50,
+        minHeight: isMobile ? '50px' : isMedium ? '55px' : '60px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : isMedium ? '10px' : '12px' }}>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate?.('dashboard')}
+              style={{
+                padding: isMobile ? '6px 10px' : isMedium ? '8px 12px' : '10px 16px',
+                background: 'var(--cafe-bg-elevated)',
+                color: 'var(--cafe-text-primary)',
+                border: '1px solid var(--cafe-border)',
+                borderRadius: isMobile ? '6px' : isMedium ? '7px' : '8px',
+                fontSize: isMobile ? '11px' : isMedium ? '12px' : '13px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--cafe-bg-elevated)';
+              }}
+            >
+              ← Back
+            </button>
+          )}
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '10px',
+            width: isMobile ? '28px' : isMedium ? '32px' : '36px',
+            height: isMobile ? '28px' : isMedium ? '32px' : '36px',
+            borderRadius: isMobile ? '8px' : isMedium ? '9px' : '10px',
             background: 'linear-gradient(135deg, var(--cafe-accent) 0%, var(--cafe-accent-light) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '18px',
+            fontSize: isMobile ? '14px' : isMedium ? '16px' : '18px',
             boxShadow: 'var(--cafe-shadow-glow)',
             transform: 'rotate(-5deg)',
             transition: 'transform 0.3s ease'
@@ -175,7 +207,7 @@ export default function BakeryPOS({
           </div>
           <div>
             <div style={{
-              fontSize: '18px',
+              fontSize: isMobile ? '14px' : isMedium ? '16px' : '18px',
               fontWeight: '700',
               color: 'var(--cafe-text-primary)',
               letterSpacing: '-0.03em',
@@ -191,12 +223,12 @@ export default function BakeryPOS({
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               style={{
-                padding: '8px 14px',
+                padding: isMobile ? '6px 10px' : '8px 14px',
                 background: 'var(--cafe-accent)',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: '8px',
-                fontSize: '12px',
+                borderRadius: isMobile ? '6px' : '8px',
+                fontSize: isMobile ? '11px' : '12px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 display: 'flex',
@@ -426,25 +458,31 @@ export default function BakeryPOS({
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', maxWidth: 'calc(100vw - 300px)', overflow: 'visible' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : isMedium ? '5px' : '6px', flex: 1, minWidth: 0, position: 'relative' }}>
             <button
               onClick={() => scrollTabs('left')}
               style={{
+                position: 'absolute',
+                left: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
                 background: 'var(--cafe-bg-elevated)',
                 color: 'var(--cafe-text-primary)',
                 border: '1px solid var(--cafe-border)',
                 borderRadius: '50%',
-                width: '28px',
-                height: '28px',
+                width: isMobile ? '28px' : isMedium ? '26px' : '28px',
+                height: isMobile ? '28px' : isMedium ? '26px' : '28px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: isMobile ? '14px' : isMedium ? '13px' : '14px',
                 fontWeight: 'bold',
                 boxShadow: 'var(--cafe-shadow-sm)',
                 transition: 'all 0.2s ease',
-                outline: 'none'
+                outline: 'none',
+                flexShrink: 0,
+                zIndex: 100
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--cafe-bg-hover)';
@@ -459,11 +497,16 @@ export default function BakeryPOS({
             </button>
             <div ref={tabsRef} className="no-scrollbar" style={{
               display: 'flex',
-              gap: '6px',
-              overflowX: 'visible',
+              gap: isMobile ? '4px' : isMedium ? '5px' : '6px',
+              overflowX: 'auto',
+              overflowY: 'hidden',
               scrollBehavior: 'smooth',
               WebkitOverflowScrolling: 'touch',
-              paddingBottom: '2px'
+              paddingBottom: '2px',
+              flex: 1,
+              minWidth: 0,
+              paddingLeft: isMobile ? '36px' : isMedium ? '34px' : '36px',
+              paddingRight: isMobile ? '36px' : isMedium ? '34px' : '36px'
             }}>
               {[
                 { id: 'orders', label: 'Orders' },
@@ -492,12 +535,12 @@ export default function BakeryPOS({
                       }
                     }}
                     style={{
-                      padding: '8px 16px',
+                      padding: isMobile ? '6px 10px' : isMedium ? '7px 12px' : '8px 16px',
                       background: activeTab === item.id ? 'var(--cafe-accent)' : 'transparent',
                       color: activeTab === item.id ? '#ffffff' : 'var(--cafe-text-secondary)',
                       border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '13px',
+                      borderRadius: isMobile ? '6px' : isMedium ? '7px' : '8px',
+                      fontSize: isMobile ? '11px' : isMedium ? '12px' : '13px',
                       fontWeight: activeTab === item.id ? '600' : '500',
                       cursor: 'pointer',
                       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -720,21 +763,27 @@ export default function BakeryPOS({
             <button
               onClick={() => scrollTabs('right')}
               style={{
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
                 background: 'var(--cafe-bg-elevated)',
                 color: 'var(--cafe-text-primary)',
                 border: '1px solid var(--cafe-border)',
                 borderRadius: '50%',
-                width: '28px',
-                height: '28px',
+                width: isMobile ? '28px' : isMedium ? '26px' : '28px',
+                height: isMobile ? '28px' : isMedium ? '26px' : '28px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: isMobile ? '14px' : isMedium ? '13px' : '14px',
                 fontWeight: 'bold',
                 boxShadow: 'var(--cafe-shadow-sm)',
                 transition: 'all 0.2s ease',
-                outline: 'none'
+                outline: 'none',
+                flexShrink: 0,
+                zIndex: 100
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--cafe-bg-hover)';

@@ -495,7 +495,7 @@
                         <div class="menu-item-description">${item.description}</div>
                         <div class="menu-item-footer">
                             <div class="menu-item-price">₹${item.price}</div>
-                            <button class="add-button" onclick="addToCart(${item.id})">Add</button>
+                            <button class="add-button" onclick="addToCart('${item.id}')">Add</button>
                         </div>
                     </div>
                 </div>
@@ -538,9 +538,9 @@
                             <div class="cart-item-price">₹${item.price} × ${item.qty}</div>
                         </div>
                         <div class="cart-item-controls">
-                            <button class="quantity-button" onclick="updateQty(${item.id}, -1)">-</button>
+                            <button class="quantity-button" onclick="updateQty('${item.id}', -1)">-</button>
                             <span>${item.qty}</span>
-                            <button class="quantity-button" onclick="updateQty(${item.id}, 1)">+</button>
+                            <button class="quantity-button" onclick="updateQty('${item.id}', 1)">+</button>
                         </div>
                     </div>
                 `).join('');

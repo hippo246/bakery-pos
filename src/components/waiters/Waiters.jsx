@@ -238,33 +238,12 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
       background: '#0f172a',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
+      {/* Controls */}
       <div style={{
-        background: '#1e293b',
         padding: screenSize === 'small' ? '16px' : '24px 32px',
         borderBottom: '1px solid #334155'
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0',
-          marginBottom: screenSize === 'small' ? '16px' : '20px'
-        }}>
-          <div>
-            <div style={{
-              color: '#f8fafc',
-              fontSize: screenSize === 'small' ? '20px' : '24px',
-              fontWeight: '700',
-              marginBottom: '4px'
-            }}>
-              👨‍🍳 Waiters & Servers
-            </div>
-            <div style={{ color: '#94a3b8', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
-              Manage waiter orders and performance
-            </div>
-          </div>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             {waiterCalls.length > 0 && (
               <button

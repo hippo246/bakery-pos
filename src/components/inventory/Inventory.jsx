@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import SpeakButton from '../voice/SpeakButton';
 import textToSpeechService from '../../services/voice/TextToSpeechService';
+import useScreenSize from '../../hooks/useScreenSize';
 
 export default function SimpleInventory({ inventory = [], setInventory, onNavigate }) {
   const [search, setSearch] = useState('');
@@ -23,7 +24,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [editingVendor, setEditingVendor] = useState(null);
   const [editingPO, setEditingPO] = useState(null);
-  const [screenSize, setScreenSize] = useState('large');
+  const screenSize = useScreenSize();
   const [formData, setFormData] = useState({
     name: '',
     category: 'Ingredients',
@@ -34,24 +35,6 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
     expiryDate: '',
     batchNumber: ''
   });
-
-  // Screen size detection
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setScreenSize('small');
-      } else if (width < 1200) {
-        setScreenSize('medium');
-      } else {
-        setScreenSize('large');
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Load waste records from localStorage
   useEffect(() => {

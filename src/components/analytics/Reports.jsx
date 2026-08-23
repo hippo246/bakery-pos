@@ -2,29 +2,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import useScreenSize from '../../hooks/useScreenSize';
 
 export default function SimpleReports({ orders = [], menuItems = [], staff = [], customers = [], inventory = [], onNavigate }) {
   const [selectedReport, setSelectedReport] = useState('sales');
   const [dateRange, setDateRange] = useState('today');
-  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
-
-  // Screen size detection
-  useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setScreenSize('small');
-      } else if (width < 1200) {
-        setScreenSize('medium');
-      } else {
-        setScreenSize('large');
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const screenSize = useScreenSize();
 
   // Export functions
   const exportToPDF = () => {
@@ -460,115 +443,72 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       background: '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
+      {/* Content */}
       <div style={{
-        background: '#ffffff',
         padding: screenSize === 'small' ? '16px' : '24px 32px',
-        borderBottom: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        flex: 1,
+        overflow: 'auto'
       }}>
+        {/* Controls */}
+        <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              exportToPDF();
+            }}
+            style={{
+              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
+              background: '#3b82f6',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#2563eb'}
+            onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
+          >
+            📄 Export PDF
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              exportToExcel();
+            }}
+            style={{
+              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
+              background: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#059669'}
+            onMouseLeave={(e) => e.target.style.background = '#10b981'}
+          >
+            📊 Export Excel
+          </button>
+        </div>
+
+        {/* Date Range & Filters */}
         <div style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          padding: '20px',
+          marginBottom: '28px',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
+          alignItems: 'center',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
         }}>
-          <div>
-            <div style={{
-              color: '#1e293b',
-              fontSize: screenSize === 'small' ? '22px' : '28px',
-              fontWeight: '800',
-              marginBottom: '6px',
-              letterSpacing: '-0.5px'
-            }}>
-              📊 Analytics Hub
-            </div>
-            <div style={{ color: '#64748b', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
-              Real-time business intelligence & insights
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '10px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                exportToPDF();
-              }}
-              style={{
-                padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-                background: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: screenSize === 'small' ? '13px' : '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#2563eb'}
-              onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
-            >
-              📄 Export PDF
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                exportToExcel();
-              }}
-              style={{
-                padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-                background: '#10b981',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '10px',
-                fontSize: screenSize === 'small' ? '13px' : '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#059669'}
-              onMouseLeave={(e) => e.target.style.background = '#10b981'}
-            >
-              📊 Export Excel
-            </button>
-            <button
-              onClick={() => onNavigate?.('dashboard')}
-              style={{
-                padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-                background: '#f1f5f9',
-                color: '#475569',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: screenSize === 'small' ? '13px' : '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
-              onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
-            >
-              ← Back
-            </button>
-          </div>
-        </div>
-      </div>
-
-    {/* Content */}
-    <div style={{ padding: screenSize === 'small' ? '16px' : '24px 32px', overflow: 'auto', flex: 1 }}>
-      {/* Date Range & Filters */}
-      <div style={{
-        background: '#ffffff',
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '28px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-      }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>Period:</span>
           {['today', 'yesterday', 'week', 'month'].map(range => (

@@ -170,50 +170,6 @@ export default function TokenManagement({ orders, setOrders, onNavigate }) {
       background: '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        background: '#ffffff',
-        padding: screenSize === 'small' ? '16px' : '20px 24px',
-        borderBottom: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '12px' : '0'
-        }}>
-          <div>
-            <div style={{
-              color: '#111827',
-              fontSize: screenSize === 'small' ? '18px' : '20px',
-              fontWeight: '600'
-            }}>
-              Token Display
-            </div>
-            <div style={{ color: '#6b7280', fontSize: screenSize === 'small' ? '12px' : '13px', marginTop: '4px' }}>
-              Active order tokens
-            </div>
-          </div>
-          <button
-            onClick={() => onNavigate?.('orders')}
-            style={{
-              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-              background: '#f9fafb',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: screenSize === 'small' ? '12px' : '13px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
-
       {/* Content */}
       <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f1f5f9' }}>
         {/* Stats Cards */}
