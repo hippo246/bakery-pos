@@ -216,7 +216,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
   };
 
   const handleDeleteItem = (itemId) => {
-    if (confirm('Are you sure you want to delete this inventory item?')) {
+    if (window.confirm('Are you sure you want to delete this inventory item?')) {
       setInventory(inventory.filter(item => item.id !== itemId));
       
       // Queue operation if offline
@@ -272,7 +272,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
       return;
     }
 
-    if (confirm(`Remove ${expiredItems.length} expired items from inventory?`)) {
+    if (window.confirm(`Remove ${expiredItems.length} expired items from inventory?`)) {
       const expiredIds = expiredItems.map(item => item.id);
       setInventory(inventory.filter(item => !expiredIds.includes(item.id)));
       alert(`Removed ${expiredItems.length} expired items`);
@@ -372,7 +372,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
   };
 
   const handleDeleteVendor = (vendorId) => {
-    if (confirm('Are you sure you want to delete this vendor?')) {
+    if (window.confirm('Are you sure you want to delete this vendor?')) {
       saveVendors(vendors.filter(v => v.id !== vendorId));
       
       // Queue operation if offline
@@ -421,7 +421,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
   };
 
   const handleDeletePO = (poId) => {
-    if (confirm('Are you sure you want to delete this purchase order?')) {
+    if (window.confirm('Are you sure you want to delete this purchase order?')) {
       savePurchaseOrders(purchaseOrders.filter(po => po.id !== poId));
       
       // Queue operation if offline
