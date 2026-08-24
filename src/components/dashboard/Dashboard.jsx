@@ -3,7 +3,7 @@ import SpeakButton from '../voice/SpeakButton';
 import textToSpeechService from '../../services/voice/TextToSpeechService';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate, settings = {} }) {
+export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate, settings = {}, darkMode = true }) {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
   const [activeTab, setActiveTab] = useState('overview');
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
@@ -15,6 +15,22 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+
+  // Live auxiliary data from localStorage
+  const [wasteRecords, setWasteRecords] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [qrOrdersLocal, setQrOrdersLocal] = useState([]);
+
+  useEffect(() => {
+    const load = () => {
+      try { const w = JSON.parse(localStorage.getItem('bakerypos_waste') || '[]'); setWasteRecords(Array.isArray(w) ? w : []); } catch {}
+      try { const r = JSON.parse(localStorage.getItem('bakerypos_reservations') || '[]'); setReservations(Array.isArray(r) ? r : []); } catch {}
+      try { const q = JSON.parse(localStorage.getItem('qr_orders') || '[]'); setQrOrdersLocal(Array.isArray(q) ? q : []); } catch {}
+    };
+    load();
+    const interval = setInterval(load, 30000); // refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   // Real-time clock update
   useEffect(() => {
@@ -149,9 +165,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       hourlySales,
       activeOrders: activeOrders.length,
       pendingOrders: pendingOrders.length,
-      paymentMethods
+      paymentMethods,
+      // Auxiliary live data
+      totalWasteCost: wasteRecords.reduce((sum, w) => sum + (parseFloat(w.cost) || 0), 0),
+      wasteCount: wasteRecords.length,
+      upcomingReservations: reservations.filter(r => new Date(r.date) >= new Date()).length,
+      totalReservations: reservations.length,
+      qrOrdersCount: qrOrdersLocal.length,
+      qrOrdersRevenue: qrOrdersLocal.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
     };
-  }, [orders, menuItems, inventory, currentTime, selectedCategory, selectedPaymentMethod]);
+  }, [orders, menuItems, inventory, currentTime, selectedCategory, selectedPaymentMethod, wasteRecords, reservations, qrOrdersLocal]);
 
   const recentOrders = orders
     .filter(o => o.status !== 'CANCELLED')
@@ -676,7 +699,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#1a1a2e',
+      background: darkMode ? '#1a1a2e' : '#f8fafc',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       <style>
@@ -703,7 +726,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       </style>
       {/* Content */}
       <div style={{
-        padding: screenSize === 'small' ? '16px' : '28px 32px'
+        padding: screenSize === 'small' ? '16px' : '28px 32px',
+        background: darkMode ? '#1a1a2e' : '#f8fafc',
+        flex: 1,
+        overflow: 'auto'
       }}>
         {/* Tab Navigation */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
@@ -712,8 +738,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             style={{
               padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: activeTab === 'overview' ? '#6366f1' : 'transparent',
-              color: activeTab === 'overview' ? '#ffffff' : '#8b8b9e',
-              border: activeTab === 'overview' ? 'none' : '1px solid #2d2d44',
+              color: activeTab === 'overview' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
+              border: activeTab === 'overview' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
               borderRadius: '8px',
               fontSize: screenSize === 'small' ? '12px' : '14px',
               fontWeight: '500',
@@ -727,8 +753,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             style={{
               padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: activeTab === 'billing' ? '#6366f1' : 'transparent',
-              color: activeTab === 'billing' ? '#ffffff' : '#8b8b9e',
-              border: activeTab === 'billing' ? 'none' : '1px solid #2d2d44',
+              color: activeTab === 'billing' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
+              border: activeTab === 'billing' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
               borderRadius: '8px',
               fontSize: screenSize === 'small' ? '12px' : '14px',
               fontWeight: '500',
@@ -801,6 +827,30 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 color="#dc2626"
                 screenSize={screenSize}
               />
+              <StatCard
+                label="Waste Cost"
+                value={`₹${(metrics.totalWasteCost || 0).toLocaleString()}`}
+                change={`${metrics.wasteCount || 0} records`}
+                trend={metrics.totalWasteCost > 0 ? 'down' : 'neutral'}
+                color="#f43f5e"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Reservations"
+                value={metrics.upcomingReservations || 0}
+                change={`${metrics.totalReservations || 0} total`}
+                trend="up"
+                color="#6366f1"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="QR Orders"
+                value={metrics.qrOrdersCount || 0}
+                change={`₹${(metrics.qrOrdersRevenue || 0).toLocaleString()}`}
+                trend="up"
+                color="#0ea5e9"
+                screenSize={screenSize}
+              />
             </div>
 
             {/* Real-time Clock & Status */}
@@ -857,15 +907,15 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             }}>
               {/* Category Pie Chart */}
               <div style={{
-                background: '#252538',
+                background: darkMode ? '#252538' : '#ffffff',
                 borderRadius: '16px',
                 padding: screenSize === 'small' ? '16px' : '24px',
-                border: '1px solid #2d2d44'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
               }}>
                 <div style={{
                   fontSize: screenSize === 'small' ? '14px' : '18px',
                   fontWeight: '600',
-                  color: '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
                   marginBottom: screenSize === 'small' ? '12px' : '24px'
                 }}>
                   🥧 Sales by Category
@@ -926,27 +976,27 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
 
               {/* Payment Method Bar Chart */}
               <div style={{
-                background: '#252538',
+                background: darkMode ? '#252538' : '#ffffff',
                 borderRadius: '16px',
                 padding: screenSize === 'small' ? '16px' : '24px',
-                border: '1px solid #2d2d44'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
               }}>
                 <div style={{
                   fontSize: screenSize === 'small' ? '14px' : '18px',
                   fontWeight: '600',
-                  color: '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
                   marginBottom: screenSize === 'small' ? '12px' : '24px'
                 }}>
                   💳 Payment Methods
                 </div>
                 <ResponsiveContainer width="100%" height={screenSize === 'small' ? 150 : 200}>
                   <BarChart data={Object.entries(metrics.paymentMethods).map(([method, amount]) => ({ method, amount }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2d2d44" />
-                    <XAxis dataKey="method" stroke="#8b8b9e" fontSize={screenSize === 'small' ? 10 : 12} />
-                    <YAxis stroke="#8b8b9e" fontSize={screenSize === 'small' ? 10 : 12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#2d2d44' : '#e5e7eb'} />
+                    <XAxis dataKey="method" stroke={darkMode ? '#8b8b9e' : '#8b8b9e'} fontSize={screenSize === 'small' ? 10 : 12} />
+                    <YAxis stroke={darkMode ? '#8b8b9e' : '#8b8b9e'} fontSize={screenSize === 'small' ? 10 : 12} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#252538', border: '1px solid #2d2d44', borderRadius: '8px' }}
-                      itemStyle={{ color: '#ffffff' }}
+                      contentStyle={{ backgroundColor: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '8px' }}
+                      itemStyle={{ color: darkMode ? '#ffffff' : '#111827' }}
                     />
                     <Bar 
                       dataKey="amount" 
@@ -990,16 +1040,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
 
             {/* Real-time Hourly Sales Chart */}
             <div style={{
-              background: '#252538',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
-              border: '1px solid #2d2d44',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <div style={{
                 fontSize: screenSize === 'small' ? '14px' : '18px',
                 fontWeight: '600',
-                color: '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
                 marginBottom: screenSize === 'small' ? '16px' : '24px',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1034,7 +1084,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                       <div style={{ 
                         width: '100%',
                         height: `${Math.max(height, 4)}px`,
-                        background: isCurrentHour ? '#6366f1' : '#3b3b5c',
+                        background: isCurrentHour ? '#6366f1' : (darkMode ? '#3b3b5c' : '#e2e8f0'),
                         borderRadius: '4px',
                         transition: 'all 0.3s ease',
                         position: 'relative'
@@ -1046,7 +1096,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                             left: '50%',
                             transform: 'translateX(-50%)',
                             fontSize: '10px',
-                            color: '#8b8b9e',
+                            color: darkMode ? '#8b8b9e' : '#64748b',
                             whiteSpace: 'nowrap'
                           }}>
                             ₹{Math.round(data.revenue)}
@@ -1055,7 +1105,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                       </div>
                       <div style={{ 
                         fontSize: screenSize === 'small' ? '9px' : '10px', 
-                        color: isCurrentHour ? '#6366f1' : '#6b6b7e',
+                        color: isCurrentHour ? '#6366f1' : (darkMode ? '#6b6b7e' : '#64748b'),
                         fontWeight: isCurrentHour ? '600' : '400'
                       }}>
                         {parseInt(hour)}:00
@@ -1068,16 +1118,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
 
             {/* Recent Orders */}
             <div style={{
-              background: '#252538',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
-              border: '1px solid #2d2d44',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <div style={{
                 fontSize: screenSize === 'small' ? '14px' : '18px',
                 fontWeight: '600',
-                color: '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
                 marginBottom: screenSize === 'small' ? '16px' : '24px'
               }}>
                 📋 Recent Orders
@@ -1086,10 +1136,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {recentOrders.slice(0, 5).map((order, index) => (
                   <div key={order.id} style={{
-                    background: '#1a1a2e',
+                    background: darkMode ? '#1a1a2e' : '#f8f9fa',
                     borderRadius: '12px',
                     padding: screenSize === 'small' ? '12px' : '16px',
-                    border: '1px solid #2d2d44',
+                    border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1098,10 +1148,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                     gap: screenSize === 'small' ? '8px' : '0'
                   }}>
                     <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                         Order #{order.id}
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
                         {formatTimeAgo(order.createdAt)}
                       </div>
                     </div>
@@ -1116,11 +1166,11 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                                    order.status === 'PENDING' ? '#fee2e2' : '#e5e7eb',
                         color: order.status === 'COMPLETED' ? '#065f46' : 
                                order.status === 'PREPARING' ? '#92400e' : 
-                               order.status === 'PENDING' ? '#991b1b' : '#374151'
+                               order.status === 'PENDING' ? '#991b1b' : '#e0e0e0'
                       }}>
                         {order.status}
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: '#ffffff', marginTop: '4px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginTop: '4px' }}>
                         ₹{order.total?.toFixed(2) || '0.00'}
                       </div>
                     </div>
@@ -1130,16 +1180,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             </div>
             {/* Kitchen Queue */}
             <div style={{
-              background: '#252538',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
-              border: '1px solid #2d2d44',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <div style={{
                 fontSize: screenSize === 'small' ? '14px' : '18px',
                 fontWeight: '600',
-                color: '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
                 marginBottom: screenSize === 'small' ? '16px' : '24px',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1160,10 +1210,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').slice(0, 5).map((order, index) => (
                   <div key={order.id} style={{
-                    background: order.status === 'PENDING' ? '#1a1a2e' : '#1e3a2e',
+                    background: order.status === 'PENDING' ? (darkMode ? '#1a1a2e' : '#fee2e2') : (darkMode ? '#1e3a2e' : '#d1fae5'),
                     borderRadius: '12px',
                     padding: screenSize === 'small' ? '12px' : '16px',
-                    border: `1px solid ${order.status === 'PENDING' ? '#2d2d44' : '#10b981'}`,
+                    border: `1px solid ${order.status === 'PENDING' ? (darkMode ? '#2d2d44' : '#fecaca') : '#10b981'}`,
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -1172,14 +1222,14 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                     gap: screenSize === 'small' ? '8px' : '0'
                   }}>
                     <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                         Order #{order.id}
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
                         {order.items?.map(item => item.name).join(', ') || 'No items'}
                       </div>
                       {order.table && (
-                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#6b6b7e', marginTop: '4px' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#6b6b7e' : '#8b8b9e', marginTop: '4px' }}>
                           Table {order.table}
                         </div>
                       )}
@@ -1195,14 +1245,14 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                       }}>
                         {order.status}
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginTop: '4px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginTop: '4px' }}>
                         {formatTimeAgo(order.createdAt)}
                       </div>
                     </div>
                   </div>
                 ))}
                 {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length === 0 && (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: darkMode ? '#6b6b7e' : '#64748b' }}>
                     <div style={{ fontSize: '14px' }}>No active orders in kitchen</div>
                   </div>
                 )}
@@ -1211,16 +1261,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
 
             {/* Table Management */}
             <div style={{
-              background: '#252538',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
-              border: '1px solid #2d2d44',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               marginBottom: screenSize === 'small' ? '16px' : '28px'
             }}>
               <div style={{
                 fontSize: screenSize === 'small' ? '14px' : '18px',
                 fontWeight: '600',
-                color: '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
                 marginBottom: screenSize === 'small' ? '16px' : '24px',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -1249,28 +1299,28 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   
                   return (
                     <div key={tableNum} style={{
-                      background: isOccupied ? '#1e3a2e' : '#1a1a2e',
+                      background: isOccupied ? (darkMode ? '#1e3a2e' : '#d1fae5') : (darkMode ? '#1a1a2e' : '#f1f5f9'),
                       borderRadius: '12px',
                       padding: screenSize === 'small' ? '12px' : '16px',
-                      border: `1px solid ${isOccupied ? '#10b981' : '#2d2d44'}`,
+                      border: `1px solid ${isOccupied ? '#10b981' : (darkMode ? '#2d2d44' : '#e2e8f0')}`,
                       textAlign: 'center',
                       transition: 'all 0.3s ease'
                     }}>
                       <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', marginBottom: '8px' }}>
                         {isOccupied ? '🍽️' : '🪑'}
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '700', color: '#ffffff', marginBottom: '4px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                         T{tableNum}
                       </div>
                       <div style={{ 
                         fontSize: screenSize === 'small' ? '11px' : '12px', 
-                        color: isOccupied ? '#10b981' : '#6b6b7e',
+                        color: isOccupied ? '#10b981' : (darkMode ? '#6b6b7e' : '#64748b'),
                         fontWeight: '500'
                       }}>
                         {isOccupied ? 'Occupied' : 'Available'}
                       </div>
                       {isOccupied && tableOrder && (
-                        <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: '#8b8b9e', marginTop: '4px' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginTop: '4px' }}>
                           {formatTimeAgo(tableOrder.createdAt)}
                         </div>
                       )}
@@ -1300,10 +1350,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                     flex: 1,
                     minWidth: screenSize === 'small' ? '100%' : '200px',
                     padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: '#252538',
-                    border: '1px solid #2d2d44',
+                    background: darkMode ? '#252538' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
                     borderRadius: '8px',
-                    color: '#ffffff',
+                    color: darkMode ? '#ffffff' : '#111827',
                     fontSize: screenSize === 'small' ? '13px' : '14px'
                   }}
                 />
@@ -1313,10 +1363,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
                   style={{
                     padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: '#252538',
-                    border: '1px solid #2d2d44',
+                    background: darkMode ? '#252538' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
                     borderRadius: '8px',
-                    color: '#ffffff',
+                    color: darkMode ? '#ffffff' : '#111827',
                     fontSize: screenSize === 'small' ? '13px' : '14px',
                     cursor: 'pointer',
                     flex: screenSize === 'small' ? '1' : 'auto'
@@ -1328,10 +1378,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                   style={{
                     padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: '#252538',
-                    border: '1px solid #2d2d44',
+                    background: darkMode ? '#252538' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
                     borderRadius: '8px',
-                    color: '#ffffff',
+                    color: darkMode ? '#ffffff' : '#111827',
                     fontSize: screenSize === 'small' ? '13px' : '14px',
                     cursor: 'pointer',
                     flex: screenSize === 'small' ? '1' : 'auto'
@@ -1342,20 +1392,20 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   onChange={(e) => setOrderFilter(e.target.value)}
                   style={{
                     padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: '#252538',
-                    border: '1px solid #2d2d44',
+                    background: darkMode ? '#252538' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
                     borderRadius: '8px',
-                    color: '#ffffff',
+                    color: darkMode ? '#ffffff' : '#111827',
                     fontSize: screenSize === 'small' ? '13px' : '14px',
                     cursor: 'pointer',
                     flex: screenSize === 'small' ? '1' : 'auto'
                   }}
                 >
-                  <option value="all">All Orders</option>
-                  <option value="pending">Pending</option>
-                  <option value="preparing">Preparing</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="all" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>All Orders</option>
+                  <option value="pending" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Pending</option>
+                  <option value="preparing" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Preparing</option>
+                  <option value="completed" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Completed</option>
+                  <option value="cancelled" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Cancelled</option>
                 </select>
                 <button
                   onClick={handleExportOrders}
@@ -1417,23 +1467,23 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 marginBottom: screenSize === 'small' ? '16px' : '24px'
               }}>
                 <div style={{
-                  background: '#252538',
+                  background: darkMode ? '#252538' : '#ffffff',
                   padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
-                  border: '1px solid #2d2d44'
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
                 }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Orders</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#ffffff' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Orders</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>
                     {filteredOrders.length}
                   </div>
                 </div>
                 <div style={{
-                  background: '#252538',
+                  background: darkMode ? '#252538' : '#ffffff',
                   padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
-                  border: '1px solid #2d2d44'
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
                 }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Total Revenue</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Revenue</div>
                   <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#10b981' }}>
                     ₹{filteredOrders.reduce((sum, o) => {
                       const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
@@ -1446,12 +1496,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   </div>
                 </div>
                 <div style={{
-                  background: '#252538',
+                  background: darkMode ? '#252538' : '#ffffff',
                   padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
-                  border: '1px solid #2d2d44'
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
                 }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Avg Order</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Avg Order</div>
                   <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#6366f1' }}>
                     ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
                       const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
@@ -1464,12 +1514,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   </div>
                 </div>
                 <div style={{
-                  background: '#252538',
+                  background: darkMode ? '#252538' : '#ffffff',
                   padding: screenSize === 'small' ? '12px' : '16px',
                   borderRadius: '12px',
-                  border: '1px solid #2d2d44'
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
                 }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Pending</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Pending</div>
                   <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#f59e0b' }}>
                     {filteredOrders.filter(o => o.status === 'PENDING').length}
                   </div>
@@ -1478,22 +1528,22 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
 
               {/* Orders List */}
               <div style={{
-                background: '#252538',
+                background: darkMode ? '#252538' : '#ffffff',
                 borderRadius: '16px',
                 padding: screenSize === 'small' ? '16px' : '24px',
-                border: '1px solid #2d2d44'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
               }}>
                 <div style={{
                   fontSize: screenSize === 'small' ? '14px' : '18px',
                   fontWeight: '600',
-                  color: '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
                   marginBottom: screenSize === 'small' ? '16px' : '24px'
                 }}>
                   📋 Orders ({filteredOrders.length})
                 </div>
                 
                 {filteredOrders.length === 0 ? (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b6b7e' }}>
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: darkMode ? '#6b6b7e' : '#64748b' }}>
                     <div style={{ fontSize: '14px' }}>No orders found</div>
                   </div>
                 ) : (
@@ -1505,9 +1555,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           padding: screenSize === 'small' ? '12px' : '16px',
-                          background: '#1a1a2e',
+                          background: darkMode ? '#1a1a2e' : '#f8f9fa',
                           borderRadius: '12px',
-                          border: '1px solid #2d2d44',
+                          border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
                           flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
                           gap: screenSize === 'small' ? '8px' : '0',
                           cursor: 'pointer'
@@ -1515,13 +1565,13 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                         onClick={() => handleViewOrder(order)}
                         >
                           <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
-                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: '#ffffff', marginBottom: '4px' }}>
+                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                               Order #{order.id}
                             </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>
+                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>
                               {new Date(order.createdAt).toLocaleString()}
                             </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#6b6b7e' }}>
+                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#6b6b7e' : '#64748b' }}>
                               {order.items?.map(i => i.name).join(', ') || 'No items'}
                             </div>
                           </div>
@@ -1543,14 +1593,14 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                                          order.status === 'PENDING' ? '#fee2e2' : '#e5e7eb',
                               color: order.status === 'COMPLETED' ? '#065f46' : 
                                      order.status === 'PREPARING' ? '#92400e' : 
-                                     order.status === 'PENDING' ? '#991b1b' : '#374151'
+                                     order.status === 'PENDING' ? '#991b1b' : '#6b7280'
                             }}>
                               {order.status}
                             </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: '#ffffff' }}>
+                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>
                               ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
                             </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
                               {order.paymentMethod || 'CASH'}
                             </div>
                           </div>
@@ -1560,16 +1610,16 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                     
                     {/* Report Summary */}
                     <div style={{
-                      background: '#252538',
+                      background: darkMode ? '#252538' : '#ffffff',
                       borderRadius: '16px',
                       padding: screenSize === 'small' ? '16px' : '24px',
-                      border: '1px solid #2d2d44',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
                       marginTop: screenSize === 'small' ? '16px' : '24px'
                     }}>
                       <div style={{
                         fontSize: screenSize === 'small' ? '14px' : '18px',
                         fontWeight: '600',
-                        color: '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827',
                         marginBottom: screenSize === 'small' ? '16px' : '24px'
                       }}>
                         📊 Report Summary
@@ -1579,8 +1629,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                         gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(3, 1fr)',
                         gap: '12px'
                       }}>
-                        <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>Total Revenue</div>
+                        <div style={{ background: darkMode ? '#1a1a2e' : '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Revenue</div>
                           <div style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
                             ₹{filteredOrders.reduce((sum, o) => {
                               const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
@@ -1592,8 +1642,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                             }, 0).toLocaleString()}
                           </div>
                         </div>
-                        <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>Avg Order Value</div>
+                        <div style={{ background: darkMode ? '#1a1a2e' : '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Avg Order Value</div>
                           <div style={{ fontSize: '18px', fontWeight: '700', color: '#6366f1' }}>
                             ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
                               const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
@@ -1605,9 +1655,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                             }, 0) / filteredOrders.length).toFixed(0) : 0}
                           </div>
                         </div>
-                        <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '4px' }}>Date Range</div>
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>
+                        <div style={{ background: darkMode ? '#1a1a2e' : '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Date Range</div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
                             {dateRange.start && dateRange.end ? 
                               `${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}` : 
                               'All time'}
@@ -1639,25 +1689,25 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
           padding: screenSize === 'small' ? '16px' : '0'
         }}>
           <div style={{
-            background: '#1a1a2e',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
             borderRadius: '16px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: screenSize === 'small' ? '100%' : '600px',
             maxWidth: '90vw',
             maxHeight: '80vh',
             overflowY: 'auto',
-            border: '1px solid #2d2d44'
+            border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>
                 Order #{selectedOrder.id}
               </h3>
               <button
                 onClick={() => setShowOrderModal(false)}
                 style={{
                   padding: '8px 12px',
-                  background: '#2d2d44',
-                  color: '#ffffff',
+                  background: darkMode ? '#2d2d44' : '#e2e8f0',
+                  color: darkMode ? '#ffffff' : '#111827',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -1670,34 +1720,34 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Date</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Date</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                     {new Date(selectedOrder.createdAt).toLocaleString()}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Status</div>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Status</div>
                   <div style={{ 
                     fontSize: screenSize === 'small' ? '13px' : '14px', 
                     color: selectedOrder.status === 'COMPLETED' ? '#10b981' : 
                            selectedOrder.status === 'PREPARING' ? '#f59e0b' : 
-                           selectedOrder.status === 'PENDING' ? '#ef4444' : '#6b6b7e',
+                           selectedOrder.status === 'PENDING' ? '#ef4444' : '#6b7280',
                     fontWeight: '500'
                   }}>
                     {selectedOrder.status}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Payment Method</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Payment Method</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                     {selectedOrder.paymentMethod || 'CASH'}
                   </div>
                 </div>
                 {selectedOrder.table && (
-                  <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Table</div>
-                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                  <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Table</div>
+                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                       {selectedOrder.table}
                     </div>
                   </div>
@@ -1705,31 +1755,31 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               </div>
 
               {selectedOrder.customer && (
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Customer</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Customer</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                     {selectedOrder.customer.name}
                     {selectedOrder.customer.phone && ` (${selectedOrder.customer.phone})`}
                   </div>
                 </div>
               )}
 
-              <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>Items</div>
+              <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>Items</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedOrder.items?.map((item, index) => (
                     <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                           {item.name} x{item.quantity}
                         </div>
                         {item.variant && (
-                          <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#6b6b7e' }}>
+                          <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#6b6b7e' : '#64748b' }}>
                             {item.variant}
                           </div>
                         )}
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff', fontWeight: '500' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827', fontWeight: '500' }}>
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </div>
                     </div>
@@ -1738,21 +1788,21 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Subtotal</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Subtotal</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                     ₹{(selectedOrder._calculated?.subtotal || selectedOrder.subtotal || 0).toFixed(2)}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Tax</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Tax</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                     ₹{(selectedOrder._calculated?.tax || selectedOrder.tax || 0).toFixed(2)}
                   </div>
                 </div>
-                <div style={{ background: '#252538', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e', marginBottom: '4px' }}>Discount</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: '#ffffff' }}>
+                <div style={{ background: darkMode ? '#252538' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Discount</div>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                     ₹{(selectedOrder._calculated?.discount || selectedOrder.discount || 0).toFixed(2)}
                   </div>
                 </div>
@@ -1786,8 +1836,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   style={{
                     flex: 1,
                     padding: screenSize === 'small' ? '10px' : '12px',
-                    background: '#2d2d44',
-                    color: '#ffffff',
+                    background: darkMode ? '#2d2d44' : '#e5e7eb',
+                    color: darkMode ? '#ffffff' : '#111827',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: screenSize === 'small' ? '13px' : '14px',

@@ -41,16 +41,33 @@ export default function BakeryPOS({
   });
   const [isMobile, setIsMobile] = useState(false);
   const [isMedium, setIsMedium] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuDropdownOpen, setMenuDropdownOpen] = useState(false);
   const [customersDropdownOpen, setCustomersDropdownOpen] = useState(false);
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0 });
+  const menuDropdownRef = useRef(null);
+  const customersDropdownRef = useRef(null);
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('bakerypos_theme');
+    return savedTheme === 'dark' ? false : true; // Default to light mode
+  });
+
+  // Get per-tab dark mode preference from settings
+  const getTabDarkMode = (tab) => {
+    if (settings.tabDarkModes && settings.tabDarkModes[tab] !== undefined) {
+      return settings.tabDarkModes[tab];
+    }
+    return darkMode; // Fall back to global theme
+  };
   const tabsRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
       setIsMobile(width < 768);
-      setIsMedium(width >= 768 && width < 1200);
+      setIsMedium(width >= 768 && width < 1024);
+      setIsTablet(width >= 1024 && width < 1366);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -58,20 +75,27 @@ export default function BakeryPOS({
   }, []);
 
   useEffect(() => {
+    localStorage.setItem('bakerypos_theme', darkMode ? 'light' : 'dark');
+  }, [darkMode]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
-      if (menuDropdownOpen || customersDropdownOpen) {
-        const target = event.target;
-        const menuButton = target.closest('button');
-        if (menuButton && (menuButton.textContent.includes('Menu') || menuButton.textContent.includes('Customers'))) {
-          return;
-        }
-        setMenuDropdownOpen(false);
-        setCustomersDropdownOpen(false);
+      // If click is on a dropdown trigger, let the onClick handler handle the toggle
+      if (event.target.closest('[data-dropdown-trigger]')) {
+        return;
       }
+      // If click is inside a dropdown menu container, let it be
+      if (event.target.closest('[data-dropdown]')) {
+        return;
+      }
+      // Otherwise, close all dropdowns
+      setMenuDropdownOpen(false);
+      setCustomersDropdownOpen(false);
+      setIsMenuOpen(false);
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [menuDropdownOpen, customersDropdownOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('bakerypos_active_tab', activeTab);
@@ -79,11 +103,26 @@ export default function BakeryPOS({
 
   const handleNavigate = (tab) => {
     setActiveTab(tab);
+    setMenuDropdownOpen(false);
+    setCustomersDropdownOpen(false);
+    setIsMenuOpen(false);
+  };
+
+  const toggleMenuDropdown = (e, dropdownType) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (dropdownType === 'menu') {
+      setMenuDropdownOpen(prev => !prev);
+      setCustomersDropdownOpen(false);
+    } else if (dropdownType === 'crm') {
+      setCustomersDropdownOpen(prev => !prev);
+      setMenuDropdownOpen(false);
+    }
   };
 
   const scrollTabs = (direction) => {
     if (tabsRef.current) {
-      const scrollAmount = 180;
+      const scrollAmount = 200;
       tabsRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
@@ -94,37 +133,37 @@ export default function BakeryPOS({
   const renderContent = () => {
     switch (activeTab) {
       case 'orders':
-        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} />;
+        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
       case 'dashboard':
-        return <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} onNavigate={handleNavigate} />;
+        return <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('dashboard')} />;
       case 'reports':
-        return <Reports orders={orders} menuItems={menuItems} staff={staff} customers={customers} inventory={inventory} onNavigate={handleNavigate} />;
+        return <Reports orders={orders} menuItems={menuItems} inventory={inventory} staff={staff} customers={customers} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('reports')} />;
       case 'crm':
-        return <CRM customers={customers} setCustomers={setCustomers} orders={orders} onNavigate={handleNavigate} />;
+        return <CRM customers={customers} setCustomers={setCustomers} darkMode={getTabDarkMode('crm')} />;
       case 'staff':
-        return <Staff staff={staff} setStaff={setStaff} onNavigate={handleNavigate} />;
+        return <Staff staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('staff')} />;
       case 'menu':
-        return <Menu menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} onNavigate={handleNavigate} />;
+        return <Menu menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('menu')} />;
       case 'inventory':
-        return <Menu menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} onNavigate={handleNavigate} />;
+        return <Inventory inventory={inventory} setInventory={setInventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('inventory')} />;
       case 'recipes':
-        return <RecipeManagement menuItems={menuItems} inventory={inventory} onNavigate={handleNavigate} />;
+        return <RecipeManagement menuItems={menuItems} inventory={inventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('recipes')} />;
       case 'waste':
-        return <WasteManagement inventory={inventory} onNavigate={handleNavigate} />;
+        return <WasteManagement inventory={inventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('waste')} />;
       case 'reservations':
-        return <Reservations tables={tables} customers={customers} onNavigate={handleNavigate} />;
+        return <Reservations tables={tables} customers={customers} onNavigate={handleNavigate} darkMode={getTabDarkMode('reservations')} />;
       case 'tokens':
-        return <TokenManagement orders={orders} setOrders={setOrders} onNavigate={handleNavigate} />;
+        return <TokenManagement orders={orders} setOrders={setOrders} onNavigate={handleNavigate} darkMode={getTabDarkMode('tokens')} />;
       case 'tables':
-        return <Tables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} />;
+        return <Tables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} darkMode={getTabDarkMode('tables')} />;
       case 'waiters':
-        return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} />;
+        return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} darkMode={getTabDarkMode('waiters')} />;
       case 'kitchen':
         return <Kitchen onNavigate={handleNavigate} orders={orders} setOrders={setOrders} menuItems={menuItems} />;
       case 'settings':
-        return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} />;
+        return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} darkMode={getTabDarkMode('settings')} />;
       default:
-        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} />;
+        return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
     }
   };
 
@@ -151,7 +190,7 @@ export default function BakeryPOS({
       {/* Header */}
       <header style={{
         background: 'var(--cafe-bg-elevated)',
-        padding: isMobile ? '10px 12px' : isMedium ? '12px 16px' : '16px 24px',
+        padding: isMobile ? '10px 12px' : isMedium ? '12px 16px' : isTablet ? '14px 20px' : '16px 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -159,43 +198,20 @@ export default function BakeryPOS({
         boxShadow: 'var(--cafe-shadow-sm)',
         position: 'relative',
         transition: 'all 0.25s ease',
-        zIndex: 50,
-        minHeight: isMobile ? '50px' : isMedium ? '55px' : '60px'
+        zIndex: 1000,
+        height: isMobile ? '50px' : isMedium ? '55px' : isTablet ? '58px' : '60px',
+        flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : isMedium ? '10px' : '12px' }}>
-          {onNavigate && (
-            <button
-              onClick={() => onNavigate?.('dashboard')}
-              style={{
-                padding: isMobile ? '6px 10px' : isMedium ? '8px 12px' : '10px 16px',
-                background: 'var(--cafe-bg-elevated)',
-                color: 'var(--cafe-text-primary)',
-                border: '1px solid var(--cafe-border)',
-                borderRadius: isMobile ? '6px' : isMedium ? '7px' : '8px',
-                fontSize: isMobile ? '11px' : isMedium ? '12px' : '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--cafe-bg-elevated)';
-              }}
-            >
-              ← Back
-            </button>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : isMedium ? '10px' : isTablet ? '11px' : '12px' }}>
           <div style={{
-            width: isMobile ? '28px' : isMedium ? '32px' : '36px',
-            height: isMobile ? '28px' : isMedium ? '32px' : '36px',
-            borderRadius: isMobile ? '8px' : isMedium ? '9px' : '10px',
+            width: isMobile ? '28px' : isMedium ? '32px' : isTablet ? '34px' : '36px',
+            height: isMobile ? '28px' : isMedium ? '32px' : isTablet ? '34px' : '36px',
+            borderRadius: isMobile ? '8px' : isMedium ? '9px' : isTablet ? '9px' : '10px',
             background: 'linear-gradient(135deg, var(--cafe-accent) 0%, var(--cafe-accent-light) 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: isMobile ? '14px' : isMedium ? '16px' : '18px',
+            fontSize: isMobile ? '14px' : isMedium ? '16px' : isTablet ? '17px' : '18px',
             boxShadow: 'var(--cafe-shadow-glow)',
             transform: 'rotate(-5deg)',
             transition: 'transform 0.3s ease'
@@ -207,7 +223,7 @@ export default function BakeryPOS({
           </div>
           <div>
             <div style={{
-              fontSize: isMobile ? '14px' : isMedium ? '16px' : '18px',
+              fontSize: isMobile ? '14px' : isMedium ? '16px' : isTablet ? '17px' : '18px',
               fontWeight: '700',
               color: 'var(--cafe-text-primary)',
               letterSpacing: '-0.03em',
@@ -218,9 +234,12 @@ export default function BakeryPOS({
           </div>
         </div>
 
-        {isMobile ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : isMedium ? '10px' : isTablet ? '11px' : '12px', flex: 1, justifyContent: 'center', maxWidth: isMobile || isMedium ? '800px' : isTablet ? '900px' : '1000px' }}>
+          {isMobile ? (
           <div style={{ position: 'relative' }}>
             <button
+              data-dropdown-trigger
+              data-mobile-menu
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               style={{
                 padding: isMobile ? '6px 10px' : '8px 14px',
@@ -242,7 +261,7 @@ export default function BakeryPOS({
               <span>▼</span>
             </button>
             {isMenuOpen && (
-              <div style={{
+              <div data-dropdown style={{
                 position: 'absolute',
                 top: '100%',
                 right: 0,
@@ -275,10 +294,11 @@ export default function BakeryPOS({
                 ].filter(item => !item.subItem).map(item => (
                   <div key={item.id} style={{ position: 'relative' }}>
                     <button
-                      onClick={() => {
+                      data-dropdown-trigger
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (item.hasDropdown) {
-                          if (item.id === 'menu') setMenuDropdownOpen(!menuDropdownOpen);
-                          if (item.id === 'crm') setCustomersDropdownOpen(!customersDropdownOpen);
+                          toggleMenuDropdown(e, item.id);
                         } else {
                           handleNavigate(item.id);
                           setIsMenuOpen(false);
@@ -316,17 +336,21 @@ export default function BakeryPOS({
                     </button>
                     
                     {item.hasDropdown && (
-                      <div style={{
-                        marginLeft: '12px',
-                        marginTop: '4px',
-                        display: (item.id === 'menu' && menuDropdownOpen) || (item.id === 'crm' && customersDropdownOpen) ? 'block' : 'none'
-                      }}>
+                      <div 
+                        ref={item.id === 'menu' ? menuDropdownRef : customersDropdownRef}
+                        data-dropdown
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          marginLeft: '12px',
+                          marginTop: '4px',
+                          display: (item.id === 'menu' && menuDropdownOpen) || (item.id === 'crm' && customersDropdownOpen) ? 'block' : 'none'
+                        }}>
                         {item.id === 'menu' && (
                           <>
                             <button
+                              data-dropdown-trigger
                               type="button"
                               onClick={(e) => {
-                                e.stopPropagation();
                                 handleNavigate('menu');
                                 setMenuDropdownOpen(false);
                                 setIsMenuOpen(false);
@@ -348,9 +372,9 @@ export default function BakeryPOS({
                               Menu Items
                             </button>
                             <button
+                              data-dropdown-trigger
                               type="button"
                               onClick={(e) => {
-                                e.stopPropagation();
                                 handleNavigate('recipes');
                                 setMenuDropdownOpen(false);
                                 setIsMenuOpen(false);
@@ -372,9 +396,9 @@ export default function BakeryPOS({
                               Recipes
                             </button>
                             <button
+                              data-dropdown-trigger
                               type="button"
                               onClick={(e) => {
-                                e.stopPropagation();
                                 handleNavigate('waste');
                                 setMenuDropdownOpen(false);
                                 setIsMenuOpen(false);
@@ -401,9 +425,9 @@ export default function BakeryPOS({
                         {item.id === 'crm' && (
                           <>
                             <button
+                              data-dropdown-trigger
                               type="button"
                               onClick={(e) => {
-                                e.stopPropagation();
                                 handleNavigate('crm');
                                 setCustomersDropdownOpen(false);
                                 setIsMenuOpen(false);
@@ -425,9 +449,9 @@ export default function BakeryPOS({
                               Customers
                             </button>
                             <button
+                              data-dropdown-trigger
                               type="button"
                               onClick={(e) => {
-                                e.stopPropagation();
                                 handleNavigate('reservations');
                                 setCustomersDropdownOpen(false);
                                 setIsMenuOpen(false);
@@ -458,31 +482,26 @@ export default function BakeryPOS({
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : isMedium ? '5px' : '6px', flex: 1, minWidth: 0, position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : isMedium ? '5px' : isTablet ? '5px' : '6px', flex: 1, minWidth: 0, maxWidth: isMobile || isMedium ? '800px' : isTablet ? '900px' : '1000px' }}>
             <button
               onClick={() => scrollTabs('left')}
               style={{
-                position: 'absolute',
-                left: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
                 background: 'var(--cafe-bg-elevated)',
                 color: 'var(--cafe-text-primary)',
                 border: '1px solid var(--cafe-border)',
                 borderRadius: '50%',
-                width: isMobile ? '28px' : isMedium ? '26px' : '28px',
-                height: isMobile ? '28px' : isMedium ? '26px' : '28px',
+                width: isMobile ? '28px' : isMedium ? '26px' : isTablet ? '27px' : '28px',
+                height: isMobile ? '28px' : isMedium ? '26px' : isTablet ? '27px' : '28px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: isMobile ? '14px' : isMedium ? '13px' : '14px',
+                fontSize: isMobile ? '14px' : isMedium ? '13px' : isTablet ? '13px' : '14px',
                 fontWeight: 'bold',
                 boxShadow: 'var(--cafe-shadow-sm)',
                 transition: 'all 0.2s ease',
                 outline: 'none',
-                flexShrink: 0,
-                zIndex: 100
+                flexShrink: 0
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--cafe-bg-hover)';
@@ -497,7 +516,7 @@ export default function BakeryPOS({
             </button>
             <div ref={tabsRef} className="no-scrollbar" style={{
               display: 'flex',
-              gap: isMobile ? '4px' : isMedium ? '5px' : '6px',
+              gap: isMobile ? '4px' : isMedium ? '5px' : isTablet ? '5px' : '6px',
               overflowX: 'auto',
               overflowY: 'hidden',
               scrollBehavior: 'smooth',
@@ -505,13 +524,12 @@ export default function BakeryPOS({
               paddingBottom: '2px',
               flex: 1,
               minWidth: 0,
-              paddingLeft: isMobile ? '36px' : isMedium ? '34px' : '36px',
-              paddingRight: isMobile ? '36px' : isMedium ? '34px' : '36px'
+              whiteSpace: 'nowrap'
             }}>
               {[
                 { id: 'orders', label: 'Orders' },
                 { id: 'dashboard', label: 'Dashboard' },
-                { id: 'reports', label: 'Reports (80+)' },
+                { id: 'reports', label: 'Reports' },
                 { id: 'crm', label: 'Customers', hasDropdown: true },
                 { id: 'staff', label: 'Staff' },
                 { id: 'menu', label: 'Menu', hasDropdown: true },
@@ -526,21 +544,34 @@ export default function BakeryPOS({
               ].filter(item => !item.subItem).map(item => (
                 <div key={item.id} style={{ position: 'relative' }}>
                   <button
-                    onClick={() => {
+                    data-dropdown-trigger
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (item.hasDropdown) {
-                        if (item.id === 'menu') setMenuDropdownOpen(!menuDropdownOpen);
-                        if (item.id === 'crm') setCustomersDropdownOpen(!customersDropdownOpen);
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setDropdownCoords({
+                          top: rect.bottom + 4,
+                          left: rect.left
+                        });
+                        if (item.id === 'menu') {
+                          setMenuDropdownOpen(!menuDropdownOpen);
+                          setCustomersDropdownOpen(false);
+                        }
+                        if (item.id === 'crm') {
+                          setCustomersDropdownOpen(!customersDropdownOpen);
+                          setMenuDropdownOpen(false);
+                        }
                       } else {
                         handleNavigate(item.id);
                       }
                     }}
                     style={{
-                      padding: isMobile ? '6px 10px' : isMedium ? '7px 12px' : '8px 16px',
+                      padding: isMobile ? '6px 10px' : isMedium ? '7px 12px' : isTablet ? '7px 14px' : '8px 16px',
                       background: activeTab === item.id ? 'var(--cafe-accent)' : 'transparent',
                       color: activeTab === item.id ? '#ffffff' : 'var(--cafe-text-secondary)',
                       border: 'none',
-                      borderRadius: isMobile ? '6px' : isMedium ? '7px' : '8px',
-                      fontSize: isMobile ? '11px' : isMedium ? '12px' : '13px',
+                      borderRadius: isMobile ? '6px' : isMedium ? '7px' : isTablet ? '7px' : '8px',
+                      fontSize: isMobile ? '11px' : isMedium ? '12px' : isTablet ? '12px' : '13px',
                       fontWeight: activeTab === item.id ? '600' : '500',
                       cursor: 'pointer',
                       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -566,224 +597,28 @@ export default function BakeryPOS({
                     {item.label}
                     {item.hasDropdown && <span style={{ fontSize: '10px' }}>▼</span>}
                   </button>
-                  
-                  {item.hasDropdown && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      background: 'var(--cafe-bg-elevated)',
-                      border: '1px solid var(--cafe-border)',
-                      borderRadius: '8px',
-                      boxShadow: 'var(--cafe-shadow-lg)',
-                      zIndex: 99999,
-                      marginTop: '4px',
-                      minWidth: '140px',
-                      display: (item.id === 'menu' && menuDropdownOpen) || (item.id === 'crm' && customersDropdownOpen) ? 'block' : 'none'
-                    }}>
-                      {item.id === 'menu' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNavigate('menu');
-                              setMenuDropdownOpen(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '10px 16px',
-                              background: activeTab === 'menu' ? 'var(--cafe-accent-dim)' : 'transparent',
-                              color: activeTab === 'menu' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: activeTab === 'menu' ? '600' : '400',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (activeTab !== 'menu') {
-                                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (activeTab !== 'menu') {
-                                e.currentTarget.style.background = 'transparent';
-                              }
-                            }}
-                          >
-                            Menu Items
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNavigate('recipes');
-                              setMenuDropdownOpen(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '10px 16px',
-                              background: activeTab === 'recipes' ? 'var(--cafe-accent-dim)' : 'transparent',
-                              color: activeTab === 'recipes' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: activeTab === 'recipes' ? '600' : '400',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (activeTab !== 'recipes') {
-                                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (activeTab !== 'recipes') {
-                                e.currentTarget.style.background = 'transparent';
-                              }
-                            }}
-                          >
-                            Recipes
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNavigate('waste');
-                              setMenuDropdownOpen(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '10px 16px',
-                              background: activeTab === 'waste' ? 'var(--cafe-accent-dim)' : 'transparent',
-                              color: activeTab === 'waste' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: activeTab === 'waste' ? '600' : '400',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (activeTab !== 'waste') {
-                                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (activeTab !== 'waste') {
-                                e.currentTarget.style.background = 'transparent';
-                              }
-                            }}
-                          >
-                            Waste
-                          </button>
-                        </>
-                      )}
-                      
-                      {item.id === 'crm' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNavigate('crm');
-                              setCustomersDropdownOpen(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '10px 16px',
-                              background: activeTab === 'crm' ? 'var(--cafe-accent-dim)' : 'transparent',
-                              color: activeTab === 'crm' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: activeTab === 'crm' ? '600' : '400',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (activeTab !== 'crm') {
-                                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (activeTab !== 'crm') {
-                                e.currentTarget.style.background = 'transparent';
-                              }
-                            }}
-                          >
-                            Customers
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleNavigate('reservations');
-                              setCustomersDropdownOpen(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              textAlign: 'left',
-                              padding: '10px 16px',
-                              background: activeTab === 'reservations' ? 'var(--cafe-accent-dim)' : 'transparent',
-                              color: activeTab === 'reservations' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '13px',
-                              fontWeight: activeTab === 'reservations' ? '600' : '400',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              if (activeTab !== 'reservations') {
-                                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (activeTab !== 'reservations') {
-                                e.currentTarget.style.background = 'transparent';
-                              }
-                            }}
-                          >
-                            Reservations
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
             <button
               onClick={() => scrollTabs('right')}
               style={{
-                position: 'absolute',
-                right: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
                 background: 'var(--cafe-bg-elevated)',
                 color: 'var(--cafe-text-primary)',
                 border: '1px solid var(--cafe-border)',
                 borderRadius: '50%',
-                width: isMobile ? '28px' : isMedium ? '26px' : '28px',
-                height: isMobile ? '28px' : isMedium ? '26px' : '28px',
+                width: isMobile ? '28px' : isMedium ? '26px' : isTablet ? '27px' : '28px',
+                height: isMobile ? '28px' : isMedium ? '26px' : isTablet ? '27px' : '28px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                fontSize: isMobile ? '14px' : isMedium ? '13px' : '14px',
+                fontSize: isMobile ? '14px' : isMedium ? '13px' : isTablet ? '13px' : '14px',
                 fontWeight: 'bold',
                 boxShadow: 'var(--cafe-shadow-sm)',
                 transition: 'all 0.2s ease',
                 outline: 'none',
-                flexShrink: 0,
-                zIndex: 100
+                flexShrink: 0
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'var(--cafe-bg-hover)';
@@ -798,6 +633,215 @@ export default function BakeryPOS({
             </button>
           </div>
         )}
+      </div>
+
+      {/* Desktop Dropdowns positioned fixed to avoid overflow clipping */}
+      {!isMobile && menuDropdownOpen && (
+        <div 
+          ref={menuDropdownRef}
+          data-dropdown
+          style={{
+            position: 'fixed',
+            top: `${dropdownCoords.top}px`,
+            left: `${dropdownCoords.left}px`,
+            background: 'var(--cafe-bg-elevated)',
+            border: '1px solid var(--cafe-border)',
+            borderRadius: '8px',
+            boxShadow: 'var(--cafe-shadow-lg)',
+            zIndex: 999999,
+            minWidth: '140px',
+            padding: '4px'
+          }}>
+          <button
+            data-dropdown-trigger
+            type="button"
+            onClick={() => {
+              handleNavigate('menu');
+              setMenuDropdownOpen(false);
+            }}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '10px 16px',
+              background: activeTab === 'menu' ? 'var(--cafe-accent-dim)' : 'transparent',
+              color: activeTab === 'menu' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: activeTab === 'menu' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'menu') {
+                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'menu') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
+          >
+            Menu Items
+          </button>
+          <button
+            data-dropdown-trigger
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNavigate('recipes');
+              setMenuDropdownOpen(false);
+            }}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '10px 16px',
+              background: activeTab === 'recipes' ? 'var(--cafe-accent-dim)' : 'transparent',
+              color: activeTab === 'recipes' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: activeTab === 'recipes' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'recipes') {
+                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'recipes') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
+          >
+            Recipes
+          </button>
+          <button
+            data-dropdown-trigger
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNavigate('waste');
+              setMenuDropdownOpen(false);
+            }}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '10px 16px',
+              background: activeTab === 'waste' ? 'var(--cafe-accent-dim)' : 'transparent',
+              color: activeTab === 'waste' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: activeTab === 'waste' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'waste') {
+                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'waste') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
+          >
+            Waste
+          </button>
+        </div>
+      )}
+
+      {!isMobile && customersDropdownOpen && (
+        <div 
+          ref={customersDropdownRef}
+          data-dropdown
+          style={{
+            position: 'fixed',
+            top: `${dropdownCoords.top}px`,
+            left: `${dropdownCoords.left}px`,
+            background: 'var(--cafe-bg-elevated)',
+            border: '1px solid var(--cafe-border)',
+            borderRadius: '8px',
+            boxShadow: 'var(--cafe-shadow-lg)',
+            zIndex: 999999,
+            minWidth: '140px',
+            padding: '4px'
+          }}>
+          <button
+            data-dropdown-trigger
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNavigate('crm');
+              setCustomersDropdownOpen(false);
+            }}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '10px 16px',
+              background: activeTab === 'crm' ? 'var(--cafe-accent-dim)' : 'transparent',
+              color: activeTab === 'crm' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: activeTab === 'crm' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'crm') {
+                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'crm') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
+          >
+            Customers
+          </button>
+          <button
+            data-dropdown-trigger
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNavigate('reservations');
+              setCustomersDropdownOpen(false);
+            }}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: '10px 16px',
+              background: activeTab === 'reservations' ? 'var(--cafe-accent-dim)' : 'transparent',
+              color: activeTab === 'reservations' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: activeTab === 'reservations' ? '600' : '400',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'reservations') {
+                e.currentTarget.style.background = 'var(--cafe-bg-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'reservations') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
+          >
+            Reservations
+          </button>
+        </div>
+      )}
       </header>
 
       {/* Main Content */}

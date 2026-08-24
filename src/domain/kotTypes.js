@@ -113,7 +113,8 @@ export function createKOT(orderData, config = DEFAULT_KOT_CONFIG) {
     totalItems: orderData.items.reduce((sum, item) => sum + item.quantity, 0),
     notes: orderData.notes || '',
     modifications: orderData.modifications || [],
-    consolidated: config.consolidateItems
+    consolidated: config.consolidateItems,
+    token: orderData.token || null
   };
   
   console.log('KOT object created:', kot);
@@ -212,7 +213,7 @@ export function updateKOTItemStatus(kot, kotItemId, status) {
   const item = kot.items.find(i => i.kotItemId === kotItemId);
   
   if (item) {
-    item.status = status;
+    item.status = status ? status.toLowerCase() : status;
     kot.updatedAt = new Date().toISOString();
     
     // Update overall KOT status based on item statuses

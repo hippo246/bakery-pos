@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function WasteManagement({ inventory, onNavigate }) {
+export default function WasteManagement({ inventory, onNavigate, darkMode = true }) {
   const [wasteRecords, setWasteRecords] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -89,11 +89,11 @@ export default function WasteManagement({ inventory, onNavigate }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
+      background: darkMode ? '#1a1a2e' : '#ffffff',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Content */}
-      <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: '#f9fafb' }}>
+      <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: darkMode ? '#14142a' : '#f9fafb' }}>
         {showForm ? (
           <WasteForm
             record={editingRecord}
@@ -103,6 +103,7 @@ export default function WasteManagement({ inventory, onNavigate }) {
               setShowForm(false);
               setEditingRecord(null);
             }}
+            darkMode={darkMode}
           />
         ) : (
           <>
@@ -113,33 +114,34 @@ export default function WasteManagement({ inventory, onNavigate }) {
               marginBottom: '24px',
               flexWrap: 'wrap'
             }}>
-              <StatCard label="Total Waste Cost" value={`₹${totalWasteCost.toFixed(2)}`} icon="💰" color="#dc2626" />
-              <StatCard label="Total Records" value={wasteRecords.length} icon="📋" />
-              <StatCard label="Total Quantity" value={`${totalWasteQuantity.toFixed(2)}`} icon="⚖️" />
-              <StatCard label="This Month" value={`₹${wasteRecords.filter(r => new Date(r.createdAt).getMonth() === new Date().getMonth()).reduce((sum, r) => sum + r.totalCost, 0).toFixed(2)}`} icon="📅" />
+              <StatCard label="Total Waste Cost" value={`₹${totalWasteCost.toFixed(2)}`} icon="💰" color="#dc2626" darkMode={darkMode} />
+              <StatCard label="Total Records" value={wasteRecords.length} icon="📋" darkMode={darkMode} />
+              <StatCard label="Total Quantity" value={`${totalWasteQuantity.toFixed(2)}`} icon="⚖️" darkMode={darkMode} />
+              <StatCard label="This Month" value={`₹${wasteRecords.filter(r => new Date(r.createdAt).getMonth() === new Date().getMonth()).reduce((sum, r) => sum + r.totalCost, 0).toFixed(2)}`} icon="📅" darkMode={darkMode} />
             </div>
 
             {/* Filters */}
             <div style={{
-              background: '#ffffff',
-              border: '1px solid #e5e7eb',
+              background: darkMode ? '#252538' : '#ffffff',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               borderRadius: '8px',
               padding: '16px',
               marginBottom: '24px',
               display: 'flex',
               gap: '16px',
               flexWrap: 'wrap',
-              alignItems: 'center'
+              alignItems: 'center',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <span style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>Filters:</span>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Filters:</span>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
                 style={{
                   padding: '10px 16px',
-                  background: '#ffffff',
-                  color: '#111827',
-                  border: '1px solid #d1d5db',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                   borderRadius: '6px',
                   fontSize: '14px',
                   outline: 'none'
@@ -159,9 +161,9 @@ export default function WasteManagement({ inventory, onNavigate }) {
                 onChange={(e) => setFilterReason(e.target.value)}
                 style={{
                   padding: '10px 16px',
-                  background: '#ffffff',
-                  color: '#111827',
-                  border: '1px solid #d1d5db',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                   borderRadius: '6px',
                   fontSize: '14px',
                   outline: 'none'
@@ -193,7 +195,16 @@ export default function WasteManagement({ inventory, onNavigate }) {
                 marginBottom: '24px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#b91c1c';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = '#dc2626';
+                e.target.style.transform = 'translateY(0)';
               }}
             >
               + Log Waste
@@ -201,13 +212,14 @@ export default function WasteManagement({ inventory, onNavigate }) {
 
             {/* Waste by Reason Chart */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               padding: '20px',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '16px' }}>
                 Waste by Reason
               </div>
               {Object.entries(wasteByReason).map(([reason, cost]) => {
@@ -215,10 +227,10 @@ export default function WasteManagement({ inventory, onNavigate }) {
                 return (
                   <div key={reason} style={{ marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827', textTransform: 'capitalize' }}>{reason}</span>
-                      <span style={{ fontSize: '13px', color: '#6b7280' }}>{percentage}% (₹{cost.toFixed(2)})</span>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111827', textTransform: 'capitalize' }}>{reason}</span>
+                      <span style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>{percentage}% (₹{cost.toFixed(2)})</span>
                     </div>
-                    <div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ height: '8px', background: darkMode ? '#252538' : '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${percentage}%`, background: '#dc2626' }} />
                     </div>
                   </div>
@@ -228,18 +240,19 @@ export default function WasteManagement({ inventory, onNavigate }) {
 
             {/* Waste Records List */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb',
-              padding: '20px'
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              padding: '20px',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '16px' }}>
                 Waste Records ({filteredRecords.length})
               </div>
               {filteredRecords.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                <div style={{ textAlign: 'center', padding: '48px', color: darkMode ? '#8b8b9e' : '#9ca3af' }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📋</div>
-                  <div style={{ fontSize: '16px', fontWeight: '500' }}>No waste records found</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111827' }}>No waste records found</div>
                   <div style={{ fontSize: '13px', marginTop: '8px' }}>Log your first waste record to get started</div>
                 </div>
               ) : (
@@ -250,6 +263,7 @@ export default function WasteManagement({ inventory, onNavigate }) {
                       record={record}
                       onEdit={() => handleEditWaste(record)}
                       onDelete={() => handleDeleteWaste(record.id)}
+                      darkMode={darkMode}
                     />
                   ))}
                 </div>
@@ -262,22 +276,23 @@ export default function WasteManagement({ inventory, onNavigate }) {
   );
 }
 
-function StatCard({ label, value, icon, color = '#111827' }) {
+function StatCard({ label, value, icon, color = '#111827', darkMode = true }) {
   return (
     <div style={{
-      background: '#ffffff',
-      border: '1px solid #e5e7eb',
+      background: darkMode ? '#252538' : '#ffffff',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
       borderRadius: '8px',
       padding: '16px',
       flex: 1,
       minWidth: '150px',
       display: 'flex',
       alignItems: 'center',
-      gap: '12px'
+      gap: '12px',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
     }}>
       <span style={{ fontSize: '24px' }}>{icon}</span>
       <div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
+        <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px', fontWeight: '500' }}>
           {label}
         </div>
         <div style={{ fontSize: '18px', fontWeight: '600', color }}>{          value}
@@ -287,7 +302,7 @@ function StatCard({ label, value, icon, color = '#111827' }) {
   );
 }
 
-function WasteRecordCard({ record, onEdit, onDelete }) {
+function WasteRecordCard({ record, onEdit, onDelete, darkMode = true }) {
   const reasonColors = {
     expired: '#dc2626',
     spoiled: '#ea580c',
@@ -295,24 +310,34 @@ function WasteRecordCard({ record, onEdit, onDelete }) {
     overprepared: '#059669',
     quality: '#0891b2',
     mistake: '#7c3aed',
-    other: '#6b7280'
+    other: '#8b8b9e'
   };
 
   return (
     <div style={{
-      background: '#f9fafb',
-      border: '1px solid #e5e7eb',
+      background: darkMode ? '#1a1a2e' : '#f9fafb',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
       borderRadius: '8px',
       padding: '16px',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+      transition: 'all 0.3s ease'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = darkMode ? '0 8px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)';
     }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <span style={{
             padding: '4px 8px',
-            background: reasonColors[record.reason] || '#6b7280',
+            background: reasonColors[record.reason] || '#8b8b9e',
             color: '#ffffff',
             borderRadius: '4px',
             fontSize: '11px',
@@ -321,18 +346,18 @@ function WasteRecordCard({ record, onEdit, onDelete }) {
           }}>
             {record.reason}
           </span>
-          <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+          <span style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
             {record.itemName}
           </span>
         </div>
-        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>
           {record.quantity} {record.unit} • {record.category}
         </div>
-        <div style={{ fontSize: '13px', color: '#6b7280' }}>
+        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
           {new Date(record.createdAt).toLocaleDateString()} • Cost: ₹{record.totalCost?.toFixed(2)}
         </div>
         {record.notes && (
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#9ca3af', marginTop: '4px' }}>
             Note: {record.notes}
           </div>
         )}
@@ -342,14 +367,17 @@ function WasteRecordCard({ record, onEdit, onDelete }) {
           onClick={onEdit}
           style={{
             padding: '8px 16px',
-            background: '#ffffff',
-            color: '#111827',
-            border: '1px solid #d1d5db',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
+            color: darkMode ? '#ffffff' : '#111827',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
             borderRadius: '6px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
+          onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#f3f4f6'}
+          onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff'}
         >
           Edit
         </button>
@@ -357,13 +385,22 @@ function WasteRecordCard({ record, onEdit, onDelete }) {
           onClick={onDelete}
           style={{
             padding: '8px 16px',
-            background: '#ffffff',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
             color: '#dc2626',
-            border: '1px solid #d1d5db',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
             borderRadius: '6px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = darkMode ? '#252538' : '#fef2f2';
+            e.target.style.borderColor = darkMode ? '#dc2626' : '#dc2626';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff';
+            e.target.style.borderColor = darkMode ? '#2d2d44' : '#d1d5db';
           }}
         >
           Delete
@@ -373,7 +410,7 @@ function WasteRecordCard({ record, onEdit, onDelete }) {
   );
 }
 
-function WasteForm({ record, inventory, onSave, onCancel }) {
+function WasteForm({ record, inventory, onSave, onCancel, darkMode = true }) {
   const [inventoryId, setInventoryId] = useState(record?.inventoryId || '');
   const [quantity, setQuantity] = useState(record?.quantity || 1);
   const [unit, setUnit] = useState(record?.unit || 'kg');
@@ -401,20 +438,21 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
 
   return (
     <div style={{
-      background: '#ffffff',
+      background: darkMode ? '#252538' : '#ffffff',
       borderRadius: '8px',
-      border: '1px solid #e5e7eb',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
       padding: '24px',
       maxWidth: '600px',
-      margin: '0 auto'
+      margin: '0 auto',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
     }}>
-      <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '24px' }}>
+      <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '24px' }}>
         {record ? 'Edit Waste Record' : 'Log New Waste'}
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Item *
           </label>
           <select
@@ -424,9 +462,9 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none'
@@ -440,7 +478,7 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Category *
           </label>
           <select
@@ -450,9 +488,9 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none'
@@ -472,7 +510,7 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
               Quantity *
             </label>
             <input
@@ -485,9 +523,9 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                 borderRadius: '6px',
                 fontSize: '14px',
                 outline: 'none'
@@ -495,7 +533,7 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
             />
           </div>
           <div style={{ width: '120px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
               Unit *
             </label>
             <select
@@ -504,9 +542,9 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                 borderRadius: '6px',
                 fontSize: '14px',
                 outline: 'none'
@@ -523,7 +561,7 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Reason for Waste *
           </label>
           <select
@@ -533,9 +571,9 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none'
@@ -552,7 +590,7 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Notes
           </label>
           <textarea
@@ -562,9 +600,9 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none',
@@ -576,17 +614,17 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
 
         {/* Cost Summary */}
         <div style={{
-          background: '#fef2f2',
-          border: '1px solid #dc2626',
+          background: darkMode ? '#1a1a2e' : '#fef2f2',
+          border: `1px solid ${darkMode ? '#2d2d44' : '#dc2626'}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '20px'
         }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '8px' }}>
             Cost Impact
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '13px', color: '#6b7280' }}>Total Cost:</span>
+            <span style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Total Cost:</span>
             <span style={{ fontSize: '18px', fontWeight: '600', color: '#dc2626' }}>₹{totalCost.toFixed(2)}</span>
           </div>
         </div>
@@ -597,14 +635,17 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
             onClick={onCancel}
             style={{
               padding: '12px 24px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
             }}
+            onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#f3f4f6'}
+            onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff'}
           >
             Cancel
           </button>
@@ -618,7 +659,16 @@ function WasteForm({ record, inventory, onSave, onCancel }) {
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#b91c1c';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#dc2626';
+              e.target.style.transform = 'translateY(0)';
             }}
           >
             Save Record

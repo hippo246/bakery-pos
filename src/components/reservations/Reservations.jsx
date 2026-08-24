@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function Reservations({ tables, customers, onNavigate }) {
+export default function Reservations({ tables, customers, onNavigate, darkMode = true }) {
   const [reservations, setReservations] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingReservation, setEditingReservation] = useState(null);
@@ -99,11 +99,11 @@ export default function Reservations({ tables, customers, onNavigate }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
+      background: darkMode ? '#1a1a2e' : '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Content */}
-      <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: '#f9fafb' }}>
+      <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: darkMode ? '#14142a' : '#f1f5f9' }}>
         {showForm ? (
           <ReservationForm
             reservation={editingReservation}
@@ -114,65 +114,96 @@ export default function Reservations({ tables, customers, onNavigate }) {
               setShowForm(false);
               setEditingReservation(null);
             }}
+            darkMode={darkMode}
           />
         ) : (
           <>
+            {/* Header */}
+            <div style={{
+              marginBottom: screenSize === 'small' ? '20px' : '28px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <h1 style={{
+                  fontSize: screenSize === 'small' ? '24px' : '32px',
+                  fontWeight: '700',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  margin: 0,
+                  marginBottom: '4px'
+                }}>
+                  📅 Reservations
+                </h1>
+                <p style={{
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
+                  color: darkMode ? '#8b8b9e' : '#8b8b9e',
+                  margin: 0
+                }}>
+                  Manage table reservations and bookings
+                </p>
+              </div>
+            </div>
+
             {/* Stats Cards */}
             <div style={{
-              display: 'flex',
-              gap: '16px',
-              marginBottom: '24px',
-              flexWrap: 'wrap'
+              display: 'grid',
+              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: screenSize === 'small' ? '12px' : '20px',
+              marginBottom: screenSize === 'small' ? '20px' : '28px'
             }}>
-              <StatCard label="Today's Reservations" value={todayReservations.length} icon="📅" />
-              <StatCard label="Confirmed" value={confirmedToday} icon="✅" color="#059669" />
-              <StatCard label="Pending" value={pendingToday} icon="⏳" color="#d97706" />
-              <StatCard label="Total Guests" value={totalGuestsToday} icon="👥" />
+              <StatCard label="Today's Reservations" value={todayReservations.length} icon="📅" darkMode={darkMode} />
+              <StatCard label="Confirmed" value={confirmedToday} icon="✅" color="#059669" darkMode={darkMode} />
+              <StatCard label="Pending" value={pendingToday} icon="⏳" color="#d97706" darkMode={darkMode} />
+              <StatCard label="Total Guests" value={totalGuestsToday} icon="👥" darkMode={darkMode} />
             </div>
 
             {/* Controls */}
             <div style={{
-              background: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '24px',
+              background: darkMode ? '#252538' : '#ffffff',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              borderRadius: '16px',
+              padding: screenSize === 'small' ? '16px' : '20px',
+              marginBottom: screenSize === 'small' ? '20px' : '28px',
               display: 'flex',
-              gap: '16px',
+              gap: screenSize === 'small' ? '12px' : '16px',
               flexWrap: 'wrap',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>Date:</span>
+                  <span style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Date:</span>
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
                     style={{
-                      padding: '10px 16px',
-                      background: '#ffffff',
-                      color: '#111827',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
+                      padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
+                      background: darkMode ? '#1a1a2e' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      borderRadius: '10px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
                       outline: 'none'
                     }}
                   />
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#6b7280' }}>Status:</span>
+                  <span style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Status:</span>
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
                     style={{
-                      padding: '10px 16px',
-                      background: '#ffffff',
-                      color: '#111827',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
+                      padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
+                      background: darkMode ? '#1a1a2e' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      borderRadius: '10px',
+                      fontSize: screenSize === 'small' ? '13px' : '14px',
                       outline: 'none'
                     }}
                   >
@@ -188,41 +219,49 @@ export default function Reservations({ tables, customers, onNavigate }) {
               <button
                 onClick={handleAddReservation}
                 style={{
-                  padding: '12px 24px',
-                  background: '#111827',
+                  padding: screenSize === 'small' ? '12px 20px' : '14px 24px',
+                  background: '#1a1a2e',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
+                  borderRadius: '10px',
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
+                  fontWeight: '600',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 4px rgba(17, 24, 39, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#1f2937';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#111827';
+                  e.target.style.transform = 'translateY(0)';
                 }}
               >
-                + New Reservation
+                ➕ New Reservation
               </button>
             </div>
 
             {/* Reservations List */}
             <div style={{
-              background: '#ffffff',
-              borderRadius: '8px',
-              border: '1px solid #e5e7eb',
-              padding: '20px'
+              background: darkMode ? '#252538' : '#ffffff',
+              borderRadius: '16px',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              padding: screenSize === 'small' ? '16px' : '24px',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '16px' }}>
                 Reservations for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </div>
               {filteredReservations.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
-                  <div style={{ fontSize: '16px', fontWeight: '500' }}>No reservations found</div>
-                  <div style={{ fontSize: '13px', marginTop: '8px' }}>Create a new reservation to get started</div>
+                <div style={{ textAlign: 'center', padding: '60px 40px', color: darkMode ? '#8b8b9e' : '#9ca3af' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>📅</div>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '8px' }}>No reservations found</div>
+                  <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Create a new reservation to get started</div>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '12px' }}>
+                <div style={{ display: 'grid', gap: '16px' }}>
                   {filteredReservations.map(reservation => (
                     <ReservationCard
                       key={reservation.id}
@@ -231,6 +270,7 @@ export default function Reservations({ tables, customers, onNavigate }) {
                       onView={() => handleViewReservation(reservation)}
                       onDelete={() => handleDeleteReservation(reservation.id)}
                       onStatusChange={handleStatusChange}
+                      darkMode={darkMode}
                     />
                   ))}
                 </div>
@@ -253,7 +293,7 @@ export default function Reservations({ tables, customers, onNavigate }) {
                 zIndex: 1000
               }}>
                 <div style={{
-                  background: '#ffffff',
+                  background: '#252538',
                   borderRadius: '12px',
                   boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
                   maxWidth: '600px',
@@ -264,7 +304,7 @@ export default function Reservations({ tables, customers, onNavigate }) {
                   flexDirection: 'column'
                 }}>
                   <div style={{
-                    background: '#111827',
+                    background: '#1a1a2e',
                     color: '#ffffff',
                     padding: '20px 24px',
                     fontSize: '16px',
@@ -293,20 +333,20 @@ export default function Reservations({ tables, customers, onNavigate }) {
                       <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827', marginBottom: '8px' }}>
                         {viewingReservation.customerName}
                       </div>
-                      <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                      <div style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '16px' }}>
                         Reservation ID: {viewingReservation.id}
                       </div>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                      <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>📞 Phone</div>
+                      <div style={{ background: '#1f1f35', padding: '16px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>📞 Phone</div>
                         <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
                           {viewingReservation.phone || 'N/A'}
                         </div>
                       </div>
-                      <div style={{ background: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>✉️ Email</div>
+                      <div style={{ background: '#1f1f35', padding: '16px', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>✉️ Email</div>
                         <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
                           {viewingReservation.email || 'N/A'}
                         </div>
@@ -316,22 +356,22 @@ export default function Reservations({ tables, customers, onNavigate }) {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
                       <div style={{ background: '#dbeafe', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                         <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e40af' }}>{viewingReservation.date}</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>Date</div>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>Date</div>
                       </div>
                       <div style={{ background: '#d1fae5', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                         <div style={{ fontSize: '20px', fontWeight: '700', color: '#065f46' }}>{viewingReservation.time}</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>Time</div>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>Time</div>
                       </div>
                       <div style={{ background: '#fef3c7', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                         <div style={{ fontSize: '20px', fontWeight: '700', color: '#92400e' }}>{viewingReservation.guests}</div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>Guests</div>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>Guests</div>
                       </div>
                     </div>
 
                     <div style={{ marginBottom: '20px' }}>
-                      <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: '500' }}>🪑 Table</div>
+                      <div style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>🪑 Table</div>
                       <div style={{ 
-                        background: '#f9fafb', 
+                        background: '#1f1f35', 
                         padding: '12px', 
                         borderRadius: '8px', 
                         fontSize: '14px', 
@@ -344,13 +384,13 @@ export default function Reservations({ tables, customers, onNavigate }) {
 
                     {viewingReservation.notes && (
                       <div style={{ marginBottom: '20px' }}>
-                        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px', fontWeight: '500' }}>📝 Notes</div>
+                        <div style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>📝 Notes</div>
                         <div style={{ 
-                          background: '#f9fafb', 
+                          background: '#1f1f35', 
                           padding: '12px', 
                           borderRadius: '8px', 
                           fontSize: '14px', 
-                          color: '#374151',
+                          color: '#e0e0e0',
                           whiteSpace: 'pre-wrap'
                         }}>
                           {viewingReservation.notes}
@@ -367,7 +407,7 @@ export default function Reservations({ tables, customers, onNavigate }) {
                         style={{
                           flex: 1,
                           padding: '12px',
-                          background: '#111827',
+                          background: '#1a1a2e',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '6px',
@@ -390,76 +430,97 @@ export default function Reservations({ tables, customers, onNavigate }) {
   );
 }
 
-function StatCard({ label, value, icon, color = '#111827' }) {
+function StatCard({ label, value, icon, color = '#111827', darkMode = true }) {
   return (
     <div style={{
-      background: '#ffffff',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      padding: '16px',
-      flex: 1,
-      minWidth: '150px',
+      background: darkMode ? '#252538' : '#ffffff',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+      borderRadius: '16px',
+      padding: '20px',
       display: 'flex',
       alignItems: 'center',
-      gap: '12px'
+      gap: '12px',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <span style={{ fontSize: '24px' }}>{icon}</span>
+      <div style={{
+        position: 'absolute',
+        top: '-20px',
+        right: '-20px',
+        width: '80px',
+        height: '80px',
+        background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+        borderRadius: '50%',
+        opacity: 0.1
+      }}></div>
+      <span style={{ fontSize: '28px' }}>{icon}</span>
       <div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
+        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px', fontWeight: '500' }}>
           {label}
         </div>
-        <div style={{ fontSize: '18px', fontWeight: '600', color }}>{value}
+        <div style={{ fontSize: '28px', fontWeight: '700', color: darkMode ? '#ffffff' : color }}>{value}
         </div>
       </div>
     </div>
   );
 }
 
-function ReservationCard({ reservation, onEdit, onView, onDelete, onStatusChange }) {
+function ReservationCard({ reservation, onEdit, onView, onDelete, onStatusChange, darkMode = true }) {
   const statusColors = {
     pending: '#d97706',
     confirmed: '#059669',
     seated: '#0891b2',
-    completed: '#6b7280',
+    completed: '#8b8b9e',
     cancelled: '#dc2626'
   };
 
   return (
     <div style={{
-      background: '#f9fafb',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      padding: '16px',
+      background: darkMode ? '#1a1a2e' : '#f9fafb',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+      borderRadius: '12px',
+      padding: '20px',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center'
-    }}>
+      alignItems: 'center',
+      transition: 'all 0.3s ease'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = darkMode ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.1)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = 'none';
+    }}
+    >
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <span style={{
-            padding: '4px 8px',
-            background: statusColors[reservation.status] || '#6b7280',
+            padding: '6px 12px',
+            background: statusColors[reservation.status] || '#8b8b9e',
             color: '#ffffff',
-            borderRadius: '4px',
-            fontSize: '11px',
-            fontWeight: '500',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: '600',
             textTransform: 'capitalize'
           }}>
             {reservation.status}
           </span>
-          <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+          <span style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
             {reservation.customerName}
           </span>
         </div>
-        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
-          {reservation.time} • {reservation.guests} guests • Table {reservation.tableName}
+        <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '6px' }}>
+          🕐 {reservation.time} • 👥 {reservation.guests} guests • 🪑 Table {reservation.tableName}
         </div>
-        <div style={{ fontSize: '13px', color: '#6b7280' }}>
-          {reservation.phone} {reservation.email ? `• ${reservation.email}` : ''}
+        <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
+          📞 {reservation.phone} {reservation.email ? `• ✉️ ${reservation.email}` : ''}
         </div>
         {reservation.notes && (
-          <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>
-            Note: {reservation.notes}
+          <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#9ca3af', marginTop: '6px' }}>
+            📝 {reservation.notes}
           </div>
         )}
       </div>
@@ -467,14 +528,21 @@ function ReservationCard({ reservation, onEdit, onView, onDelete, onStatusChange
         <button
           onClick={onView}
           style={{
-            padding: '8px 16px',
-            background: '#f3f4f6',
-            color: '#374151',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
+            padding: '10px 16px',
+            background: darkMode ? '#2d2d44' : '#f3f4f6',
+            color: darkMode ? '#ffffff' : '#e0e0e0',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+            borderRadius: '8px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = darkMode ? '#2d2d44' : '#e5e7eb';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = darkMode ? '#2d2d44' : '#f3f4f6';
           }}
         >
           👁️ View
@@ -483,11 +551,11 @@ function ReservationCard({ reservation, onEdit, onView, onDelete, onStatusChange
           value={reservation.status}
           onChange={(e) => onStatusChange(reservation.id, e.target.value)}
           style={{
-            padding: '8px 12px',
-            background: '#ffffff',
-            color: '#111827',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
+            padding: '10px 14px',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
+            color: darkMode ? '#ffffff' : '#111827',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+            borderRadius: '8px',
             fontSize: '13px',
             outline: 'none',
             cursor: 'pointer'
@@ -502,39 +570,58 @@ function ReservationCard({ reservation, onEdit, onView, onDelete, onStatusChange
         <button
           onClick={onEdit}
           style={{
-            padding: '8px 16px',
-            background: '#ffffff',
-            color: '#111827',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
+            padding: '10px 16px',
+            background: '#3b82f6',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 2px 4px rgba(59, 130, 246, 0.2)'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#2563eb';
+            e.target.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = '#3b82f6';
+            e.target.style.transform = 'translateY(0)';
           }}
         >
-          Edit
+          ✏️ Edit
         </button>
         <button
           onClick={onDelete}
           style={{
-            padding: '8px 16px',
-            background: '#ffffff',
+            padding: '10px 16px',
+            background: darkMode ? '#2d2d44' : '#ffffff',
             color: '#dc2626',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
+            border: `1px solid ${darkMode ? '#dc2626' : '#d1d5db'}`,
+            borderRadius: '8px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = darkMode ? '#dc2626' : '#fef2f2';
+            e.target.style.color = darkMode ? '#ffffff' : '#dc2626';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = darkMode ? '#2d2d44' : '#ffffff';
+            e.target.style.color = '#dc2626';
           }}
         >
-          Delete
+          🗑️ Delete
         </button>
       </div>
     </div>
   );
 }
 
-function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
+function ReservationForm({ reservation, tables, customers, onSave, onCancel, darkMode = true }) {
   const [customerName, setCustomerName] = useState(reservation?.customerName || '');
   const [phone, setPhone] = useState(reservation?.phone || '');
   const [email, setEmail] = useState(reservation?.email || '');
@@ -566,21 +653,22 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
 
   return (
     <div style={{
-      background: '#ffffff',
-      borderRadius: '8px',
-      border: '1px solid #e5e7eb',
-      padding: '24px',
+      background: darkMode ? '#252538' : '#ffffff',
+      borderRadius: '16px',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+      padding: '32px',
       maxWidth: '600px',
-      margin: '0 auto'
+      margin: '0 auto',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
     }}>
-      <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '24px' }}>
-        {reservation ? 'Edit Reservation' : 'New Reservation'}
+      <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginBottom: '24px' }}>
+        {reservation ? '✏️ Edit Reservation' : '➕ New Reservation'}
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-            Customer Name *
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+            👤 Customer Name *
           </label>
           <input
             type="text"
@@ -590,10 +678,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              borderRadius: '10px',
               fontSize: '14px',
               outline: 'none'
             }}
@@ -603,8 +691,8 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-              Phone *
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+              📞 Phone *
             </label>
             <input
               type="tel"
@@ -614,10 +702,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '10px',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -625,8 +713,8 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-              Email
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+              ✉️ Email
             </label>
             <input
               type="email"
@@ -635,10 +723,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '10px',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -649,8 +737,8 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-              Date *
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+              📅 Date *
             </label>
             <input
               type="date"
@@ -660,18 +748,18 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '10px',
                 fontSize: '14px',
                 outline: 'none'
               }}
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-              Time *
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+              🕐 Time *
             </label>
             <input
               type="time"
@@ -681,10 +769,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '10px',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -694,8 +782,8 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-              Number of Guests *
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+              👥 Number of Guests *
             </label>
             <input
               type="number"
@@ -706,18 +794,18 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '10px',
                 fontSize: '14px',
                 outline: 'none'
               }}
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-              Table *
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+              🪑 Table *
             </label>
             <select
               value={tableId}
@@ -726,10 +814,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: '#ffffff',
-                color: '#111827',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '10px',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -745,8 +833,8 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-            Status
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+            📊 Status
           </label>
           <select
             value={status}
@@ -754,10 +842,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              borderRadius: '10px',
               fontSize: '14px',
               outline: 'none'
             }}
@@ -771,8 +859,8 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-            Notes
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
+            📝 Notes
           </label>
           <textarea
             value={notes}
@@ -781,10 +869,10 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              borderRadius: '10px',
               fontSize: '14px',
               outline: 'none',
               resize: 'vertical'
@@ -799,13 +887,20 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
             onClick={onCancel}
             style={{
               padding: '12px 24px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
+              background: darkMode ? '#2d2d44' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              borderRadius: '10px',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = darkMode ? '#2d2d44' : '#e5e7eb';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = darkMode ? '#2d2d44' : '#ffffff';
             }}
           >
             Cancel
@@ -814,16 +909,26 @@ function ReservationForm({ reservation, tables, customers, onSave, onCancel }) {
             type="submit"
             style={{
               padding: '12px 24px',
-              background: '#111827',
+              background: '#1a1a2e',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: '10px',
               fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 4px rgba(17, 24, 39, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#1f2937';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#111827';
+              e.target.style.transform = 'translateY(0)';
             }}
           >
-            Save Reservation
+            {reservation ? 'Update Reservation' : 'Create Reservation'}
           </button>
         </div>
       </form>

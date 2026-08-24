@@ -206,7 +206,31 @@ export default function BrewCRM() {
     return () => window.removeEventListener("brewcrm:storage-error", handler);
   }, []);
 
-  useEffect(() => { if (isLocalMode) saveLocalCollection("orders", orders); }, [orders]);
+  useEffect(() => { 
+    if (isLocalMode) {
+      saveLocalCollection("orders", orders);
+    }
+    // Sync order statuses to localStorage for QR clients to poll
+    try {
+      const qrStatuses = {};
+      orders.forEach(order => {
+        if (order && order.id) {
+          qrStatuses[order.id] = {
+            id: order.id,
+            status: order.status,
+            items: order.items,
+            total: order.total,
+            tableName: order.tableName,
+            token: order.token,
+            createdAt: order.createdAt
+          };
+        }
+      });
+      localStorage.setItem('qr_order_statuses', JSON.stringify(qrStatuses));
+    } catch (e) {
+      console.error('Error syncing order statuses for QR:', e);
+    }
+  }, [orders]);
   useEffect(() => { if (isLocalMode) saveLocalCollection("customers", customers); }, [customers]);
   useEffect(() => { if (isLocalMode) saveLocalCollection("menuItems", menuItems); }, [menuItems]);
   useEffect(() => { if (isLocalMode) saveLocalCollection("staff", staff); }, [staff]);

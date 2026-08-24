@@ -1,5 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import textToSpeechService from '../../services/voice/TextToSpeechService';
+
+// Injected once for all SpeakButton instances - previously each rendered
+// instance added its own identical <style> tag with the same @keyframes,
+// so a list with many speak buttons bloated the DOM with duplicate CSS.
+const KEYFRAMES_ID = 'speak-button-pulse-keyframes';
+function ensurePulseKeyframes() {
+  if (typeof document === 'undefined' || document.getElementById(KEYFRAMES_ID)) {
+    return;
+  }
+  const style = document.createElement('style');
+  style.id = KEYFRAMES_ID;
+  style.textContent = `
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 /**
  * Reusable SpeakButton component for text-to-speech
@@ -17,6 +36,11 @@ function SpeakButton({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    ensurePulseKeyframes();
+  }, []);
 
   const sizeStyles = {
     small: { width: '28px', height: '28px', fontSize: '12px' },
@@ -31,9 +55,18 @@ function SpeakButton({
     if (!speechText) return;
 
     const success = textToSpeechService.speak(speechText, {
-      onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
-      onError: () => setIsSpeaking(false),
+      onStart: () => {
+        setIsSpeaking(true);
+        setIsPaused(false);
+      },
+      onEnd: () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+      },
+      onError: () => {
+        setIsSpeaking(false);
+        setIsPaused(false);
+      },
       onPause: () => setIsPaused(true),
       onResume: () => setIsPaused(false)
     });
@@ -47,7 +80,31 @@ function SpeakButton({
     textToSpeechService.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
+    setShowControls(false);
   };
+
+  // Close the extended controls popover once speech ends on its own
+  // (previously it could stay open with nothing left to pause/stop).
+  useEffect(() => {
+    if (!isSpeaking) {
+      setShowControls(false);
+    }
+  }, [isSpeaking]);
+
+  // Close the popover on an outside click - previously it stayed open
+  // until the gear was clicked again, even after clicking elsewhere on the page.
+  useEffect(() => {
+    if (!showControls) return;
+
+    const handleOutsideClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowControls(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showControls]);
 
   const handlePause = () => {
     if (isPaused) {
@@ -76,6 +133,7 @@ function SpeakButton({
 
   return (
     <div 
+      ref={containerRef}
       className={`speak-button-container ${className}`}
       style={{ position: 'relative', display: 'inline-block' }}
     >
@@ -83,6 +141,8 @@ function SpeakButton({
       <button
         onClick={isSpeaking ? handleStop : handleSpeak}
         disabled={disabled}
+        aria-label={isSpeaking ? 'Stop reading aloud' : 'Read aloud'}
+        aria-pressed={isSpeaking}
         style={{
           ...currentSize,
           borderRadius: '50%',
@@ -139,6 +199,7 @@ function SpeakButton({
         >
           <button
             onClick={handlePause}
+            aria-label={isPaused ? 'Resume reading' : 'Pause reading'}
             style={{
               padding: '4px 8px',
               borderRadius: '4px',
@@ -154,6 +215,7 @@ function SpeakButton({
           </button>
           <button
             onClick={handleStop}
+            aria-label="Stop reading"
             style={{
               padding: '4px 8px',
               borderRadius: '4px',
@@ -170,36 +232,33 @@ function SpeakButton({
         </div>
       )}
 
-      {/* Settings button */}
-      <button
-        onClick={toggleControls}
-        style={{
-          position: 'absolute',
-          bottom: '-4px',
-          right: '-4px',
-          width: '16px',
-          height: '16px',
-          borderRadius: '50%',
-          border: 'none',
-          backgroundColor: '#6b7280',
-          color: 'white',
-          cursor: 'pointer',
-          fontSize: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-        title="Settings"
-      >
-        ⚙️
-      </button>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(1.2); }
-        }
-      `}</style>
+      {/* Settings button - only relevant once something is actually playing */}
+      {isSpeaking && (
+        <button
+          onClick={toggleControls}
+          aria-label="Playback controls"
+          aria-expanded={showControls}
+          style={{
+            position: 'absolute',
+            bottom: '-4px',
+            right: '-4px',
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            border: 'none',
+            backgroundColor: '#6b7280',
+            color: 'white',
+            cursor: 'pointer',
+            fontSize: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          title="Settings"
+        >
+          ⚙️
+        </button>
+      )}
     </div>
   );
 }

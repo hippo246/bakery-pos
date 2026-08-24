@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { KitchenStation } from '../../domain/kotTypes.js';
 import useScreenSize from '../../hooks/useScreenSize';
 
-export default function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables }) {
+export default function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables, darkMode = true }) {
   const [activeSection, setActiveSection] = useState('general');
   const screenSize = useScreenSize();
 
@@ -23,6 +23,25 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     autoPrintReceipt: settings.autoPrintReceipt !== false,
     kitchenDisplayEnabled: settings.kitchenDisplayEnabled !== false,
     qrOrderingEnabled: settings.qrOrderingEnabled !== false,
+    qrRestaurantName: settings.qrRestaurantName || settings.storeName || '',
+    qrWelcomeMessage: settings.qrWelcomeMessage || 'Welcome! Scan to order from your table.',
+    qrGstRate: settings.qrGstRate ?? 18,
+    qrSplitGst: settings.qrSplitGst !== false,
+    qrAllowSpecialRequests: settings.qrAllowSpecialRequests !== false,
+    qrAutoAcceptOrders: settings.qrAutoAcceptOrders !== false,
+    qrShowItemDescriptions: settings.qrShowItemDescriptions !== false,
+    qrShowCategoryFilter: settings.qrShowCategoryFilter !== false,
+    qrShowSearch: settings.qrShowSearch !== false,
+    qrAllowCallWaiter: settings.qrAllowCallWaiter !== false,
+    qrPrimaryColor: settings.qrPrimaryColor || '#111827',
+    qrAccentColor: settings.qrAccentColor || '#10b981',
+    qrOrderingUrl: settings.qrOrderingUrl || (typeof window !== 'undefined' ? window.location.origin + '/qr-ordering.html' : '/qr-ordering.html'),
+    // QR Receipt controls
+    qrReceiptFooter: settings.qrReceiptFooter || '',
+    qrShowReceiptOnOrder: settings.qrShowReceiptOnOrder !== false,
+    qrReceiptShowFssai: settings.qrReceiptShowFssai !== false,
+    qrReceiptShowTariff: settings.qrReceiptShowTariff !== false,
+    qrReceiptShowReviewQr: settings.qrReceiptShowReviewQr !== false,
     theme: settings.theme || 'light',
     orderTimeout: settings.orderTimeout || '30',
     lowStockAlert: settings.lowStockAlert !== false,
@@ -43,6 +62,23 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     showTableOnReceipt: settings.showTableOnReceipt !== false,
     showCustomerOnReceipt: settings.showCustomerOnReceipt !== false,
     receiptFontSize: settings.receiptFontSize || '12',
+    // Per-tab dark mode settings
+    tabDarkModes: settings.tabDarkModes || {
+      orders: false,
+      dashboard: false,
+      reports: false,
+      crm: false,
+      staff: false,
+      menu: false,
+      inventory: false,
+      recipes: false,
+      waste: false,
+      reservations: false,
+      tokens: false,
+      tables: false,
+      waiters: false,
+      settings: false
+    },
     // Workflow settings
     requireCustomer: settings.requireCustomer || false,
     requireTable: settings.requireTable || false,
@@ -196,6 +232,41 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     if (oldCodeType !== newCodeType) {
       updateMenuCodes(newCodeType);
     }
+
+    // Sync QR settings to localStorage so the HTML ordering page can read them
+    try {
+      const qrConfig = {
+        enabled: formData.qrOrderingEnabled,
+        restaurantName: formData.qrRestaurantName || formData.storeName,
+        welcomeMessage: formData.qrWelcomeMessage,
+        gstRate: Number(formData.qrGstRate) || 18,
+        splitGst: formData.qrSplitGst,
+        allowSpecialRequests: formData.qrAllowSpecialRequests,
+        autoAcceptOrders: formData.qrAutoAcceptOrders,
+        showItemDescriptions: formData.qrShowItemDescriptions,
+        showCategoryFilter: formData.qrShowCategoryFilter,
+        showSearch: formData.qrShowSearch,
+        allowCallWaiter: formData.qrAllowCallWaiter,
+        primaryColor: formData.qrPrimaryColor,
+        accentColor: formData.qrAccentColor,
+        googleReviewUrl: formData.googleReviewUrl || '',
+        storeName: formData.storeName,
+        storeAddress: formData.storeAddress,
+        // Receipt controls
+        receiptFooter: formData.qrReceiptFooter || formData.receiptFooter || '',
+        showReceiptOnOrder: formData.qrShowReceiptOnOrder,
+        receiptShowFssai: formData.qrReceiptShowFssai,
+        receiptShowTariff: formData.qrReceiptShowTariff,
+        receiptShowReviewQr: formData.qrReceiptShowReviewQr,
+        // Pass through licence/compliance fields
+        gstin: formData.gstin,
+        fssaiLicense: formData.fssaiLicense,
+        tariffCode: formData.tariffCode,
+        phone: formData.phone,
+      };
+      localStorage.setItem('qr_settings', JSON.stringify(qrConfig));
+    } catch (e) { console.error('Failed to sync QR settings', e); }
+
     setHasChanges(false);
   };
 
@@ -269,6 +340,12 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       autoPrintReceipt: settings.autoPrintReceipt !== false,
       kitchenDisplayEnabled: settings.kitchenDisplayEnabled !== false,
       qrOrderingEnabled: settings.qrOrderingEnabled !== false,
+      // QR Receipt controls
+      qrReceiptFooter: settings.qrReceiptFooter || '',
+      qrShowReceiptOnOrder: settings.qrShowReceiptOnOrder !== false,
+      qrReceiptShowFssai: settings.qrReceiptShowFssai !== false,
+      qrReceiptShowTariff: settings.qrReceiptShowTariff !== false,
+      qrReceiptShowReviewQr: settings.qrReceiptShowReviewQr !== false,
       theme: settings.theme || 'light',
       orderTimeout: settings.orderTimeout || '30',
       lowStockAlert: settings.lowStockAlert !== false,
@@ -334,6 +411,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       items: [
         { id: 'general', label: 'General', icon: '⚙️' },
         { id: 'display', label: 'Display', icon: '🖥️' },
+        { id: 'themes', label: 'Themes', icon: '🎨' },
         { id: 'notifications', label: 'Notifications', icon: '🔔' }
       ]
     },
@@ -463,7 +541,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       lineHeight: '1.4',
       color: '#000',
       padding: '16px',
-      background: '#fff',
+      background: '#ffffff',
       border: '1px solid #e5e7eb',
       borderRadius: '4px',
       maxWidth: '280px',
@@ -545,12 +623,25 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     );
   };
 
+  // Theme colors
+  const t = {
+    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
+    bgCard:   darkMode ? '#252538' : '#ffffff',
+    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
+    border:   darkMode ? '#2d2d44' : '#e2e8f0',
+    text:     darkMode ? '#ffffff' : '#111827',
+    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    accent:   '#6366f1',
+  };
+
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
+      background: t.bg,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Content */}
@@ -558,9 +649,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         {/* Sidebar */}
         <div style={{
           width: screenSize === 'small' ? '100%' : '280px',
-          background: '#ffffff',
-          borderRight: screenSize === 'small' ? 'none' : '1px solid #e5e7eb',
-          borderBottom: screenSize === 'small' ? '1px solid #e5e7eb' : 'none',
+          background: t.bgInput,
+          borderRight: `1px solid ${t.border}`,
+          borderBottom: `1px solid ${t.border}`,
           padding: screenSize === 'small' ? '12px' : '16px',
           overflowY: screenSize === 'small' ? 'auto' : 'auto',
           overflowX: screenSize === 'small' ? 'auto' : 'hidden'
@@ -589,7 +680,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     style={{
                       padding: screenSize === 'small' ? '8px 12px' : '10px 12px',
                       background: activeSection === section.id ? '#f3f4f6' : 'transparent',
-                      color: activeSection === section.id ? '#111827' : '#6b7280',
+                      color: activeSection === section.id ? '#111827' : '#8b8b9e',
                       border: activeSection === section.id ? '1px solid #e5e7eb' : '1px solid transparent',
                       borderRadius: '6px',
                       fontSize: screenSize === 'small' ? '13px' : '14px',
@@ -624,15 +715,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         </div>
 
         {/* Main Content */}
-        <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f9fafb' }}>
+        <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: t.bgEle }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '8px',
+            background: t.bgInput,
+            borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
-            maxWidth: '700px',
-            border: '1px solid #e5e7eb'
+            maxWidth: activeSection === 'qr' ? '1100px' : '700px',
+            border: `1px solid ${t.border}`,
+            transition: 'max-width 0.2s ease-in-out'
           }}>
-            <div style={{ margin: '0 0 20px', fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#111827', paddingBottom: screenSize === 'small' ? '12px' : '16px', borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ margin: '0 0 20px', fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: t.text, paddingBottom: screenSize === 'small' ? '12px' : '16px', borderBottom: `1px solid ${t.border}` }}>
               {sections.flatMap(g => g.items).find(s => s.id === activeSection)?.label}
             </div>
 
@@ -640,16 +732,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🌍 Regional Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Currency
                       </label>
                       <select
@@ -658,10 +750,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
-                          background: '#ffffff',
+                          background: t.bgInput,
                           outline: 'none'
                         }}
                       >
@@ -672,7 +764,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Language
                       </label>
                       <select
@@ -681,10 +773,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
-                          background: '#ffffff',
+                          background: t.bgInput,
                           outline: 'none'
                         }}
                       >
@@ -697,15 +789,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
 
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🎨 Appearance
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                       Theme
                     </label>
                     <select
@@ -714,10 +806,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       style={{
                         width: '100%',
                         padding: '10px 12px',
-                        border: '1px solid #d1d5db',
+                        border: `1px solid ${t.border}`,
                         borderRadius: '6px',
                         fontSize: '14px',
-                        background: '#ffffff',
+                        background: t.bgInput,
                         outline: 'none'
                       }}
                     >
@@ -733,16 +825,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🏪 Store Information
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Store Name
                       </label>
                       <input
@@ -753,7 +845,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -761,7 +853,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Store Address
                       </label>
                       <input
@@ -772,7 +864,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -781,7 +873,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                           Phone
                         </label>
                         <input
@@ -792,7 +884,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${t.border}`,
                             borderRadius: '6px',
                             fontSize: '14px',
                             outline: 'none'
@@ -800,7 +892,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                           Email
                         </label>
                         <input
@@ -811,7 +903,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${t.border}`,
                             borderRadius: '6px',
                             fontSize: '14px',
                             outline: 'none'
@@ -828,16 +920,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     💰 Tax Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Tax Rate (%)
                       </label>
                       <input
@@ -848,7 +940,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -866,16 +958,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Legal Compliance */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     📋 Legal Compliance
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         GSTIN
                       </label>
                       <input
@@ -886,7 +978,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -894,7 +986,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         FSSAI License
                       </label>
                       <input
@@ -905,7 +997,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -913,7 +1005,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Tariff Code
                       </label>
                       <input
@@ -924,7 +1016,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -932,7 +1024,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Google Review URL
                       </label>
                       <input
@@ -943,7 +1035,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -956,16 +1048,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Receipt Settings */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🧾 Receipt Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Store Logo URL
                       </label>
                       <input
@@ -976,7 +1068,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -984,7 +1076,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Receipt Footer
                       </label>
                       <input
@@ -995,7 +1087,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -1003,7 +1095,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Receipt Font Size
                       </label>
                       <select
@@ -1012,10 +1104,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
-                          background: '#ffffff',
+                          background: t.bgInput,
                           outline: 'none'
                         }}
                       >
@@ -1025,7 +1117,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         <input
                           type="checkbox"
                           checked={formData.autoPrintReceipt}
@@ -1041,15 +1133,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Display Options */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     👁️ Display Options
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showLogoOnReceipt}
@@ -1058,7 +1150,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show Store Logo
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showGstOnReceipt}
@@ -1067,7 +1159,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show GST on Receipt
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showTableOnReceipt}
@@ -1076,7 +1168,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show Table on Receipt
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showCustomerOnReceipt}
@@ -1085,7 +1177,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show Customer on Receipt
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showCashierOnReceipt}
@@ -1094,7 +1186,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show Cashier/Staff on Receipt
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showEmailOnReceipt}
@@ -1103,7 +1195,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show Email on Receipt
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showPaymentDetailsOnReceipt}
@@ -1112,7 +1204,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Show Payment Details on Receipt
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.showBillIdOnReceipt}
@@ -1132,16 +1224,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* POS Mode */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🛒 POS Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         POS Mode
                       </label>
                       <select
@@ -1150,10 +1242,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
-                          background: '#ffffff',
+                          background: t.bgInput,
                           outline: 'none'
                         }}
                       >
@@ -1167,15 +1259,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Order Requirements */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     📋 Order Requirements
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.requireCustomer}
@@ -1184,7 +1276,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Require customer selection for orders
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.requireTable}
@@ -1193,7 +1285,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Require table selection for orders
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.allowWalkIn}
@@ -1202,7 +1294,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Allow walk-in orders (no customer/table)
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.requirePaymentBeforeKOT}
@@ -1211,7 +1303,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Require payment before sending to kitchen
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.autoCreateKOT}
@@ -1220,7 +1312,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Auto-create KOT on order completion
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.autoAssignTables}
@@ -1235,16 +1327,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Payment Settings */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     💳 Payment Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Brevo API Key (for email receipts)
                       </label>
                       <input
@@ -1255,23 +1347,23 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
                         }}
                       />
-                      <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
                         Used for sending email receipts to customers
                       </div>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Allowed Payment Methods
                       </label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {['CASH', 'CARD', 'UPI', 'NETBANKING', 'WALLET'].map(method => (
-                          <label key={method} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: '#374151', padding: '6px 10px', background: '#ffffff', border: formData.allowedPaymentMethods?.includes(method) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
+                          <label key={method} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: t.textSub, padding: '6px 10px', background: t.bgInput, border: formData.allowedPaymentMethods?.includes(method) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={formData.allowedPaymentMethods?.includes(method)}
@@ -1288,7 +1380,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         ))}
                       </div>
                     </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableSplitPayment}
@@ -1299,7 +1391,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     </label>
                     {formData.enableSplitPayment && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                           Maximum split payments per order
                         </label>
                         <input
@@ -1311,7 +1403,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${t.border}`,
                             borderRadius: '6px',
                             fontSize: '14px',
                             outline: 'none'
@@ -1325,15 +1417,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Discount Settings */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🏷️ Discount Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableDiscount}
@@ -1345,7 +1437,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     {formData.enableDiscount && (
                       <>
                         <div>
-                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                             Maximum discount percentage (%)
                           </label>
                           <input
@@ -1357,14 +1449,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              border: '1px solid #d1d5db',
+                              border: `1px solid ${t.border}`,
                               borderRadius: '6px',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
                         </div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                           <input
                             type="checkbox"
                             checked={formData.requireManagerForHighDiscount}
@@ -1375,7 +1467,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         </label>
                         {formData.requireManagerForHighDiscount && (
                           <div>
-                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                               High discount threshold (%)
                             </label>
                             <input
@@ -1387,13 +1479,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                               style={{
                                 width: '100%',
                                 padding: '10px 12px',
-                                border: '1px solid #d1d5db',
+                                border: `1px solid ${t.border}`,
                                 borderRadius: '6px',
                                 fontSize: '14px',
                                 outline: 'none'
                               }}
                             />
-                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                            <div style={{ fontSize: '12px', color: t.textMute, marginTop: '4px' }}>
                               Discounts above this percentage require manager approval
                             </div>
                           </div>
@@ -1406,15 +1498,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Custom Orders */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     ✏️ Custom Orders
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableCustomOrders}
@@ -1425,7 +1517,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     </label>
                     {formData.enableCustomOrders && (
                       <>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                           <input
                             type="checkbox"
                             checked={formData.requireApprovalForCustomOrders}
@@ -1434,7 +1526,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           />
                           Require manager approval for custom orders
                         </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                           <input
                             type="checkbox"
                             checked={formData.requireNotesForCustomOrders}
@@ -1451,15 +1543,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Void Settings */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     ❌ Void Orders
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableVoid}
@@ -1468,7 +1560,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Enable void orders
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.requireManagerForVoid}
@@ -1483,15 +1575,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Order Notes */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     📝 Order Notes
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableOrderNotes}
@@ -1500,7 +1592,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       />
                       Enable order notes
                     </label>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                    <div style={{ fontSize: '12px', color: t.textMute }}>
                       Allow staff to add special instructions to orders
                     </div>
                   </div>
@@ -1509,15 +1601,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Hold Orders */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     ⏸️ Hold Orders
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableHoldOrders}
@@ -1529,7 +1621,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     {formData.enableHoldOrders && (
                       <>
                         <div>
-                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                             Maximum hold orders
                           </label>
                           <input
@@ -1541,7 +1633,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              border: '1px solid #d1d5db',
+                              border: `1px solid ${t.border}`,
                               borderRadius: '6px',
                               fontSize: '14px',
                               outline: 'none'
@@ -1549,7 +1641,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           />
                         </div>
                         <div>
-                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                             Hold order timeout (minutes)
                           </label>
                           <input
@@ -1561,13 +1653,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             style={{
                               width: '100%',
                               padding: '10px 12px',
-                              border: '1px solid #d1d5db',
+                              border: `1px solid ${t.border}`,
                               borderRadius: '6px',
                               fontSize: '14px',
                               outline: 'none'
                             }}
                           />
-                          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                          <div style={{ fontSize: '12px', color: t.textMute, marginTop: '4px' }}>
                             Orders held longer than this will be automatically released
                           </div>
                         </div>
@@ -1579,15 +1671,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* KOT Settings */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🎫 KOT (Kitchen Order Ticket)
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.autoPrintKOT}
@@ -1597,12 +1689,12 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       Auto-print KOT when order is sent to kitchen
                     </label>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         KOT Print Stations
                       </label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {['kitchen', 'bar', 'bakery', 'grill', 'beverage'].map(station => (
-                          <label key={station} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: '#374151', padding: '6px 10px', background: '#ffffff', border: formData.kotPrintStations?.includes(station) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
+                          <label key={station} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: t.textSub, padding: '6px 10px', background: t.bgInput, border: formData.kotPrintStations?.includes(station) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={formData.kotPrintStations?.includes(station)}
@@ -1625,15 +1717,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Token System */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🎫 Token System
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
                       <input
                         type="checkbox"
                         checked={formData.enableTokenSystem}
@@ -1644,7 +1736,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     </label>
                     {formData.enableTokenSystem && (
                       <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                           Token Prefix
                         </label>
                         <input
@@ -1656,14 +1748,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid #d1d5db',
+                            border: `1px solid ${t.border}`,
                             borderRadius: '6px',
                             fontSize: '14px',
                             outline: 'none',
                             textTransform: 'uppercase'
                           }}
                         />
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                        <div style={{ fontSize: '12px', color: t.textMute, marginTop: '4px' }}>
                           Example: T001, T002, etc.
                         </div>
                       </div>
@@ -1674,21 +1766,21 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Workflow Configuration */}
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🔄 Workflow Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Order Workflow Steps
                       </label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                         {['items', 'customer', 'table', 'payment', 'review'].map(step => (
-                          <label key={step} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: '#374151', padding: '6px 10px', background: '#ffffff', border: formData.workflowSteps?.includes(step) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
+                          <label key={step} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: t.textSub, padding: '6px 10px', background: t.bgInput, border: formData.workflowSteps?.includes(step) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
                               checked={formData.workflowSteps?.includes(step)}
@@ -1704,7 +1796,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           </label>
                         ))}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: t.textMute, marginTop: '4px' }}>
                         Define the order of steps in the order creation workflow
                       </div>
                     </div>
@@ -1717,16 +1809,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🔢 Item Code Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Code Type
                       </label>
                       <select
@@ -1735,10 +1827,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
-                          background: '#ffffff',
+                          background: t.bgInput,
                           outline: 'none'
                         }}
                       >
@@ -1756,16 +1848,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     👨‍🍳 Kitchen Display
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         <input
                           type="checkbox"
                           checked={formData.kitchenDisplayEnabled}
@@ -1781,30 +1873,568 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             )}
 
             {activeSection === 'qr' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div style={{
-                  padding: '16px',
-                  background: '#f9fafb',
-                  borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                    📱 QR Ordering
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: screenSize === 'small' ? 'column' : 'row', gap: '24px', alignItems: 'flex-start' }}>
+                
+                {/* Left Column: Form Controls */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  {/* Status Banner */}
+                  <div style={{
+                    padding: '16px 20px',
+                    background: formData.qrOrderingEnabled
+                      ? 'linear-gradient(135deg, #10b98122, #05966933)'
+                      : 'linear-gradient(135deg, #ef444422, #dc262633)',
+                    borderRadius: '12px',
+                    border: `1px solid ${formData.qrOrderingEnabled ? '#10b98188' : '#ef444488'}`,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                  }}>
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: formData.qrOrderingEnabled ? '#10b981' : '#ef4444' }}>
+                        {formData.qrOrderingEnabled ? '✅ QR Ordering is ENABLED' : '🚫 QR Ordering is DISABLED'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: t.textMute, marginTop: '3px' }}>
+                        {formData.qrOrderingEnabled
+                          ? 'Customers can scan table QR codes to place orders'
+                          : 'The QR ordering page will show a disabled notice'}
+                      </div>
+                    </div>
+                    <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div
+                        onClick={() => handleInputChange('qrOrderingEnabled', !formData.qrOrderingEnabled)}
+                        style={{
+                          width: '48px', height: '26px',
+                          background: formData.qrOrderingEnabled ? '#10b981' : '#2d2d48',
+                          borderRadius: '13px', position: 'relative', cursor: 'pointer',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          position: 'absolute', top: '3px',
+                          left: formData.qrOrderingEnabled ? '25px' : '3px',
+                          width: '20px', height: '20px',
+                          background: t.bgInput, borderRadius: '50%',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Quick Preview Link */}
+                  <div style={{ padding: '14px 18px', background: t.bgEle, borderRadius: '10px', border: `1px solid ${t.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>🔗 Ordering Page URL</div>
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '3px', fontFamily: 'monospace' }}>{typeof window !== 'undefined' ? window.location.origin : ''}/qr-ordering.html?table=...</div>
+                    </div>
+                    <button
+                      onClick={() => window.open('/qr-ordering.html?table=' + encodeURIComponent(JSON.stringify({ tableId: 1, tableName: 'T1' })), '_blank')}
+                      style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      Open Live App 📱
+                    </button>
+                  </div>
+
+                  {/* Branding & Content */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>🏪 Branding</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Restaurant Name</label>
                         <input
-                          type="checkbox"
-                          checked={formData.qrOrderingEnabled}
-                          onChange={(e) => handleInputChange('qrOrderingEnabled', e.target.checked)}
-                          style={{ width: '16px', height: '16px' }}
+                          value={formData.qrRestaurantName}
+                          onChange={e => handleInputChange('qrRestaurantName', e.target.value)}
+                          placeholder={formData.storeName || 'Your Restaurant'}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
                         />
-                        Enable QR Ordering
-                      </label>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>GST Rate (%)</label>
+                        <select
+                          value={formData.qrGstRate}
+                          onChange={e => handleInputChange('qrGstRate', Number(e.target.value))}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        >
+                          <option value={0}>0% (Exempt)</option>
+                          <option value={5}>5% GST</option>
+                          <option value={12}>12% GST</option>
+                          <option value={18}>18% GST</option>
+                          <option value={28}>28% GST</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Welcome Message</label>
+                      <textarea
+                        value={formData.qrWelcomeMessage}
+                        onChange={e => handleInputChange('qrWelcomeMessage', e.target.value)}
+                        rows={2}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', resize: 'vertical', fontFamily: 'inherit', background: t.bgCard, color: t.text, outline: 'none' }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Header Theme Color</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="color" value={formData.qrPrimaryColor} onChange={e => handleInputChange('qrPrimaryColor', e.target.value)} style={{ width: '40px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }} />
+                          <span style={{ fontSize: '12px', color: t.textMute, fontFamily: 'monospace' }}>{formData.qrPrimaryColor}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Accent Button Color</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input type="color" value={formData.qrAccentColor} onChange={e => handleInputChange('qrAccentColor', e.target.value)} style={{ width: '40px', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer' }} />
+                          <span style={{ fontSize: '12px', color: t.textMute, fontFamily: 'monospace' }}>{formData.qrAccentColor}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feature Toggles */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>⚙️ Feature Toggles</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[
+                        { key: 'qrSplitGst', label: 'Show CGST + SGST split', desc: 'Breaks tax down into central + state components' },
+                        { key: 'qrAllowSpecialRequests', label: 'Special Requests field', desc: 'Add a customized notes textbox inside checkout' },
+                        { key: 'qrAutoAcceptOrders', label: 'Auto-accept orders', desc: 'Skip server confirmation checks' },
+                        { key: 'qrShowItemDescriptions', label: 'Show item descriptions', desc: 'Display descriptive text under food cards' },
+                        { key: 'qrShowCategoryFilter', label: 'Category filter bar', desc: 'Show horizontal category navigation tags' },
+                        { key: 'qrShowSearch', label: 'Search bar', desc: 'Let customers search specific bakery items' },
+                        { key: 'qrAllowCallWaiter', label: 'Call Waiter button', desc: 'Place a digital request button inside table header' },
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{label}</div>
+                            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>{desc}</div>
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{
+                              width: '40px', height: '22px', flexShrink: 0,
+                              background: formData[key] ? '#10b981' : '#2d2d48',
+                              borderRadius: '11px', position: 'relative', cursor: 'pointer',
+                              transition: 'background 0.2s', marginLeft: '12px'
+                            }}
+                          >
+                            <div style={{
+                              position: 'absolute', top: '3px',
+                              left: formData[key] ? '21px' : '3px',
+                              width: '16px', height: '16px',
+                              background: t.bgInput, borderRadius: '50%',
+                              transition: 'left 0.2s',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                            }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Receipt Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>🧾 Receipt Options</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}`, marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Show receipt after order</div>
+                        <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>Display thermal receipt preview on success screen</div>
+                      </div>
+                      <div
+                        onClick={() => handleInputChange('qrShowReceiptOnOrder', !formData.qrShowReceiptOnOrder)}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrShowReceiptOnOrder ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                      >
+                        <div style={{ position: 'absolute', top: '3px', left: formData.qrShowReceiptOnOrder ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+                      {[
+                        { key: 'qrReceiptShowFssai',    label: 'Show FSSAI details',   desc: 'Print official FSSAI licensing number' },
+                        { key: 'qrReceiptShowTariff',   label: 'Show Tariff / HSN',   desc: 'Print item taxation codes' },
+                        { key: 'qrReceiptShowReviewQr', label: 'Google Review QR Code',    desc: 'Generate review links' },
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: t.text }}>{label}</div>
+                            <div style={{ fontSize: '10px', color: t.textMute, marginTop: '2px' }}>{desc}</div>
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{ width: '36px', height: '20px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '10px' }}
+                          >
+                            <div style={{ position: 'absolute', top: '2px', left: formData[key] ? '18px' : '2px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Receipt Footer message</label>
+                      <textarea
+                        value={formData.qrReceiptFooter}
+                        onChange={e => handleInputChange('qrReceiptFooter', e.target.value)}
+                        placeholder={formData.receiptFooter || 'Thank you for your order!'}
+                        rows={2}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', resize: 'none', background: t.bgCard, color: t.text, outline: 'none' }}
+                      />
                     </div>
                   </div>
                 </div>
+
+                {/* Right Column: Live Smart Phone Mockup */}
+                {!screenSize.includes('small') && (
+                  <div style={{
+                    width: '320px',
+                    position: 'sticky',
+                    top: '24px',
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: t.textMute, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      📱 Live Customer App Preview
+                    </div>
+                    
+                    {/* CSS Smartphone chassis */}
+                    <div style={{
+                      width: '300px',
+                      height: '580px',
+                      background: '#000000',
+                      borderRadius: '36px',
+                      border: '12px solid #000000',
+                      boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 3px #2d2d44',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      position: 'relative'
+                    }}>
+                      
+                      {/* Notch / Dynamic Island */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '90px',
+                        height: '18px',
+                        background: '#000000',
+                        borderRadius: '10px',
+                        zIndex: 99
+                      }} />
+
+                      {/* Phone Screen Container */}
+                      <div style={{
+                        flex: 1,
+                        background: '#121214',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
+                        color: t.text,
+                        overflow: 'hidden'
+                      }}>
+                        
+                        {/* Mock App Header */}
+                        <div style={{
+                          background: formData.qrPrimaryColor || '#1f1f35',
+                          padding: '24px 12px 14px',
+                          borderBottom: '1px solid rgba(255,255,255,0.08)',
+                          textAlign: 'center',
+                          position: 'relative'
+                        }}>
+                          <div style={{ fontSize: '13px', fontWeight: '700' }}>
+                            {formData.qrRestaurantName || 'BakeryPOS Café'}
+                          </div>
+                          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>
+                            Table 05
+                          </div>
+                          {formData.qrAllowCallWaiter && (
+                            <button style={{
+                              position: 'absolute',
+                              right: '8px',
+                              top: '24px',
+                              background: '#ef4444',
+                              color: t.text,
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '8px',
+                              padding: '2px 4px',
+                              fontWeight: '600'
+                            }}>
+                              🔔 Waiter
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Welcome Banner */}
+                        <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                          <p style={{ fontSize: '10px', color: '#cbd5e1', margin: 0 }}>
+                            {formData.qrWelcomeMessage || 'Welcome! Scan to order.'}
+                          </p>
+                        </div>
+
+                        {/* Category filter bar */}
+                        {formData.qrShowCategoryFilter && (
+                          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px', overflowX: 'auto', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                            {['All', 'Beverages', 'Pastries', 'Dessert'].map((cat, idx) => (
+                              <span key={idx} style={{
+                                fontSize: '9px',
+                                padding: '3px 8px',
+                                background: idx === 0 ? (formData.qrAccentColor || '#10b981') : 'rgba(255,255,255,0.05)',
+                                color: idx === 0 ? '#ffffff' : '#94a3b8',
+                                borderRadius: '10px',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {cat}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Search Bar */}
+                        {formData.qrShowSearch && (
+                          <div style={{ padding: '8px 10px' }}>
+                            <div style={{
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '6px',
+                              padding: '5px 8px',
+                              fontSize: '9px',
+                              color: '#94a3b8'
+                            }}>
+                              🔍 Search menu...
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Menu Item list mock */}
+                        <div style={{ flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {[
+                            { name: 'Signature Chocolate Croissant', price: 180, desc: 'Fresh butter croissant baked with premium dark chocolate rods.', icon: '🥐' },
+                            { name: 'Blueberry Danish Roll', price: 220, desc: 'Sweet danish topped with wild blueberries & cream cheese.', icon: '🫐' }
+                          ].map((item, idx) => (
+                            <div key={idx} style={{
+                              background: 'rgba(255,255,255,0.03)',
+                              border: '1px solid rgba(255,255,255,0.05)',
+                              borderRadius: '8px',
+                              padding: '8px',
+                              display: 'flex',
+                              gap: '8px',
+                              alignItems: 'center'
+                            }}>
+                              <span style={{ fontSize: '20px' }}>{item.icon}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '10px', fontWeight: '700' }}>{item.name}</div>
+                                {formData.qrShowItemDescriptions && (
+                                  <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '2px', lineHeight: '1.2' }}>{item.desc}</div>
+                                )}
+                                <div style={{ fontSize: '9px', fontWeight: '700', marginTop: '4px', color: formData.qrAccentColor || '#10b981' }}>
+                                  ₹{item.price}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Mock Checkout button */}
+                        <div style={{ padding: '10px', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                          <button style={{
+                            width: '100%',
+                            padding: '10px',
+                            background: formData.qrAccentColor || '#10b981',
+                            color: t.text,
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}>
+                            🛒 View Basket (₹0)
+                          </button>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+
+            {activeSection === 'themes' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+                {/* Global Toggle */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #1f1f35 0%, #252538 100%)',
+                  borderRadius: '16px',
+                  border: `1px solid ${t.border}`,
+                  padding: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '20px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '16px', fontWeight: '700', color: t.text, marginBottom: '6px' }}>
+                      🌗 Global Theme
+                    </div>
+                    <div style={{ fontSize: '13px', color: t.textMute, lineHeight: '1.5' }}>
+                      Set all tabs to dark or light mode at once. You can override individual tabs below.
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+                    <button
+                      onClick={() => {
+                        const allDark = {};
+                        Object.keys(formData.tabDarkModes).forEach(t => { allDark[t] = true; });
+                        handleInputChange('tabDarkModes', allDark);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        background: Object.values(formData.tabDarkModes).every(Boolean) ? '#6366f1' : '#1a1a2e',
+                        color: t.text,
+                        border: `1px solid ${Object.values(formData.tabDarkModes).every(Boolean) ? '#6366f1' : '#2d2d44'}`,
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      🌙 All Dark
+                    </button>
+                    <button
+                      onClick={() => {
+                        const allLight = {};
+                        Object.keys(formData.tabDarkModes).forEach(t => { allLight[t] = false; });
+                        handleInputChange('tabDarkModes', allLight);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        background: Object.values(formData.tabDarkModes).every(v => !v) ? '#f59e0b' : '#1a1a2e',
+                        color: t.text,
+                        border: `1px solid ${Object.values(formData.tabDarkModes).every(v => !v) ? '#f59e0b' : '#2d2d44'}`,
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      ☀️ All Light
+                    </button>
+                  </div>
+                </div>
+
+                {/* Per-Tab Toggle Switches */}
+                <div style={{
+                  background: t.bgEle,
+                  borderRadius: '16px',
+                  border: `1px solid ${t.border}`,
+                  padding: '24px'
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '6px' }}>
+                    🎛️ Per-Tab Theme Control
+                  </div>
+                  <div style={{ fontSize: '12px', color: t.textMute, marginBottom: '20px' }}>
+                    Toggle each tab individually — Kitchen is always dark.
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                    {(() => {
+                      const tabMeta = {
+                        orders:    { icon: '🛒', label: 'Orders (POS)' },
+                        dashboard: { icon: '📊', label: 'Dashboard' },
+                        reports:   { icon: '📈', label: 'Reports' },
+                        crm:       { icon: '👥', label: 'Customers (CRM)' },
+                        staff:     { icon: '🧑‍💼', label: 'Staff' },
+                        menu:      { icon: '🍽️', label: 'Menu' },
+                        inventory: { icon: '📦', label: 'Inventory' },
+                        recipes:   { icon: '📖', label: 'Recipes' },
+                        waste:     { icon: '♻️', label: 'Waste' },
+                        reservations: { icon: '📅', label: 'Reservations' },
+                        tokens:    { icon: '🎫', label: 'Tokens' },
+                        tables:    { icon: '🪑', label: 'Tables' },
+                        waiters:   { icon: '🤵', label: 'Waiters' },
+                        settings:  { icon: '⚙️', label: 'Settings' },
+                      };
+                      return Object.keys(formData.tabDarkModes).map(tab => {
+                        const meta = tabMeta[tab] || { icon: '🔲', label: tab };
+                        const isDark = formData.tabDarkModes[tab];
+                        return (
+                          <div key={tab} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '14px 16px',
+                            background: t.bgInput,
+                            borderRadius: '12px',
+                            border: `1px solid ${isDark ? '#6366f1' : '#2d2d44'}`,
+                            transition: 'border-color 0.2s'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '18px' }}>{meta.icon}</span>
+                              <span style={{ fontSize: '13px', fontWeight: '500', color: isDark ? '#c4b5fd' : '#e0e0e0' }}>
+                                {meta.label}
+                              </span>
+                            </div>
+                            {/* Toggle switch */}
+                            <div
+                              onClick={() => handleInputChange('tabDarkModes', {
+                                ...formData.tabDarkModes,
+                                [tab]: !isDark
+                              })}
+                              style={{
+                                width: '44px',
+                                height: '24px',
+                                borderRadius: '12px',
+                                background: isDark ? '#6366f1' : '#374151',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'background 0.25s',
+                                flexShrink: 0
+                              }}
+                            >
+                              <div style={{
+                                position: 'absolute',
+                                top: '3px',
+                                left: isDark ? '23px' : '3px',
+                                width: '18px',
+                                height: '18px',
+                                borderRadius: '50%',
+                                background: '#ffffff',
+                                transition: 'left 0.25s',
+                                boxShadow: '0 1px 4px rgba(0,0,0,0.4)'
+                              }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+
+                {/* Info card */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #1e3a5f 0%, #1e3050 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid #2563eb40',
+                  padding: '18px 20px',
+                  display: 'flex',
+                  gap: '14px',
+                  alignItems: 'flex-start'
+                }}>
+                  <span style={{ fontSize: '20px', flexShrink: 0 }}>💡</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#93c5fd', marginBottom: '4px' }}>
+                      Pro Tip
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: '1.6' }}>
+                      Use <strong style={{ color: '#c4b5fd' }}>dark mode</strong> for Reports, Staff, and Waiters to reduce eye strain during extended sessions. Use <strong style={{ color: '#fbbf24' }}>light mode</strong> for Dashboard and CRM in bright-lit environments.
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
@@ -1812,16 +2442,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🔔 Notifications
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         <input
                           type="checkbox"
                           checked={formData.enableNotifications}
@@ -1840,16 +2470,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🖥️ Display Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         <input
                           type="checkbox"
                           checked={formData.lowStockAlert}
@@ -1868,11 +2498,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     💾 Backup & Restore
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1883,7 +2513,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '100%',
                           padding: '10px 12px',
                           background: '#111827',
-                          color: '#ffffff',
+                          color: t.text,
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '14px',
@@ -1895,7 +2525,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </button>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Restore Backup
                       </label>
                       <input
@@ -1905,7 +2535,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1px solid #d1d5db',
+                          border: `1px solid ${t.border}`,
                           borderRadius: '6px',
                           fontSize: '14px',
                           outline: 'none'
@@ -1921,14 +2551,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
                   padding: '16px',
-                  background: '#f9fafb',
+                  background: t.bgEle,
                   borderRadius: '8px',
-                  border: '1px solid #e5e7eb'
+                  border: `1px solid ${t.border}`
                 }}>
-                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🐛 Debug Information
                   </div>
-                  <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.8' }}>
+                  <div style={{ fontSize: '13px', color: t.textSub, lineHeight: '1.8' }}>
                     <div><strong>Browser:</strong> {navigator.userAgent}</div>
                     <div><strong>Platform:</strong> {navigator.platform}</div>
                     <div><strong>Language:</strong> {navigator.language}</div>

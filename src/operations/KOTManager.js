@@ -187,8 +187,15 @@ export class KOTManager {
       return { success: false, error: 'KOT not found' };
     }
 
-    kot.status = status;
+    kot.status = status ? status.toLowerCase() : status;
     kot.updatedAt = new Date().toISOString();
+
+    if (kot.items) {
+      kot.items = kot.items.map(item => ({
+        ...item,
+        status: status ? status.toLowerCase() : status
+      }));
+    }
 
     if (status === KOTStatus.READY && !kot.actualReadyAt) {
       kot.actualReadyAt = new Date().toISOString();

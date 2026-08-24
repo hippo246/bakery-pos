@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getRecipeManager } from '../../services/recipes/RecipeManager.js';
 
-export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
+export default function RecipeManagement({ menuItems, inventory, onNavigate, darkMode = true }) {
   const recipeManager = getRecipeManager();
   const [recipes, setRecipes] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -108,14 +108,30 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
   };
 
   const handleMenuEngineering = () => {
-    // Mock sales data - in production this would come from actual sales
-    const mockSalesData = recipes.map(r => ({
-      menuItemId: r.menuItemId,
-      quantitySold: Math.floor(Math.random() * 100) + 10,
-      revenue: (r.foodCost * 2.5) * (Math.floor(Math.random() * 100) + 10)
-    }));
+    // Read actual orders from localStorage or props to build real sales analysis metrics
+    const ordersList = JSON.parse(localStorage.getItem('bakerypos_orders') || '[]');
+    const actualSalesData = recipes.map(r => {
+      let qty = 0;
+      let rev = 0;
+      ordersList.forEach(ord => {
+        if (ord.status === 'COMPLETED') {
+          ord.items?.forEach(item => {
+            if (item.name === r.name || item.id === r.menuItemId) {
+              qty += (item.qty || item.quantity || 1);
+              rev += (item.price || 0) * (item.qty || item.quantity || 1);
+            }
+          });
+        }
+      });
+      // Fallback to minimal positive value if there are zero sales so the math still works
+      return {
+        menuItemId: r.menuItemId,
+        quantitySold: qty || 1,
+        revenue: rev || (r.foodCost * 2.5)
+      };
+    });
     
-    const insights = recipeManager.getMenuEngineeringInsights(mockSalesData);
+    const insights = recipeManager.getMenuEngineeringInsights(actualSalesData);
     setMenuEngineeringData(insights);
     setShowMenuEngineering(true);
   };
@@ -127,11 +143,11 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
+      background: darkMode ? '#1a1a2e' : '#ffffff',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Content */}
-      <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: '#f9fafb' }}>
+      <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: darkMode ? '#14142a' : '#f9fafb' }}>
         {showForm ? (
           <RecipeForm
             recipe={editingRecipe}
@@ -153,39 +169,43 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
               marginBottom: '24px'
             }}>
               <div style={{
-                background: '#ffffff',
+                background: darkMode ? '#252538' : '#ffffff',
                 padding: '16px',
                 borderRadius: '8px',
-                border: '1px solid #e5e7eb'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
               }}>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Total Recipes</div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#111827' }}>{stats.totalRecipes}</div>
+                <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>Total Recipes</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>{stats.totalRecipes}</div>
               </div>
               <div style={{
-                background: '#ffffff',
+                background: darkMode ? '#252538' : '#ffffff',
                 padding: '16px',
                 borderRadius: '8px',
-                border: '1px solid #e5e7eb'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
               }}>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Active Recipes</div>
+                <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>Active Recipes</div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{stats.activeRecipes}</div>
               </div>
               <div style={{
-                background: '#ffffff',
+                background: darkMode ? '#252538' : '#ffffff',
                 padding: '16px',
                 borderRadius: '8px',
-                border: '1px solid #e5e7eb'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
               }}>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>Ingredients</div>
+                <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>Ingredients</div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>{stats.totalIngredients}</div>
               </div>
               <div style={{
-                background: '#ffffff',
+                background: darkMode ? '#252538' : '#ffffff',
                 padding: '16px',
                 borderRadius: '8px',
-                border: '1px solid #e5e7eb'
+                border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
               }}>
-                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>High Margin Items</div>
+                <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>High Margin Items</div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#f59e0b' }}>{stats.highMarginItems}</div>
               </div>
             </div>
@@ -202,7 +222,16 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#1f2937';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#111827';
+                  e.target.style.transform = 'translateY(0)';
                 }}
               >
                 + Create Recipe
@@ -217,7 +246,16 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#4f46e5';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#6366f1';
+                  e.target.style.transform = 'translateY(0)';
                 }}
               >
                 + Add Ingredient
@@ -232,7 +270,16 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
                   borderRadius: '6px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#059669';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#10b981';
+                  e.target.style.transform = 'translateY(0)';
                 }}
               >
                 📊 Menu Engineering
@@ -241,19 +288,20 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
 
             {/* Recipes List */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               padding: '20px',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '16px' }}>
                 Recipe Library
               </div>
               {recipes.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                <div style={{ textAlign: 'center', padding: '48px', color: darkMode ? '#8b8b9e' : '#9ca3af' }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📖</div>
-                  <div style={{ fontSize: '16px', fontWeight: '500' }}>No recipes yet</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111827' }}>No recipes yet</div>
                   <div style={{ fontSize: '13px', marginTop: '8px' }}>Create your first recipe to get started</div>
                 </div>
               ) : (
@@ -265,6 +313,7 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
                       onEdit={() => handleEditRecipe(recipe)}
                       onDelete={() => handleDeleteRecipe(recipe.id)}
                       onView={() => setSelectedRecipe(recipe)}
+                      darkMode={darkMode}
                     />
                   ))}
                 </div>
@@ -273,49 +322,54 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
 
             {/* Ingredients List */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#252538' : '#ffffff',
               borderRadius: '8px',
-              border: '1px solid #e5e7eb',
-              padding: '20px'
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              padding: '20px',
+              boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '16px' }}>
                 Ingredients Database
               </div>
               {ingredients.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: '#9ca3af' }}>
+                <div style={{ textAlign: 'center', padding: '48px', color: darkMode ? '#8b8b9e' : '#9ca3af' }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>🥗</div>
-                  <div style={{ fontSize: '16px', fontWeight: '500' }}>No ingredients yet</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111827' }}>No ingredients yet</div>
                   <div style={{ fontSize: '13px', marginTop: '8px' }}>Add ingredients to build recipes</div>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
-                      <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Name</th>
-                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Unit</th>
-                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Cost/Unit</th>
-                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Supplier</th>
-                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Actions</th>
+                      <tr style={{ borderBottom: `2px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Name</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Unit</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Cost/Unit</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Supplier</th>
+                        <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ingredients.map(ingredient => (
-                        <tr key={ingredient.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                          <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>{ingredient.name}</td>
-                          <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>{ingredient.unit}</td>
-                          <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>₹{ingredient.costPerUnit.toFixed(2)}</td>
-                          <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>{ingredient.supplier || '-'}</td>
+                        <tr key={ingredient.id} style={{ borderBottom: `1px solid ${darkMode ? '#252538' : '#f3f4f6'}` }}>
+                          <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#ffffff' : '#111827', fontWeight: '500' }}>{ingredient.name}</td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>{ingredient.unit}</td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#ffffff' : '#111827', fontWeight: '600' }}>₹{ingredient.costPerUnit.toFixed(2)}</td>
+                          <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>{ingredient.supplier || '-'}</td>
                           <td style={{ padding: '12px' }}>
                             <button
                               onClick={() => handleEditIngredient(ingredient)}
-                              style={{ padding: '6px 12px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', marginRight: '8px' }}
+                              style={{ padding: '6px 12px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', marginRight: '8px', transition: 'all 0.2s ease' }}
+                              onMouseEnter={(e) => e.target.style.background = '#2563eb'}
+                              onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => handleDeleteIngredient(ingredient.id)}
-                              style={{ padding: '6px 12px', background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                              style={{ padding: '6px 12px', background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                              onMouseEnter={(e) => e.target.style.background = '#dc2626'}
+                              onMouseLeave={(e) => e.target.style.background = '#ef4444'}
                             >
                               Delete
                             </button>
@@ -336,6 +390,7 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
         <RecipeDetailModal
           recipe={selectedRecipe}
           onClose={() => setSelectedRecipe(null)}
+          darkMode={darkMode}
         />
       )}
 
@@ -354,13 +409,14 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
           zIndex: 2000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#252538' : '#ffffff',
             borderRadius: '12px',
             padding: '24px',
             width: '500px',
-            maxWidth: '90vw'
+            maxWidth: '90vw',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginBottom: '20px' }}>
               {editingIngredient ? 'Edit Ingredient' : 'Add Ingredient'}
             </h3>
             <IngredientForm
@@ -370,6 +426,7 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
                 setShowIngredientForm(false);
                 setEditingIngredient(null);
               }}
+              darkMode={darkMode}
             />
           </div>
         </div>
@@ -390,21 +447,24 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
           zIndex: 2000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#252538' : '#ffffff',
             borderRadius: '12px',
             padding: '24px',
             width: '900px',
             maxWidth: '90vw',
             maxHeight: '90vh',
-            overflow: 'auto'
+            overflow: 'auto',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>
                 📊 Menu Engineering Insights
               </h3>
               <button
                 onClick={() => setShowMenuEngineering(false)}
-                style={{ padding: '8px 12px', background: '#f3f4f6', color: '#111827', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                style={{ padding: '8px 12px', background: darkMode ? '#1a1a2e' : '#f3f4f6', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s ease' }}
+                onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#e5e7eb'}
+                onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f3f4f6'}
               >
                 ×
               </button>
@@ -412,26 +472,26 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Item</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Sold</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Revenue</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Food Cost</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Cost %</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Margin</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>Contribution</th>
+                  <tr style={{ borderBottom: `2px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Item</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Sold</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Revenue</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Food Cost</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Cost %</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Margin</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', textTransform: 'uppercase' }}>Contribution</th>
                   </tr>
                 </thead>
                 <tbody>
                   {menuEngineeringData.map((item, index) => (
-                    <tr key={item.menuItemId} style={{ borderBottom: index < menuEngineeringData.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '500' }}>{item.name}</td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>{item.quantitySold}</td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>₹{item.revenue.toFixed(0)}</td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>₹{item.foodCost.toFixed(2)}</td>
+                    <tr key={item.menuItemId} style={{ borderBottom: index < menuEngineeringData.length - 1 ? `1px solid ${darkMode ? '#252538' : '#f3f4f6'}` : 'none' }}>
+                      <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#ffffff' : '#111827', fontWeight: '500' }}>{item.name}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>{item.quantitySold}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#ffffff' : '#111827', fontWeight: '600' }}>₹{item.revenue.toFixed(0)}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>₹{item.foodCost.toFixed(2)}</td>
                       <td style={{ padding: '12px', fontSize: '14px', color: item.foodCostPercentage > 35 ? '#ef4444' : '#10b981', fontWeight: '600' }}>{item.foodCostPercentage.toFixed(1)}%</td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: item.profitMargin > 70 ? '#10b981' : item.profitMargin < 30 ? '#ef4444' : '#6b7280', fontWeight: '600' }}>{item.profitMargin.toFixed(1)}%</td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>₹{item.totalContribution.toFixed(0)}</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: item.profitMargin > 70 ? '#10b981' : item.profitMargin < 30 ? '#ef4444' : (darkMode ? '#8b8b9e' : '#8b8b9e'), fontWeight: '600' }}>{item.profitMargin.toFixed(1)}%</td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: darkMode ? '#ffffff' : '#111827', fontWeight: '600' }}>₹{item.totalContribution.toFixed(0)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -444,7 +504,7 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate }) {
   );
 }
 
-function IngredientForm({ ingredient, onSave, onCancel }) {
+function IngredientForm({ ingredient, onSave, onCancel, darkMode = true }) {
   const [name, setName] = useState(ingredient?.name || '');
   const [unit, setUnit] = useState(ingredient?.unit || 'kg');
   const [costPerUnit, setCostPerUnit] = useState(ingredient?.costPerUnit || '');
@@ -468,7 +528,7 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
     <form onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#111827', marginBottom: '8px' }}>
             Ingredient Name *
           </label>
           <input
@@ -479,15 +539,18 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px',
-              border: '1px solid #d1d5db',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              outline: 'none'
             }}
             placeholder="e.g., All-Purpose Flour"
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#111827', marginBottom: '8px' }}>
             Unit *
           </label>
           <select
@@ -496,9 +559,12 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px',
-              border: '1px solid #d1d5db',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              outline: 'none'
             }}
           >
             <option value="kg">Kilogram (kg)</option>
@@ -510,7 +576,7 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
           </select>
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#111827', marginBottom: '8px' }}>
             Cost per Unit *
           </label>
           <input
@@ -523,15 +589,18 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px',
-              border: '1px solid #d1d5db',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              outline: 'none'
             }}
             placeholder="e.g., 45.00"
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#111827', marginBottom: '8px' }}>
             Supplier
           </label>
           <input
@@ -541,15 +610,18 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px',
-              border: '1px solid #d1d5db',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              outline: 'none'
             }}
             placeholder="e.g., Local Supplier"
           />
         </div>
         <div>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#111827', marginBottom: '8px' }}>
             Category
           </label>
           <input
@@ -559,9 +631,12 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px',
-              border: '1px solid #d1d5db',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '8px',
-              fontSize: '14px'
+              fontSize: '14px',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              outline: 'none'
             }}
             placeholder="e.g., Dry Goods"
           />
@@ -573,7 +648,7 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             onChange={(e) => setIsActive(e.target.checked)}
             style={{ width: '18px', height: '18px' }}
           />
-          <label style={{ fontSize: '14px', color: '#111827' }}>Active Ingredient</label>
+          <label style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>Active Ingredient</label>
         </div>
       </div>
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
@@ -582,17 +657,19 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
           onClick={onCancel}
           style={{
             padding: '12px 24px',
-            background: '#f3f4f6',
-            color: '#111827',
-            border: 'none',
+            background: darkMode ? '#1a1a2e' : '#f3f4f6',
+            color: darkMode ? '#ffffff' : '#111827',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
             borderRadius: '8px',
             fontSize: '14px',
             fontWeight: '600',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
+          onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#e5e7eb'}
+          onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f3f4f6'}
         >
-          Cancel
-        </button>
+          Cancel        </button>
         <button
           type="submit"
           style={{
@@ -603,7 +680,16 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
             borderRadius: '8px',
             fontSize: '14px',
             fontWeight: '600',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#4f46e5';
+            e.target.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = '#6366f1';
+            e.target.style.transform = 'translateY(0)';
           }}
         >
           {ingredient ? 'Update' : 'Add'} Ingredient
@@ -613,25 +699,26 @@ function IngredientForm({ ingredient, onSave, onCancel }) {
   );
 }
 
-function StatCard({ label, value, icon }) {
+function StatCard({ label, value, icon, darkMode = true }) {
   return (
     <div style={{
-      background: '#ffffff',
-      border: '1px solid #e5e7eb',
+      background: darkMode ? '#252538' : '#ffffff',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
       borderRadius: '8px',
       padding: '16px',
       flex: 1,
       minWidth: '150px',
       display: 'flex',
       alignItems: 'center',
-      gap: '12px'
+      gap: '12px',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
     }}>
       <span style={{ fontSize: '24px' }}>{icon}</span>
       <div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
+        <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px', fontWeight: '500' }}>
           {label}
         </div>
-        <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+        <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
           {value}
         </div>
       </div>
@@ -639,22 +726,32 @@ function StatCard({ label, value, icon }) {
   );
 }
 
-function RecipeCard({ recipe, onEdit, onDelete, onView }) {
+function RecipeCard({ recipe, onEdit, onDelete, onView, darkMode = true }) {
   return (
     <div style={{
-      background: '#f9fafb',
-      border: '1px solid #e5e7eb',
+      background: darkMode ? '#252538' : '#f9fafb',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
       borderRadius: '8px',
       padding: '20px',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center'
+      alignItems: 'center',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+      transition: 'all 0.3s ease'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-2px)';
+      e.currentTarget.style.boxShadow = darkMode ? '0 8px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)';
     }}>
       <div>
-        <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+        <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
           {recipe.name}
         </div>
-        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>
+        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px' }}>
           {recipe.ingredients?.length || 0} ingredients • {recipe.portions || 1} portions
         </div>
         <div style={{ fontSize: '14px', fontWeight: '600', color: '#059669' }}>
@@ -666,14 +763,17 @@ function RecipeCard({ recipe, onEdit, onDelete, onView }) {
           onClick={onView}
           style={{
             padding: '8px 16px',
-            background: '#ffffff',
-            color: '#111827',
-            border: '1px solid #d1d5db',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
+            color: darkMode ? '#ffffff' : '#111827',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
             borderRadius: '6px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
+          onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#f3f4f6'}
+          onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff'}
         >
           View
         </button>
@@ -681,14 +781,17 @@ function RecipeCard({ recipe, onEdit, onDelete, onView }) {
           onClick={onEdit}
           style={{
             padding: '8px 16px',
-            background: '#ffffff',
-            color: '#111827',
-            border: '1px solid #d1d5db',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
+            color: darkMode ? '#ffffff' : '#111827',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
             borderRadius: '6px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
+          onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#f3f4f6'}
+          onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff'}
         >
           Edit
         </button>
@@ -696,13 +799,22 @@ function RecipeCard({ recipe, onEdit, onDelete, onView }) {
           onClick={onDelete}
           style={{
             padding: '8px 16px',
-            background: '#ffffff',
+            background: darkMode ? '#1a1a2e' : '#ffffff',
             color: '#dc2626',
-            border: '1px solid #d1d5db',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
             borderRadius: '6px',
             fontSize: '13px',
             fontWeight: '500',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = darkMode ? '#252538' : '#fef2f2';
+            e.target.style.borderColor = darkMode ? '#dc2626' : '#dc2626';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff';
+            e.target.style.borderColor = darkMode ? '#2d2d44' : '#d1d5db';
           }}
         >
           Delete
@@ -712,7 +824,7 @@ function RecipeCard({ recipe, onEdit, onDelete, onView }) {
   );
 }
 
-function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
+function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel, darkMode = true }) {
   const [name, setName] = useState(recipe?.name || '');
   const [description, setDescription] = useState(recipe?.description || '');
   const [portions, setPortions] = useState(recipe?.portions || 1);
@@ -769,20 +881,21 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
 
   return (
     <div style={{
-      background: '#ffffff',
+      background: darkMode ? '#252538' : '#ffffff',
       borderRadius: '8px',
-      border: '1px solid #e5e7eb',
+      border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
       padding: '24px',
       maxWidth: '800px',
-      margin: '0 auto'
+      margin: '0 auto',
+      boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
     }}>
-      <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '24px' }}>
+      <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '24px' }}>
         {recipe ? 'Edit Recipe' : 'Create New Recipe'}
       </div>
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Recipe Name *
           </label>
           <input
@@ -793,9 +906,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none'
@@ -805,7 +918,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Description
           </label>
           <textarea
@@ -815,9 +928,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none',
@@ -828,7 +941,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Category
           </label>
           <select
@@ -837,9 +950,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none'
@@ -856,7 +969,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Number of Portions *
           </label>
           <input
@@ -868,9 +981,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none'
@@ -880,7 +993,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
 
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+            <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0' }}>
               Ingredients
             </label>
             <button
@@ -894,7 +1007,16 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                 borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: '500',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = '#1f2937';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = '#111827';
+                e.target.style.transform = 'translateY(0)';
               }}
             >
               + Add Ingredient
@@ -902,15 +1024,15 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
           </div>
           {ingredients.map((ing, index) => (
             <div key={index} style={{
-              background: '#f9fafb',
-              border: '1px solid #e5e7eb',
+              background: darkMode ? '#1a1a2e' : '#f9fafb',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               borderRadius: '6px',
               padding: '16px',
               marginBottom: '12px'
             }}>
               <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>
                     Ingredient
                   </label>
                   <select
@@ -919,9 +1041,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      background: '#ffffff',
-                      color: '#111827',
-                      border: '1px solid #d1d5db',
+                      background: darkMode ? '#252538' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
                       fontSize: '13px',
                       outline: 'none'
@@ -934,7 +1056,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                   </select>
                 </div>
                 <div style={{ width: '100px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>
                     Quantity
                   </label>
                   <input
@@ -946,9 +1068,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      background: '#ffffff',
-                      color: '#111827',
-                      border: '1px solid #d1d5db',
+                      background: darkMode ? '#252538' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
                       fontSize: '13px',
                       outline: 'none'
@@ -956,7 +1078,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                   />
                 </div>
                 <div style={{ width: '80px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>
                     Unit
                   </label>
                   <select
@@ -965,9 +1087,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '10px 12px',
-                      background: '#ffffff',
-                      color: '#111827',
-                      border: '1px solid #d1d5db',
+                      background: darkMode ? '#252538' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
                       fontSize: '13px',
                       outline: 'none'
@@ -989,12 +1111,21 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
                     onClick={() => removeIngredient(index)}
                     style={{
                       padding: '10px',
-                      background: '#ffffff',
+                      background: darkMode ? '#1a1a2e' : '#ffffff',
                       color: '#dc2626',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
                       fontSize: '16px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = darkMode ? '#252538' : '#fef2f2';
+                      e.target.style.borderColor = darkMode ? '#dc2626' : '#dc2626';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff';
+                      e.target.style.borderColor = darkMode ? '#2d2d44' : '#d1d5db';
                     }}
                   >
                     ✕
@@ -1006,7 +1137,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Instructions
           </label>
           <textarea
@@ -1016,9 +1147,9 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '12px 16px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               outline: 'none',
@@ -1030,27 +1161,27 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
 
         {/* Cost Summary */}
         <div style={{
-          background: '#f0fdf4',
-          border: '1px solid #059669',
+          background: darkMode ? '#1a1a2e' : '#f0fdf4',
+          border: `1px solid ${darkMode ? '#2d2d44' : '#059669'}`,
           borderRadius: '8px',
           padding: '16px',
           marginBottom: '20px'
         }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '12px' }}>
             Cost Summary
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#6b7280' }}>Total Cost:</span>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>₹{calculateCost().toFixed(2)}</span>
+            <span style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Total Cost:</span>
+            <span style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>₹{calculateCost().toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '13px', color: '#6b7280' }}>Cost per Portion:</span>
+            <span style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Cost per Portion:</span>
             <span style={{ fontSize: '16px', fontWeight: '600', color: '#059669' }}>₹{(calculateCost() / portions).toFixed(2)}</span>
           </div>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0' }}>
             <input
               type="checkbox"
               checked={active}
@@ -1067,14 +1198,17 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
             onClick={onCancel}
             style={{
               padding: '12px 24px',
-              background: '#ffffff',
-              color: '#111827',
-              border: '1px solid #d1d5db',
+              background: darkMode ? '#1a1a2e' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
             }}
+            onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#f3f4f6'}
+            onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#ffffff'}
           >
             Cancel
           </button>
@@ -1088,7 +1222,16 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#1f2937';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = '#111827';
+              e.target.style.transform = 'translateY(0)';
             }}
           >
             Save Recipe
@@ -1099,7 +1242,7 @@ function RecipeForm({ recipe, inventory, menuItems, onSave, onCancel }) {
   );
 }
 
-function RecipeDetailModal({ recipe, onClose }) {
+function RecipeDetailModal({ recipe, onClose, darkMode = true }) {
   return (
     <div style={{
       position: 'fixed',
@@ -1114,29 +1257,33 @@ function RecipeDetailModal({ recipe, onClose }) {
       zIndex: 1000
     }}>
       <div style={{
-        background: '#ffffff',
+        background: darkMode ? '#252538' : '#ffffff',
         borderRadius: '12px',
         maxWidth: '600px',
         width: '90%',
         maxHeight: '90vh',
         overflow: 'auto',
-        padding: '24px'
+        padding: '24px',
+        border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
             {recipe.name}
           </div>
           <button
             onClick={onClose}
             style={{
               padding: '8px',
-              background: '#f9fafb',
-              color: '#111827',
-              border: '1px solid #e5e7eb',
+              background: darkMode ? '#1a1a2e' : '#f9fafb',
+              color: darkMode ? '#ffffff' : '#111827',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
               borderRadius: '6px',
               fontSize: '16px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
             }}
+            onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#f3f4f6'}
+            onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f9fafb'}
           >
             ✕
           </button>
@@ -1144,53 +1291,53 @@ function RecipeDetailModal({ recipe, onClose }) {
 
         {recipe.description && (
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Description</div>
-            <div style={{ fontSize: '14px', color: '#111827' }}>{recipe.description}</div>
+            <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>Description</div>
+            <div style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>{recipe.description}</div>
           </div>
         )}
 
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Category</div>
-          <div style={{ fontSize: '14px', color: '#111827' }}>{recipe.category || 'N/A'}</div>
+          <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>Category</div>
+          <div style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>{recipe.category || 'N/A'}</div>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>Portions</div>
-          <div style={{ fontSize: '14px', color: '#111827' }}>{recipe.portions || 1}</div>
+          <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '4px' }}>Portions</div>
+          <div style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>{recipe.portions || 1}</div>
         </div>
 
         <div style={{
           marginBottom: '16px',
           padding: '16px',
-          background: '#f0fdf4',
+          background: darkMode ? '#1a1a2e' : '#f0fdf4',
           borderRadius: '8px',
-          border: '1px solid #059669'
+          border: `1px solid ${darkMode ? '#2d2d44' : '#059669'}`
         }}>
-          <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>Cost Information</div>
+          <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px' }}>Cost Information</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ fontSize: '14px', color: '#111827' }}>Total Cost:</span>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>₹{recipe.totalCost?.toFixed(2) || '0.00'}</span>
+            <span style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>Total Cost:</span>
+            <span style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>₹{recipe.totalCost?.toFixed(2) || '0.00'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '14px', color: '#111827' }}>Cost per Portion:</span>
+            <span style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>Cost per Portion:</span>
             <span style={{ fontSize: '16px', fontWeight: '600', color: '#059669' }}>₹{recipe.costPerPortion?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '12px' }}>
             Ingredients ({recipe.ingredients?.length || 0})
           </div>
           {recipe.ingredients?.map((ing, index) => (
             <div key={index} style={{
               padding: '12px',
-              background: '#f9fafb',
+              background: darkMode ? '#1a1a2e' : '#f9fafb',
               borderRadius: '6px',
               marginBottom: '8px',
               display: 'flex',
               justifyContent: 'space-between'
             }}>
-              <span style={{ fontSize: '14px', color: '#111827' }}>
+              <span style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#111827' }}>
                 {ing.quantity} {ing.unit} of ingredient
               </span>
             </div>
@@ -1199,15 +1346,15 @@ function RecipeDetailModal({ recipe, onClose }) {
 
         {recipe.instructions && (
           <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '12px' }}>
               Instructions
             </div>
             <div style={{
               padding: '16px',
-              background: '#f9fafb',
+              background: darkMode ? '#1a1a2e' : '#f9fafb',
               borderRadius: '6px',
               fontSize: '14px',
-              color: '#111827',
+              color: darkMode ? '#ffffff' : '#111827',
               whiteSpace: 'pre-wrap'
             }}>
               {recipe.instructions}
@@ -1215,7 +1362,7 @@ function RecipeDetailModal({ recipe, onClose }) {
           </div>
         )}
 
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '16px' }}>
+        <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#9ca3af', marginTop: '16px' }}>
           Last updated: {recipe.updatedAt ? new Date(recipe.updatedAt).toLocaleString() : 'N/A'}
         </div>
       </div>

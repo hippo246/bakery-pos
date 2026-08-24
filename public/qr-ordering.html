@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BakeryPOS - QR Ordering</title>
+    <!-- jsPDF for downloading PDF receipts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -175,10 +177,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            padding: 16px;
         }
         
         .cart-modal.active {
@@ -187,33 +192,52 @@
         
         .cart-content {
             background: #ffffff;
-            border-radius: 12px;
-            padding: 24px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow: auto;
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 540px;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         .cart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
         }
         
         .cart-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #111827;
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .close-button {
-            background: none;
+            background: #f1f5f9;
             border: none;
-            font-size: 24px;
+            font-size: 22px;
             cursor: pointer;
-            color: #6b7280;
+            color: #64748b;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .close-button:hover {
+            background: #e2e8f0;
+            color: #0f172a;
         }
         
         .cart-item {
@@ -293,36 +317,60 @@
         
         .form-input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-size: 14px;
+            padding: 14px 16px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 15px;
+            color: #0f172a;
+            background: #f8fafc;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            background: #ffffff;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
         
         .checkout-button {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             background: #10b981;
             color: #ffffff;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            margin-top: 16px;
+            margin-top: 20px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .checkout-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
         }
         
         .call-waiter-button {
             width: 100%;
-            padding: 14px;
-            background: #f59e0b;
+            padding: 16px;
+            background: #ef4444;
             color: #ffffff;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             margin-top: 12px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+
+        .call-waiter-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
         }
         
         .success-message {
@@ -359,6 +407,210 @@
                 padding: 16px;
             }
         }
+        /* ── Full Screen Order Success Overlay ── */
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 2000;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .success-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+            display: flex;
+        }
+        .success-checkmark {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin-bottom: 24px;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+            animation: popCheckmark 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes popCheckmark {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 360px;
+            margin-top: 28px;
+        }
+        .success-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        .success-action-btn.primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+        }
+        .success-action-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .success-action-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .success-action-btn.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+        }
+        .success-action-btn.danger:hover {
+            transform: translateY(-1px);
+        }
+
+        /* ── Assistance Bottom Sheet ── */
+        #assist-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 1100;
+            animation: fadeIn 0.2s ease;
+        }
+        #assist-backdrop.open { display: block; }
+
+        #assist-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1101;
+            background: #ffffff;
+            border-radius: 28px 28px 0 0;
+            padding: 12px 24px 36px;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.34, 1.1, 0.64, 1);
+            max-height: 92vh;
+            overflow-y: auto;
+        }
+        #assist-sheet.open {
+            transform: translateY(0);
+        }
+        .assist-handle {
+            width: 44px;
+            height: 5px;
+            border-radius: 99px;
+            background: #e2e8f0;
+            margin: 0 auto 20px;
+        }
+        .assist-type-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0 20px;
+        }
+        .assist-type-tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 18px 10px;
+            border-radius: 16px;
+            border: 2px solid #e2e8f0;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            text-align: center;
+            line-height: 1.2;
+            user-select: none;
+        }
+        .assist-type-tile .tile-icon {
+            font-size: 30px;
+            line-height: 1;
+        }
+        .assist-type-tile:hover {
+            border-color: #94a3b8;
+            background: #f1f5f9;
+        }
+        .assist-type-tile.selected {
+            border-color: #ef4444;
+            background: #fff5f5;
+            color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+        }
+        .assist-type-tile.selected .tile-icon {
+            animation: bounceIn 0.3s ease;
+        }
+        #floating-assist-button {
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            z-index: 1000;
+            padding: 16px 22px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 6px 24px rgba(239, 68, 68, 0.45);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            animation: floatPulse 3s ease-in-out infinite;
+        }
+        #floating-assist-button:hover {
+            transform: scale(1.06) translateY(-2px);
+            box-shadow: 0 10px 28px rgba(239, 68, 68, 0.5);
+        }
+        @keyframes floatPulse {
+            0%, 100% { box-shadow: 0 6px 24px rgba(239,68,68,0.45); }
+            50% { box-shadow: 0 6px 32px rgba(239,68,68,0.65); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; } to { opacity: 1; }
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.7); } 70% { transform: scale(1.15); } 100% { transform: scale(1); }
+        }
+        /* ── Pulse on ready status ── */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; } 50% { opacity: 0.6; }
+        }
     </style>
 </head>
 <body>
@@ -386,18 +638,144 @@
                 <button class="close-button" onclick="hideCart()">×</button>
             </div>
             <div id="cart-items"></div>
-            <div class="cart-total">
+            <div class="cart-total" style="display: none;">
                 <div class="total-label">Total</div>
                 <div class="total-amount">₹<span id="cart-total">0</span></div>
             </div>
+            <div class="cart-summary-details" style="margin-top: 20px; padding-top: 16px; border-top: 2px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 14px; color: #4b5563;">
+                    <span>Subtotal</span>
+                    <span>₹<span id="cart-subtotal">0.00</span></span>
+                </div>
+                <div id="cgst-row" style="display: flex; justify-content: space-between; font-size: 14px; color: #4b5563;">
+                    <span>CGST (9%)</span>
+                    <span>₹<span id="cart-cgst">0.00</span></span>
+                </div>
+                <div id="sgst-row" style="display: flex; justify-content: space-between; font-size: 14px; color: #4b5563;">
+                    <span>SGST (9%)</span>
+                    <span>₹<span id="cart-sgst">0.00</span></span>
+                </div>
+                <div id="gst-row" style="display: none; justify-content: space-between; font-size: 14px; color: #4b5563;">
+                    <span id="gst-label">GST (18%)</span>
+                    <span>₹<span id="cart-gst">0.00</span></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #111827; border-top: 1px dashed #e5e7eb; padding-top: 8px; margin-top: 4px;">
+                    <span>Grand Total</span>
+                    <span>₹<span id="cart-grand-total">0.00</span></span>
+                </div>
+            </div>
             <div class="checkout-form">
+                <div id="validation-notice" style="display:none; background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:600; margin-bottom:12px;"></div>
                 <div class="form-group">
                     <label class="form-label">Your Name *</label>
                     <input type="text" class="form-input" id="customer-name" placeholder="Enter your name">
                 </div>
-                <button class="checkout-button" onclick="placeOrder()">Place Order</button>
-                <button class="call-waiter-button" onclick="callWaiter()">🔔 Call Waiter</button>
+                <div class="form-group">
+                    <label class="form-label">Special Requests (optional)</label>
+                    <textarea id="special-request" class="form-input" placeholder="E.g. No onions, extra sauce, allergy info..." rows="2" style="resize:vertical; font-family:inherit;"></textarea>
+                </div>
+                <button class="checkout-button" onclick="placeOrder()">✅ Place Order</button>
+                <div class="form-group call-waiter-group" style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+                    <label class="form-label">Need Assistance?</label>
+                    <select id="assistance-type" class="form-input" style="background:#fff; margin-bottom:8px;">
+                        <option value="CALL_WAITER">🛎️ Call Waiter (General Help)</option>
+                        <option value="CALL_WHEELCHAIR">♿ Wheelchair Assistance</option>
+                        <option value="CALL_WATER">💧 Water Refill</option>
+                        <option value="CALL_CLEAR">🧼 Clear Table</option>
+                        <option value="CALL_BILL">💵 Request Bill / Pay</option>
+                    </select>
+                    <button class="call-waiter-button" onclick="callWaiter()" style="margin-top:4px;">🔔 Call for Assistance</button>
+                </div>
             </div>
+        </div>
+    </div>
+
+
+    <!-- Floating Assistance FAB -->
+    <button id="floating-assist-button" onclick="showAssistModal()">
+        <span style="font-size:20px;">🛎️</span>
+        Request Assistance
+    </button>
+
+    <!-- Assistance Bottom Sheet Backdrop -->
+    <div id="assist-backdrop" onclick="hideAssistModal()"></div>
+
+    <!-- Assistance Bottom Sheet -->
+    <div id="assist-sheet">
+        <div class="assist-handle"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div>
+                <h3 style="font-size:20px; font-weight:800; color:#0f172a; margin:0;">Request Assistance</h3>
+                <p style="font-size:13px; color:#94a3b8; margin:4px 0 0;">A team member will come to you shortly</p>
+            </div>
+            <button onclick="hideAssistModal()" style="background:#f1f5f9; border:none; width:36px; height:36px; border-radius:50%; font-size:20px; cursor:pointer; color:#64748b; display:flex; align-items:center; justify-content:center;">×</button>
+        </div>
+
+        <!-- Assistance Type Tiles -->
+        <div class="assist-type-grid" id="assist-type-grid">
+            <div class="assist-type-tile selected" data-type="CALL_WAITER" onclick="selectAssistType(this)">
+                <span class="tile-icon">🛎️</span>
+                <span>Call Waiter</span>
+            </div>
+            <div class="assist-type-tile" data-type="CALL_WHEELCHAIR" onclick="selectAssistType(this)">
+                <span class="tile-icon">♿</span>
+                <span>Wheelchair Help</span>
+            </div>
+            <div class="assist-type-tile" data-type="CALL_WATER" onclick="selectAssistType(this)">
+                <span class="tile-icon">💧</span>
+                <span>Water Refill</span>
+            </div>
+            <div class="assist-type-tile" data-type="CALL_CLEAR" onclick="selectAssistType(this)">
+                <span class="tile-icon">🧼</span>
+                <span>Clear Table</span>
+            </div>
+            <div class="assist-type-tile" data-type="CALL_BILL" onclick="selectAssistType(this)">
+                <span class="tile-icon">💵</span>
+                <span>Get Bill</span>
+            </div>
+            <div class="assist-type-tile" data-type="CALL_OTHER" onclick="selectAssistType(this)">
+                <span class="tile-icon">💬</span>
+                <span>Other Help</span>
+            </div>
+        </div>
+
+        <!-- Optional name -->
+        <div style="margin-bottom:16px;">
+            <label class="form-label" style="font-weight:600; color:#374151;">Your Name (optional)</label>
+            <input type="text" class="form-input" id="assist-customer-name" placeholder="So we can find you easily..." style="margin-top:6px;">
+        </div>
+
+        <!-- Send Button -->
+        <button onclick="submitModalAssistance()" style="width:100%; padding:18px; background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; border:none; border-radius:14px; font-size:17px; font-weight:800; cursor:pointer; box-shadow:0 4px 16px rgba(239,68,68,0.3); letter-spacing:0.3px; transition:all 0.2s;" onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform='none'">
+            🔔 &nbsp;Send Help Request
+        </button>
+    </div>
+    
+    <!-- Full Screen Order Success Overlay -->
+    <div class="success-overlay" id="success-overlay">
+        <div class="success-checkmark">✓</div>
+        <h2 style="font-size: 28px; font-weight: 800; margin-bottom: 8px;">Order Placed!</h2>
+        <p style="font-size: 15px; color: #94a3b8; margin-bottom: 24px;">Your order has been sent directly to the kitchen.</p>
+
+        <!-- POS Thermal Receipt Preview Card -->
+        <div id="receipt-preview" style="background:#ffffff; border:2px solid #000000; padding:16px; width:100%; max-width:280px; text-align:left; color:#000000; font-family:'Courier New', monospace; font-size:12px; line-height:1.4; box-shadow:0 10px 25px rgba(0,0,0,0.3); margin-bottom:12px; border-radius:4px;">
+            <!-- Will be populated dynamically by showSuccessOverlay -->
+        </div>
+
+        <!-- Option Actions -->
+        <div class="success-button-group">
+            <button class="success-action-btn primary" id="btn-success-pdf">
+                📄 Download PDF Receipt
+            </button>
+            <button class="success-action-btn secondary" onclick="window.print()">
+                📸 Take Screenshot / Print
+            </button>
+            <button class="success-action-btn secondary" onclick="closeSuccessOverlay(); showAssistModal();">
+                🛎️ Request Assistance / Help
+            </button>
+            <button class="success-action-btn danger" onclick="closeSuccessOverlay()">
+                🛒 Order Something Else / Reorder
+            </button>
         </div>
     </div>
     
@@ -419,18 +797,18 @@
         // Fallback sample data if no menu found
         if (menuItems.length === 0) {
             menuItems = [
-                { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐' },
-                { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫' },
-                { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖' },
-                { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕' },
-                { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛' },
-                { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕' },
-                { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰' },
-                { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀' },
-                { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮' },
-                { id: 10, name: 'Sandwich', category: 'Food', price: 85, description: 'Club sandwich with fries', emoji: '🥪' },
-                { id: 11, name: 'Salad', category: 'Food', price: 75, description: 'Fresh garden salad', emoji: '🥗' },
-                { id: 12, name: 'Soup', category: 'Food', price: 65, description: 'Soup of the day', emoji: '🍲' }
+                { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐', veg: true },
+                { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫', veg: true },
+                { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖', veg: true },
+                { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕', veg: true },
+                { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛', veg: true },
+                { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕', veg: true },
+                { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰', veg: true },
+                { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀', veg: true },
+                { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮', veg: true },
+                { id: 10, name: 'Spicy Chicken Sandwich', category: 'Food', price: 115, description: 'Club sandwich with fries and tender chicken', emoji: '🥪', veg: false, spicy: 2 },
+                { id: 11, name: 'Spicy Salad', category: 'Food', price: 75, description: 'Fresh garden salad with chili dressing', emoji: '🥗', veg: true, spicy: 1 },
+                { id: 12, name: 'Hot Pot Soup', category: 'Food', price: 65, description: 'Spicy soup of the day', emoji: '🍲', veg: true, spicy: 3 }
             ];
         }
         
@@ -453,8 +831,92 @@
         
         const tableInfo = getTableInfo();
         
+        // ── QR Settings from POS ────────────────────────────────────────────
+        let qrSettings = {
+            enabled: true,
+            restaurantName: '',
+            welcomeMessage: '',
+            gstRate: 18,
+            splitGst: true,
+            allowSpecialRequests: true,
+            showCategoryFilter: true,
+            showSearch: true,
+            allowCallWaiter: true,
+            showItemDescriptions: true,
+            primaryColor: '#111827',
+            accentColor: '#10b981'
+        };
+        try {
+            const saved = localStorage.getItem('qr_settings');
+            if (saved) Object.assign(qrSettings, JSON.parse(saved));
+        } catch (e) {}
+
+        function applySettings() {
+            // Disabled page overlay
+            if (!qrSettings.enabled) {
+                document.body.innerHTML = `
+                  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;flex-direction:column;gap:16px;padding:24px;text-align:center;">
+                    <div style="font-size:64px;">🚫</div>
+                    <h1 style="font-size:24px;font-weight:700;color:#111827;">Online Ordering Unavailable</h1>
+                    <p style="color:#6b7280;max-width:320px;">QR ordering is currently disabled. Please ask a staff member to assist you.</p>
+                  </div>`;
+                return false;
+            }
+
+            // Branding
+            if (qrSettings.restaurantName) {
+                const logoEl = document.querySelector('.logo');
+                if (logoEl) logoEl.textContent = '🥐 ' + qrSettings.restaurantName;
+                document.title = qrSettings.restaurantName + ' — Order';
+            }
+
+            // Colours
+            const root = document.documentElement;
+            root.style.setProperty('--primary', qrSettings.primaryColor);
+            root.style.setProperty('--accent', qrSettings.accentColor);
+
+            // Inject dynamic colour styles
+            const style = document.createElement('style');
+            style.textContent = `
+              .cart-button, .add-button { background: ${qrSettings.primaryColor} !important; }
+              .checkout-button { background: ${qrSettings.accentColor} !important; }
+              .category-button.active { background: ${qrSettings.primaryColor} !important; }
+            `;
+            document.head.appendChild(style);
+
+            // Welcome message
+            if (qrSettings.welcomeMessage) {
+                const content = document.querySelector('.content');
+                if (content) {
+                    const msg = document.createElement('p');
+                    msg.style.cssText = 'text-align:center;color:#6b7280;font-size:14px;margin-bottom:16px;';
+                    msg.textContent = qrSettings.welcomeMessage;
+                    content.insertBefore(msg, content.firstChild);
+                }
+            }
+
+            // Search bar visibility
+            const searchEl = document.getElementById('search-input');
+            if (searchEl) searchEl.style.display = qrSettings.showSearch ? '' : 'none';
+
+            // Category filter visibility
+            const catEl = document.getElementById('categories');
+            if (catEl) catEl.style.display = qrSettings.showCategoryFilter ? '' : 'none';
+
+            // Call waiter button
+            const waiterBtn = document.querySelector('.call-waiter-button');
+            if (waiterBtn) waiterBtn.style.display = qrSettings.allowCallWaiter ? '' : 'none';
+
+            // Special requests field
+            const srGroup = document.getElementById('special-request')?.closest('.form-group');
+            if (srGroup) srGroup.style.display = qrSettings.allowSpecialRequests ? '' : 'none';
+
+            return true;
+        }
+
         // Initialize
         function init() {
+            if (!applySettings()) return; // abort if disabled
             renderCategories();
             renderMenuItems();
             loadCart();
@@ -481,25 +943,66 @@
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const filtered = menuItems.filter(item => {
                 const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-                const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
-                                     item.description.toLowerCase().includes(searchTerm);
+                const name = item.name || '';
+                const desc = item.description || '';
+                const matchesSearch = name.toLowerCase().includes(searchTerm) || 
+                                     desc.toLowerCase().includes(searchTerm);
                 return matchesCategory && matchesSearch;
             });
             
             const container = document.getElementById('menu-grid');
-            container.innerHTML = filtered.map(item => `
-                <div class="menu-item">
-                    <div class="menu-item-image">${item.emoji}</div>
-                    <div class="menu-item-content">
-                        <div class="menu-item-name">${item.name}</div>
-                        <div class="menu-item-description">${item.description}</div>
-                        <div class="menu-item-footer">
-                            <div class="menu-item-price">₹${item.price}</div>
-                            <button class="add-button" onclick="addToCart('${item.id}')">Add</button>
+            container.innerHTML = filtered.map(item => {
+                // Check if item is already in cart
+                const existing = cart.find(c => String(c.id) === String(item.id));
+                const inCartQty = existing ? existing.qty : 0;
+                
+                // Diet tags
+                let tagHtml = '';
+                if (item.veg !== undefined) {
+                    tagHtml += `<span style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; margin-right:6px; background:${item.veg ? '#e6f4ea; color:#137333;' : '#fce8e6; color:#c5221f;'}">
+                        ${item.veg ? '🟢 Veg' : '🔴 Non-Veg'}
+                    </span>`;
+                }
+                
+                // Spiciness level
+                if (item.spicy) {
+                    tagHtml += `<span style="font-size:11px; margin-right:6px;" title="Spicy level: ${item.spicy}">${'🌶️'.repeat(item.spicy)}</span>`;
+                }
+
+                // Add button vs quantity selector
+                let actionButtonHtml = '';
+                if (inCartQty > 0) {
+                    actionButtonHtml = `
+                        <div style="display:flex; align-items:center; background:#f1f5f9; border-radius:8px; padding:2px; border:1px solid #cbd5e1; gap:4px;">
+                            <button class="quantity-button" onclick="updateQty('${item.id}', -1)" style="width:28px; height:28px; border:none; background:#ffffff; border-radius:6px; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,0.05);">-</button>
+                            <span style="font-weight:700; font-size:13px; min-width:20px; text-align:center; color:#0f172a;">${inCartQty}</span>
+                            <button class="quantity-button" onclick="updateQty('${item.id}', 1)" style="width:28px; height:28px; border:none; background:#ffffff; border-radius:6px; cursor:pointer; font-weight:700; display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(0,0,0,0.05);">+</button>
+                        </div>
+                    `;
+                } else {
+                    actionButtonHtml = `<button class="add-button" onclick="addToCart('${item.id}')" style="padding:6px 14px; background:#111827; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">Add</button>`;
+                }
+
+                return `
+                    <div class="menu-item" style="position:relative; display:flex; flex-direction:column; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background:#fff; transition:box-shadow 0.2s; ${inCartQty > 0 ? 'border-color:#10b981; box-shadow: 0 0 0 1px #10b981;' : ''}">
+                        ${inCartQty > 0 ? `<div style="position:absolute; top:8px; left:8px; background:#10b981; color:#fff; font-size:9px; font-weight:800; padding:2px 6px; border-radius:50px;">${inCartQty} IN CART</div>` : ''}
+                        <div class="menu-item-image" style="background:#f8fafc; font-size:40px; display:flex; align-items:center; justify-content:center; height:120px;">${item.emoji}</div>
+                        <div class="menu-item-content" style="padding:14px; flex:1; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+                            <div>
+                                <div style="display:flex; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
+                                    ${tagHtml}
+                                </div>
+                                <div class="menu-item-name" style="font-weight:700; font-size:15px; color:#0f172a; margin-bottom:2px;">${item.name}</div>
+                                <div class="menu-item-description" style="font-size:12px; color:#64748b; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item.description}</div>
+                            </div>
+                            <div class="menu-item-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                                <div class="menu-item-price" style="font-weight:800; font-size:16px; color:#0f172a;">₹${item.price.toFixed(2)}</div>
+                                ${actionButtonHtml}
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         function filterItems() {
@@ -507,8 +1010,8 @@
         }
         
         function addToCart(itemId) {
-            const item = menuItems.find(i => i.id === itemId);
-            const existing = cart.find(c => c.id === itemId);
+            const item = menuItems.find(i => String(i.id) === String(itemId));
+            const existing = cart.find(c => String(c.id) === String(itemId));
             
             if (existing) {
                 existing.qty++;
@@ -522,10 +1025,36 @@
         
         function updateCartUI() {
             const count = cart.reduce((sum, item) => sum + item.qty, 0);
-            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const gstRate = (qrSettings.gstRate || 0) / 100;
+            const totalTax = subtotal * gstRate;
+            const halfTax = totalTax / 2;
+            const grandTotal = subtotal + totalTax;
             
             document.getElementById('cart-count').textContent = count;
-            document.getElementById('cart-total').textContent = total;
+            const legacyEl = document.getElementById('cart-total');
+            if (legacyEl) legacyEl.textContent = grandTotal.toFixed(2);
+            document.getElementById('cart-subtotal').textContent = subtotal.toFixed(2);
+
+            const cgstRow = document.getElementById('cgst-row');
+            const sgstRow = document.getElementById('sgst-row');
+            const gstRow = document.getElementById('gst-row');
+
+            if (qrSettings.splitGst && gstRate > 0) {
+                if (cgstRow) { cgstRow.style.display = ''; document.getElementById('cart-cgst').textContent = halfTax.toFixed(2); }
+                if (sgstRow) { sgstRow.style.display = ''; document.getElementById('cart-sgst').textContent = halfTax.toFixed(2); }
+                if (gstRow) gstRow.style.display = 'none';
+            } else if (gstRate > 0) {
+                if (cgstRow) cgstRow.style.display = 'none';
+                if (sgstRow) sgstRow.style.display = 'none';
+                if (gstRow) { gstRow.style.display = ''; document.getElementById('cart-gst').textContent = totalTax.toFixed(2); }
+            } else {
+                if (cgstRow) cgstRow.style.display = 'none';
+                if (sgstRow) sgstRow.style.display = 'none';
+                if (gstRow) gstRow.style.display = 'none';
+            }
+
+            document.getElementById('cart-grand-total').textContent = grandTotal.toFixed(2);
             
             const container = document.getElementById('cart-items');
             if (cart.length === 0) {
@@ -535,7 +1064,7 @@
                     <div class="cart-item">
                         <div class="cart-item-info">
                             <div class="cart-item-name">${item.name}</div>
-                            <div class="cart-item-price">₹${item.price} × ${item.qty}</div>
+                            <div class="cart-item-price">₹${item.price.toFixed(2)} × ${item.qty} = <strong>₹${(item.price * item.qty).toFixed(2)}</strong></div>
                         </div>
                         <div class="cart-item-controls">
                             <button class="quantity-button" onclick="updateQty('${item.id}', -1)">-</button>
@@ -545,6 +1074,9 @@
                     </div>
                 `).join('');
             }
+            
+            // Re-render menu grid to keep counts in sync on cards
+            renderMenuItems();
         }
         
         function updateQty(itemId, delta) {
@@ -581,28 +1113,42 @@
         
         function placeOrder() {
             const customerName = document.getElementById('customer-name').value.trim();
+            const specialRequest = (document.getElementById('special-request') || {}).value?.trim() || '';
             
             if (!customerName) {
-                alert('Please enter your name');
+                const n = document.getElementById('validation-notice');
+                if (n) { n.textContent = 'Please enter your name'; n.style.display = 'block'; setTimeout(() => n.style.display = 'none', 3000); }
                 return;
             }
             
             if (cart.length === 0) {
-                alert('Please add items to your cart');
+                const n = document.getElementById('validation-notice');
+                if (n) { n.textContent = 'Please add items to your cart first'; n.style.display = 'block'; setTimeout(() => n.style.display = 'none', 3000); }
                 return;
             }
             
-            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const gstRate = (qrSettings.gstRate || 0) / 100;
+            const totalTax = subtotal * gstRate;
+            const halfTax = totalTax / 2;
+            const grandTotal = subtotal + totalTax;
+            
+            const orderId = `ORD-${Date.now()}`;
+            const tokenNumber = `T-${Date.now().toString().slice(-4)}`;
             
             const order = {
-                id: `ORD-${Date.now()}`,
-                items: cart,
-                total: total,
-                subtotal: total,
+                id: orderId,
+                token: tokenNumber,
+                items: cart.map(item => ({ ...item, quantity: item.qty })),
+                subtotal: parseFloat(subtotal.toFixed(2)),
+                cgst: parseFloat(halfTax.toFixed(2)),
+                sgst: parseFloat(halfTax.toFixed(2)),
+                taxRate: qrSettings.gstRate || 0,
+                taxAmount: parseFloat(totalTax.toFixed(2)),
+                total: parseFloat(grandTotal.toFixed(2)),
                 discount: 0,
                 discountAmount: 0,
-                taxRate: 18,
-                taxAmount: total * 0.18,
+                specialRequest: specialRequest,
                 paymentMethod: 'QR_ORDER',
                 customerName: customerName,
                 tableId: tableInfo?.tableId || null,
@@ -619,18 +1165,30 @@
                 const existingOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
                 localStorage.setItem('qr_orders', JSON.stringify([...existingOrders, order]));
                 
+                // Track placed order IDs locally for status updates
+                const placedIds = JSON.parse(localStorage.getItem('qr_placed_order_ids') || '[]');
+                placedIds.push(orderId);
+                localStorage.setItem('qr_placed_order_ids', JSON.stringify(placedIds));
+                
+                // Add default status so it shows immediately
+                const qrStatuses = JSON.parse(localStorage.getItem('qr_order_statuses') || '{}');
+                qrStatuses[orderId] = order;
+                localStorage.setItem('qr_order_statuses', JSON.stringify(qrStatuses));
+                
                 // Clear cart
                 cart = [];
                 localStorage.removeItem('qr_cart');
                 updateCartUI();
                 hideCart();
                 document.getElementById('customer-name').value = '';
+                if (document.getElementById('special-request')) {
+                    document.getElementById('special-request').value = '';
+                }
                 
-                // Show success message
-                const successMsg = document.getElementById('success-message');
-                successMsg.textContent = 'Order placed successfully!';
-                successMsg.classList.add('active');
-                setTimeout(() => successMsg.classList.remove('active'), 3000);
+                // Open fullscreen success overlay
+                showSuccessOverlay(order);
+                
+                pollActiveOrders();
             } catch (error) {
                 console.error('Error storing order:', error);
                 alert('Failed to place order. Please try again.');
@@ -639,13 +1197,14 @@
         
         function callWaiter() {
             const customerName = document.getElementById('customer-name').value.trim() || 'Guest';
+            const assistanceType = document.getElementById('assistance-type')?.value || 'CALL_WAITER';
             
             const waiterCall = {
                 id: `WAITER-${Date.now()}`,
                 tableId: tableInfo?.tableId || null,
                 tableName: tableInfo?.tableName || null,
                 customerName: customerName,
-                type: 'CALL_WAITER',
+                type: assistanceType,
                 status: 'PENDING',
                 createdAt: new Date().toISOString()
             };
@@ -659,17 +1218,390 @@
                 
                 // Show success message
                 const successMsg = document.getElementById('success-message');
-                successMsg.textContent = 'Waiter called successfully!';
+                successMsg.textContent = 'Help request sent successfully!';
                 successMsg.classList.add('active');
                 setTimeout(() => successMsg.classList.remove('active'), 3000);
             } catch (error) {
                 console.error('Error calling waiter:', error);
-                alert('Failed to call waiter. Please try again.');
+                alert('Failed to send request. Please try again.');
+            }
+        }
+        function showSuccessOverlay(order) {
+            const preview = document.getElementById('receipt-preview');
+            if (preview) {
+                // Hide receipt card if turned off in settings
+                if (qrSettings.showReceiptOnOrder === false) {
+                    preview.style.display = 'none';
+                } else {
+                    preview.style.display = '';
+                    const subtotal = order.subtotal || (order.items || []).reduce((s, i) => s + (i.price * (i.quantity || i.qty || 1)), 0);
+                    const total = order.total || 0;
+
+                    // — Header —
+                    let html = `<div style="text-align:center;margin-bottom:12px;border-bottom:2px dashed #000;padding-bottom:12px;">`;
+                    if (qrSettings.storeLogo) {
+                        html += `<img src="${qrSettings.storeLogo}" style="width:60px;height:60px;margin:0 auto 8px;display:block;object-fit:contain;"/>`;
+                    }
+                    html += `<div style="font-size:16px;font-weight:bold;margin-bottom:4px;">${qrSettings.storeName || 'BakeryPOS'}</div>`;
+                    if (qrSettings.storeAddress) html += `<div style="font-size:10px;margin-bottom:2px;">${qrSettings.storeAddress}</div>`;
+                    if (qrSettings.phone)       html += `<div style="font-size:10px;margin-bottom:2px;">Tel: ${qrSettings.phone}</div>`;
+                    html += `<div style="font-size:10px;margin-bottom:2px;">GSTIN: ${qrSettings.gstin || 'N/A'}</div>`;
+                    if (qrSettings.receiptShowFssai !== false) html += `<div style="font-size:10px;margin-bottom:2px;">FSSAI: ${qrSettings.fssaiLicense || 'N/A'}</div>`;
+                    if (qrSettings.receiptShowTariff !== false) html += `<div style="font-size:10px;margin-bottom:2px;">Tariff: ${qrSettings.tariffCode || 'N/A'}</div>`;
+                    html += `</div>`;
+
+                    // — Order meta —
+                    html += `<div style="margin-bottom:12px;border-bottom:1px dashed #000;padding-bottom:8px;">`;
+                    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Order #: ${order.id.slice(-6)}</span><span>Token: ${order.token || 'N/A'}</span></div>`;
+                    html += `<div style="font-size:10px;margin-bottom:2px;">${new Date(order.createdAt).toLocaleString()}</div>`;
+                    if (order.tableName) html += `<div style="font-size:10px;margin-bottom:2px;">Table: ${order.tableName}</div>`;
+                    html += `<div style="font-size:10px;margin-bottom:2px;">Customer: ${order.customerName || 'Guest'}</div>`;
+                    html += `<div style="font-size:10px;">Staff: QR Self-Order</div>`;
+                    html += `</div>`;
+
+                    // — Items —
+                    html += `<div style="margin-bottom:12px;border-bottom:1px dashed #000;padding-bottom:8px;">`;
+                    (order.items || []).forEach(item => {
+                        const qty   = item.quantity || item.qty || 1;
+                        const price = item.price || 0;
+                        html += `<div style="margin-bottom:8px;">`;
+                        html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:500;">${item.name}</span><span>₹${(qty * price).toFixed(2)}</span></div>`;
+                        html += `<div style="font-size:10px;color:#666;">${qty} x ₹${price.toFixed(2)}</div>`;
+                        html += `</div>`;
+                    });
+                    html += `</div>`;
+
+                    // — Totals —
+                    html += `<div style="border-top:2px solid #000;padding-top:8px;margin-bottom:12px;">`;
+                    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Subtotal:</span><span>₹${subtotal.toFixed(2)}</span></div>`;
+                    if (order.cgst) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>CGST:</span><span>₹${order.cgst.toFixed(2)}</span></div>`;
+                    if (order.sgst) html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>SGST:</span><span>₹${order.sgst.toFixed(2)}</span></div>`;
+                    html += `<div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;margin-top:8px;border-top:1px solid #000;padding-top:8px;"><span>TOTAL:</span><span>₹${total.toFixed(2)}</span></div>`;
+                    html += `<div style="font-size:10px;margin-top:4px;">Paid: QR Order</div>`;
+                    html += `</div>`;
+
+                    // — Footer —
+                    html += `<div style="text-align:center;margin-top:12px;border-top:1px dashed #000;padding-top:12px;">`;
+                    html += `<div style="font-size:11px;margin-bottom:8px;">${qrSettings.receiptFooter || 'Thank you for your order!'}</div>`;
+                    if (qrSettings.receiptShowReviewQr !== false && qrSettings.googleReviewUrl) {
+                        html += `<div style="margin-top:12px;"><div style="font-size:10px;margin-bottom:6px;">Scan to review us:</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent((qrSettings.googleReviewUrl || '').trim())}" alt="Google Review QR" style="width:80px;height:80px;margin:0 auto;display:block;border:1px solid #000;"/></div>`;
+                    }
+                    html += `</div>`;
+
+                    preview.innerHTML = html;
+                }
+            }
+
+            // Set dynamic click handler for the PDF download button
+            const pdfBtn = document.getElementById('btn-success-pdf');
+            if (pdfBtn) {
+                pdfBtn.onclick = () => downloadReceiptPDF(order.id);
+            }
+
+            const overlay = document.getElementById('success-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                // Trigger CSS transition
+                setTimeout(() => overlay.classList.add('open'), 10);
+            }
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSuccessOverlay() {
+            const overlay = document.getElementById('success-overlay');
+            if (overlay) {
+                overlay.classList.remove('open');
+                setTimeout(() => overlay.style.display = 'none', 300);
+            }
+            document.body.style.overflow = '';
+        }
+
+        function pollActiveOrders() {
+            try {
+                const placedIds = JSON.parse(localStorage.getItem('qr_placed_order_ids') || '[]');
+                const container = document.getElementById('active-orders-container');
+                if (placedIds.length === 0) {
+                    if (container) container.innerHTML = '';
+                    return;
+                }
+
+                const qrStatuses = JSON.parse(localStorage.getItem('qr_order_statuses') || '{}');
+                
+                let html = '';
+                let hasActive = false;
+
+                placedIds.forEach(id => {
+                    const order = qrStatuses[id];
+                    if (!order) return;
+
+                    hasActive = true;
+                    const status = (order.status || 'PENDING').toLowerCase();
+                    let statusLabel = '⏳ Placed';
+                    let statusColor = '#f59e0b';
+                    let statusPulse = false;
+
+                    if (status === 'preparing' || status === 'preparing') {
+                        statusLabel = '🍳 Preparing';
+                        statusColor = '#8b5cf6';
+                    } else if (status === 'in_progress' || status === 'in-progress') {
+                        statusLabel = '🍳 Preparing';
+                        statusColor = '#3b82f6';
+                    } else if (status === 'ready') {
+                        statusLabel = '🛎️ Ready for Pick-up!';
+                        statusColor = '#22c55e';
+                        statusPulse = true;
+                    } else if (status === 'completed') {
+                        statusLabel = '🍽️ Served / Completed';
+                        statusColor = '#6b7280';
+                    }
+
+                    const itemsStr = (order.items || []).map(item => `${item.quantity || item.qty || 1}× ${item.name}`).join(', ');
+
+                    html += `
+                        <div style="background:#ffffff; border-radius:12px; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative;">
+                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-size:12px; font-weight:700; color:#475569;">ORDER #${id.slice(-6)}${order.token ? ` • TOKEN: ${order.token}` : ''}</span>
+                                <span style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; color:#fff; background:${statusColor}; ${statusPulse ? 'animation: pulse 1.5s infinite;' : ''}">
+                                    ${statusLabel}
+                                </span>
+                            </div>
+                            <div style="font-size:13px; color:#1f2937; margin-bottom:8px; font-weight:500;">
+                                ${itemsStr}
+                            </div>
+                            <div style="font-size:12px; color:#6b7280; display:flex; justify-content:space-between; align-items:center;">
+                                <span>Table: ${order.tableName || 'Counter'}</span>
+                                <span style="font-weight:700; color:#10b981;">₹${(order.total || 0).toFixed(2)}</span>
+                            </div>
+                            <div style="margin-top:12px; display:flex; gap:8px;">
+                                <button onclick="downloadReceiptPDF('${id}')" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; font-size:11px; font-weight:700; color:#475569; cursor:pointer; transition:all 0.2s;" onmouseenter="this.style.background='#f1f5f9'" onmouseleave="this.style.background='#f8fafc'">
+                                    📄 Download Receipt (PDF)
+                                </button>
+                            </div>
+                    `;
+
+                    if ((status === 'completed' || status === 'ready') && qrSettings.googleReviewUrl) {
+                        html += `
+                            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #e5e7eb; text-align:center;">
+                                <p style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;">⭐⭐⭐⭐⭐<br>How was your experience? Leave us a review!</p>
+                                <a href="${qrSettings.googleReviewUrl}" target="_blank" style="display:inline-block; padding:8px 16px; background:#4f46e5; color:#fff; text-decoration:none; border-radius:6px; font-size:11px; font-weight:700; border:none; cursor:pointer;">Rate us on Google</a>
+                            </div>
+                        `;
+                    }
+
+                    html += `</div>`;
+                });
+
+                if (hasActive) {
+                    if (container) container.innerHTML = `
+                        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px; margin-bottom:20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <span style="font-size:14px; font-weight:700; color:#15803d;">📱 Your Active Orders</span>
+                                <button onclick="clearPlacedOrders()" style="background:none; border:none; color:#166534; font-size:11px; font-weight:600; cursor:pointer; text-decoration:underline;">Clear History</button>
+                            </div>
+                            ${html}
+                            <div style="text-align:center; margin-top:8px;">
+                                <button onclick="hideCart(); window.scrollTo({top: 200, behavior: 'smooth'});" style="background:#15803d; color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; width:100%;">
+                                    🛒 Order Something Else / Reorder
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    if (container) container.innerHTML = '';
+                }
+            } catch (e) {
+                console.error('Error polling active orders:', e);
+            }
+        }
+
+        function clearPlacedOrders() {
+            if (confirm('Are you sure you want to clear your local order history? (This will not cancel placed orders)')) {
+                localStorage.removeItem('qr_placed_order_ids');
+                pollActiveOrders();
+            }
+        }
+
+        function downloadReceiptPDF(orderId) {
+            try {
+                const qrStatuses = JSON.parse(localStorage.getItem('qr_order_statuses') || '{}');
+                const order = qrStatuses[orderId];
+                if (!order) { alert('Order not found!'); return; }
+
+                const subtotal = order.subtotal || (order.items || []).reduce((s, i) => s + (i.price * (i.quantity || i.qty || 1)), 0);
+                const total    = order.total || 0;
+
+                // ── Open print window with identical receipt HTML ────────────────
+                let receiptHTML = `
+                    <div style="font-family:'Courier New',monospace;font-size:12px;line-height:1.4;color:#000;padding:16px;background:#fff;max-width:280px;margin:0 auto;border:2px solid #000;">`;
+
+                // Header
+                receiptHTML += `<div style="text-align:center;margin-bottom:12px;border-bottom:2px dashed #000;padding-bottom:12px;">`;
+                if (qrSettings.storeLogo) {
+                    receiptHTML += `<img src="${qrSettings.storeLogo}" style="width:60px;height:60px;margin:0 auto 8px;display:block;object-fit:contain;"/>`;
+                }
+                receiptHTML += `<div style="font-size:16px;font-weight:bold;margin-bottom:4px;">${qrSettings.storeName || 'BakeryPOS'}</div>`;
+                if (qrSettings.storeAddress) receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">${qrSettings.storeAddress}</div>`;
+                if (qrSettings.phone)        receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Tel: ${qrSettings.phone}</div>`;
+                receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">GSTIN: ${qrSettings.gstin || 'N/A'}</div>`;
+                if (qrSettings.receiptShowFssai !== false) receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">FSSAI: ${qrSettings.fssaiLicense || 'N/A'}</div>`;
+                if (qrSettings.receiptShowTariff !== false) receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Tariff: ${qrSettings.tariffCode || 'N/A'}</div>`;
+                receiptHTML += `</div>`;
+
+                // Order meta
+                receiptHTML += `<div style="margin-bottom:12px;border-bottom:1px dashed #000;padding-bottom:8px;">`;
+                receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Order #: ${order.id.slice(-6)}</span><span>Token: ${order.token || 'N/A'}</span></div>`;
+                receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">${new Date(order.createdAt).toLocaleString()}</div>`;
+                if (order.tableName) receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Table: ${order.tableName}</div>`;
+                receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Customer: ${order.customerName || 'Guest'}</div>`;
+                receiptHTML += `<div style="font-size:10px;">Staff: QR Self-Order</div>`;
+                receiptHTML += `</div>`;
+
+                // Items
+                receiptHTML += `<div style="margin-bottom:12px;border-bottom:1px dashed #000;padding-bottom:8px;">`;
+                (order.items || []).forEach(item => {
+                    const qty   = item.quantity || item.qty || 1;
+                    const price = item.price || 0;
+                    receiptHTML += `<div style="margin-bottom:8px;">`;
+                    receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:500;">${item.name}</span><span>&#8377;${(qty * price).toFixed(2)}</span></div>`;
+                    receiptHTML += `<div style="font-size:10px;color:#666;">${qty} x &#8377;${price.toFixed(2)}</div>`;
+                    receiptHTML += `</div>`;
+                });
+                receiptHTML += `</div>`;
+
+                // Totals
+                receiptHTML += `<div style="border-top:2px solid #000;padding-top:8px;margin-bottom:12px;">`;
+                receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Subtotal:</span><span>&#8377;${subtotal.toFixed(2)}</span></div>`;
+                if (order.cgst) receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>CGST:</span><span>&#8377;${order.cgst.toFixed(2)}</span></div>`;
+                if (order.sgst) receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>SGST:</span><span>&#8377;${order.sgst.toFixed(2)}</span></div>`;
+                receiptHTML += `<div style="display:flex;justify-content:space-between;font-weight:bold;font-size:14px;margin-top:8px;border-top:1px solid #000;padding-top:8px;"><span>TOTAL:</span><span>&#8377;${total.toFixed(2)}</span></div>`;
+                receiptHTML += `<div style="font-size:10px;margin-top:4px;">Paid: QR Order</div>`;
+                receiptHTML += `</div>`;
+
+                // Footer
+                receiptHTML += `<div style="text-align:center;margin-top:12px;border-top:1px dashed #000;padding-top:12px;">`;
+                receiptHTML += `<div style="font-size:11px;margin-bottom:8px;">${qrSettings.receiptFooter || 'Thank you for your order!'}</div>`;
+                if (qrSettings.receiptShowReviewQr !== false && qrSettings.googleReviewUrl) {
+                    receiptHTML += `<div style="margin-top:12px;"><div style="font-size:10px;margin-bottom:6px;">Scan to review us:</div><img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent((qrSettings.googleReviewUrl || '').trim())}" alt="Google Review QR" style="width:80px;height:80px;margin:0 auto;display:block;border:1px solid #000;"/></div>`;
+                }
+                receiptHTML += `</div>`;
+                receiptHTML += `</div>`;
+
+                // Open print/save window
+                const win = window.open('', '_blank', 'width=340,height=600');
+                if (!win) { alert('Please allow pop-ups to download the receipt.'); return; }
+                win.document.write(`
+                    <!DOCTYPE html><html><head>
+                    <title>Receipt - ${order.id.slice(-6)}</title>
+                    <style>
+                        body { margin:0; padding:10px; background:#ffffff; display:flex; flex-direction:column; align-items:center; font-family:'Courier New',monospace; }
+                        @media print {
+                            body { padding:0; background:#fff; }
+                            .no-print { display: none !important; }
+                            @page { margin: 0; size: auto; }
+                        }
+                        .no-print-btn {
+                            padding: 8px 16px;
+                            border-radius: 6px;
+                            font-size: 13px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            border: none;
+                        }
+                    </style>
+                    </head><body>
+                    ${receiptHTML}
+                    <div class="no-print" style="text-align:center;margin-top:16px;display:flex;gap:12px;justify-content:center;width:100%;max-width:280px;box-sizing:border-box;">
+                        <button class="no-print-btn" onclick="window.print()" style="flex:1;background:#2563eb;color:#fff;">Print</button>
+                        <button class="no-print-btn" onclick="window.close()" style="flex:1;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">Close</button>
+                    </div>
+                    <script>
+                        // Auto trigger print and auto close window when print dialog is closed
+                        window.onload = function() {
+                            setTimeout(function() {
+                                window.print();
+                                // Add check to close window after print dialog is closed
+                                window.onafterprint = function() { window.close(); };
+                            }, 300);
+                        };
+                    <\/script>
+                    </body></html>`);
+                win.document.close();
+            } catch (err) {
+                console.error("Error generating receipt:", err);
+                alert("Failed to generate receipt. Please try again.");
+            }
+        }
+
+
+        function showAssistModal() {
+            // Pre-fill name from checkout form if available
+            const checkoutName = document.getElementById('customer-name')?.value?.trim();
+            if (checkoutName) {
+                const nameInput = document.getElementById('assist-customer-name');
+                if (nameInput && !nameInput.value) nameInput.value = checkoutName;
+            }
+            document.getElementById('assist-backdrop').classList.add('open');
+            // Small delay so CSS transition is visible
+            requestAnimationFrame(() => {
+                document.getElementById('assist-sheet').classList.add('open');
+            });
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideAssistModal() {
+            document.getElementById('assist-sheet').classList.remove('open');
+            document.getElementById('assist-backdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function selectAssistType(el) {
+            document.querySelectorAll('.assist-type-tile').forEach(t => t.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        function submitModalAssistance() {
+            const customerName = document.getElementById('assist-customer-name')?.value?.trim() || 'Guest';
+            const selectedTile = document.querySelector('.assist-type-tile.selected');
+            const assistanceType = selectedTile ? selectedTile.dataset.type : 'CALL_WAITER';
+
+            const waiterCall = {
+                id: `WAITER-${Date.now()}`,
+                tableId: tableInfo?.tableId || null,
+                tableName: tableInfo?.tableName || null,
+                customerName: customerName,
+                type: assistanceType,
+                status: 'PENDING',
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                const existingCalls = JSON.parse(localStorage.getItem('waiter_calls') || '[]');
+                localStorage.setItem('waiter_calls', JSON.stringify([...existingCalls, waiterCall]));
+
+                hideAssistModal();
+
+                // Show success toast
+                const successMsg = document.getElementById('success-message');
+                successMsg.textContent = '✅ Help request sent! A team member is on the way.';
+                successMsg.classList.add('active');
+                setTimeout(() => successMsg.classList.remove('active'), 3500);
+
+                // Reset tile selection back to default
+                document.querySelectorAll('.assist-type-tile').forEach(t => t.classList.remove('selected'));
+                const firstTile = document.querySelector('.assist-type-tile');
+                if (firstTile) firstTile.classList.add('selected');
+                const nameInput = document.getElementById('assist-customer-name');
+                if (nameInput) nameInput.value = '';
+            } catch (error) {
+                console.error('Error sending assistance request:', error);
+                alert('Failed to send request. Please try again.');
             }
         }
         
         // Initialize on load
         init();
+        pollActiveOrders();
+        setInterval(pollActiveOrders, 3000); // Poll status changes from localStorage every 3 seconds
     </script>
 </body>
 </html>

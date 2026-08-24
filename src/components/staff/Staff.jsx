@@ -1,86 +1,133 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import useScreenSize from '../../hooks/useScreenSize';
 
-export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavigate }) {
+export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavigate, darkMode = true }) {
+  const [activeTab, setActiveTab] = useState('staff');
   const [showModal, setShowModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [staffToDelete, setStaffToDelete] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [viewingStaff, setViewingStaff] = useState(null);
-  const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
-  const [activeTab, setActiveTab] = useState('staff');
+  const [showViewModal, setShowViewModal] = useState(null);
+  const screenSize = useScreenSize();
+  const [search, setSearch] = useState('');
+
+  // Modals for Scheduling & Payroll
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    staffId: '',
+    day: 'Monday',
+    startTime: '09:00',
+    endTime: '18:00',
+    status: 'scheduled'
+  });
+
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [payrollForm, setPayrollForm] = useState({
+    staffId: '',
+    hoursWorked: '',
+    bonus: '',
+    deductions: '',
+    period: 'Current Month'
+  });
+
   const [formData, setFormData] = useState({
     name: '',
-    role: '',
+    role: 'Waiter',
     phone: '',
     status: 'active',
-    hourlyRate: 0,
+    hourlyRate: 150,
     permissions: {
-      viewOrders: false,
+      viewOrders: true,
       editOrders: false,
-    deleteOrders: false,
+      deleteOrders: false,
       viewReports: false,
       manageStaff: false,
       manageSettings: false,
-      processPayments: false,
+      processPayments: true,
       manageInventory: false
     }
   });
 
-  // Scheduling state
-  const [schedules, setSchedules] = useState([
-    { id: 1, staffId: 's1', staffName: 'Rahul Sharma', day: 'Monday', startTime: '09:00', endTime: '18:00', status: 'scheduled' },
-    { id: 2, staffId: 's2', staffName: 'Priya Singh', day: 'Monday', startTime: '10:00', endTime: '19:00', status: 'scheduled' }
-  ]);
+  // Load from localStorage or defaults
+  const [schedules, setSchedules] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bakerypos_schedules');
+      return saved ? JSON.parse(saved) : [
+        { id: 1, staffId: 's1', staffName: 'Rahul Sharma', day: 'Monday', startTime: '09:00', endTime: '18:00', status: 'scheduled' },
+        { id: 2, staffId: 's2', staffName: 'Priya Singh', day: 'Monday', startTime: '10:00', endTime: '19:00', status: 'scheduled' }
+      ];
+    } catch {
+      return [];
+    }
+  });
 
-  // Performance tracking state
-  const [performanceData, setPerformanceData] = useState([
-    { id: 1, staffId: 's1', staffName: 'Rahul Sharma', ordersServed: 45, totalSales: 12500, avgOrderValue: 278, rating: 4.5 },
-    { id: 2, staffId: 's2', staffName: 'Priya Singh', ordersServed: 38, totalSales: 9800, avgOrderValue: 258, rating: 4.2 }
-  ]);
+  const [payrollData, setPayrollData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bakerypos_payroll');
+      return saved ? JSON.parse(saved) : [
+        { id: 1, staffId: 's1', staffName: 'Rahul Sharma', hoursWorked: 160, hourlyRate: 150, totalPay: 24000, bonus: 2000, deductions: 0, netPay: 26000, period: 'Current Month' },
+        { id: 2, staffId: 's2', staffName: 'Priya Singh', hoursWorked: 145, hourlyRate: 140, totalPay: 20300, bonus: 1500, deductions: 500, netPay: 21300, period: 'Current Month' }
+      ];
+    } catch {
+      return [];
+    }
+  });
 
-  // Payroll state
-  const [payrollData, setPayrollData] = useState([
-    { id: 1, staffId: 's1', staffName: 'Rahul Sharma', hoursWorked: 160, hourlyRate: 150, totalPay: 24000, bonus: 2000, deductions: 0, netPay: 26000, period: 'January 2024' },
-    { id: 2, staffId: 's2', staffName: 'Priya Singh', hoursWorked: 145, hourlyRate: 140, totalPay: 20300, bonus: 1500, deductions: 500, netPay: 21300, period: 'January 2024' }
-  ]);
-
-  // Screen size detection
   useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      if (width < 768) {
-        setScreenSize('small');
-      } else if (width < 1200) {
-        setScreenSize('medium');
-      } else {
-        setScreenSize('large');
-      }
-    };
+    localStorage.setItem('bakerypos_schedules', JSON.stringify(schedules));
+  }, [schedules]);
 
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  useEffect(() => {
+    localStorage.setItem('bakerypos_payroll', JSON.stringify(payrollData));
+  }, [payrollData]);
+
+  // Compute live performance metrics from active orders list
+  const livePerformance = useMemo(() => {
+    const perfMap = {};
+    // Seed with existing staff
+    staff.forEach(s => {
+      perfMap[s.name] = { staffName: s.name, ordersServed: 0, totalSales: 0, rating: 4.5 };
+    });
+
+    // Parse completed orders
+    orders.forEach(ord => {
+      if (ord.status === 'COMPLETED') {
+        const serverName = ord.employeeName || ord.waiter || 'Unknown';
+        if (serverName !== 'Unknown') {
+          if (!perfMap[serverName]) {
+            perfMap[serverName] = { staffName: serverName, ordersServed: 0, totalSales: 0, rating: 4.5 };
+          }
+          perfMap[serverName].ordersServed++;
+          perfMap[serverName].totalSales += (ord.total || 0);
+        }
+      }
+    });
+
+    return Object.values(perfMap).map(p => ({
+      ...p,
+      avgOrderValue: p.ordersServed > 0 ? Math.round(p.totalSales / p.ordersServed) : 0
+    })).sort((a, b) => b.totalSales - a.totalSales);
+  }, [orders, staff]);
 
   const handleAddStaff = () => {
     setSelectedStaff(null);
     setFormData({ 
       name: '', 
-      role: '', 
+      role: 'Waiter', 
       phone: '', 
       status: 'active',
-      hourlyRate: 0,
+      hourlyRate: 150,
       permissions: {
-        viewOrders: false,
+        viewOrders: true,
         editOrders: false,
         deleteOrders: false,
         viewReports: false,
         manageStaff: false,
         manageSettings: false,
-        processPayments: false,
+        processPayments: true,
         manageInventory: false
       }
     });
@@ -91,31 +138,26 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
     setSelectedStaff(staffMember);
     setFormData({
       name: staffMember.name || '',
-      role: staffMember.role || '',
+      role: staffMember.role || 'Waiter',
       phone: staffMember.phone || '',
       status: staffMember.status || 'active',
-      hourlyRate: staffMember.hourlyRate || 0,
+      hourlyRate: staffMember.hourlyRate || 150,
       permissions: staffMember.permissions || {
-        viewOrders: false,
+        viewOrders: true,
         editOrders: false,
         deleteOrders: false,
         viewReports: false,
         manageStaff: false,
         manageSettings: false,
-        processPayments: false,
+        processPayments: true,
         manageInventory: false
       }
     });
     setShowModal(true);
   };
 
-  const handleViewStaff = (staffMember) => {
-    setViewingStaff(staffMember);
-    setShowViewModal(true);
-  };
-
   const handleSaveStaff = () => {
-    if (!formData.name.trim() || !formData.role.trim()) return;
+    if (!formData.name.trim()) return;
 
     if (selectedStaff) {
       setStaff(staff.map(s => 
@@ -157,21 +199,131 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
     ));
   };
 
+  // Scheduling operations
+  const handleAddSchedule = () => {
+    setEditingSchedule(null);
+    setScheduleForm({
+      staffId: staff[0]?.id || '',
+      day: 'Monday',
+      startTime: '09:00',
+      endTime: '18:00',
+      status: 'scheduled'
+    });
+    setShowScheduleModal(true);
+  };
+
+  const handleSaveSchedule = () => {
+    const selectedEmp = staff.find(s => s.id === scheduleForm.staffId) || staff[0];
+    if (!selectedEmp) return;
+
+    const newSched = {
+      id: editingSchedule ? editingSchedule.id : Date.now(),
+      staffId: scheduleForm.staffId || selectedEmp.id,
+      staffName: selectedEmp.name,
+      day: scheduleForm.day,
+      startTime: scheduleForm.startTime,
+      endTime: scheduleForm.endTime,
+      status: scheduleForm.status
+    };
+
+    if (editingSchedule) {
+      setSchedules(schedules.map(s => s.id === editingSchedule.id ? newSched : s));
+    } else {
+      setSchedules([...schedules, newSched]);
+    }
+    setShowScheduleModal(false);
+  };
+
+  // Payroll operations
+  const handleAddPayroll = () => {
+    setPayrollForm({
+      staffId: staff[0]?.id || '',
+      hoursWorked: '',
+      bonus: '',
+      deductions: '',
+      period: 'Current Month'
+    });
+    setShowPayrollModal(true);
+  };
+
+  const handleSavePayroll = () => {
+    const selectedEmp = staff.find(s => s.id === payrollForm.staffId) || staff[0];
+    if (!selectedEmp) return;
+
+    const hrs = parseFloat(payrollForm.hoursWorked) || 0;
+    const rate = selectedEmp.hourlyRate || 150;
+    const bonusVal = parseFloat(payrollForm.bonus) || 0;
+    const dedVal = parseFloat(payrollForm.deductions) || 0;
+    const basePay = hrs * rate;
+
+    const newPay = {
+      id: Date.now(),
+      staffId: selectedEmp.id,
+      staffName: selectedEmp.name,
+      hoursWorked: hrs,
+      hourlyRate: rate,
+      totalPay: basePay,
+      bonus: bonusVal,
+      deductions: dedVal,
+      netPay: basePay + bonusVal - dedVal,
+      period: payrollForm.period
+    };
+
+    setPayrollData([newPay, ...payrollData]);
+    setShowPayrollModal(false);
+  };
+
+  // Export Payroll to CSV helper
+  const exportPayrollCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Staff Name,Period,Hours Worked,Hourly Rate,Base Pay,Bonus,Deductions,Net Pay\n";
+    payrollData.forEach(p => {
+      csvContent += `"${p.staffName}","${p.period}",${p.hoursWorked},${p.hourlyRate},${p.totalPay},${p.bonus},${p.deductions},${p.netPay}\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `payroll_report_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const activeStaffCount = staff.filter(s => s.status === 'active').length;
+
+  const filteredStaff = useMemo(() => {
+    return staff.filter(s => {
+      const q = search.toLowerCase();
+      return s.name?.toLowerCase().includes(q) || s.role?.toLowerCase().includes(q);
+    });
+  }, [staff, search]);
+
+  // Theme colors
+  const t = {
+    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
+    bgCard:   darkMode ? '#252538' : '#ffffff',
+    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
+    border:   darkMode ? '#2d2d44' : '#e2e8f0',
+    text:     darkMode ? '#ffffff' : '#111827',
+    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    accent:   '#6366f1',
+    accentHover: '#4f46e5',
+  };
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      background: t.bg,
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       {/* Tabs */}
       <div style={{
-        background: '#ffffff',
-        padding: screenSize === 'small' ? '12px 16px' : '16px 24px',
-        borderBottom: '1px solid #e5e7eb',
+        background: t.bgEle,
+        padding: '12px 24px',
+        borderBottom: `1px solid ${t.border}`,
         display: 'flex',
         gap: '8px',
         overflow: 'auto'
@@ -181,16 +333,16 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-              background: activeTab === tab ? '#111827' : 'transparent',
-              color: activeTab === tab ? '#ffffff' : '#6b7280',
-              border: activeTab === tab ? 'none' : '1px solid #e5e7eb',
-              borderRadius: '6px',
-              fontSize: screenSize === 'small' ? '12px' : '13px',
-              fontWeight: '500',
+              padding: '10px 20px',
+              background: activeTab === tab ? '#6366f1' : t.bgCard,
+              color: t.text,
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
               cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              textTransform: 'capitalize'
+              textTransform: 'capitalize',
+              transition: 'all 0.2s'
             }}
           >
             {tab}
@@ -198,451 +350,602 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
         ))}
       </div>
 
-      {/* Content */}
-      <div style={{ padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', flex: 1 }}>
+      {/* Main Body */}
+      <div style={{ padding: '24px', overflow: 'auto', flex: 1 }}>
+        
+        {/* TAB 1: Staff Directory */}
         {activeTab === 'staff' && (
           <>
-        {/* Controls */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '8px',
-          padding: screenSize === 'small' ? '12px' : '16px',
-          marginBottom: screenSize === 'small' ? '16px' : '20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexWrap: 'wrap',
-          gap: screenSize === 'small' ? '12px' : '0',
-          border: '1px solid #e5e7eb'
-        }}>
-          <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500', color: '#111827' }}>
-            <span style={{ color: '#111827', fontWeight: '600' }}>{activeStaffCount}</span> of <span style={{ color: '#111827', fontWeight: '600' }}>{staff.length}</span> active
-          </div>
-          <button
-            onClick={handleAddStaff}
-            style={{
-              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-              background: '#111827',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: screenSize === 'small' ? '13px' : '14px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            + Add Staff
-          </button>
-        </div>
-
-        {/* Staff Grid */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '8px',
-          padding: screenSize === 'small' ? '16px' : '20px',
-          border: '1px solid #e5e7eb',
-          overflow: 'auto'
-        }}>
-          {staff.length === 0 ? (
-            <div style={{ padding: screenSize === 'small' ? '40px 20px' : '60px 20px', textAlign: 'center', color: '#9ca3af' }}>
-              <div style={{ fontSize: screenSize === 'small' ? '40px' : '48px', marginBottom: '12px' }}>👨‍🍳</div>
-              <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '500' }}>
-                No staff members yet. Add your first team member!
+            {/* Search and control header */}
+            <div style={{
+              background: t.bgCard,
+              borderRadius: '16px',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px',
+              border: `1px solid ${t.border}`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder="Search staff members..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{
+                    padding: '10px 16px',
+                    background: t.bgInput,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    color: t.text,
+                    fontSize: '14px',
+                    outline: 'none',
+                    minWidth: '200px'
+                  }}
+                />
+                <span style={{ fontSize: '13px', color: t.textMute }}>
+                  🟢 <strong style={{ color: t.text }}>{activeStaffCount}</strong> / {staff.length} active
+                </span>
               </div>
+              <button
+                onClick={handleAddStaff}
+                style={{
+                  padding: '10px 20px',
+                  background: '#6366f1',
+                  color: t.text,
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                ➕ Add Team Member
+              </button>
             </div>
-          ) : (
-            staff.map(staffMember => (
-              <StaffCard
-                key={staffMember.id}
-                staff={staffMember}
-                onEdit={() => handleEditStaff(staffMember)}
-                onView={() => handleViewStaff(staffMember)}
-                onDelete={() => handleDeleteStaff(staffMember.id)}
-                onStatusToggle={() => handleStatusToggle(staffMember)}
-              />
-            ))
-          )}
-        </div>
+
+            {/* Premium Staff Visual Cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '20px'
+            }}>
+              {filteredStaff.length === 0 ? (
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: t.textMute }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>🧑‍🍳</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500', color: t.text }}>No team members found</div>
+                </div>
+              ) : (
+                filteredStaff.map(emp => {
+                  const initials = emp.name ? emp.name.split(' ').map(n=>n[0]).join('').toUpperCase() : '?';
+                  const isActive = emp.status === 'active';
+                  return (
+                    <div
+                      key={emp.id}
+                      style={{
+                        background: t.bgCard,
+                        borderRadius: '16px',
+                        border: `1px solid ${t.border}`,
+                        padding: '20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        opacity: isActive ? 1 : 0.5
+                      }}
+                    >
+                      <div>
+                        {/* Upper Section */}
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '50%',
+                            background: '#6366f1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '700',
+                            fontSize: '16px',
+                            color: t.text
+                          }}>
+                            {initials}
+                          </div>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: t.text }}>{emp.name}</h4>
+                            <span style={{ fontSize: '12px', color: t.textMute }}>👔 {emp.role}</span>
+                          </div>
+                        </div>
+
+                        {/* Stats mini grid */}
+                        <div style={{
+                          background: t.bgInput,
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: '12px',
+                          marginBottom: '16px'
+                        }}>
+                          <div>
+                            <span style={{ color: t.textMute }}>Phone:</span>
+                            <span style={{ color: t.text, marginLeft: '4px' }}>{emp.phone || '–'}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: t.textMute }}>Hourly:</span>
+                            <span style={{ color: '#10b981', fontWeight: '600', marginLeft: '4px' }}>₹{emp.hourlyRate}/hr</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Operations row */}
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleStatusToggle(emp)}
+                          style={{
+                            flex: 1,
+                            padding: '8px',
+                            background: isActive ? '#059669' : '#b91c1c',
+                            color: t.text,
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          onClick={() => handleEditStaff(emp)}
+                          style={{
+                            padding: '8px 12px',
+                            background: t.border,
+                            color: t.text,
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStaff(emp.id)}
+                          style={{
+                            padding: '8px 12px',
+                            background: 'transparent',
+                            color: '#ef4444',
+                            border: '1px solid #ef4444',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </>
         )}
 
+        {/* TAB 2: Scheduling */}
         {activeTab === 'scheduling' && (
-          <>
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '8px',
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              marginBottom: '20px'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
-                📅 Staff Scheduling
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Staff</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Day</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Start Time</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>End Time</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schedules.map((schedule, index) => (
-                      <tr key={schedule.id} style={{ borderBottom: index < schedules.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{schedule.staffName}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{schedule.day}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{schedule.startTime}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{schedule.endTime}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{
-                            padding: '4px 12px',
-                            borderRadius: '20px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            background: schedule.status === 'scheduled' ? '#10b981' : '#f59e0b',
-                            color: '#ffffff'
-                          }}>
-                            {schedule.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button style={{
-                marginTop: '16px',
-                padding: '12px 24px',
-                background: '#111827',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}>
-                + Add Schedule
+          <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '16px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: t.text, margin: 0 }}>📅 Staff Shift Rosters</h3>
+              <button
+                onClick={handleAddSchedule}
+                style={{ padding: '10px 20px', background: '#6366f1', color: t.text, border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                + Add Shift Schedule
               </button>
             </div>
-          </>
+            
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: t.bgInput, borderBottom: `2px solid ${t.border}` }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Staff</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Day</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Hours</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedules.map((s, index) => (
+                    <tr key={s.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.text, fontWeight: '600' }}>{s.staffName}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.textMute }}>{s.day}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.textMute }}>{s.startTime} – {s.endTime}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '600', background: s.status === 'scheduled' ? '#059669' : '#d97706', color: t.text }}>
+                          {s.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <button
+                          onClick={() => {
+                            setSchedules(schedules.filter(x => x.id !== s.id));
+                          }}
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                        >
+                          Cancel Shift
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
+        {/* TAB 3: Payroll */}
         {activeTab === 'payroll' && (
-          <>
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '8px',
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              marginBottom: '20px'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
-                💰 Payroll Management
+          <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '16px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: t.text, margin: 0 }}>💰 Payroll Ledger</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={exportPayrollCSV}
+                  style={{ padding: '10px 16px', background: t.border, color: t.text, border: 'none', borderRadius: '8px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  📥 Export CSV
+                </button>
+                <button
+                  onClick={handleAddPayroll}
+                  style={{ padding: '10px 16px', background: '#6366f1', color: t.text, border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Record Payroll Entry
+                </button>
               </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Staff</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Hours</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Rate/Hr</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Total</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Bonus</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Deductions</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Net Pay</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payrollData.map((payroll, index) => (
-                      <tr key={payroll.id} style={{ borderBottom: index < payrollData.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{payroll.staffName}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{payroll.hoursWorked}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>₹{payroll.hourlyRate}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>₹{payroll.totalPay}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#10b981', fontWeight: '600' }}>+₹{payroll.bonus}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#ef4444', fontWeight: '600' }}>-₹{payroll.deductions}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#111827', fontWeight: '700' }}>₹{payroll.netPay}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button style={{
-                marginTop: '16px',
-                padding: '12px 24px',
-                background: '#111827',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}>
-                Generate Payroll
-              </button>
             </div>
-          </>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: t.bgInput, borderBottom: `2px solid ${t.border}` }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Staff</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Hours Worked</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Rate/Hr</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Bonus</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Deductions</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Net Pay</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Period</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payrollData.map((p) => (
+                    <tr key={p.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.text, fontWeight: '600' }}>{p.staffName}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.text }}>{p.hoursWorked} hrs</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.textMute }}>₹{p.hourlyRate}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#10b981' }}>+₹{p.bonus}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#f43f5e' }}>-₹{p.deductions}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#10b981', fontWeight: '700' }}>₹{p.netPay.toLocaleString()}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.textMute }}>{p.period}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
 
+        {/* TAB 4: Performance */}
         {activeTab === 'performance' && (
-          <>
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '8px',
-              padding: '20px',
-              border: '1px solid #e5e7eb',
-              marginBottom: '20px'
-            }}>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
-                📊 Performance Tracking
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Staff</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Orders</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Total Sales</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Avg Order</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>Rating</th>
+          <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '16px', padding: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: t.text, marginBottom: '20px' }}>📊 Live Sales Leaderboard</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: t.bgInput, borderBottom: `2px solid ${t.border}` }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Rank</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Staff Member</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Orders Served</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Total Revenue</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', color: t.textMute, textTransform: 'uppercase' }}>Avg Ticket Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {livePerformance.map((perf, index) => (
+                    <tr key={perf.staffName} style={{ borderBottom: `1px solid ${t.border}` }}>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#6366f1', fontWeight: '700' }}>#{index + 1}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.text, fontWeight: '600' }}>{perf.staffName}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.text }}>{perf.ordersServed}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: '#10b981', fontWeight: '700' }}>₹{perf.totalSales.toLocaleString()}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '14px', color: t.textMute }}>₹{perf.avgOrderValue}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {performanceData.map((perf, index) => (
-                      <tr key={perf.id} style={{ borderBottom: index < performanceData.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#111827', fontWeight: '600' }}>{perf.staffName}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>{perf.ordersServed}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280', fontWeight: '600' }}>₹{perf.totalSales.toLocaleString()}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#6b7280' }}>₹{perf.avgOrderValue}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{
-                            padding: '4px 12px',
-                            borderRadius: '20px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            background: perf.rating >= 4.5 ? '#10b981' : perf.rating >= 4 ? '#f59e0b' : '#ef4444',
-                            color: '#ffffff'
-                          }}>
-                            {perf.rating} ⭐
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </>
+          </div>
         )}
+
       </div>
 
-      {/* Modal */}
+      {/* Staff Editor Modal */}
       {showModal && (
         <div style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: t.bgCard,
             borderRadius: '16px',
-            padding: '32px',
-            width: '500px',
-            maxWidth: '90vw',
-            border: '1px solid #2d2d44'
+            padding: '28px',
+            width: '450px',
+            border: `1px solid ${t.border}`
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
-                {selectedStaff ? 'Edit Staff' : 'Add Staff'}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  padding: '8px 12px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: t.text, marginTop: 0, marginBottom: '20px' }}>
+              {selectedStaff ? 'Edit Staff Details' : 'Create Staff Member'}
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-                  Name
-                </label>
+                <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Staff Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1a1a2e',
-                    color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                  placeholder="Enter staff name..."
+                  style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
                 />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-                  Role
-                </label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1a1a2e',
-                    color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                >
-                  <option value="">Select role...</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Waiter">Waiter</option>
-                  <option value="Chef">Chef</option>
-                  <option value="Cashier">Cashier</option>
-                  <option value="Server">Server</option>
-                </select>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Role</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                  >
+                    <option value="Waiter">Waiter</option>
+                    <option value="Chef">Chef</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Cashier">Cashier</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Hourly Rate (₹)</label>
+                  <input
+                    type="number"
+                    value={formData.hourlyRate}
+                    onChange={(e) => setFormData({ ...formData, hourlyRate: parseInt(e.target.value) || 0 })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                  />
+                </div>
               </div>
+
               <div>
-                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-                  Phone
-                </label>
+                <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Phone Number</label>
                 <input
-                  type="tel"
+                  type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1a1a2e',
-                    color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                  placeholder="Enter phone number..."
+                  style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
                 />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '8px' }}>
-                  Hourly Rate (₹)
-                </label>
-                <input
-                  type="number"
-                  value={formData.hourlyRate}
-                  onChange={(e) => setFormData({ ...formData, hourlyRate: parseInt(e.target.value) || 0 })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1a1a2e',
-                    color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                  placeholder="Enter hourly rate..."
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', color: '#8b8b9e', marginBottom: '12px' }}>
-                  Permissions
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                  {[
-                    { key: 'viewOrders', label: 'View Orders' },
-                    { key: 'editOrders', label: 'Edit Orders' },
-                    { key: 'deleteOrders', label: 'Delete Orders' },
-                    { key: 'viewReports', label: 'View Reports' },
-                    { key: 'manageStaff', label: 'Manage Staff' },
-                    { key: 'manageSettings', label: 'Manage Settings' },
-                    { key: 'processPayments', label: 'Process Payments' },
-                    { key: 'manageInventory', label: 'Manage Inventory' }
-                  ].map(perm => (
-                    <label key={perm.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#e0e0e0', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.permissions[perm.key] || false}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          permissions: { 
-                            ...formData.permissions, 
-                            [perm.key]: e.target.checked 
-                          } 
-                        })}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      {perm.label}
-                    </label>
-                  ))}
-                </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowModal(false)}
-                style={{
-                  padding: '12px 24px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
+                style={{ padding: '10px 20px', background: t.border, color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveStaff}
-                style={{
-                  padding: '12px 24px',
-                  background: '#6366f1',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
+                style={{ padding: '10px 20px', background: '#6366f1', color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
               >
-                Save
+                Save Changes
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Shift Scheduler Modal */}
+      {showScheduleModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: t.bgCard,
+            borderRadius: '16px',
+            padding: '28px',
+            width: '400px',
+            border: `1px solid ${t.border}`
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: t.text, marginTop: 0, marginBottom: '20px' }}>
+              Assign Shift Schedule
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Select Employee</label>
+                <select
+                  value={scheduleForm.staffId}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, staffId: e.target.value })}
+                  style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                >
+                  <option value="">-- Choose Staff --</option>
+                  {staff.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Day of Week</label>
+                <select
+                  value={scheduleForm.day}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, day: e.target.value })}
+                  style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                >
+                  {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Start Time</label>
+                  <input
+                    type="time"
+                    value={scheduleForm.startTime}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, startTime: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>End Time</label>
+                  <input
+                    type="time"
+                    value={scheduleForm.endTime}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, endTime: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                style={{ padding: '10px 20px', background: t.border, color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSchedule}
+                style={{ padding: '10px 20px', background: '#6366f1', color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Assign Shift
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payroll Entry Modal */}
+      {showPayrollModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: t.bgCard,
+            borderRadius: '16px',
+            padding: '28px',
+            width: '400px',
+            border: `1px solid ${t.border}`
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: t.text, marginTop: 0, marginBottom: '20px' }}>
+              Record Payroll Entry
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Select Employee</label>
+                <select
+                  value={payrollForm.staffId}
+                  onChange={(e) => setPayrollForm({ ...payrollForm, staffId: e.target.value })}
+                  style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                >
+                  <option value="">-- Choose Staff --</option>
+                  {staff.map(s => <option key={s.id} value={s.id}>{s.name} (Rate: ₹{s.hourlyRate}/hr)</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Hours Worked</label>
+                  <input
+                    type="number"
+                    value={payrollForm.hoursWorked}
+                    onChange={(e) => setPayrollForm({ ...payrollForm, hoursWorked: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                    placeholder="e.g. 160"
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Period</label>
+                  <input
+                    type="text"
+                    value={payrollForm.period}
+                    onChange={(e) => setPayrollForm({ ...payrollForm, period: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Bonus (₹)</label>
+                  <input
+                    type="number"
+                    value={payrollForm.bonus}
+                    onChange={(e) => setPayrollForm({ ...payrollForm, bonus: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                    placeholder="0"
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', color: t.textMute, display: 'block', marginBottom: '6px' }}>Deductions (₹)</label>
+                  <input
+                    type="number"
+                    value={payrollForm.deductions}
+                    onChange={(e) => setPayrollForm({ ...payrollForm, deductions: e.target.value })}
+                    style={{ width: '100%', padding: '10px', background: t.bgInput, border: `1px solid ${t.border}`, borderRadius: '6px', color: t.text }}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowPayrollModal(false)}
+                style={{ padding: '10px 20px', background: t.border, color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePayroll}
+                style={{ padding: '10px 20px', background: '#6366f1', color: t.text, border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Submit Entry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div style={{
           position: 'fixed',
@@ -657,17 +960,17 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
           zIndex: 2000
         }}>
           <div style={{
-            background: '#252538',
+            background: t.bgCard,
             borderRadius: '16px',
             padding: '32px',
             width: '400px',
             maxWidth: '90vw',
-            border: '1px solid #2d2d44'
+            border: `1px solid ${t.border}`
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: t.text, marginBottom: '12px', margin: 0 }}>
               Remove Staff
             </h3>
-            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: t.textMute, marginBottom: '24px' }}>
               Are you sure you want to remove this staff member?
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -678,8 +981,8 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                 }}
                 style={{
                   padding: '12px 24px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
+                  background: t.border,
+                  color: t.textSub,
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -694,7 +997,7 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                 style={{
                   padding: '12px 24px',
                   background: '#ef4444',
-                  color: '#ffffff',
+                  color: t.text,
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -722,10 +1025,10 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 5000
         }}>
           <div style={{
-            background: '#252538',
+            background: t.bgCard,
             borderRadius: '16px',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             maxWidth: '600px',
@@ -734,18 +1037,18 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            border: '1px solid #2d2d44'
+            border: `1px solid ${t.border}`
           }}>
             <div style={{
-              background: '#1a1a2e',
-              color: '#ffffff',
+              background: t.bgInput,
+              color: t.text,
               padding: '20px 24px',
               fontSize: '16px',
               fontWeight: '600',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderBottom: '1px solid #2d2d44'
+              borderBottom: `1px solid ${t.border}`
             }}>
               <span>👤 Staff Details</span>
               <button
@@ -753,7 +1056,7 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#ffffff',
+                  color: t.text,
                   fontSize: '20px',
                   cursor: 'pointer'
                 }}
@@ -764,55 +1067,55 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
             
             <div style={{ padding: '24px', overflow: 'auto' }}>
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', marginBottom: '8px' }}>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: t.text, marginBottom: '8px' }}>
                   {viewingStaff.name}
                 </div>
-                <div style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', color: t.textMute, marginBottom: '16px' }}>
                   Staff ID: {viewingStaff.id}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                <div style={{ background: '#1a1a2e', padding: '16px', borderRadius: '8px', border: '1px solid #2d2d44' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>🎭 Role</div>
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff' }}>
+                <div style={{ background: t.bgInput, padding: '16px', borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                  <div style={{ fontSize: '12px', color: t.textMute, marginBottom: '4px' }}>🎭 Role</div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: t.text }}>
                     {viewingStaff.role || 'N/A'}
                   </div>
                 </div>
-                <div style={{ background: '#1a1a2e', padding: '16px', borderRadius: '8px', border: '1px solid #2d2d44' }}>
-                  <div style={{ fontSize: '12px', color: '#8b8b9e', marginBottom: '4px' }}>📞 Phone</div>
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff' }}>
+                <div style={{ background: t.bgInput, padding: '16px', borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                  <div style={{ fontSize: '12px', color: t.textMute, marginBottom: '4px' }}>📞 Phone</div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: t.text }}>
                     {viewingStaff.phone || 'N/A'}
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-                <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px', border: '1px solid #2d2d44', textAlign: 'center' }}>
+                <div style={{ background: t.bgInput, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
                   <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>₹{viewingStaff.hourlyRate || 0}</div>
-                  <div style={{ fontSize: '11px', color: '#8b8b9e' }}>Hourly Rate</div>
+                  <div style={{ fontSize: '11px', color: t.textMute }}>Hourly Rate</div>
                 </div>
-                <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px', border: '1px solid #2d2d44', textAlign: 'center' }}>
+                <div style={{ background: t.bgInput, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
                   <div style={{ fontSize: '20px', fontWeight: '700', color: viewingStaff.status === 'active' ? '#10b981' : '#ef4444' }}>
                     {viewingStaff.status || 'active'}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#8b8b9e' }}>Status</div>
+                  <div style={{ fontSize: '11px', color: t.textMute }}>Status</div>
                 </div>
-                <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px', border: '1px solid #2d2d44', textAlign: 'center' }}>
+                <div style={{ background: t.bgInput, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
                   <div style={{ fontSize: '20px', fontWeight: '700', color: '#6366f1' }}>
                     {Object.values(viewingStaff.permissions || {}).filter(Boolean).length}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#8b8b9e' }}>Permissions</div>
+                  <div style={{ fontSize: '11px', color: t.textMute }}>Permissions</div>
                 </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>🔐 Permissions</div>
+                <div style={{ fontSize: '13px', color: t.textMute, marginBottom: '8px', fontWeight: '500' }}>🔐 Permissions</div>
                 <div style={{ 
-                  background: '#1a1a2e', 
+                  background: t.bgInput, 
                   padding: '12px', 
                   borderRadius: '8px', 
-                  border: '1px solid #2d2d44',
+                  border: `1px solid ${t.border}`,
                   display: 'grid',
                   gridTemplateColumns: 'repeat(2, 1fr)',
                   gap: '8px'
@@ -820,7 +1123,7 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                   {Object.entries(viewingStaff.permissions || {}).map(([perm, enabled]) => (
                     <div key={perm} style={{ 
                       fontSize: '12px', 
-                      color: enabled ? '#10b981' : '#6b7280',
+                      color: enabled ? '#10b981' : '#8b8b9e',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px'
@@ -841,7 +1144,7 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                     flex: 1,
                     padding: '12px',
                     background: '#6366f1',
-                    color: '#ffffff',
+                    color: t.text,
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '14px',
@@ -872,17 +1175,17 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
           zIndex: 2000
         }}>
           <div style={{
-            background: '#252538',
+            background: t.bgCard,
             borderRadius: '16px',
             padding: '32px',
             width: '400px',
             maxWidth: '90vw',
-            border: '1px solid #2d2d44'
+            border: `1px solid ${t.border}`
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: t.text, marginBottom: '12px', margin: 0 }}>
               Notice
             </h3>
-            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: t.textMute, marginBottom: '24px' }}>
               {alertMessage}
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -891,7 +1194,7 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                 style={{
                   padding: '12px 24px',
                   background: '#6366f1',
-                  color: '#ffffff',
+                  color: t.text,
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -929,7 +1232,7 @@ function StaffCard({ staff, onEdit, onView, onDelete, onStatusToggle }) {
         <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827', marginBottom: '6px' }}>
           {staff.name}
         </div>
-        <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '4px' }}>
+        <div style={{ fontSize: '13px', color: t.textMute, marginBottom: '4px' }}>
           👔 {staff.role} {staff.phone ? `• 📞 ${staff.phone}` : ''}
         </div>
         <div style={{ 
@@ -951,7 +1254,7 @@ function StaffCard({ staff, onEdit, onView, onDelete, onStatusToggle }) {
           style={{
             padding: '8px 16px',
             background: '#f3f4f6',
-            color: '#374151',
+            color: t.textSub,
             border: '1px solid #d1d5db',
             borderRadius: '6px',
             fontSize: '13px',

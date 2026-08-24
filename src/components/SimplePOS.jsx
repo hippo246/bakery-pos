@@ -9,17 +9,22 @@ import VoiceOrderRecorder from './voice/VoiceOrderRecorder';
 import SpeakButton from './voice/SpeakButton';
 import textToSpeechService from '../services/voice/TextToSpeechService';
 
-export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables }) {
+export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables, darkMode = true }) {
   const { currentTerminal } = useTerminal();
   const posMode = settings.posMode || 'basic';
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [quantityInput, setQuantityInput] = useState('0');
+  const [quantityInput, setQuantityInput] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [gstRate, setGstRate] = useState(settings.gstRate || 18);
   const [gstEnabled, setGstEnabled] = useState(settings.gstEnabled !== false); // Default to true unless explicitly disabled
+  const [tipAmount, setTipAmount] = useState(0);
+  const [orderNotes, setOrderNotes] = useState('');
+  const [showCustomDiscount, setShowCustomDiscount] = useState(false);
+  const [showTipInput, setShowTipInput] = useState(false);
+  const [showNotesInput, setShowNotesInput] = useState(false);
   
   // Initialize KOT manager
   const kotManager = getKOTManager();
@@ -103,6 +108,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showTableSelector, setShowTableSelector] = useState(false);
   const [numpadSearch, setNumpadSearch] = useState('');
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [orderType, setOrderType] = useState('dine-in'); // 'dine-in' or 'takeaway'
+  const [cartSearchQuery, setCartSearchQuery] = useState('');
   
   // Cart restore state
   const [showCartRestore, setShowCartRestore] = useState(false);
@@ -400,7 +408,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         price: (item.price || 0) + modifierPrice + variantPrice
       }];
     });
-    setQuantityInput('0');
+    setQuantityInput('');
     setSelectedModifiers([]);
     setSelectedVariant(null);
 
@@ -607,7 +615,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     if (selectedCartItems.length === 0) return;
 
     const value = itemActionMode === 'quantity' ? parseInt(quantityInput) : 
-                  itemActionMode === 'discount' ? discount :
+                  itemActionMode === 'discount' ? parseInt(quantityInput) :
                   itemActionMode === 'amount' ? parseFloat(quantityInput) : null;
 
     if (value === null && itemActionMode !== 'notes') return;
@@ -658,7 +666,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   }, 0);
   const discountAmount = (cartSubtotal * discount) / 100;
   const taxAmount = gstEnabled ? ((cartSubtotal - discountAmount) * gstRate) / 100 : 0;
-  const cartTotal = cartSubtotal - discountAmount + taxAmount;
+  const cartTotal = cartSubtotal - discountAmount + taxAmount + (parseFloat(tipAmount) || 0);
 
   const handleCheckout = () => {
     if (!cart || cart.length === 0) return;
@@ -670,6 +678,28 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       setShowAlert(true);
       return;
     }
+
+    // Prefill customer details for receipt options
+    if (selectedCustomer) {
+      if (selectedCustomer.email) setReceiptEmail(selectedCustomer.email);
+      if (selectedCustomer.phone) setReceiptPhone(selectedCustomer.phone);
+      if (selectedCustomer.email && selectedCustomer.phone) {
+        setReceiptDelivery('both');
+      } else if (selectedCustomer.email) {
+        setReceiptDelivery('email');
+      } else if (selectedCustomer.phone) {
+        setReceiptDelivery('sms');
+      } else {
+        setReceiptDelivery('none');
+      }
+    } else {
+      setReceiptEmail('');
+      setReceiptPhone('');
+      setReceiptDelivery('none');
+    }
+
+    // Prepopulate paymentAmount with cartTotal for card/UPI payments
+    setPaymentAmount(cartTotal.toFixed(2));
 
     setShowPaymentModal(true);
   };
@@ -795,13 +825,27 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     // If payment method is CARD, UPI, or WALLET, use Razorpay
     if (['CARD', 'UPI', 'WALLET'].includes(paymentMethod) && paymentMethod !== 'SPLIT') {
       // Use environment variable or settings, fallback to test key
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || settings.razorpayKeyId;
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || settings.razorpayKeyId || 'rzp_test_TNOHWmxS3Z0i8f';
 
       if (!razorpayKey) {
         setAlertMessage('Payment gateway not configured. Please contact administrator.');
         setShowAlert(true);
         console.error('Razorpay key not configured');
         return;
+      }
+
+      // Check if cart has items and total is valid
+      if (!cartTotal || cartTotal <= 0) {
+        setAlertMessage('Cart total must be greater than 0 to process payment.');
+        setShowAlert(true);
+        return;
+      }
+
+      // Warn about UPI in test mode
+      if (paymentMethod === 'UPI' && razorpayKey.startsWith('rzp_test_')) {
+        setAlertMessage('UPI payments may not work in test mode. Please use CARD for testing.');
+        setShowAlert(true);
+        // Continue anyway - let user decide
       }
 
       try {
@@ -814,6 +858,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           order_id: null, // Optional - create order on server for better security
           handler: function(response) {
             // Payment successful
+            console.log('Payment successful:', response);
             completeOrder(response.razorpay_payment_id);
           },
           prefill: {
@@ -826,25 +871,31 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               console.log('Payment modal dismissed');
             },
             escape: true,
-            confirm_close: true
+            confirm_close: true,
+            backdrop_close: false
           },
           notes: {
             order_id: `ORD-${Date.now().toString().slice(-6)}`,
             customer: selectedCustomer?.name || 'Walk-in'
+          },
+          theme: {
+            color: '#C9A227'
           }
         };
 
         if (typeof window !== 'undefined' && window.Razorpay) {
+          console.log('Opening Razorpay with key:', razorpayKey);
           const rzp = new window.Razorpay(options);
           rzp.open();
 
           rzp.on('payment.failed', function(response) {
             console.error('Payment failed:', response.error);
-            setAlertMessage('Payment failed: ' + (response.error?.description || 'Unknown error'));
+            const errorMsg = response.error?.description || response.error?.reason || 'Unknown error';
+            setAlertMessage('Payment failed: ' + errorMsg);
             setShowAlert(true);
           });
         } else {
-          throw new Error('Razorpay SDK not loaded');
+          throw new Error('Razorpay SDK not loaded. Please refresh the page.');
         }
       } catch (error) {
         console.error('Razorpay error:', error);
@@ -1107,6 +1158,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       gstEnabled: gstEnabled,
       gstRate: gstRate || 0,
       taxAmount: taxAmount || 0,
+      tipAmount: parseFloat(tipAmount) || 0,
+      notes: orderNotes || '',
       paymentMethod: paymentMethod || 'CASH',
       paymentId: paymentId,
       splitPayments: paymentMethod === 'SPLIT' ? splitPayments : null,
@@ -1119,6 +1172,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       customerPhone: selectedCustomer?.phone || null,
       tableId: selectedTable?.id || null,
       tableNumber: selectedTable?.name || null,
+      orderType: orderType || 'dine-in',
       staffId: selectedEmployee?.id || null,
       staffName: selectedEmployee?.name || 'Unknown',
       terminal: currentTerminal?.name || 'Main',
@@ -1137,8 +1191,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setLastOrder(newOrder);
     setCart([]);
     setDiscount(0);
+    setTipAmount(0);
+    setOrderNotes('');
+    setShowCustomDiscount(false);
+    setShowTipInput(false);
+    setShowNotesInput(false);
     setSelectedCustomer(null);
     setSelectedTable(null);
+    setOrderType('dine-in');
     setPaymentMethod('CASH');
     setShowPaymentModal(false);
     setShowReceipt(true);
@@ -1473,6 +1533,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       customerName: selectedCustomer?.name || 'Walk-in',
       tableId: selectedTable?.id || null,
       tableName: selectedTable?.name || null,
+      orderType: orderType || 'dine-in',
       staffId: selectedEmployee?.id || null,
       staffName: selectedEmployee?.name || 'Unknown',
       terminal: currentTerminal?.name || 'Main',
@@ -1486,6 +1547,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setDiscount(0);
     setSelectedCustomer(null);
     setSelectedTable(null);
+    setOrderType('dine-in');
     setPaymentMethod('CASH');
     setShowSplitBillModal(false);
     setSplitPayments([]);
@@ -1716,57 +1778,71 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   const handleNumpadClick = (value) => {
     if (isEditingCartItems) {
-      // Handle cart item editing
+      // Cart item editing mode: quantityInput is the string buffer for all three modes (quantity, discount, amount)
       if (value === 'C') {
         if (itemActionMode === 'quantity') setQuantityInput('1');
-        else if (itemActionMode === 'discount') setDiscount(0);
+        else if (itemActionMode === 'discount') setQuantityInput('0');
         else if (itemActionMode === 'amount') setQuantityInput('0');
-        setIsEditingCartItems(false);
-        clearCartSelection();
       } else if (value === '⌫') {
-        if (itemActionMode === 'quantity') {
-          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '1');
-        } else if (itemActionMode === 'discount') {
-          setDiscount(0);
-        } else if (itemActionMode === 'amount') {
-          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+        setQuantityInput(prev => {
+          if (prev.length <= 1) {
+            return itemActionMode === 'quantity' ? '1' : '0';
+          }
+          return prev.slice(0, -1);
+        });
+      } else if (value === '.') {
+        if (itemActionMode === 'amount') {
+          setQuantityInput(prev => prev.includes('.') ? prev : prev + '.');
         }
       } else {
+        // Digits
         if (itemActionMode === 'quantity') {
           setQuantityInput(prev => prev === '0' ? value : prev + value);
         } else if (itemActionMode === 'discount') {
-          const newValue = parseInt(value);
-          if (!isNaN(newValue) && newValue >= 0 && newValue <= 100) {
-            setDiscount(newValue);
-          }
+          setQuantityInput(prev => {
+            const nextStr = prev === '0' ? value : prev + value;
+            const parsed = parseInt(nextStr);
+            return (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? nextStr : prev;
+          });
         } else if (itemActionMode === 'amount') {
           setQuantityInput(prev => prev === '0' ? value : prev + value);
         }
       }
     } else {
-      // Normal numpad behavior
+      // Normal POS mode: quantityInput handles quantity & amount, while discount state handles global order discount
       if (value === 'C') {
-        if (numpadMode === 'quantity') setQuantityInput('1');
+        if (numpadMode === 'quantity') setQuantityInput('');
         else if (numpadMode === 'discount') setDiscount(0);
-        else if (numpadMode === 'amount') setQuantityInput('0');
+        else if (numpadMode === 'amount') setQuantityInput('');
       } else if (value === '⌫') {
         if (numpadMode === 'quantity') {
-          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '1');
+          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '');
         } else if (numpadMode === 'discount') {
-          setDiscount(0);
+          setDiscount(prev => {
+            const prevStr = prev.toString();
+            const nextStr = prevStr.length > 1 ? prevStr.slice(0, -1) : '0';
+            return parseInt(nextStr) || 0;
+          });
         } else if (numpadMode === 'amount') {
-          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+          setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '');
+        }
+      } else if (value === '.') {
+        if (numpadMode === 'amount') {
+          setQuantityInput(prev => prev.includes('.') ? prev : prev + '.');
         }
       } else {
+        // Digits
         if (numpadMode === 'quantity') {
-          setQuantityInput(prev => prev === '0' ? value : prev + value);
+          setQuantityInput(prev => (!prev || prev === '0') ? value : prev + value);
         } else if (numpadMode === 'discount') {
-          const newValue = parseInt(value);
-          if (!isNaN(newValue) && newValue >= 0 && newValue <= 100) {
-            setDiscount(newValue);
-          }
+          setDiscount(prev => {
+            const prevStr = prev.toString();
+            const nextStr = prevStr === '0' ? value : prevStr + value;
+            const parsed = parseInt(nextStr);
+            return (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? parsed : prev;
+          });
         } else if (numpadMode === 'amount') {
-          setQuantityInput(prev => prev === '0' ? value : prev + value);
+          setQuantityInput(prev => (!prev || prev === '0') ? value : prev + value);
         }
       }
     }
@@ -1785,6 +1861,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           setShowModifiersModal(false);
           setShowOrderHistory(false);
           setShowSplitBillModal(false);
+          setShowShortcuts(false);
         }
         return;
       }
@@ -1792,8 +1869,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       // F1 - Help/Shortcuts
       if (e.key === 'F1') {
         e.preventDefault();
-        setAlertMessage('Keyboard Shortcuts:\nF1 - Help\nF2 - Checkout\nF3 - Hold Order\nF4 - Void Last Item\nF5 - Discount Toggle\nF6 - Tax Toggle\nF7 - Print Receipt\nF8 - Order History\nF9 - Quick Code Focus\nF10 - Clear Cart\nF11 - Fullscreen\nF12 - Settings\n1-6 - Quick Actions\nEscape - Close Modals\nEnter - Add Item (if selected)');
-        setShowAlert(true);
+        setShowShortcuts(true);
       }
       // F2 - Checkout
       else if (e.key === 'F2') {
@@ -1960,6 +2036,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         setShowModifiersModal(false);
         setShowOrderHistory(false);
         setShowSplitBillModal(false);
+        setShowShortcuts(false);
       }
       // Ctrl/Cmd + B - Focus search/quick code
       else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
@@ -1991,15 +2068,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#f1f5f9',
-      overflow: 'auto',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      width: '100%',
+      maxWidth: '100%',
+      background: darkMode ? '#1a1a1a' : '#f5f5f5',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Professional Header */}
       <div style={{
-        background: '#ffffff',
+        background: darkMode ? '#2a2a2a' : '#ffffff',
         padding: '8px 16px',
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2067,7 +2146,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
-                  zIndex: 1000,
+                  zIndex: 5000,
                   minWidth: screenSize === 'small' ? '280px' : '400px',
                   maxWidth: screenSize === 'small' ? '90vw' : '500px',
                   maxHeight: screenSize === 'small' ? '400px' : '500px',
@@ -2223,18 +2302,19 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {posMode === 'advanced' && (
               <>
                 <button
-                  onClick={() => alert('Keyboard Shortcuts:\nF1 - Help\nF2 - Checkout\nF3 - Hold Order\nF4 - Void Last Item\nF5 - Discount Toggle\nF6 - GST Toggle\nF7 - Print Receipt\nF8 - Order History\nF9 - Search Focus\nF10 - Clear Cart\nF11 - Fullscreen\n0-9 - Quick Add Items\nEscape - Close Modals\nCtrl+B - Search\nCtrl+K - Clear Cart\nCtrl+Enter - Checkout')}
+                  onClick={() => setShowShortcuts(true)}
                   style={{
-                    padding: '4px 8px',
+                    padding: '6px 10px',
                     background: '#f3f4f6',
-                    color: '#6b7280',
+                    color: '#374151',
                     border: '1px solid #e5e7eb',
                     borderRadius: '4px',
-                    fontSize: '10px',
+                    fontSize: '11px',
+                    fontWeight: '600',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '3px'
+                    gap: '4px'
                   }}
                   title="Press F1 for shortcuts"
                 >
@@ -2258,50 +2338,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     width: '150px'
                   }}
                 />
-                <button
-                  onClick={() => setShowCustomerLookup(true)}
-                  style={{
-                    padding: '6px 8px',
-                    background: '#f3f4f6',
-                    color: '#374151',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  👤 Customer
-                </button>
               </>
             )}
-            {cart.length > 0 && (
-              <div style={{
-                background: '#dbeafe',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                color: '#1e40af',
-                fontWeight: '600',
-                fontFamily: 'monospace'
-              }}>
-                ⏱ {formatTimer(orderTimer)}
-              </div>
-            )}
-            <button
-              onClick={() => setShowOrderHistory(true)}
-              style={{
-                padding: '6px 12px',
-                background: '#f3f4f6',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              History
-            </button>
           </div>
         </div>
       </div>
@@ -2401,7 +2439,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                zIndex: 1000,
+                zIndex: 5000,
                 maxHeight: '300px',
                 overflowY: 'auto',
                 marginTop: '8px'
@@ -2559,6 +2597,63 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
           </div>
 
+          {/* Cart Search Bar */}
+          {cart.length > 2 && (
+            <div style={{
+              padding: screenSize === 'small' ? '4px 8px' : '5px 10px',
+              borderBottom: '1px solid #f1f5f9',
+              background: '#f9fafb'
+            }}>
+              <div style={{ position: 'relative' }}>
+                <span style={{
+                  position: 'absolute',
+                  left: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '11px',
+                  color: '#94a3b8',
+                  pointerEvents: 'none'
+                }}>🔍</span>
+                <input
+                  type="text"
+                  value={cartSearchQuery}
+                  onChange={e => setCartSearchQuery(e.target.value)}
+                  placeholder="Search cart items..."
+                  style={{
+                    width: '100%',
+                    padding: screenSize === 'small' ? '4px 26px 4px 24px' : '5px 28px 5px 26px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    background: '#ffffff',
+                    color: '#1f2937',
+                    outline: 'none'
+                  }}
+                />
+                {cartSearchQuery && (
+                  <button
+                    onClick={() => setCartSearchQuery('')}
+                    style={{
+                      position: 'absolute',
+                      right: '6px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      padding: '2px',
+                      lineHeight: 1
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Cart Items */}
           <div style={{ flex: 1, overflowY: 'auto', padding: screenSize === 'small' ? '8px' : '10px' }}>
             {cart.length === 0 ? (
@@ -2572,7 +2667,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div>Cart is empty</div>
               </div>
             ) : (
-              cart.map((item, index) => (
+              cart
+                .map((item, index) => ({ item, index }))
+                .filter(({ item }) => !cartSearchQuery || item.name.toLowerCase().includes(cartSearchQuery.toLowerCase()))
+                .map(({ item, index }) => (
                 <div 
                   key={`${item.id}-${index}`} 
                   onClick={() => toggleCartItemSelection(index)}
@@ -2683,6 +2781,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
                   <button
                     onClick={() => {
+                      const firstItem = cart[selectedCartItems[0]];
+                      setQuantityInput(firstItem ? firstItem.quantity.toString() : '1');
                       setItemActionMode('quantity');
                       setNumpadMode('quantity');
                       setIsEditingCartItems(true);
@@ -2703,6 +2803,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   </button>
                   <button
                     onClick={() => {
+                      const firstItem = cart[selectedCartItems[0]];
+                      setQuantityInput(firstItem ? (firstItem.discount || 0).toString() : '0');
                       setItemActionMode('discount');
                       setNumpadMode('discount');
                       setIsEditingCartItems(true);
@@ -2723,6 +2825,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   </button>
                   <button
                     onClick={() => {
+                      const firstItem = cart[selectedCartItems[0]];
+                      setQuantityInput(firstItem ? firstItem.price.toString() : '0.00');
                       setItemActionMode('amount');
                       setNumpadMode('amount');
                       setIsEditingCartItems(true);
@@ -2909,76 +3013,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
           {/* Cart Footer */}
           <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
-            {/* Customer Type Selection */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
-              <button
-                onClick={() => setShowCustomerLookup(true)}
-                style={{
-                  flex: 1,
-                  padding: '4px 6px',
-                  background: selectedCustomer ? '#dbeafe' : '#f3f4f6',
-                  color: selectedCustomer ? '#1e40af' : '#374151',
-                  border: selectedCustomer ? '1px solid #93c5fd' : '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}
-              >
-                <span>👤</span>
-                <span>{selectedCustomer ? selectedCustomer.name : 'Customer'}</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedCustomer(null);
-                  setCustomerPhone('');
-                }}
-                style={{
-                  flex: 1,
-                  padding: '4px 6px',
-                  background: !selectedCustomer ? '#dbeafe' : '#f3f4f6',
-                  color: !selectedCustomer ? '#1e40af' : '#374151',
-                  border: !selectedCustomer ? '1px solid #93c5fd' : '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '3px'
-                }}
-              >
-                <span>🚶</span>
-                <span>Walk-in</span>
-              </button>
-            </div>
-
-            {/* Table Assignment */}
-            <div style={{ marginBottom: '6px' }}>
-              <button
-                onClick={() => setShowTableSelector(true)}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  background: selectedTable ? '#dbeafe' : '#f3f4f6',
-                  color: selectedTable ? '#1e40af' : '#374151',
-                  border: selectedTable ? '1px solid #93c5fd' : '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <span>🪑 {selectedTable ? `Table ${selectedTable.name}` : 'Select Table'}</span>
-                {selectedTable && <span>✓</span>}
-              </button>
-            </div>
-
             {/* Order Summary */}
             <div style={{ marginBottom: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginBottom: '2px' }}>
@@ -3002,6 +3036,138 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <span>₹{cartTotal.toFixed(2)}</span>
               </div>
             </div>
+            {/* Order Context Bar */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+              marginBottom: '8px',
+              marginTop: '4px'
+            }}>
+              {/* Row 1: Customer Type Pill */}
+              <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+                <button
+                  onClick={() => { setSelectedCustomer(null); setCustomerPhone(''); }}
+                  style={{
+                    flex: 1,
+                    padding: '5px 0',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    background: !selectedCustomer ? '#1e40af' : '#f3f4f6',
+                    color: !selectedCustomer ? '#ffffff' : '#9ca3af',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '3px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  🚶 Walk-in
+                </button>
+                <button
+                  onClick={() => setShowCustomerLookup(true)}
+                  style={{
+                    flex: 1,
+                    padding: '5px 0',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    background: selectedCustomer ? '#1e40af' : '#f3f4f6',
+                    color: selectedCustomer ? '#ffffff' : '#9ca3af',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '3px',
+                    transition: 'all 0.15s',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis'
+                  }}
+                >
+                  👤 {selectedCustomer ? selectedCustomer.name.split(' ')[0] : 'Customer'}
+                </button>
+              </div>
+
+              {/* Row 2: Dining Type Pill & Table Chip */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {/* Dining Type toggle */}
+                <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb', flex: 1.2 }}>
+                  <button
+                    onClick={() => { setOrderType('dine-in'); }}
+                    style={{
+                      flex: 1,
+                      padding: '5px 0',
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      background: orderType === 'dine-in' ? '#2563eb' : '#f3f4f6',
+                      color: orderType === 'dine-in' ? '#ffffff' : '#9ca3af',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '3px',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    🍽️ Dine-in
+                  </button>
+                  <button
+                    onClick={() => { setOrderType('takeaway'); setSelectedTable(null); }}
+                    style={{
+                      flex: 1,
+                      padding: '5px 0',
+                      fontSize: '10px',
+                      fontWeight: '700',
+                      background: orderType === 'takeaway' ? '#2563eb' : '#f3f4f6',
+                      color: orderType === 'takeaway' ? '#ffffff' : '#9ca3af',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '3px',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    🛍️ Takeaway
+                  </button>
+                </div>
+
+                {/* Table assignment chip */}
+                <button
+                  onClick={() => {
+                    setShowTableSelector(true);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '5px 8px',
+                    background: orderType === 'takeaway' ? 'rgba(0,0,0,0.03)' : selectedTable ? '#ede9fe' : '#f3f4f6',
+                    color: orderType === 'takeaway' ? '#cbd5e1' : selectedTable ? '#6d28d9' : '#475569',
+                    border: orderType === 'takeaway' ? '1px dashed #cbd5e1' : selectedTable ? '1px solid #c4b5fd' : '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    cursor: orderType === 'takeaway' ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s',
+                    minWidth: '70px',
+                    opacity: orderType === 'takeaway' ? 0.5 : 1
+                  }}
+                  disabled={orderType === 'takeaway'}
+                  title={orderType === 'takeaway' ? 'Table only available for dine-in' : selectedTable ? `Table ${selectedTable.name}` : 'Assign table'}
+                >
+                  🪑 {selectedTable ? `T${selectedTable.name}` : 'Select'}
+                </button>
+              </div>
+            </div>
+
             <button
               onClick={handleCheckout}
               disabled={cart.length === 0}
@@ -3038,59 +3204,140 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
           {/* Quick Actions */}
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            padding: screenSize === 'small' ? '6px' : '8px'
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+            borderRadius: '14px',
+            border: '1px solid rgba(255,255,255,0.07)',
+            padding: screenSize === 'small' ? '10px' : '12px',
+            backdropFilter: 'blur(8px)'
           }}>
-            <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: '#1f2937', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
+            <div style={{
+              fontSize: '10px',
+              fontWeight: '700',
+              color: 'rgba(255,255,255,0.35)',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              marginBottom: '10px',
+              paddingLeft: '2px'
+            }}>
               Quick Actions
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '6px' : '8px' }}>
               {[
-                { id: 'hold', label: 'Hold', icon: '⏸️' },
-                { id: 'voice', label: 'Voice', icon: '🎤' },
-                { id: 'void', label: 'Void', icon: '❌' },
-                { id: 'discount', label: 'Disc', icon: '🏷️' },
-                { id: 'print', label: 'Print', icon: '🖨️' },
-                { id: 'table', label: 'Table', icon: '🪑' }
-              ].map(action => (
-                <button
-                  key={action.id}
-                  onClick={() => {
-                    if (action.id === 'hold') handleHoldOrder();
-                    if (action.id === 'voice') setShowVoiceOrder(true);
-                    if (action.id === 'void') handleVoidLastItem();
-                    if (action.id === 'discount') setDiscount(discount === 0 ? 10 : 0);
-                    if (action.id === 'print') setShowPrintSettings(true);
-                    if (action.id === 'table') setShowTableSelector(true);
-                    if (action.id === 'kitchen') {
-                      // Show kitchen status - could be a modal or navigate to kitchen view
-                      setAlertMessage('Kitchen Status: All orders are being processed');
-                      setShowAlert(true);
-                    }
-                  }}
-                  style={{
-                    padding: screenSize === 'small' ? '5px 3px' : '6px 4px',
-                    background: '#f3f4f6',
-                    color: '#374151',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '4px',
-                    fontSize: screenSize === 'small' ? '8px' : '9px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '2px'
-                  }}
-                >
-                  <span style={{ fontSize: screenSize === 'small' ? '11px' : '12px' }}>{action.icon}</span>
-                  {action.label}
-                </button>
-              ))}
+                { id: 'hold',     label: 'Hold',     icon: '⏸',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.25)' },
+                { id: 'voice',    label: 'Voice',    icon: '🎤', color: '#818cf8', bg: 'rgba(129,140,248,0.12)', border: 'rgba(129,140,248,0.25)' },
+                { id: 'custom',   label: 'Custom',   icon: '✚',  color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: 'rgba(52,211,153,0.25)' },
+                { id: 'history',  label: 'History',  icon: '🕐', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)' },
+                { id: 'customer', label: 'Customer', icon: '👤', color: '#c084fc', bg: 'rgba(192,132,252,0.12)', border: 'rgba(192,132,252,0.25)' },
+                { id: 'split',    label: 'Split',    icon: '⚡',  color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)' },
+                { id: 'void',     label: 'Void',     icon: '⊘',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)' },
+                { id: 'held',     label: 'Held',     icon: '📋', color: '#facc15', bg: 'rgba(250,204,21,0.12)',  border: 'rgba(250,204,21,0.25)' },
+                { id: 'table',    label: 'Table',    icon: '🪑', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
+              ].map(action => {
+                // Show active state for relevant toggleable actions
+                const isActive =
+                  (action.id === 'customer' && selectedCustomer) ||
+                  (action.id === 'held' && heldOrders.length > 0) ||
+                  (action.id === 'split' && showSplitBillModal) ||
+                  (action.id === 'table' && selectedTable);
+                const activeBg = isActive ? action.bg.replace('0.12', '0.28') : action.bg;
+                const activeBorder = isActive ? action.color : action.border;
+
+                return (
+                  <button
+                    key={action.id}
+                    onClick={() => {
+                      if (action.id === 'hold') handleHoldOrder();
+                      if (action.id === 'voice') setShowVoiceOrder(true);
+                      if (action.id === 'custom') setShowCustomOrder(true);
+                      if (action.id === 'history') setShowOrderHistory(true);
+                      if (action.id === 'customer') setShowCustomerLookup(true);
+                      if (action.id === 'split') setShowSplitBillModal(true);
+                      if (action.id === 'void') handleVoidLastItem();
+                      if (action.id === 'held') setShowHeldOrders(true);
+                      if (action.id === 'table') setShowTableSelector(true);
+                    }}
+                    style={{
+                      padding: screenSize === 'small' ? '10px 4px' : '12px 4px',
+                      background: activeBg,
+                      color: action.color,
+                      border: `1px solid ${activeBorder}`,
+                      borderRadius: '10px',
+                      fontSize: screenSize === 'small' ? '9px' : '10px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                      outline: 'none',
+                      letterSpacing: '0.02em',
+                      WebkitTapHighlightColor: 'transparent',
+                      position: 'relative'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = action.bg.replace('0.12', '0.22');
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = `0 4px 12px ${action.bg.replace('0.12', '0.3')}`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = activeBg;
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    onMouseDown={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0) scale(0.95)';
+                    }}
+                    onMouseUp={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px) scale(1)';
+                    }}
+                  >
+                    {/* Badge for held orders count */}
+                    {action.id === 'held' && heldOrders.length > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '4px',
+                        right: '4px',
+                        background: action.color,
+                        color: '#000',
+                        fontSize: '8px',
+                        fontWeight: '900',
+                        borderRadius: '50%',
+                        width: '14px',
+                        height: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1
+                      }}>
+                        {heldOrders.length}
+                      </span>
+                    )}
+                    {/* Badge for assigned table */}
+                    {action.id === 'table' && selectedTable && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '3px',
+                        right: '3px',
+                        background: action.color,
+                        color: '#000',
+                        fontSize: '7px',
+                        fontWeight: '900',
+                        borderRadius: '4px',
+                        padding: '1px 4px',
+                        lineHeight: 1.4
+                      }}>
+                        {selectedTable.name}
+                      </span>
+                    )}
+                    <span style={{ fontSize: screenSize === 'small' ? '16px' : '18px', lineHeight: 1 }}>{action.icon}</span>
+                    {action.id === 'table' && selectedTable ? `T${selectedTable.name}` : action.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
+
 
           {/* Numpad */}
           <div style={{
@@ -3210,190 +3457,125 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', fontWeight: '600', color: '#64748b', marginBottom: screenSize === 'small' ? '3px' : '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               {numpadMode === 'quantity' ? 'Quantity' : numpadMode === 'discount' ? 'Discount %' : 'Amount'}
             </div>
-            <input
-              type="text"
-              value={numpadMode === 'discount' ? discount : quantityInput}
-              onChange={(e) => {
-                if (numpadMode === 'discount') {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val) && val >= 0 && val <= 100) setDiscount(val);
-                } else {
-                  setQuantityInput(e.target.value);
-                }
-              }}
-              placeholder={numpadMode === 'quantity' ? 'Enter quantity' : numpadMode === 'discount' ? 'Enter discount %' : 'Enter amount'}
-              style={{
-                width: '100%',
-                padding: screenSize === 'small' ? '6px' : '8px',
-                background: '#ffffff',
-                color: '#0f172a',
-                border: '2px solid #e2e8f0',
-                borderRadius: '6px',
-                fontSize: screenSize === 'small' ? '14px' : '16px',
-                fontWeight: '700',
-                textAlign: 'center',
-                marginBottom: screenSize === 'small' ? '4px' : '6px',
-                fontFamily: 'monospace',
-                outline: 'none',
-                boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
-              }}
-            />
+            <div style={{ position: 'relative', width: '100%', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
+              <input
+                type="text"
+                readOnly
+                value={numpadMode === 'discount' ? (isEditingCartItems ? (quantityInput ? `${quantityInput}%` : '') : (discount > 0 ? `${discount}%` : '')) : numpadMode === 'amount' ? (quantityInput ? `₹${quantityInput}` : '') : quantityInput}
+                placeholder={numpadMode === 'quantity' ? 'Enter quantity' : numpadMode === 'discount' ? 'Enter discount %' : 'Enter amount'}
+                style={{
+                  width: '100%',
+                  padding: screenSize === 'small' ? '6px 28px 6px 8px' : '8px 32px 8px 8px',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: screenSize === 'small' ? '14px' : '16px',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (isEditingCartItems) {
+                    if (itemActionMode === 'quantity') setQuantityInput('');
+                    else if (itemActionMode === 'discount') setQuantityInput('0');
+                    else if (itemActionMode === 'amount') setQuantityInput('');
+                  } else {
+                    if (numpadMode === 'quantity') setQuantityInput('');
+                    else if (numpadMode === 'discount') setDiscount(0);
+                    else if (numpadMode === 'amount') setQuantityInput('');
+                  }
+                }}
+                title="Clear input"
+                style={{
+                  position: 'absolute',
+                  right: screenSize === 'small' ? '6px' : '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#dc2626',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  outline: 'none'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
-              {isEditingCartItems ? (
-                // Show confirm button when editing cart items
-                <>
-                  {['7', '8', '9', '4', '5', '6', '1', '2', '3'].map(key => (
-                    <button
-                      key={key}
-                      onClick={() => handleNumpadClick(key)}
-                      style={{
-                        padding: screenSize === 'small' ? '8px' : '10px',
-                        background: '#f3f4f6',
-                        color: '#1f2937',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: screenSize === 'small' ? '13px' : '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.1s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = '#e5e7eb';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = '#f3f4f6';
-                      }}
-                    >
-                      {key}
-                    </button>
-                  ))}
-                  <button
-                    onClick={applyItemAction}
-                    style={{
-                      padding: screenSize === 'small' ? '8px' : '10px',
-                      background: '#22c55e',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: screenSize === 'small' ? '13px' : '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.1s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#16a34a';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = '#22c55e';
-                    }}
-                  >
-                    ✓
-                  </button>
-                  <button
-                    onClick={() => handleNumpadClick('0')}
-                    style={{
-                      padding: screenSize === 'small' ? '8px' : '10px',
-                      background: '#f3f4f6',
-                      color: '#1f2937',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: screenSize === 'small' ? '13px' : '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.1s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#e5e7eb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = '#f3f4f6';
-                    }}
-                  >
-                    0
-                  </button>
-                  <button
-                    onClick={() => handleNumpadClick('⌫')}
-                    style={{
-                      padding: screenSize === 'small' ? '8px' : '10px',
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: screenSize === 'small' ? '13px' : '14px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.1s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#fecaca';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = '#fee2e2';
-                    }}
-                  >
-                    ⌫
-                  </button>
-                </>
-              ) : (
-                // Normal numpad
-                ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '⌫'].map(key => (
+              {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map(key => {
+                const isActionKey = key === '⌫' || key === '.';
+                return (
                   <button
                     key={key}
                     onClick={() => handleNumpadClick(key)}
                     style={{
                       padding: screenSize === 'small' ? '8px' : '10px',
-                      background: key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6',
-                      color: key === 'C' || key === '⌫' ? '#dc2626' : '#1f2937',
+                      background: key === '⌫' ? '#fee2e2' : '#f3f4f6',
+                      color: key === '⌫' ? '#dc2626' : '#1f2937',
                       border: 'none',
                       borderRadius: '4px',
                       fontSize: screenSize === 'small' ? '13px' : '14px',
-                      fontWeight: '600',
+                      fontWeight: '700',
                       cursor: 'pointer',
-                      transition: 'all 0.1s ease'
+                      transition: 'all 0.1s ease',
+                      outline: 'none'
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.background = key === 'C' || key === '⌫' ? '#fecaca' : '#e5e7eb';
+                      e.currentTarget.style.background = key === '⌫' ? '#fecaca' : '#e5e7eb';
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = key === 'C' || key === '⌫' ? '#fee2e2' : '#f3f4f6';
+                      e.currentTarget.style.background = key === '⌫' ? '#fee2e2' : '#f3f4f6';
                     }}
                   >
                     {key}
                   </button>
-                ))
-              )}
+                );
+              })}
             </div>
+
+            {isEditingCartItems && (
+              <button
+                onClick={applyItemAction}
+                style={{
+                  width: '100%',
+                  marginTop: screenSize === 'small' ? '4px' : '6px',
+                  padding: screenSize === 'small' ? '8px' : '10px',
+                  background: '#22c55e',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: screenSize === 'small' ? '13px' : '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.1s ease',
+                  outline: 'none',
+                  boxShadow: '0 2px 4px rgba(34, 197, 94, 0.2)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#16a34a';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#22c55e';
+                }}
+              >
+                ✓ Apply Changes
+              </button>
+            )}
           </div>
 
-          {/* Custom Order */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            padding: screenSize === 'small' ? '8px' : '12px'
-          }}>
-            <button
-              onClick={() => setShowCustomOrder(true)}
-              style={{
-                width: '100%',
-                padding: screenSize === 'small' ? '8px' : '10px',
-                background: '#8b5cf6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: screenSize === 'small' ? '12px' : '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
-            >
-              <span style={{ fontSize: screenSize === 'small' ? '14px' : '16px' }}>✨</span>
-              Custom Order
-            </button>
-          </div>
+
         </div>
       )}
       </div>
@@ -3627,341 +3809,403 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       )}
 
       {/* Custom Order Modal */}
-      {showCustomOrder && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000
-        }}>
+      {showCustomOrder && (() => {
+        // Define add-on state inside a wrapper function scope or use existing states.
+        // Let's create presets with emojis
+        const addOnPresets = [
+          { name: 'Extra Sauce', price: 10, icon: '🥫' },
+          { name: 'Extra Cheese', price: 15, icon: '🧀' },
+          { name: 'Takeaway Box', price: 15, icon: '📦' },
+          { name: 'Birthday Candles', price: 20, icon: '🕯️' },
+          { name: 'Special Message', price: 25, icon: '🖋️' },
+          { name: 'Ice Cream Scoop', price: 40, icon: '🍨' }
+        ];
+
+        return (
           <div style={{
-            background: '#252538',
-            borderRadius: '16px',
-            padding: screenSize === 'small' ? '16px' : '32px',
-            width: screenSize === 'small' ? '95vw' : '500px',
-            maxWidth: screenSize === 'small' ? '95vw' : '90vw',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            border: '1px solid #2d2d44'
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(8, 8, 16, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: screenSize === 'small' ? 'flex-end' : 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
-                Custom Order
-              </h3>
-              <button
-                onClick={() => {
-                  setShowCustomOrder(false);
-                  setCustomOrderName('');
-                  setCustomOrderPrice('');
-                  setCustomOrderQuantity('1');
-                  setCustomOrderNotes('');
-                  setCustomOrderCategory('');
-                  setSelectedBaseItem(null);
-                }}
-                style={{
-                  padding: '8px 12px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px'
-                }}
-              >
-                ×
-              </button>
-            </div>
+            <div style={{
+              background: 'linear-gradient(135deg, #181829 0%, #0f0f18 100%)',
+              borderRadius: screenSize === 'small' ? '20px 20px 0 0' : '20px',
+              padding: screenSize === 'small' ? '20px 16px 28px' : '28px',
+              width: screenSize === 'small' ? '100vw' : '520px',
+              maxWidth: screenSize === 'small' ? '100vw' : '90vw',
+              maxHeight: screenSize === 'small' ? '92vh' : '90vh',
+              overflowY: 'auto',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }} className="no-scrollbar">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '14px' }}>
+                <div>
+                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
+                    ✨ Add Custom Order
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b8b9e' }}>
+                    Create or customize an off-menu item
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCustomOrder(false);
+                    setCustomOrderName('');
+                    setCustomOrderPrice('');
+                    setCustomOrderQuantity('1');
+                    setCustomOrderNotes('');
+                    setCustomOrderCategory('');
+                    setSelectedBaseItem(null);
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: '#e0e0e0',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    outline: 'none',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
+                >
+                  ×
+                </button>
+              </div>
 
-            {/* Base Item Selection */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                Base Menu Item (Optional)
-              </label>
-              <select
-                value={selectedBaseItem?.id || ''}
-                onChange={(e) => {
-                  const item = menuItems.find(m => m.id === e.target.value);
-                  setSelectedBaseItem(item || null);
-                  if (item) {
-                    setCustomOrderName(item.name);
-                    setCustomOrderPrice(item.price.toString());
-                    setCustomOrderCategory(item.category);
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#2d2d44',
-                  border: '1px solid #3d3d5c',
-                  borderRadius: '8px',
-                  color: '#e0e0e0',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="">Select a menu item (optional)</option>
-                {menuItems.filter(item => item.active !== false).map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} - ₹{item.price.toFixed(2)}
-                  </option>
-                ))}
-              </select>
-            </div>
+              {/* Base Item Selection */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Base Menu Item (Optional)
+                </label>
+                <select
+                  value={selectedBaseItem?.id || ''}
+                  onChange={(e) => {
+                    const item = menuItems.find(m => m.id === e.target.value);
+                    setSelectedBaseItem(item || null);
+                    if (item) {
+                      setCustomOrderName(item.name);
+                      setCustomOrderPrice(item.price.toString());
+                      setCustomOrderCategory(item.category);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '10px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option style={{ background: '#181829', color: '#8b8b9e' }} value="">Select a menu item to customize...</option>
+                  {menuItems.filter(item => item.active !== false).map(item => (
+                    <option style={{ background: '#181829', color: '#ffffff' }} key={item.id} value={item.id}>
+                      {item.name} - ₹{item.price.toFixed(2)}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Quick Presets */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Quick Add-ons
-              </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {[
-                  { name: 'Extra Sauce', price: 10 },
-                  { name: 'Extra Cheese', price: 15 },
-                  { name: 'Takeaway Box', price: 15 },
-                  { name: 'Tissues', price: 5 }
-                ].map(preset => (
-                  <button
-                    key={preset.name}
-                    onClick={() => {
-                      setCustomOrderName(preset.name);
-                      setCustomOrderPrice(preset.price.toString());
-                      setCustomOrderCategory('Add-ons');
-                    }}
+              {/* Quick Presets */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Quick Add-ons
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  {addOnPresets.map(preset => {
+                    const isSelected = customOrderName.includes(preset.name);
+                    return (
+                      <button
+                        key={preset.name}
+                        onClick={() => {
+                          if (isSelected) {
+                            // Remove
+                            setCustomOrderName(prev => prev.replace(` + ${preset.name}`, '').replace(preset.name, '').trim());
+                            setCustomOrderPrice(prev => {
+                              const p = Math.max(0, (parseFloat(prev) || 0) - preset.price);
+                              return p > 0 ? p.toString() : '';
+                            });
+                          } else {
+                            // Add
+                            setCustomOrderName(prev => prev ? `${prev} + ${preset.name}` : preset.name);
+                            setCustomOrderPrice(prev => ((parseFloat(prev) || 0) + preset.price).toString());
+                            if (!customOrderCategory) setCustomOrderCategory('Extras');
+                          }
+                        }}
+                        style={{
+                          padding: '10px 6px',
+                          background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                          color: isSelected ? '#818cf8' : '#ffffff',
+                          border: isSelected ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.05)',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s ease',
+                          outline: 'none'
+                        }}
+                      >
+                        <span>{preset.icon}</span>
+                        <div style={{ textAlign: 'left', fontSize: '11px', display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>{preset.name}</span>
+                          <span style={{ opacity: 0.6 }}>+₹{preset.price}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Order Name */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Item Name
+                </label>
+                <input
+                  type="text"
+                  value={customOrderName}
+                  onChange={(e) => setCustomOrderName(e.target.value)}
+                  placeholder="Enter item name or preset..."
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: 'rgba(0,0,0,0.2)',
+                    color: '#ffffff',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              {/* Price, Quantity, Category Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Price (₹)
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#8b8b9e', fontSize: '13px' }}>₹</span>
+                    <input
+                      type="number"
+                      value={customOrderPrice}
+                      onChange={(e) => setCustomOrderPrice(e.target.value)}
+                      placeholder="0.00"
+                      style={{
+                        width: '100%',
+                        padding: '12px 12px 12px 24px',
+                        background: 'rgba(0,0,0,0.2)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '10px',
+                        fontSize: '14px',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={customOrderQuantity}
+                    onChange={(e) => setCustomOrderQuantity(e.target.value)}
+                    min="1"
                     style={{
-                      padding: '8px 12px',
-                      background: '#2d2d44',
-                      color: '#e0e0e0',
-                      border: '1px solid #3d3d5c',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(0,0,0,0.2)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      textAlign: 'center'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#3d3d5c'}
-                    onMouseLeave={(e) => e.target.style.background = '#2d2d44'}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Category
+                  </label>
+                  <select
+                    value={customOrderCategory}
+                    onChange={(e) => setCustomOrderCategory(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
                   >
-                    {preset.name} (₹{preset.price})
-                  </button>
-                ))}
+                    <option style={{ background: '#181829' }} value="Food">🥐 Food</option>
+                    <option style={{ background: '#181829' }} value="Beverages">☕ Beverages</option>
+                    <option style={{ background: '#181829' }} value="Extras">🥫 Extras</option>
+                    <option style={{ background: '#181829' }} value="Services">🕯️ Services</option>
+                    <option style={{ background: '#181829' }} value="Custom">✨ Custom</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            {/* Order Name */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                Order Name
-              </label>
-              <input
-                type="text"
-                value={customOrderName}
-                onChange={(e) => setCustomOrderName(e.target.value)}
-                placeholder="Enter item name..."
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#1a1a2e',
-                  color: '#ffffff',
-                  border: '1px solid #2d2d44',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            {/* Price and Quantity Row */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                  Price (₹)
+              {/* Notes */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Instructions & Modifications
                 </label>
-                <input
-                  type="number"
-                  value={customOrderPrice}
-                  onChange={(e) => setCustomOrderPrice(e.target.value)}
-                  placeholder="0.00"
+                <textarea
+                  value={customOrderNotes}
+                  onChange={(e) => setCustomOrderNotes(e.target.value)}
+                  placeholder="e.g. eggless, extra hot, birthday message details..."
+                  rows="2"
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: '#1a1a2e',
+                    background: 'rgba(0,0,0,0.2)',
                     color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '10px',
                     fontSize: '14px',
+                    resize: 'none',
+                    fontFamily: 'inherit',
                     outline: 'none'
                   }}
                 />
               </div>
-              <div style={{ width: '100px' }}>
-                <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                  Qty
-                </label>
-                <input
-                  type="number"
-                  value={customOrderQuantity}
-                  onChange={(e) => setCustomOrderQuantity(e.target.value)}
-                  min="1"
+
+              {/* Preview Summary */}
+              {customOrderName && customOrderPrice && (
+                <div style={{
+                  background: 'rgba(99, 102, 241, 0.06)',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(99, 102, 241, 0.15)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>
+                      {customOrderName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#8b8b9e', marginTop: '2px' }}>
+                      ₹{parseFloat(customOrderPrice).toFixed(2)} × {customOrderQuantity}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: '800', color: '#818cf8' }}>
+                    ₹{(parseFloat(customOrderPrice) * parseInt(customOrderQuantity || 1)).toFixed(2)}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                <button
+                  onClick={() => {
+                    setShowCustomOrder(false);
+                    setCustomOrderName('');
+                    setCustomOrderPrice('');
+                    setCustomOrderQuantity('1');
+                    setCustomOrderNotes('');
+                    setCustomOrderCategory('');
+                    setSelectedBaseItem(null);
+                  }}
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1a1a2e',
+                    flex: 1,
+                    padding: '14px',
+                    background: 'rgba(255, 255, 255, 0.04)',
                     color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    borderRadius: '10px',
                     fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
                     outline: 'none'
                   }}
-                />
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!customOrderName || !customOrderPrice) {
+                      setAlertMessage('Please enter an item name and price.');
+                      setShowAlert(true);
+                      return;
+                    }
+                    const customItem = {
+                      id: `custom-${Date.now()}`,
+                      name: customOrderName,
+                      price: parseFloat(customOrderPrice),
+                      quantity: parseInt(customOrderQuantity) || 1,
+                      category: customOrderCategory || 'Custom',
+                      notes: customOrderNotes,
+                      isCustom: true,
+                      baseItemId: selectedBaseItem?.id || null,
+                      baseItemName: selectedBaseItem?.name || null
+                    };
+                    setCart([...cart, customItem]);
+                    setShowCustomOrder(false);
+                    setCustomOrderName('');
+                    setCustomOrderPrice('');
+                    setCustomOrderQuantity('1');
+                    setCustomOrderNotes('');
+                    setCustomOrderCategory('');
+                    setSelectedBaseItem(null);
+                  }}
+                  style={{
+                    flex: 1.3,
+                    padding: '14px',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+                    transition: 'all 0.2s',
+                    outline: 'none'
+                  }}
+                >
+                  Add to Cart
+                </button>
               </div>
-            </div>
-
-            {/* Category */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                Category
-              </label>
-              <select
-                value={customOrderCategory}
-                onChange={(e) => setCustomOrderCategory(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#1a1a2e',
-                  color: '#ffffff',
-                  border: '1px solid #2d2d44',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
-              >
-                <option value="">Select category...</option>
-                <option value="Beverages">Beverages</option>
-                <option value="Food">Food</option>
-                <option value="Extras">Extras</option>
-                <option value="Services">Services</option>
-                <option value="Custom">Custom</option>
-              </select>
-            </div>
-
-            {/* Notes */}
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ fontSize: '13px', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                Notes (Optional)
-              </label>
-              <textarea
-                value={customOrderNotes}
-                onChange={(e) => setCustomOrderNotes(e.target.value)}
-                placeholder="Add any special instructions..."
-                rows="2"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#1a1a2e',
-                  color: '#ffffff',
-                  border: '1px solid #2d2d44',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  resize: 'vertical',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            {/* Preview */}
-            {customOrderName && customOrderPrice && (
-              <div style={{
-                background: '#2d2d44',
-                padding: '12px',
-                borderRadius: '8px',
-                marginBottom: '24px',
-                border: '1px solid #3d3d5c'
-              }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#e0e0e0', marginBottom: '4px' }}>
-                  Preview
-                </div>
-                <div style={{ fontSize: '14px', color: '#e0e0e0' }}>
-                  {customOrderName} × {customOrderQuantity} = ₹{(parseFloat(customOrderPrice) * parseInt(customOrderQuantity || 1)).toFixed(2)}
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  setShowCustomOrder(false);
-                  setCustomOrderName('');
-                  setCustomOrderPrice('');
-                  setCustomOrderQuantity('1');
-                  setCustomOrderNotes('');
-                  setCustomOrderCategory('');
-                  setSelectedBaseItem(null);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '14px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (!customOrderName || !customOrderPrice) {
-                    setAlertMessage('Please fill in required fields');
-                    setShowAlert(true);
-                    return;
-                  }
-                  const customItem = {
-                    id: `custom-${Date.now()}`,
-                    name: customOrderName,
-                    price: parseFloat(customOrderPrice),
-                    quantity: parseInt(customOrderQuantity) || 1,
-                    category: customOrderCategory || 'Custom',
-                    notes: customOrderNotes,
-                    isCustom: true,
-                    baseItemId: selectedBaseItem?.id || null,
-                    baseItemName: selectedBaseItem?.name || null
-                  };
-                  setCart([...cart, customItem]);
-                  setShowCustomOrder(false);
-                  setCustomOrderName('');
-                  setCustomOrderPrice('');
-                  setCustomOrderQuantity('1');
-                  setCustomOrderNotes('');
-                  setCustomOrderCategory('');
-                  setSelectedBaseItem(null);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '14px',
-                  background: '#6366f1',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Add to Cart
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Held Orders Modal */}
       {showHeldOrders && (
@@ -4083,6 +4327,136 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(8, 8, 16, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #181829 0%, #0f0f18 100%)',
+            borderRadius: '20px',
+            padding: '24px',
+            width: screenSize === 'small' ? '95vw' : '480px',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                  ⌨️ POS Keyboard Shortcuts
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b8b9e' }}>
+                  Boost checkout speed with hardware keys
+                </p>
+              </div>
+              <button
+                onClick={() => setShowShortcuts(false)}
+                style={{
+                  padding: '6px 10px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  color: '#e0e0e0',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  outline: 'none'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              maxHeight: '360px',
+              overflowY: 'auto',
+              paddingRight: '4px'
+            }} className="no-scrollbar">
+              {[
+                { key: 'F1', desc: 'Help / View Shortcuts' },
+                { key: 'F2', desc: 'Secure Checkout' },
+                { key: 'F3', desc: 'Hold Active Order' },
+                { key: 'F4', desc: 'Void Last Cart Item' },
+                { key: 'F5', desc: 'Toggle 10% Discount' },
+                { key: 'F6', desc: 'Toggle GST (Tax)' },
+                { key: 'F7', desc: 'Print Last Receipt' },
+                { key: 'F8', desc: 'Open Order History' },
+                { key: 'F9', desc: 'Focus Quick Code Entry' },
+                { key: 'F10', desc: 'Clear Active Cart' },
+                { key: 'F11', desc: 'Toggle Fullscreen Mode' },
+                { key: 'F12', desc: 'Settings Pane' },
+                { key: '0-9', desc: 'Quick add top-selling items to cart' },
+                { key: 'Esc', desc: 'Close all open modals / overlays' }
+              ].map((shortcut, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <span style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: '500' }}>
+                    {shortcut.desc}
+                  </span>
+                  <span style={{
+                    padding: '4px 8px',
+                    background: 'rgba(99, 102, 241, 0.15)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    borderRadius: '6px',
+                    color: '#818cf8',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    fontFamily: 'monospace'
+                  }}>
+                    {shortcut.key}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowShortcuts(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+                outline: 'none'
+              }}
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}
@@ -4372,500 +4746,851 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       )}
 
       {/* Payment Modal */}
-      {showPaymentModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000
-        }}>
+      {showPaymentModal && (() => {
+        // Calculate cash suggestions based on cart total
+        const suggestions = [
+          cartTotal,
+          Math.ceil(cartTotal / 10) * 10,
+          Math.ceil(cartTotal / 50) * 50,
+          Math.ceil(cartTotal / 100) * 100,
+          500,
+          1000
+        ].filter((val, index, self) => val >= cartTotal && self.indexOf(val) === index).slice(0, 5);
+
+        const parsedAmount = parseFloat(paymentAmount) || 0;
+        const changeDue = parsedAmount - cartTotal;
+        
+        // Validation check for enabling 'Complete Payment'
+        const isPaymentValid = paymentMethod === 'SPLIT'
+          ? Math.abs(splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0) - cartTotal) < 0.01
+          : parsedAmount >= cartTotal;
+
+        return (
           <div style={{
-            background: '#252538',
-            borderRadius: '16px',
-            padding: screenSize === 'small' ? '16px' : '24px',
-            width: screenSize === 'small' ? '95vw' : '100%',
-            maxWidth: screenSize === 'small' ? '95vw' : '600px',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            border: '1px solid #2d2d44'
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(8, 8, 16, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: screenSize === 'small' ? 'flex-end' : 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
-                Checkout
-              </h3>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setPaymentAmount('');
-                }}
-                style={{
-                  padding: '8px 12px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Order Summary */}
-            <div style={{ background: '#1a1a2e', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Subtotal</span>
-                <span style={{ fontSize: '16px', fontWeight: '500', color: '#ffffff' }}>₹{cartSubtotal.toFixed(2)}</span>
-              </div>
-              {discount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Discount ({discount}%)</span>
-                  <span style={{ fontSize: '16px', fontWeight: '500', color: '#10b981' }}>-₹{discountAmount.toFixed(2)}</span>
+            <div style={{
+              background: 'linear-gradient(135deg, #181829 0%, #0f0f18 100%)',
+              borderRadius: screenSize === 'small' ? '20px 20px 0 0' : '20px',
+              padding: screenSize === 'small' ? '16px 16px 24px' : '28px',
+              width: screenSize === 'small' ? '100vw' : '90vw',
+              maxWidth: screenSize === 'small' ? '100vw' : '950px',
+              maxHeight: screenSize === 'small' ? '92vh' : '90vh',
+              overflowY: 'auto',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: screenSize === 'small' ? '14px' : '20px'
+            }} className="no-scrollbar">
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
+                    Secure Checkout
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b8b9e' }}>
+                    Order: <span style={{ color: '#6366f1', fontWeight: '600' }}>#{Date.now().toString().slice(-6)}</span>
+                  </p>
                 </div>
-              )}
-              {gstEnabled && taxAmount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#8b8b9e' }}>GST ({gstRate}%)</span>
-                  <span style={{ fontSize: '16px', fontWeight: '500', color: '#ffffff' }}>₹{taxAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #2d2d44' }}>
-                <span style={{ fontSize: '18px', fontWeight: '600', color: '#ffffff' }}>Total</span>
-                <span style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>₹{cartTotal.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Settings Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                 <button
-                  onClick={() => setDiscount(discount === 0 ? 10 : 0)}
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setPaymentAmount('');
+                  }}
                   style={{
-                    padding: '10px',
-                    background: discount > 0 ? '#10b981' : '#2d2d44',
-                    color: '#ffffff',
+                    padding: '8px 12px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: '#e0e0e0',
                     border: 'none',
                     borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    transition: 'background 0.2s',
+                    outline: 'none'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
                 >
-                  🏷️ {discount > 0 ? `${discount}% Off` : 'No Discount'}
-                </button>
-                <button
-                  onClick={() => setGstEnabled(!gstEnabled)}
-                  style={{
-                    padding: '10px',
-                    background: gstEnabled ? '#6366f1' : '#2d2d44',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🧾 GST: {gstEnabled ? 'On' : 'Off'}
+                  ×
                 </button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
-                <input
-                  type="number"
-                  value={gstRate}
-                  onChange={(e) => setGstRate(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                  disabled={!gstEnabled}
-                  style={{
-                    width: '50px',
-                    padding: '8px 0',
-                    background: 'transparent',
-                    color: gstEnabled ? '#ffffff' : '#8b8b9e',
-                    border: 'none',
-                    borderRadius: '0',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    outline: 'none',
-                    textAlign: 'center'
-                  }}
-                />
-                <span style={{ color: '#8b8b9e', fontSize: '12px' }}>%</span>
-              </div>
-            </div>
 
-            {/* Receipt Options */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e', marginBottom: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Receipt Options
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#2d2d44', borderRadius: '8px', padding: '0 12px' }}>
-                  <select
-                    value={receiptDelivery}
-                    onChange={(e) => setReceiptDelivery(e.target.value)}
-                    style={{
-                      padding: '8px 0',
-                      background: 'transparent',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '0',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      outline: 'none',
-                      cursor: 'pointer',
-                      flex: 1
-                    }}
-                  >
-                    <option value="none">Print Only</option>
-                    <option value="email">📧 Email</option>
-                    <option value="sms">📱 SMS</option>
-                    <option value="both">Email + SMS</option>
-                  </select>
-                </div>
-              </div>
-              
-              {(receiptDelivery === 'email' || receiptDelivery === 'both') && (
-                <div style={{ marginBottom: '12px' }}>
-                  <input
-                    type="email"
-                    value={receiptEmail}
-                    onChange={(e) => setReceiptEmail(e.target.value)}
-                    placeholder="Enter email address"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: '#1a1a2e',
-                      color: '#ffffff',
-                      border: '1px solid #2d2d44',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              )}
-              
-              {(receiptDelivery === 'sms' || receiptDelivery === 'both') && (
-                <div style={{ marginBottom: '12px' }}>
-                  <input
-                    type="tel"
-                    value={receiptPhone}
-                    onChange={(e) => setReceiptPhone(e.target.value)}
-                    placeholder="Enter phone number"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: '#1a1a2e',
-                      color: '#ffffff',
-                      border: '1px solid #2d2d44',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Payment Methods */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e', marginBottom: '12px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Payment Method
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                {[
-                  { id: 'CASH', label: 'Cash', icon: '💵' },
-                  { id: 'CARD', label: 'Card', icon: '💳' },
-                  { id: 'UPI', label: 'UPI', icon: '📱' },
-                  { id: 'WALLET', label: 'Wallet', icon: '👛' },
-                  { id: 'SPLIT', label: 'Split', icon: '💰' }
-                ].map(method => (
-                  <button
-                    key={method.id}
-                    onClick={() => {
-                      setPaymentMethod(method.id);
-                      if (method.id === 'SPLIT') {
-                        setSplitPayments([{ method: 'CASH', amount: cartTotal }]);
-                      }
-                    }}
-                    style={{
-                      padding: '16px 12px',
-                      background: paymentMethod === method.id ? '#6366f1' : '#1a1a2e',
-                      color: paymentMethod === method.id ? '#ffffff' : '#e0e0e0',
-                      border: paymentMethod === method.id ? '2px solid #6366f1' : '1px solid #2d2d44',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <span style={{ fontSize: '20px' }}>{method.icon}</span>
-                    {method.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Split Payment Interface */}
-            {paymentMethod === 'SPLIT' && (
-              <div style={{ marginBottom: '24px', background: '#1a1a2e', padding: '16px', borderRadius: '8px', border: '1px solid #2d2d44' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#8b8b9e' }}>
-                    Split Payment Details
-                  </label>
-                  <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
-                    Remaining: ₹{(cartTotal - splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0)).toFixed(2)}
-                  </div>
-                </div>
+              {/* Grid Content */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1.2fr',
+                gap: screenSize === 'small' ? '14px' : '24px'
+              }}>
                 
-                {/* Split by People */}
-                <div style={{ marginBottom: '12px', padding: '12px', background: '#2d2d44', borderRadius: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', color: '#8b8b9e' }}>Split equally among:</span>
-                    <input
-                      type="number"
-                      value={splitByPeople}
-                      onChange={(e) => setSplitByPeople(parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      min="1"
-                      max="20"
+                {/* Left Side: Summary & Options */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Order Summary Card */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '16px',
+                    padding: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.04)'
+                  }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8b8b9e' }}>
+                      Bill Details
+                    </h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Subtotal</span>
+                      <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{cartSubtotal.toFixed(2)}</span>
+                    </div>
+                    
+                    {discount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Discount ({discount}%)</span>
+                        <span style={{ fontSize: '15px', fontWeight: '600', color: '#10b981' }}>-₹{discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    {gstEnabled && taxAmount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '14px', color: '#8b8b9e' }}>GST ({gstRate}%)</span>
+                        <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{taxAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px dashed rgba(255, 255, 255, 0.1)', marginTop: '8px' }}>
+                      <span style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff' }}>Grand Total</span>
+                      <span style={{ fontSize: '22px', fontWeight: '700', color: '#818cf8' }}>₹{cartTotal.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Settings Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: screenSize === 'small' ? '8px' : '10px' }}>
+                    <button
+                      onClick={() => setDiscount(discount === 0 ? 10 : 0)}
                       style={{
-                        width: '60px',
-                        padding: '6px 8px',
-                        background: '#1a1a2e',
-                        color: '#ffffff',
-                        border: '1px solid #3d3d5c',
-                        borderRadius: '4px',
+                        padding: '12px 10px',
+                        background: discount > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                        color: discount > 0 ? '#10b981' : '#ffffff',
+                        border: discount > 0 ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
                         fontSize: '13px',
                         fontWeight: '600',
-                        outline: 'none'
-                      }}
-                    />
-                    <span style={{ fontSize: '13px', color: '#8b8b9e' }}>people</span>
-                    <button
-                      onClick={() => {
-                        if (splitByPeople > 0) {
-                          const amountPerPerson = cartTotal / splitByPeople;
-                          const newPayments = [];
-                          for (let i = 0; i < splitByPeople; i++) {
-                            newPayments.push({ method: 'CASH', amount: amountPerPerson });
-                          }
-                          setSplitPayments(newPayments);
-                        }
-                      }}
-                      disabled={splitByPeople < 1}
-                      style={{
-                        padding: '6px 12px',
-                        background: splitByPeople >= 1 ? '#6366f1' : '#2d2d44',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        cursor: splitByPeople >= 1 ? 'pointer' : 'not-allowed'
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
                       }}
                     >
-                      Apply Split
+                      🏷️ {discount > 0 ? `${discount}% Off` : 'Add Discount'}
+                    </button>
+                    <button
+                      onClick={() => setGstEnabled(!gstEnabled)}
+                      style={{
+                        padding: '12px 10px',
+                        background: gstEnabled ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                        color: gstEnabled ? '#818cf8' : '#ffffff',
+                        border: gstEnabled ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      🧾 GST: {gstEnabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                    <button
+                      onClick={() => setShowTipInput(!showTipInput)}
+                      style={{
+                        padding: '12px 10px',
+                        background: tipAmount > 0 ? 'rgba(129, 140, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                        color: tipAmount > 0 ? '#818cf8' : '#ffffff',
+                        border: tipAmount > 0 ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      💖 {tipAmount > 0 ? `Tip: ₹${tipAmount}` : 'Add Tip'}
+                    </button>
+                    <button
+                      onClick={() => setShowNotesInput(!showNotesInput)}
+                      style={{
+                        padding: '12px 10px',
+                        background: orderNotes ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                        color: orderNotes ? '#f59e0b' : '#ffffff',
+                        border: orderNotes ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      📝 {orderNotes ? 'Note Added' : 'Add Note'}
                     </button>
                   </div>
-                  {splitByPeople > 0 && (
-                    <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
-                      Each person pays: ₹{(cartTotal / splitByPeople).toFixed(2)}
+
+                  {discount > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px 14px' }}>
+                      <span style={{ color: '#8b8b9e', fontSize: '13px', fontWeight: '600' }}>Select Discount Rate:</span>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {[5, 10, 15, 20].map(val => (
+                          <button
+                            key={val}
+                            onClick={() => setDiscount(val)}
+                            style={{
+                              padding: '6px 12px',
+                              background: discount === val ? '#10b981' : 'rgba(255,255,255,0.05)',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {val}%
+                          </button>
+                        ))}
+                        <input
+                          type="number"
+                          placeholder="Custom %"
+                          value={discount}
+                          onChange={(e) => setDiscount(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                          style={{
+                            width: '80px',
+                            padding: '6px 10px',
+                            background: 'rgba(0,0,0,0.2)',
+                            color: '#ffffff',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            outline: 'none',
+                            textAlign: 'center'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {gstEnabled && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px 14px' }}>
+                      <span style={{ color: '#8b8b9e', fontSize: '13px' }}>GST Rate:</span>
+                      <input
+                        type="number"
+                        value={gstRate}
+                        onChange={(e) => setGstRate(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                        style={{
+                          width: '60px',
+                          padding: '4px',
+                          background: 'rgba(0,0,0,0.2)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          outline: 'none',
+                          textAlign: 'center'
+                        }}
+                      />
+                      <span style={{ color: '#ffffff', fontSize: '13px' }}>%</span>
+                    </div>
+                  )}
+
+                  {showTipInput && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px 14px' }}>
+                      <span style={{ color: '#8b8b9e', fontSize: '13px', fontWeight: '600' }}>Add Tip / Service Charge:</span>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {[0, 20, 50, 100].map(val => (
+                          <button
+                            key={val}
+                            onClick={() => setTipAmount(val)}
+                            style={{
+                              padding: '6px 12px',
+                              background: tipAmount === val ? '#6366f1' : 'rgba(255,255,255,0.05)',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {val === 0 ? 'No Tip' : `₹${val}`}
+                          </button>
+                        ))}
+                        <input
+                          type="number"
+                          placeholder="Custom Tip"
+                          value={tipAmount || ''}
+                          onChange={(e) => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                          style={{
+                            flex: 1,
+                            minWidth: '80px',
+                            padding: '6px 10px',
+                            background: 'rgba(0,0,0,0.2)',
+                            color: '#ffffff',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {showNotesInput && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px 14px' }}>
+                      <span style={{ color: '#8b8b9e', fontSize: '13px', fontWeight: '600' }}>Special Instructions / Order Note:</span>
+                      <textarea
+                        value={orderNotes}
+                        onChange={(e) => setOrderNotes(e.target.value)}
+                        placeholder="e.g. eggless, double cream, write Happy Birthday..."
+                        rows={2}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: 'rgba(0,0,0,0.2)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          resize: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Customer Info Preview */}
+                  {selectedCustomer && (
+                    <div style={{
+                      background: 'rgba(99, 102, 241, 0.05)',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(99, 102, 241, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{ fontSize: '24px' }}>👤</div>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>{selectedCustomer.name}</div>
+                        <div style={{ fontSize: '12px', color: '#8b8b9e', marginTop: '2px' }}>{selectedCustomer.phone || 'No phone'}</div>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {splitPayments.map((payment, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                {/* Right Side: Payment Methods, Numpad & Details */}
+                <div style={{ display: 'grid', gridTemplateColumns: paymentMethod === 'SPLIT' || screenSize === 'small' ? '1fr' : '1fr auto', gap: '16px', alignItems: 'start' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '12px' : '16px' }}>
+                  
+                  {/* Payment Methods Grid */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Payment Method
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'CASH', label: 'Cash', icon: '💵' },
+                        { id: 'CARD', label: 'Card', icon: '💳' },
+                        { id: 'UPI', label: 'UPI', icon: '📱' },
+                        { id: 'WALLET', label: 'Wallet', icon: '👛' },
+                        { id: 'SPLIT', label: 'Split', icon: '💰' }
+                      ].map(method => {
+                        const active = paymentMethod === method.id;
+                        return (
+                          <button
+                            key={method.id}
+                            onClick={() => {
+                              setPaymentMethod(method.id);
+                              if (method.id === 'SPLIT') {
+                                setSplitPayments([{ method: 'CASH', amount: cartTotal }]);
+                              } else {
+                                // Default to exact amount on method switch
+                                setPaymentAmount(cartTotal.toFixed(2));
+                              }
+                            }}
+                            style={{
+                              padding: screenSize === 'small' ? '10px 4px' : '12px 6px',
+                              background: active ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'rgba(255, 255, 255, 0.02)',
+                              color: active ? '#ffffff' : '#b2b2c5',
+                              border: active ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.05)',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: active ? '0 4px 12px rgba(99, 102, 241, 0.3)' : 'none'
+                            }}
+                          >
+                            <span style={{ fontSize: '18px' }}>{method.icon}</span>
+                            {method.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Quick Cash Suggestions - only for Cash */}
+                  {paymentMethod === 'CASH' && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#8b8b9e', width: '100%', fontWeight: '600' }}>Quick Cash</span>
+                      {suggestions.map((val) => (
+                        <button
+                          key={val}
+                          onClick={() => setPaymentAmount(val.toString())}
+                          style={{
+                            padding: '8px 12px',
+                            background: parsedAmount === val ? '#6366f1' : 'rgba(255, 255, 255, 0.04)',
+                            color: '#ffffff',
+                            border: parsedAmount === val ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.06)',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          ₹{val}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Split Payment Interface */}
+                  {paymentMethod === 'SPLIT' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e' }}>Split Bill Details</span>
+                        <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
+                          Remaining: ₹{(cartTotal - splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0)).toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(0,0,0,0.1)', padding: '8px 10px', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '12px', color: '#8b8b9e' }}>Split equally:</span>
+                        <input
+                          type="number"
+                          value={splitByPeople}
+                          onChange={(e) => setSplitByPeople(parseInt(e.target.value) || 0)}
+                          min="1"
+                          max="20"
+                          style={{
+                            width: '50px',
+                            padding: '4px',
+                            background: 'rgba(255,255,255,0.05)',
+                            color: '#ffffff',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '4px',
+                            textAlign: 'center',
+                            outline: 'none',
+                            fontSize: '12px'
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (splitByPeople > 0) {
+                              const amt = cartTotal / splitByPeople;
+                              setSplitPayments(Array(splitByPeople).fill(null).map(() => ({ method: 'CASH', amount: amt })));
+                            }
+                          }}
+                          disabled={splitByPeople < 1}
+                          style={{
+                            padding: '4px 10px',
+                            background: splitByPeople >= 1 ? '#6366f1' : 'rgba(255,255,255,0.05)',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+
+                      {splitPayments.map((payment, index) => (
+                        <div key={index} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <select
+                            value={payment.method}
+                            onChange={(e) => {
+                              const updated = [...splitPayments];
+                              updated[index].method = e.target.value;
+                              setSplitPayments(updated);
+                            }}
+                            style={{
+                              padding: '8px',
+                              background: '#1a1a2e',
+                              color: '#ffffff',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              flex: 1
+                            }}
+                          >
+                            <option value="CASH">💵 Cash</option>
+                            <option value="CARD">💳 Card</option>
+                            <option value="UPI">📱 UPI</option>
+                            <option value="WALLET">👛 Wallet</option>
+                          </select>
+                          <input
+                            type="number"
+                            value={payment.amount}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              const updated = [...splitPayments];
+                              updated[index].amount = val;
+                              setSplitPayments(updated);
+                            }}
+                            style={{
+                              padding: '8px',
+                              background: '#1a1a2e',
+                              color: '#ffffff',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              width: '90px'
+                            }}
+                          />
+                          {splitPayments.length > 1 && (
+                            <button
+                              onClick={() => setSplitPayments(splitPayments.filter((_, i) => i !== index))}
+                              style={{ padding: '6px 8px', background: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => setSplitPayments([...splitPayments, { method: 'CASH', amount: 0 }])}
+                        style={{ width: '100%', padding: '8px', background: 'transparent', color: '#a2a2bd', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        + Add Method
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* Dedicated Numpad Panel */}
+                {(paymentMethod !== 'SPLIT') && (() => {
+                  const handleCheckoutNumpad = (val) => {
+                    let current = paymentAmount === undefined || paymentAmount === null ? '' : String(paymentAmount);
+                    if (val === 'C') {
+                      setPaymentAmount('');
+                    } else if (val === '⌫') {
+                      setPaymentAmount(current.slice(0, -1));
+                    } else if (val === '.') {
+                      if (!current.includes('.')) setPaymentAmount(current + '.');
+                    } else {
+                      setPaymentAmount(current + val);
+                    }
+                  };
+
+                  const displayAmount = paymentAmount || '';
+                  const parsedDisplay = parseFloat(displayAmount) || 0;
+                  const diff = parsedDisplay - cartTotal;
+                  const hasAmount = displayAmount !== '';
+                  const numpadWidth = screenSize === 'small' ? '100%' : '220px';
+
+                  return (
+                    <div style={{
+                      width: numpadWidth,
+                      flexShrink: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0px',
+                      background: 'rgba(0,0,0,0.25)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '20px',
+                      overflow: 'hidden'
+                    }}>
+
+                      {/* Display Screen */}
+                      <div style={{
+                        background: 'rgba(0,0,0,0.4)',
+                        padding: screenSize === 'small' ? '14px 16px 12px' : '16px 18px 14px',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Amount Tendered</div>
+                        <div style={{
+                          fontSize: screenSize === 'small' ? '24px' : '28px',
+                          fontWeight: '800',
+                          color: '#ffffff',
+                          letterSpacing: '-0.02em',
+                          minHeight: '32px',
+                          fontVariantNumeric: 'tabular-nums'
+                        }}>
+                          ₹{displayAmount || '0'}
+                        </div>
+                        {hasAmount && (
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '5px 10px',
+                            borderRadius: '8px',
+                            background: diff >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                            border: `1px solid ${diff >= 0 ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontSize: '11px', color: diff >= 0 ? '#10b981' : '#ef4444', fontWeight: '600' }}>
+                              {diff >= 0 ? 'Change' : 'Short'}
+                            </span>
+                            <span style={{ fontSize: '14px', fontWeight: '800', color: diff >= 0 ? '#10b981' : '#ef4444' }}>
+                              ₹{Math.abs(diff).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setPaymentAmount(cartTotal.toFixed(2))}
+                          style={{
+                            marginTop: '8px',
+                            width: '100%',
+                            padding: '6px',
+                            background: 'rgba(99,102,241,0.1)',
+                            border: '1px solid rgba(99,102,241,0.2)',
+                            borderRadius: '8px',
+                            color: '#818cf8',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            letterSpacing: '0.03em'
+                          }}
+                        >
+                          EXACT  ₹{cartTotal.toFixed(2)}
+                        </button>
+                      </div>
+
+                      {/* Numpad Keys */}
+                      <div style={{ padding: screenSize === 'small' ? '10px' : '12px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '6px' : '8px' }}>
+                        {[
+                          '7', '8', '9',
+                          '4', '5', '6',
+                          '1', '2', '3',
+                          '.', '0', '⌫'
+                        ].map((key) => {
+                          const isBackspace = key === '⌫';
+                          const isDot = key === '.';
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => handleCheckoutNumpad(key)}
+                              style={{
+                                minHeight: screenSize === 'small' ? '52px' : '44px',
+                                background: isBackspace
+                                  ? 'rgba(239,68,68,0.1)'
+                                  : isDot
+                                  ? 'rgba(255,255,255,0.03)'
+                                  : 'rgba(255,255,255,0.05)',
+                                border: isBackspace
+                                  ? '1px solid rgba(239,68,68,0.2)'
+                                  : '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: '10px',
+                                color: isBackspace ? '#ef4444' : '#ffffff',
+                                fontSize: isBackspace ? '16px' : screenSize === 'small' ? '20px' : '18px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                transition: 'background 0.1s, transform 0.1s',
+                                outline: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                WebkitTapHighlightColor: 'transparent'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = isBackspace ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)';
+                                e.currentTarget.style.transform = 'scale(0.97)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = isBackspace ? 'rgba(239,68,68,0.1)' : (isDot ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)');
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                            >
+                              {key}
+                            </button>
+                          );
+                        })}
+                        {/* Full-width Clear button */}
+                        <button
+                          type="button"
+                          onClick={() => handleCheckoutNumpad('C')}
+                          style={{
+                            gridColumn: '1 / -1',
+                            padding: screenSize === 'small' ? '14px' : '10px',
+                            background: 'rgba(99,102,241,0.08)',
+                            border: '1px solid rgba(99,102,241,0.15)',
+                            borderRadius: '10px',
+                            color: '#818cf8',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            letterSpacing: '0.05em',
+                            transition: 'background 0.15s',
+                            WebkitTapHighlightColor: 'transparent'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.08)'}
+                        >
+                          CLEAR
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                  {/* Receipt Options */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.04)'
+                  }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Receipt Delivery
+                    </label>
                     <select
-                      value={payment.method}
-                      onChange={(e) => {
-                        const updated = [...splitPayments];
-                        updated[index].method = e.target.value;
-                        setSplitPayments(updated);
-                      }}
+                      value={receiptDelivery}
+                      onChange={(e) => setReceiptDelivery(e.target.value)}
                       style={{
+                        width: '100%',
                         padding: '10px',
-                        background: '#2d2d44',
+                        background: '#1a1a2e',
                         color: '#ffffff',
-                        border: '1px solid #3d3d5c',
-                        borderRadius: '6px',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '8px',
                         fontSize: '13px',
-                        flex: 1
+                        outline: 'none',
+                        marginBottom: '10px'
                       }}
                     >
-                      <option value="CASH">💵 Cash</option>
-                      <option value="CARD">💳 Card</option>
-                      <option value="UPI">📱 UPI</option>
-                      <option value="WALLET">👛 Wallet</option>
+                      <option value="none">Thermal Print Only</option>
+                      <option value="email">📧 Email Receipt</option>
+                      <option value="sms">📱 SMS Receipt</option>
+                      <option value="both">📧 + 📱 Email & SMS</option>
                     </select>
-                    <input
-                      type="number"
-                      value={payment.amount}
-                      onChange={(e) => {
-                        const newAmount = parseFloat(e.target.value) || 0;
-                        const updated = [...splitPayments];
-                        updated[index].amount = newAmount;
-                        
-                        // Auto-fill remaining amount in the next payment row
-                        const currentTotal = updated.reduce((sum, p) => sum + (p.amount || 0), 0);
-                        const remaining = cartTotal - currentTotal;
-                        
-                        // Find the next payment row that's empty or has 0 amount
-                        const nextEmptyIndex = updated.findIndex((p, i) => i > index && (!p.amount || p.amount === 0));
-                        if (nextEmptyIndex !== -1 && remaining > 0) {
-                          updated[nextEmptyIndex].amount = remaining;
-                        } else if (remaining > 0 && index === splitPayments.length - 1) {
-                          // If this is the last row and there's remaining, add a new row
-                          updated.push({ method: 'CASH', amount: remaining });
-                        }
-                        
-                        setSplitPayments(updated);
-                      }}
-                      placeholder="Amount"
-                      style={{
-                        padding: '10px',
-                        background: '#2d2d44',
-                        color: '#ffffff',
-                        border: '1px solid #3d3d5c',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        width: '100px'
-                      }}
-                    />
-                    {splitPayments.length > 1 && (
-                      <button
-                        onClick={() => {
-                          setSplitPayments(splitPayments.filter((_, i) => i !== index));
-                        }}
+
+                    {(receiptDelivery === 'email' || receiptDelivery === 'both') && (
+                      <input
+                        type="email"
+                        value={receiptEmail}
+                        onChange={(e) => setReceiptEmail(e.target.value)}
+                        placeholder="customer@email.com"
                         style={{
-                          padding: '8px',
-                          background: '#ef4444',
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: 'rgba(0,0,0,0.2)',
                           color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer'
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          outline: 'none',
+                          marginBottom: '8px'
                         }}
-                      >
-                        ✕
-                      </button>
+                      />
+                    )}
+                    
+                    {(receiptDelivery === 'sms' || receiptDelivery === 'both') && (
+                      <input
+                        type="tel"
+                        value={receiptPhone}
+                        onChange={(e) => setReceiptPhone(e.target.value)}
+                        placeholder="Mobile number"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: 'rgba(0,0,0,0.2)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          outline: 'none'
+                        }}
+                      />
                     )}
                   </div>
-                ))}
-                <button
-                  onClick={() => setSplitPayments([...splitPayments, { method: 'CASH', amount: 0 }])}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: '#2d2d44',
-                    color: '#e0e0e0',
-                    border: '1px dashed #3d3d5c',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    marginTop: '8px'
-                  }}
-                >
-                  + Add Payment Method
-                </button>
-                <div style={{ marginTop: '12px', fontSize: '13px', color: '#8b8b9e' }}>
-                  Total: ₹{splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)} / ₹{cartTotal.toFixed(2)}
-                </div>
-              </div>
-            )}
 
-            {/* Payment Amount Input for Card/UPI/Wallet */}
-            {paymentMethod !== 'CASH' && (
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block' }}>
-                  Enter Amount
-                </label>
-                <input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder={`₹${cartTotal.toFixed(2)}`}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    background: '#1a1a2e',
-                    color: '#ffffff',
-                    border: '1px solid #2d2d44',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-            )}
+                  {/* Actions buttons */}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: screenSize === 'small' ? '4px' : '8px' }}>
+                    <button
+                      onClick={() => {
+                        setShowPaymentModal(false);
+                        setPaymentAmount('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: screenSize === 'small' ? '16px' : '14px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        fontSize: screenSize === 'small' ? '15px' : '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      onClick={processPayment}
+                      disabled={!isPaymentValid}
+                      style={{
+                        flex: 1.5,
+                        padding: screenSize === 'small' ? '16px' : '14px',
+                        background: isPaymentValid 
+                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                          : 'rgba(255, 255, 255, 0.03)',
+                        color: isPaymentValid ? '#ffffff' : '#8b8b9e',
+                        border: isPaymentValid ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
+                        borderRadius: '10px',
+                        fontSize: screenSize === 'small' ? '15px' : '14px',
+                        fontWeight: '700',
+                        cursor: isPaymentValid ? 'pointer' : 'not-allowed',
+                        transition: 'all 0.2s',
+                        boxShadow: isPaymentValid ? '0 4px 14px rgba(16, 185, 129, 0.25)' : 'none',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                    >
+                      Complete & Print
+                    </button>
+                  </div>
 
-            {/* Customer Info */}
-            {selectedCustomer && (
-              <div style={{ background: '#1a1a2e', padding: '12px', borderRadius: '8px', marginBottom: '24px', border: '1px solid #2d2d44' }}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>
-                  {selectedCustomer.name}
                 </div>
-                <div style={{ fontSize: '12px', color: '#8b8b9e' }}>
-                  {selectedCustomer.phone}
-                </div>
-              </div>
-            )}
 
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  setPaymentAmount('');
-                }}
-                style={{
-                  flex: 1,
-                  padding: '16px',
-                  background: '#2d2d44',
-                  color: '#e0e0e0',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={processPayment}
-                disabled={paymentMethod !== 'CASH' && (!paymentAmount || parseFloat(paymentAmount) < cartTotal)}
-                style={{
-                  flex: 1,
-                  padding: '16px',
-                  background: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? '#6366f1' : '#2d2d44',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? 'pointer' : 'not-allowed',
-                  opacity: (paymentMethod === 'CASH' || (paymentAmount && parseFloat(paymentAmount) >= cartTotal)) ? 1 : 0.5
-                }}
-              >
-                Complete Payment
-              </button>
+                </div>
+
+              </div>
+
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Split Bill Modal */}
       {showSplitBillModal && (
@@ -5167,7 +5892,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 5000
         }}>
           <div style={{
             background: '#ffffff',
@@ -5290,7 +6015,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 5000
         }}>
           <div style={{
             background: '#ffffff',
@@ -5395,7 +6120,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 5000
         }}>
           <div style={{
             background: '#ffffff',

@@ -2,6 +2,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import speechTranscriptionService from '../../services/voice/SpeechTranscriptionService';
 import orderParserService from '../../services/voice/OrderParserService';
 
+const LANGUAGES = [
+  { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
+  { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
+  { code: 'en-IN', name: 'English (India)', flag: '🇮🇳' },
+  { code: 'hi-IN', name: 'Hindi', flag: '🇮🇳' },
+  { code: 'kn-IN', name: 'Kannada', flag: '🇮🇳' },
+  { code: 'ta-IN', name: 'Tamil', flag: '🇮🇳' },
+  { code: 'te-IN', name: 'Telugu', flag: '🇮🇳' },
+  { code: 'ml-IN', name: 'Malayalam', flag: '🇮🇳' }
+];
+
 /**
  * Voice Order Recorder Component
  * Allows waiters to speak orders naturally using Web Speech API
@@ -16,7 +27,6 @@ function VoiceOrderRecorder({
   const [parsedOrder, setParsedOrder] = useState(null);
   const [interimTranscript, setInterimTranscript] = useState('');
   const [finalTranscript, setFinalTranscript] = useState('');
-  const [showTranscriptConfirmation, setShowTranscriptConfirmation] = useState(false);
   const [showTextInput, setShowTextInput] = useState(false);
   const [manualInput, setManualInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -25,31 +35,42 @@ function VoiceOrderRecorder({
   const [selectedLanguage, setSelectedLanguage] = useState('en-US');
   const [confidenceThreshold, setConfidenceThreshold] = useState(0.6);
   const [retryCount, setRetryCount] = useState(0);
-  const [maxRetries] = useState(2);
+  const maxRetries = 2;
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [audioLevel, setAudioLevel] = useState(0);
   const [hasSpeechActivity, setHasSpeechActivity] = useState(false);
   const [error, setError] = useState(null);
   
-  const timerRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const suggestionsRef = useRef(null);
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const microphoneRef = useRef(null);
+  const streamRef = useRef(null);
+  const isRecordingRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const animationFrameRef = useRef(null);
+  const textareaRef = useRef(null);
+  const lastInputMethodRef = useRef('voice');
+
+  // Keep a ref mirror of isRecording so async loops (audio meter, retries)
+  // always read the live value instead of a stale closure.
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
       if (microphoneRef.current) {
         microphoneRef.current.disconnect();
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
@@ -58,13 +79,22 @@ function VoiceOrderRecorder({
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      console.log('Network connection restored');
+      // Only clear the error if it's the network one we set - don't
+      // clobber an unrelated error (e.g. mic permission) that might be showing.
+      setError(prev => (prev === 'Network connection lost. Please check your internet connection.' ? null : prev));
     };
     
     const handleOffline = () => {
       setIsOnline(false);
-      console.log('Network connection lost');
       setError('Network connection lost. Please check your internet connection.');
+      // Previously the mic kept running (and the UI stayed stuck on
+      // "Recording...") even after connectivity dropped. Stop it now.
+      if (isRecordingRef.current) {
+        isRecordingRef.current = false;
+        setIsRecording(false);
+        stopAudioMonitoring();
+        speechTranscriptionService.stopListening();
+      }
     };
     
     window.addEventListener('online', handleOnline);
@@ -80,6 +110,7 @@ function VoiceOrderRecorder({
   const startAudioMonitoring = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       analyserRef.current = audioContextRef.current.createAnalyser();
       microphoneRef.current = audioContextRef.current.createMediaStreamSource(stream);
@@ -89,6 +120,10 @@ function VoiceOrderRecorder({
       const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
       
       const updateAudioLevel = () => {
+        // Use the ref (not the isRecording state) so this loop always sees the
+        // live recording status instead of the value captured when it started.
+        if (!isRecordingRef.current || !analyserRef.current) return;
+
         analyserRef.current.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
         setAudioLevel(average / 255);
@@ -97,9 +132,7 @@ function VoiceOrderRecorder({
           setHasSpeechActivity(true);
         }
         
-        if (isRecording) {
-          requestAnimationFrame(updateAudioLevel);
-        }
+        animationFrameRef.current = requestAnimationFrame(updateAudioLevel);
       };
       
       updateAudioLevel();
@@ -109,16 +142,58 @@ function VoiceOrderRecorder({
   };
 
   const stopAudioMonitoring = () => {
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     if (microphoneRef.current) {
       microphoneRef.current.disconnect();
       microphoneRef.current = null;
     }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (streamRef.current) {
+      // Stop the actual mic tracks - otherwise the browser's "mic in use"
+      // indicator stays on and the mic stays reserved after recording ends.
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
     setAudioLevel(0);
     setHasSpeechActivity(false);
+  };
+
+  // Shared by both the recording and parsing error paths - previously this
+  // exact if/else chain was duplicated in two places and had drifted apart.
+  const getErrorDetails = (err) => {
+    let message = 'Failed to process transcription. Please try again.';
+    let shouldRetry = false;
+
+    if (err.message) {
+      if (err.message.includes('network') || err.message.includes('connection')) {
+        message = 'Network error. Please check your internet connection and try again.';
+        shouldRetry = true;
+      } else if (err.message.includes('permission') || err.message.includes('allowed')) {
+        message = 'Microphone permission denied. Please allow microphone access in your browser settings.';
+      } else if (err.message.includes('not-allowed') || err.message.includes('denied')) {
+        message = 'Access denied. Please check your browser permissions.';
+      } else if (err.message.includes('no-speech') || err.message.includes('speech')) {
+        message = 'No speech detected. Please speak clearly and closer to the microphone.';
+        shouldRetry = true;
+      } else if (err.message.includes('audio') || err.message.includes('microphone')) {
+        message = 'No microphone found. Please connect a microphone and try again.';
+      } else if (err.message.includes('aborted')) {
+        message = 'Recording was stopped. Please try again.';
+      } else if (err.message.includes('timeout')) {
+        message = 'Request timed out. Please try again.';
+        shouldRetry = true;
+      } else {
+        message = err.message;
+      }
+    }
+
+    return { message, shouldRetry };
   };
 
   const startRecording = async () => {
@@ -128,6 +203,8 @@ function VoiceOrderRecorder({
         return;
       }
 
+      isRecordingRef.current = true;
+      lastInputMethodRef.current = 'voice';
       setIsRecording(true);
       setError(null);
       setFinalTranscript('');
@@ -138,11 +215,13 @@ function VoiceOrderRecorder({
 
       const transcription = await speechTranscriptionService.transcribe({
         language: selectedLanguage,
+        confidenceThreshold,
         onInterimResult: (interim) => {
           setInterimTranscript(interim);
         }
       });
 
+      isRecordingRef.current = false;
       setFinalTranscript(transcription.text);
       setIsRecording(false);
       stopAudioMonitoring();
@@ -152,57 +231,38 @@ function VoiceOrderRecorder({
 
     } catch (err) {
       console.error('Recording error:', err);
+      isRecordingRef.current = false;
       setIsRecording(false);
       stopAudioMonitoring();
-      
-      // Provide specific error messages based on error type
-      let errorMessage = 'Failed to process transcription. Please try again.';
-      let shouldRetry = false;
-      
-      if (err.message) {
-        if (err.message.includes('network') || err.message.includes('connection')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
-          shouldRetry = true;
-        } else if (err.message.includes('permission') || err.message.includes('allowed')) {
-          errorMessage = 'Microphone permission denied. Please allow microphone access in your browser settings.';
-        } else if (err.message.includes('not-allowed') || err.message.includes('denied')) {
-          errorMessage = 'Access denied. Please check your browser permissions.';
-        } else if (err.message.includes('no-speech') || err.message.includes('speech')) {
-          errorMessage = 'No speech detected. Please speak clearly and closer to the microphone.';
-          shouldRetry = true;
-        } else if (err.message.includes('audio') || err.message.includes('microphone')) {
-          errorMessage = 'No microphone found. Please connect a microphone and try again.';
-        } else if (err.message.includes('aborted')) {
-          errorMessage = 'Recording was stopped. Please try again.';
-        } else if (err.message.includes('timeout')) {
-          errorMessage = 'Request timed out. Please try again.';
-          shouldRetry = true;
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      // Auto-retry for certain errors
-      if (shouldRetry && retryCount < maxRetries) {
-        console.log(`Auto-retry ${retryCount + 1}/${maxRetries}`);
-        setRetryCount(prev => prev + 1);
+
+      const { message: errorMessage, shouldRetry } = getErrorDetails(err);
+
+      // Auto-retry for certain errors. Uses retryCountRef rather than the
+      // retryCount state - a state value captured in this closure would go
+      // stale across recursive setTimeout calls and never actually increment,
+      // so retries could exceed maxRetries or never stop.
+      if (shouldRetry && retryCountRef.current < maxRetries) {
+        retryCountRef.current += 1;
+        setRetryCount(retryCountRef.current);
+        console.log(`Auto-retry ${retryCountRef.current}/${maxRetries}`);
         setTimeout(() => {
           startRecording();
         }, 1000);
         return;
       }
-      
+
       setError(errorMessage);
     }
   };
 
   const stopRecording = () => {
+    isRecordingRef.current = false;
     setIsRecording(false);
     stopAudioMonitoring();
     speechTranscriptionService.stopListening();
   };
 
-  const processTranscription = async (text, confidence) => {
+  const processTranscription = async (text, speechConfidence) => {
     setIsProcessing(true);
     setError(null);
 
@@ -211,86 +271,84 @@ function VoiceOrderRecorder({
       
       // Validate parsed order
       const validation = orderParserService.validateOrder(parsed, menuItems);
-      
-      setParsedOrder({
+
+      // Combine speech-recognition confidence with the order-parser's own
+      // confidence - previously speechConfidence was accepted but never
+      // used, so a low-confidence (possibly mis-heard) transcription could
+      // still auto-confirm as long as the parser felt sure about the text
+      // it was given.
+      const overallConfidence = Math.min(
+        typeof speechConfidence === 'number' ? speechConfidence : 1,
+        parsed.confidence
+      );
+
+      const fullOrder = {
         ...parsed,
         transcription: text,
+        speechConfidence,
+        confidence: overallConfidence,
         validation
-      });
+      };
 
-      // Auto-confirm only if very high confidence (> 0.8) and no errors
-      // Lower confidence results require manual confirmation
-      if (validation.valid && parsed.confidence > 0.8) {
-        handleConfirm();
+      setParsedOrder(fullOrder);
+
+      // Auto-confirm only if confidence clears the user's chosen threshold
+      // (previously hardcoded to 0.8, so the slider above did nothing) and
+      // there are no validation errors. Pass fullOrder directly rather than
+      // relying on the parsedOrder state, which hasn't re-rendered yet.
+      if (validation.valid && overallConfidence > confidenceThreshold) {
+        handleConfirm(fullOrder);
       }
 
     } catch (err) {
       console.error('Error processing transcription:', err);
-      
-      // Provide specific error messages based on error type
-      let errorMessage = 'Failed to process transcription. Please try again.';
-      let shouldRetry = false;
-      
-      if (err.message) {
-        if (err.message.includes('network') || err.message.includes('connection')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
-          shouldRetry = true;
-        } else if (err.message.includes('permission') || err.message.includes('allowed')) {
-          errorMessage = 'Microphone permission denied. Please allow microphone access in your browser settings.';
-        } else if (err.message.includes('not-allowed') || err.message.includes('denied')) {
-          errorMessage = 'Access denied. Please check your browser permissions.';
-        } else if (err.message.includes('no-speech') || err.message.includes('speech')) {
-          errorMessage = 'No speech detected. Please speak clearly and closer to the microphone.';
-          shouldRetry = true;
-        } else if (err.message.includes('audio') || err.message.includes('microphone')) {
-          errorMessage = 'No microphone found. Please connect a microphone and try again.';
-        } else if (err.message.includes('aborted')) {
-          errorMessage = 'Recording was stopped. Please try again.';
-        } else if (err.message.includes('timeout')) {
-          errorMessage = 'Request timed out. Please try again.';
-          shouldRetry = true;
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      // Auto-retry for certain errors
-      if (shouldRetry && retryCount < maxRetries) {
-        console.log(`Auto-retry ${retryCount + 1}/${maxRetries}`);
-        setRetryCount(prev => prev + 1);
+
+      const { message: errorMessage, shouldRetry } = getErrorDetails(err);
+
+      if (shouldRetry && retryCountRef.current < maxRetries) {
+        retryCountRef.current += 1;
+        setRetryCount(retryCountRef.current);
+        console.log(`Auto-retry ${retryCountRef.current}/${maxRetries}`);
         setTimeout(() => {
           startRecording();
         }, 1000);
         return;
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleConfirm = () => {
-    if (parsedOrder && onOrderParsed) {
-      onOrderParsed(parsedOrder);
+  const handleConfirm = (orderToConfirm = parsedOrder) => {
+    if (orderToConfirm && onOrderParsed) {
+      onOrderParsed(orderToConfirm);
       resetState();
     }
   };
 
   const handleEdit = () => {
     // Add items to cart for editing using existing cart functionality
-    console.log('Edit button clicked, parsedOrder:', parsedOrder);
     if (parsedOrder && onOrderParsed) {
-      console.log('Calling onOrderParsed with forEditing flag');
       onOrderParsed({ ...parsedOrder, forEditing: true });
       resetState();
-    } else {
-      console.log('Edit failed - no parsedOrder or onOrderParsed');
     }
   };
 
   const handleRetry = () => {
+    retryCountRef.current = 0;
     setRetryCount(0);
+
+    if (lastInputMethodRef.current === 'manual') {
+      // Keep them in the text editor with their previous text intact
+      // instead of silently switching to voice recording.
+      setParsedOrder(null);
+      setError(null);
+      setShowTextInput(true);
+      return;
+    }
+
     resetState();
     startRecording();
   };
@@ -304,13 +362,13 @@ function VoiceOrderRecorder({
     setParsedOrder(null);
     setFinalTranscript('');
     setInterimTranscript('');
-    setShowTranscriptConfirmation(false);
     setShowTextInput(false);
     setManualInput('');
     setSuggestions([]);
     setShowSuggestions(false);
     setSelectedSuggestionIndex(-1);
     setError(null);
+    retryCountRef.current = 0;
     setRetryCount(0);
   };
 
@@ -319,11 +377,7 @@ function VoiceOrderRecorder({
     setManualInput('');
   };
 
-  const handleManualInputChange = (e) => {
-    const value = e.target.value;
-    setManualInput(value);
-    
-    // Get suggestions
+  const refreshSuggestions = (value) => {
     if (value.length >= 1) {
       const newSuggestions = orderParserService.getSuggestions(value, menuItems);
       setSuggestions(newSuggestions);
@@ -333,6 +387,12 @@ function VoiceOrderRecorder({
       setSuggestions([]);
       setShowSuggestions(false);
     }
+  };
+
+  const handleManualInputChange = (e) => {
+    const value = e.target.value;
+    setManualInput(value);
+    refreshSuggestions(value);
   };
 
   const handleSuggestionClick = (suggestion) => {
@@ -372,21 +432,23 @@ function VoiceOrderRecorder({
     
     setIsProcessing(true);
     setError(null);
+    lastInputMethodRef.current = 'manual';
 
     try {
       const parsed = await orderParserService.parseOrder(manualInput, menuItems);
       const validation = orderParserService.validateOrder(parsed, menuItems);
-      
-      setParsedOrder({
+
+      const fullOrder = {
         ...parsed,
         transcription: manualInput,
         validation
-      });
+      };
 
+      setParsedOrder(fullOrder);
       setShowTextInput(false);
-      
+
       if (validation.valid) {
-        handleConfirm();
+        handleConfirm(fullOrder);
       }
     } catch (err) {
       console.error('Error processing manual input:', err);
@@ -423,30 +485,32 @@ function VoiceOrderRecorder({
           </div>
         </div>
 
+        {!isOnline && (
+          <div style={{
+            marginBottom: '16px',
+            padding: '10px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            fontSize: '12px',
+            textAlign: 'center'
+          }}>
+            📡 You're offline. Voice and typed orders need a connection to parse.
+          </div>
+        )}
+
         {/* Language Selection */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             Language
           </div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {[
-              { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
-              { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
-              { code: 'en-IN', name: 'English (India)', flag: '🇮🇳' },
-              { code: 'hi-IN', name: 'Hindi', flag: '🇮🇳' },
-              { code: 'kn-IN', name: 'Kannada', flag: '🇮🇳' },
-              { code: 'ta-IN', name: 'Tamil', flag: '🇮🇳' },
-              { code: 'te-IN', name: 'Telugu', flag: '🇮🇳' },
-              { code: 'ml-IN', name: 'Malayalam', flag: '🇮🇳' }
-            ].map(lang => (
+            {LANGUAGES.map(lang => (
               <button
                 key={lang.code}
-                onClick={() => {
-                  setSelectedLanguage(lang.code);
-                  if (recognitionRef.current) {
-                    recognitionRef.current.lang = lang.code;
-                  }
-                }}
+                onClick={() => setSelectedLanguage(lang.code)}
+                aria-pressed={selectedLanguage === lang.code}
                 style={{
                   padding: '6px 12px',
                   backgroundColor: selectedLanguage === lang.code ? '#2563eb' : '#f3f4f6',
@@ -497,25 +561,31 @@ function VoiceOrderRecorder({
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
           <button
             onClick={startRecording}
+            disabled={!isOnline}
+            aria-disabled={!isOnline}
             style={{
               padding: '12px 24px',
-              backgroundColor: '#2563eb',
+              backgroundColor: isOnline ? '#2563eb' : '#93c5fd',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
               fontSize: '14px',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: isOnline ? 'pointer' : 'not-allowed',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
               transition: 'all 0.15s ease'
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#1d4ed8';
-              e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.15)';
+              if (isOnline) {
+                e.target.style.backgroundColor = '#1d4ed8';
+                e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.15)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#2563eb';
-              e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+              if (isOnline) {
+                e.target.style.backgroundColor = '#2563eb';
+                e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+              }
             }}
           >
             🎤 Start Recording
@@ -569,6 +639,11 @@ function VoiceOrderRecorder({
         <p style={{ margin: '0', color: '#6b7280', fontSize: '14px' }}>
           Analyzing your order
         </p>
+        {finalTranscript && (
+          <p style={{ margin: '12px 0 0', color: '#9ca3af', fontSize: '13px', fontStyle: 'italic' }}>
+            "{finalTranscript}"
+          </p>
+        )}
       </div>
     );
   }
@@ -593,16 +668,37 @@ function VoiceOrderRecorder({
           </div>
         </div>
 
+        {/* Live mic level meter */}
+        <div
+          role="progressbar"
+          aria-label="Microphone input level"
+          aria-valuenow={Math.round(audioLevel * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          style={{
+            height: '8px',
+            borderRadius: '4px',
+            backgroundColor: '#f3f4f6',
+            overflow: 'hidden',
+            marginBottom: '8px'
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${Math.min(100, Math.round(audioLevel * 100))}%`,
+              backgroundColor: hasSpeechActivity ? '#22c55e' : '#93c5fd',
+              transition: 'width 0.1s ease, background-color 0.2s ease'
+            }}
+          />
+        </div>
+        <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginBottom: '16px' }}>
+          {hasSpeechActivity ? '🎧 Picking up your voice' : 'Waiting for speech...'}
+        </div>
+
         {/* Language indicator */}
         <div style={{ marginBottom: '16px', fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>
-          🌐 {selectedLanguage === 'en-US' ? 'English (US)' : 
-              selectedLanguage === 'en-GB' ? 'English (UK)' :
-              selectedLanguage === 'en-IN' ? 'English (India)' :
-              selectedLanguage === 'hi-IN' ? 'Hindi' :
-              selectedLanguage === 'kn-IN' ? 'Kannada' :
-              selectedLanguage === 'ta-IN' ? 'Tamil' :
-              selectedLanguage === 'te-IN' ? 'Telugu' :
-              selectedLanguage === 'ml-IN' ? 'Malayalam' : selectedLanguage}
+          🌐 {LANGUAGES.find(lang => lang.code === selectedLanguage)?.name || selectedLanguage}
         </div>
 
         <button
@@ -648,8 +744,23 @@ function VoiceOrderRecorder({
           <h3 style={{ margin: 0, color: '#7c3aed' }}>Type Your Order</h3>
         </div>
 
+        {error && (
+          <div style={{
+            marginBottom: '16px',
+            padding: '10px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            fontSize: '13px'
+          }}>
+            ❌ {error}
+          </div>
+        )}
+
         <div style={{ position: 'relative', marginBottom: '16px' }}>
           <textarea
+            ref={textareaRef}
             value={manualInput}
             onChange={handleManualInputChange}
             onKeyDown={handleKeyDown}
@@ -728,7 +839,14 @@ function VoiceOrderRecorder({
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
               <button
                 key={num}
-                onClick={() => setManualInput(prev => prev + num)}
+                onClick={() => {
+                  const needsSpace = manualInput.length > 0 && !/\s$/.test(manualInput);
+                  const next = manualInput + (needsSpace ? ' ' : '') + num;
+                  setManualInput(next);
+                  refreshSuggestions(next);
+                  textareaRef.current?.focus();
+                }}
+                aria-label={`Insert ${num}`}
                 style={{
                   padding: '6px 12px',
                   backgroundColor: '#f3f4f6',
@@ -824,10 +942,60 @@ function VoiceOrderRecorder({
         padding: '24px',
         boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-          <span style={{ fontSize: '24px', marginRight: '8px' }}>✓</span>
-          <h3 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>Order Parsed</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: '24px', marginRight: '8px' }}>{parsedOrder.validation?.valid === false ? '⚠️' : '✓'}</span>
+            <h3 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+              {parsedOrder.validation?.valid === false ? 'Needs Review' : 'Order Parsed'}
+            </h3>
+          </div>
+          {typeof parsedOrder.confidence === 'number' && (
+            <span style={{
+              fontSize: '11px',
+              fontWeight: '600',
+              padding: '3px 8px',
+              borderRadius: '999px',
+              backgroundColor: parsedOrder.confidence > confidenceThreshold ? '#dcfce7' : '#fef3c7',
+              color: parsedOrder.confidence > confidenceThreshold ? '#166534' : '#92400e'
+            }}>
+              {Math.round(parsedOrder.confidence * 100)}% confidence
+            </span>
+          )}
         </div>
+
+        {/* Validation issues, if any - previously computed by orderParserService
+            but never surfaced anywhere in the UI */}
+        {parsedOrder.validation?.valid === false && (
+          <div style={{
+            marginBottom: '12px',
+            padding: '10px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            color: '#b91c1c',
+            fontSize: '12px'
+          }}>
+            {Array.isArray(parsedOrder.validation.errors) && parsedOrder.validation.errors.length > 0
+              ? parsedOrder.validation.errors.join(' ')
+              : 'Please double-check this order before adding it.'}
+          </div>
+        )}
+
+        {/* What was actually heard/typed, so the user can sanity-check the
+            parse - previously captured on the order object but never shown. */}
+        {parsedOrder.transcription && (
+          <div style={{
+            marginBottom: '12px',
+            padding: '8px 12px',
+            borderRadius: '6px',
+            backgroundColor: '#f9fafb',
+            color: '#6b7280',
+            fontSize: '12px',
+            fontStyle: 'italic'
+          }}>
+            "{parsedOrder.transcription}"
+          </div>
+        )}
 
         {/* Table */}
         {parsedOrder.tableNumber && (

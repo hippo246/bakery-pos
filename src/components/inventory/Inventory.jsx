@@ -3,7 +3,7 @@ import SpeakButton from '../voice/SpeakButton';
 import textToSpeechService from '../../services/voice/TextToSpeechService';
 import useScreenSize from '../../hooks/useScreenSize';
 
-export default function SimpleInventory({ inventory = [], setInventory, onNavigate }) {
+export default function SimpleInventory({ inventory = [], setInventory, onNavigate, darkMode = true }) {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [showModal, setShowModal] = useState(false);
@@ -509,57 +509,64 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
     };
   };
 
+  // Theme colors
+  const t = {
+    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
+    bgCard:   darkMode ? '#252538' : '#ffffff',
+    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
+    border:   darkMode ? '#2d2d44' : '#e2e8f0',
+    text:     darkMode ? '#ffffff' : '#111827',
+    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    accent:   '#6366f1',
+  };
+
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#ffffff',
-      fontFamily: 'MS Sans Serif, Arial, sans-serif'
+      background: t.bg,
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
     }}>
       {/* Header */}
       <div style={{
-        background: '#c0c0c0',
-        border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-        padding: screenSize === 'small' ? '8px' : '4px',
-        marginBottom: screenSize === 'small' ? '12px' : '8px'
+        background: darkMode ? '#1f1f35' : '#ffffff',
+        borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+        padding: '20px 32px'
       }}>
         <div style={{
-          background: '#000080',
-          color: '#ffffff',
-          padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-          fontSize: screenSize === 'small' ? '11px' : '12px',
-          fontWeight: 'bold',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-          flexDirection: screenSize === 'small' ? 'column' : 'row',
-          gap: screenSize === 'small' ? '8px' : '0'
+          alignItems: 'center',
+          gap: '12px',
+          flexWrap: 'wrap'
         }}>
-          <span>INVENTORY MANAGEMENT</span>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#ffffff' }}>📦 Inventory Management</h2>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             {!isOnline && (
               <div style={{
-                background: '#ff0000',
+                background: '#ef4444',
                 color: '#ffffff',
-                padding: '2px 6px',
-                fontSize: '9px',
+                padding: '4px 10px',
+                fontSize: '11px',
                 fontWeight: 'bold',
-                borderRadius: '4px'
+                borderRadius: '6px'
               }}>
-                OFFLINE
+                ⚡ OFFLINE
               </div>
             )}
             {pendingOperations.length > 0 && (
               <div style={{
-                background: '#ff6600',
+                background: '#f59e0b',
                 color: '#ffffff',
-                padding: '2px 6px',
-                fontSize: '9px',
+                padding: '4px 10px',
+                fontSize: '11px',
                 fontWeight: 'bold',
-                borderRadius: '4px'
+                borderRadius: '6px'
               }}>
-                {pendingOperations.length} PENDING
+                {pendingOperations.length} PENDING SYNC
               </div>
             )}
             <SpeakButton
@@ -576,229 +583,120 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             <button
               onClick={() => onNavigate?.('dashboard')}
               style={{
-                background: '#c0c0c0',
-                border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-                color: '#000000',
-                fontSize: screenSize === 'small' ? '10px' : '10px',
-                fontWeight: 'bold',
-                padding: screenSize === 'small' ? '4px 12px' : '2px 6px',
+                background: '#2d2d48',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: '600',
+                padding: '8px 16px',
+                borderRadius: '8px',
                 cursor: 'pointer'
               }}
             >
-              BACK
+              ← Back
             </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ padding: screenSize === 'small' ? '12px' : '8px', overflow: 'auto', flex: 1 }}>
+      <div style={{ padding: '24px 32px', overflow: 'auto', flex: 1 }}>
         {/* Controls */}
         <div style={{
-          background: '#c0c0c0',
-          border: screenSize === 'small' ? '1px inset #808080' : '2px inset #808080',
-          padding: screenSize === 'small' ? '12px' : '8px',
-          marginBottom: screenSize === 'small' ? '12px' : '8px',
+          background: darkMode ? '#1f1f35' : '#ffffff',
+          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '20px',
           display: 'flex',
-          gap: screenSize === 'small' ? '8px' : '8px',
-          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          gap: '10px',
+          alignItems: 'center',
           flexWrap: 'wrap'
         }}>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search inventory..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
               flex: 1,
-              minWidth: screenSize === 'small' ? '150px' : '200px',
-              padding: screenSize === 'small' ? '6px 8px' : '4px',
-              border: screenSize === 'small' ? '1px inset #808080' : '2px inset #808080',
-              fontSize: screenSize === 'small' ? '11px' : '12px'
+              minWidth: '180px',
+              padding: '8px 12px',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#cbd5e1'}`,
+              borderRadius: '8px',
+              fontSize: '13px',
+              background: darkMode ? '#252538' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#1f2937',
+              outline: 'none'
             }}
           />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
-              padding: screenSize === 'small' ? '6px 8px' : '4px',
-              border: screenSize === 'small' ? '1px inset #808080' : '2px inset #808080',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              background: '#ffffff',
-              cursor: 'pointer'
+              padding: '8px 12px',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#cbd5e1'}`,
+              borderRadius: '8px',
+              fontSize: '13px',
+              background: darkMode ? '#252538' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#1f2937',
+              cursor: 'pointer',
+              outline: 'none'
             }}
           >
             {categories.map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
-          <button
-            onClick={handleAddItem}
-            style={{
-              background: '#000080',
-              color: '#ffffff',
-             	border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            ADD ITEM
-          </button>
-          <button
-            onClick={() => setShowExpiryAlerts(true)}
-            style={{
-              background: expiredCount > 0 ? '#ff0000' : '#ff6600',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            EXPIRY ALERTS ({expiredCount})
-          </button>
-          <button
-            onClick={() => setShowFefoSuggestions(true)}
-            style={{
-              background: '#008000',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            FEFO SUGGESTIONS
-          </button>
-          <button
-            onClick={() => setShowWasteModal(true)}
-            style={{
-              background: '#800080',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            LOG WASTE
-          </button>
-          <button
-            onClick={() => setShowWasteReport(true)}
-            style={{
-              background: '#800000',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            WASTE REPORT
-          </button>
-          <button
-            onClick={() => setShowVendorList(true)}
-            style={{
-              background: '#0066cc',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            VENDORS ({vendors.length})
-          </button>
-          <button
-            onClick={() => setShowPOList(true)}
-            style={{
-              background: '#cc6600',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            PURCHASE ORDERS ({purchaseOrders.length})
-          </button>
-          <button
-            onClick={() => setShowAnalytics(true)}
-            style={{
-              background: '#660099',
-              color: '#ffffff',
-              border: screenSize === 'small' ? '1px outset #ffffff' : '2px outset #ffffff',
-              fontSize: screenSize === 'small' ? '11px' : '12px',
-              fontWeight: 'bold',
-              padding: screenSize === 'small' ? '6px 12px' : '4px 8px',
-              cursor: 'pointer'
-            }}
-          >
-            ANALYTICS
-          </button>
+          <button onClick={handleAddItem} style={{ background: darkMode ? '#6366f1' : '#3b82f6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>+ Add Item</button>
+          <button onClick={() => setShowExpiryAlerts(true)} style={{ background: expiredCount > 0 ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>⏰ Expiry ({expiredCount})</button>
+          <button onClick={() => setShowFefoSuggestions(true)} style={{ background: '#10b981', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>📋 FEFO</button>
+          <button onClick={() => setShowWasteModal(true)} style={{ background: '#8b5cf6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>🗑 Log Waste</button>
+          <button onClick={() => setShowWasteReport(true)} style={{ background: '#ef4444', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>📊 Waste Report</button>
+          <button onClick={() => setShowVendorList(true)} style={{ background: '#3b82f6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>🏭 Vendors ({vendors.length})</button>
+          <button onClick={() => setShowPOList(true)} style={{ background: '#f59e0b', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>🛒 POs ({purchaseOrders.length})</button>
+          <button onClick={() => setShowAnalytics(true)} style={{ background: '#7c3aed', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>📈 Analytics</button>
         </div>
 
         {/* Stats */}
         <div style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '8px'
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '12px',
+          marginBottom: '20px'
         }}>
-          <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
-            padding: '8px',
-            flex: 1
-          }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>TOTAL ITEMS</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{inventory.length}</div>
+          <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Total Items</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>{inventory.length}</div>
+          </div>
+          <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Low Stock</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: lowStockCount > 0 ? '#f59e0b' : '#10b981' }}>{lowStockCount}</div>
+          </div>
+          <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Expiring Soon</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: expiringSoonCount > 0 ? '#f59e0b' : '#10b981' }}>{expiringSoonCount}</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: darkMode ? '#1a1a2e' : '#f8f9fa',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
             padding: '8px',
             flex: 1
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>LOW STOCK</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: lowStockCount > 0 ? '#ff8c00' : '#008000' }}>{lowStockCount}</div>
-          </div>
-          <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
-            padding: '8px',
-            flex: 1
-          }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>EXPIRING SOON</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: expiringSoonCount > 0 ? '#ff6600' : '#008000' }}>{expiringSoonCount}</div>
-          </div>
-          <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
-            padding: '8px',
-            flex: 1
-          }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>TOTAL VALUE</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold' }}>₹{totalValue.toLocaleString()}</div>
+            <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '2px' }}>TOTAL VALUE</div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827' }}>₹{totalValue.toLocaleString()}</div>
           </div>
         </div>
 
         {/* Inventory Table */}
         <div style={{
-          background: '#ffffff',
-          border: '2px inset #808080',
+          background: darkMode ? '#1a1a2e' : '#ffffff',
+          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
           padding: '8px',
           overflow: 'auto'
-        }}>
+        }>
           {filteredItems.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#808080' }}>
+            <div style={{ padding: '20px', textAlign: 'center', color: darkMode ? '#8b8b9e' : '#64748b' }}>
               {search || categoryFilter !== 'ALL' ? 'No items found' : 'No inventory items yet. Add your first item!'}
             </div>
           ) : (
@@ -810,8 +708,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 <div
                   key={item.id}
                   style={{
-                    background: '#ffffff',
-                    border: '1px solid #c0c0c0',
+                    background: darkMode ? '#1a1a2e' : '#f8f9fa',
+                    border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
                     padding: '8px',
                     marginBottom: '4px',
                     display: 'flex',
@@ -820,16 +718,16 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '2px', color: darkMode ? '#ffffff' : '#111827' }}>
                       {item.name}
                     </div>
-                    <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '2px' }}>
                       {item.category}
                     </div>
-                    <div style={{ fontSize: '10px', color: isLowStock ? '#ff8c00' : '#008000', fontWeight: 'bold' }}>
+                    <div style={{ fontSize: '10px', color: isLowStock ? '#ff8c00' : '#10b981', fontWeight: 'bold' }}>
                       Qty: {item.quantity} {item.unit} • Min: {item.minStock} {item.unit}
                     </div>
-                    <div style={{ fontSize: '10px', color: '#808080' }}>
+                    <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
                       Value: ₹{itemValue.toFixed(2)}
                     </div>
                   </div>
@@ -838,9 +736,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleAdjustStock(item, -1)}
                       style={{
                         padding: '4px 8px',
-                        background: '#c0c0c0',
-                        border: '2px outset #ffffff',
-                        color: '#000000',
+                        background: darkMode ? '#252538' : '#e5e7eb',
+                        border: 'none',
+                        color: darkMode ? '#ffffff' : '#111827',
                         fontSize: '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer'
@@ -852,9 +750,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleAdjustStock(item, 1)}
                       style={{
                         padding: '4px 8px',
-                        background: '#c0c0c0',
-                        border: '2px outset #ffffff',
-                        color: '#000000',
+                        background: darkMode ? '#252538' : '#e5e7eb',
+                        border: 'none',
+                        color: darkMode ? '#ffffff' : '#111827',
                         fontSize: '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer'
@@ -866,29 +764,29 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleEditItem(item)}
                       style={{
                         padding: '4px 8px',
-                        background: '#c0c0c0',
-                        border: '2px outset #ffffff',
-                        color: '#000000',
+                        background: darkMode ? '#252538' : '#e5e7eb',
+                        border: 'none',
+                        color: darkMode ? '#ffffff' : '#111827',
                         fontSize: '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer'
                       }}
                     >
-                      EDIT
+                      ✏️
                     </button>
                     <button
                       onClick={() => handleDeleteItem(item.id)}
                       style={{
                         padding: '4px 8px',
-                        background: '#c0c0c0',
-                        border: '2px outset #ffffff',
-                        color: '#000000',
+                        background: darkMode ? '#252538' : '#e5e7eb',
+                        border: 'none',
+                        color: darkMode ? '#ffffff' : '#111827',
                         fontSize: '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer'
                       }}
                     >
-                      DEL
+                      🗑
                     </button>
                   </div>
                 </div>
@@ -913,15 +811,15 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: darkMode ? '#252538' : '#ffffff',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
             padding: '4px',
             maxWidth: '450px',
             width: '90%'
           }}>
             {/* Title Bar */}
             <div style={{
-              background: '#000080',
+              background: '#6366f1',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -934,9 +832,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -949,10 +847,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             </div>
             
             {/* Content */}
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: darkMode ? '#252538' : '#ffffff' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                     Name *
                   </label>
                   <input
@@ -962,14 +860,16 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '2px inset #808080',
-                      fontSize: '12px'
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      fontSize: '12px',
+                      background: darkMode ? '#1a1a2e' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                     Category *
                   </label>
                   <select
@@ -978,9 +878,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '2px inset #808080',
+                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       fontSize: '12px',
-                      background: '#ffffff'
+                      background: darkMode ? '#1a1a2e' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#111827'
                     }}
                   >
                     {categories.filter(c => c !== 'ALL').map(cat => (
@@ -991,7 +892,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Quantity *
                     </label>
                     <input
@@ -1002,14 +903,16 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: '2px inset #808080',
-                        fontSize: '12px'
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
                       }}
                     />
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Unit *
                     </label>
                     <input
@@ -1020,8 +923,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: '2px inset #808080',
-                        fontSize: '12px'
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
                       }}
                     />
                   </div>
@@ -1029,7 +934,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Min Stock
                     </label>
                     <input
@@ -1040,14 +945,16 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: '2px inset #808080',
-                        fontSize: '12px'
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
                       }}
                     />
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Cost per Unit (₹)
                     </label>
                     <input
@@ -1059,8 +966,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: '2px inset #808080',
-                        fontSize: '12px'
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
                       }}
                     />
                   </div>
@@ -1068,7 +977,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Expiry Date
                     </label>
                     <input
@@ -1078,14 +987,16 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: '2px inset #808080',
-                        fontSize: '12px'
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
                       }}
                     />
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Batch Number
                     </label>
                     <input
@@ -1096,8 +1007,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: '2px inset #808080',
-                        fontSize: '12px'
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
                       }}
                     />
                   </div>
@@ -1110,9 +1023,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   style={{
                     flex: 1,
                     padding: '6px',
-                    background: '#c0c0c0',
-                    border: '2px outset #ffffff',
-                    color: '#000000',
+                    background: darkMode ? '#252538' : '#e5e7eb',
+                    border: 'none',
+                    color: darkMode ? '#ffffff' : '#111827',
                     fontSize: '11px',
                     fontWeight: 'bold',
                     cursor: 'pointer'
@@ -1125,9 +1038,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   style={{
                     flex: 1,
                     padding: '6px',
-                    background: '#c0c0c0',
-                    border: '2px outset #ffffff',
-                    color: '#000000',
+                    background: darkMode ? '#252538' : '#3b82f6',
+                    border: 'none',
+                    color: '#ffffff',
                     fontSize: '11px',
                     fontWeight: 'bold',
                     cursor: 'pointer'
@@ -1156,8 +1069,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '600px',
             width: '90%',
@@ -1165,7 +1078,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             overflow: 'auto'
           }}>
             <div style={{
-              background: expiredCount > 0 ? '#ff0000' : '#ff6600',
+              background: expiredCount > 0 ? '#ef4444' : '#f59e0b',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1178,9 +1091,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowExpiryAlerts(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1192,13 +1105,13 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#ff0000' }}>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#ef4444' }}>
                   Expired Items ({getExpiredItems().length})
                 </div>
                 {getExpiredItems().length === 0 ? (
-                  <div style={{ fontSize: '11px', color: '#008000' }}>No expired items</div>
+                  <div style={{ fontSize: '11px', color: '#10b981' }}>No expired items</div>
                 ) : (
                   getExpiredItems().map(item => (
                     <div key={item.id} style={{
@@ -1209,7 +1122,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       fontSize: '11px'
                     }}>
                       <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                      <div style={{ color: '#ff0000' }}>Expired: {new Date(item.expiryDate).toLocaleDateString()}</div>
+                      <div style={{ color: '#ef4444' }}>Expired: {new Date(item.expiryDate).toLocaleDateString()}</div>
                       <div>Qty: {item.quantity} {item.unit} • Batch: {item.batchNumber || 'N/A'}</div>
                     </div>
                   ))
@@ -1220,9 +1133,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     style={{
                       marginTop: '8px',
                       padding: '6px 12px',
-                      background: '#ff0000',
+                      background: '#ef4444',
                       color: '#ffffff',
-                      border: '2px outset #ffffff',
+                      border: 'none',
                       fontSize: '11px',
                       fontWeight: 'bold',
                       cursor: 'pointer'
@@ -1234,11 +1147,11 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </div>
 
               <div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#ff6600' }}>
+                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#f59e0b' }}>
                   Expiring Soon (within 7 days) ({getExpiringItems().length})
                 </div>
                 {getExpiringItems().length === 0 ? (
-                  <div style={{ fontSize: '11px', color: '#008000' }}>No items expiring soon</div>
+                  <div style={{ fontSize: '11px', color: '#10b981' }}>No items expiring soon</div>
                 ) : (
                   getExpiringItems().map(item => {
                     const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
@@ -1251,7 +1164,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                         fontSize: '11px'
                       }}>
                         <div style={{ fontWeight: 'bold' }}>{item.name}</div>
-                        <div style={{ color: '#ff6600' }}>
+                        <div style={{ color: '#f59e0b' }}>
                           Expires: {new Date(item.expiryDate).toLocaleDateString()} ({daysUntilExpiry} days)
                         </div>
                         <div>Qty: {item.quantity} {item.unit} • Batch: {item.batchNumber || 'N/A'}</div>
@@ -1280,8 +1193,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '600px',
             width: '90%',
@@ -1289,7 +1202,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             overflow: 'auto'
           }}>
             <div style={{
-              background: '#008000',
+              background: '#10b981',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1302,9 +1215,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowFefoSuggestions(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1316,12 +1229,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
-              <div style={{ fontSize: '11px', color: '#808080', marginBottom: '12px' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
+              <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '12px' }}>
                 Use items with earliest expiry dates first to minimize waste
               </div>
               {getFefoSuggestions().length === 0 ? (
-                <div style={{ fontSize: '11px', color: '#808080' }}>No items with expiry dates</div>
+                <div style={{ fontSize: '11px', color: '#8b8b9e' }}>No items with expiry dates</div>
               ) : (
                 getFefoSuggestions().map((item, index) => {
                   const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
@@ -1329,7 +1242,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   return (
                     <div key={item.id} style={{
                       background: isUrgent ? '#ffcccc' : '#ccffcc',
-                      border: `1px solid ${isUrgent ? '#ff0000' : '#008000'}`,
+                      border: `1px solid ${isUrgent ? '#ef4444' : '#10b981'}`,
                       padding: '8px',
                       marginBottom: '4px',
                       fontSize: '11px',
@@ -1341,13 +1254,13 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                         <div style={{ fontWeight: 'bold' }}>
                           #{index + 1} {item.name}
                         </div>
-                        <div style={{ color: isUrgent ? '#ff0000' : '#008000' }}>
+                        <div style={{ color: isUrgent ? '#ef4444' : '#10b981' }}>
                           Expires: {new Date(item.expiryDate).toLocaleDateString()} ({daysUntilExpiry} days)
                         </div>
                         <div>Qty: {item.quantity} {item.unit} • Batch: {item.batchNumber || 'N/A'}</div>
                       </div>
                       <div style={{
-                        background: isUrgent ? '#ff0000' : '#008000',
+                        background: isUrgent ? '#ef4444' : '#10b981',
                         color: '#ffffff',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -1380,14 +1293,14 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '500px',
             width: '90%'
           }}>
             <div style={{
-              background: '#800080',
+              background: '#8b5cf6',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1400,9 +1313,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowWasteModal(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1414,7 +1327,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <WasteLogForm
                 inventory={inventory}
                 onLogWaste={(itemId, quantity, reason, staffId) => {
@@ -1443,8 +1356,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '800px',
             width: '90%',
@@ -1452,7 +1365,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             overflow: 'auto'
           }}>
             <div style={{
-              background: '#800000',
+              background: '#ef4444',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1465,9 +1378,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowWasteReport(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1479,7 +1392,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <WasteReport analytics={getWasteAnalytics()} records={wasteRecords} />
             </div>
           </div>
@@ -1508,7 +1421,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
     <form onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Item *
           </label>
           <select
@@ -1518,9 +1431,9 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px',
-              background: '#ffffff'
+              background: '#1a1a2e'
             }}
           >
             <option value="">Select item</option>
@@ -1531,7 +1444,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Quantity *
           </label>
           <input
@@ -1544,14 +1457,14 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Reason *
           </label>
           <select
@@ -1561,9 +1474,9 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px',
-              background: '#ffffff'
+              background: '#1a1a2e'
             }}
           >
             <option value="">Select reason</option>
@@ -1578,7 +1491,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Staff ID
           </label>
           <input
@@ -1589,7 +1502,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
           />
@@ -1603,9 +1516,9 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
-            color: '#000000',
+            background: '#252538',
+            border: 'none',
+            color: '#ffffff',
             fontSize: '11px',
             fontWeight: 'bold',
             cursor: 'pointer'
@@ -1618,9 +1531,9 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#800080',
+            background: '#8b5cf6',
             color: '#ffffff',
-            border: '2px outset #ffffff',
+            border: 'none',
             fontSize: '11px',
             fontWeight: 'bold',
             cursor: 'pointer'
@@ -1640,21 +1553,21 @@ function WasteReport({ analytics, records }) {
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Summary</div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Total Waste Cost</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Waste Cost</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#800000' }}>₹{analytics.totalWasteCost.toFixed(2)}</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Total Records</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Records</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{analytics.totalWasteRecords}</div>
           </div>
         </div>
@@ -1663,7 +1576,7 @@ function WasteReport({ analytics, records }) {
       {Object.keys(analytics.wasteByReason).length > 0 && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Waste by Reason</div>
-          <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px' }}>
+          <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
             {Object.entries(analytics.wasteByReason).map(([reason, cost]) => (
               <div key={reason} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
                 <span>{reason}</span>
@@ -1677,7 +1590,7 @@ function WasteReport({ analytics, records }) {
       {Object.keys(analytics.wasteByItem).length > 0 && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Waste by Item</div>
-          <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px' }}>
+          <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
             {Object.entries(analytics.wasteByItem)
               .sort(([, a], [, b]) => b - a)
               .slice(0, 5)
@@ -1694,7 +1607,7 @@ function WasteReport({ analytics, records }) {
       {records.length > 0 && (
         <div>
           <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Recent Waste Records</div>
-          <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px', maxHeight: '200px', overflow: 'auto' }}>
+          <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
             {records.slice(-10).reverse().map(record => (
               <div key={record.id} style={{
                 borderBottom: '1px solid #c0c0c0',
@@ -1702,11 +1615,11 @@ function WasteReport({ analytics, records }) {
                 fontSize: '11px'
               }}>
                 <div style={{ fontWeight: 'bold' }}>{record.itemName}</div>
-                <div style={{ color: '#808080' }}>
+                <div style={{ color: '#8b8b9e' }}>
                   Qty: {record.quantity} {record.unit} • Cost: ₹{record.totalCost.toFixed(2)}
                 </div>
                 <div style={{ color: '#800000' }}>Reason: {record.reason}</div>
-                <div style={{ fontSize: '10px', color: '#808080' }}>
+                <div style={{ fontSize: '10px', color: '#8b8b9e' }}>
                   {new Date(record.timestamp).toLocaleString()}
                 </div>
               </div>
@@ -1730,8 +1643,8 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '800px',
             width: '90%',
@@ -1739,7 +1652,7 @@ function WasteReport({ analytics, records }) {
             overflow: 'auto'
           }}>
             <div style={{
-              background: '#0066cc',
+              background: '#3b82f6',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1752,9 +1665,9 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowVendorList(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1766,14 +1679,14 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <button
                 onClick={handleAddVendor}
                 style={{
                   padding: '6px 12px',
-                  background: '#0066cc',
+                  background: '#3b82f6',
                   color: '#ffffff',
-                  border: '2px outset #ffffff',
+                  border: 'none',
                   fontSize: '11px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
@@ -1784,11 +1697,11 @@ function WasteReport({ analytics, records }) {
               </button>
 
               {vendors.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#808080' }}>
+                <div style={{ textAlign: 'center', padding: '20px', color: '#8b8b9e' }}>
                   No vendors added yet
                 </div>
               ) : (
-                <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px' }}>
+                <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
                   {vendors.map(vendor => (
                     <div key={vendor.id} style={{
                       borderBottom: '1px solid #c0c0c0',
@@ -1799,10 +1712,10 @@ function WasteReport({ analytics, records }) {
                     }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{vendor.name}</div>
-                        <div style={{ fontSize: '11px', color: '#808080' }}>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
                           Phone: {vendor.phone} • Email: {vendor.email || 'N/A'}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#808080' }}>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
                           Payment Terms: {vendor.paymentTerms || 'N/A'}
                         </div>
                         <div style={{ fontSize: '11px' }}>
@@ -1826,9 +1739,9 @@ function WasteReport({ analytics, records }) {
                           onClick={() => handleEditVendor(vendor)}
                           style={{
                             padding: '4px 8px',
-                            background: '#c0c0c0',
-                            border: '2px outset #ffffff',
-                            color: '#000000',
+                            background: '#252538',
+                            border: 'none',
+                            color: '#ffffff',
                             fontSize: '10px',
                             fontWeight: 'bold',
                             cursor: 'pointer'
@@ -1840,8 +1753,8 @@ function WasteReport({ analytics, records }) {
                           onClick={() => handleDeleteVendor(vendor.id)}
                           style={{
                             padding: '4px 8px',
-                            background: '#ff0000',
-                            border: '2px outset #ffffff',
+                            background: '#ef4444',
+                            border: 'none',
                             color: '#ffffff',
                             fontSize: '10px',
                             fontWeight: 'bold',
@@ -1875,14 +1788,14 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '500px',
             width: '90%'
           }}>
             <div style={{
-              background: '#0066cc',
+              background: '#3b82f6',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1895,9 +1808,9 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowVendorModal(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1909,7 +1822,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <VendorForm
                 vendor={editingVendor}
                 onSave={handleSaveVendor}
@@ -1938,8 +1851,8 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '900px',
             width: '90%',
@@ -1947,7 +1860,7 @@ function WasteReport({ analytics, records }) {
             overflow: 'auto'
           }}>
             <div style={{
-              background: '#cc6600',
+              background: '#f59e0b',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -1960,9 +1873,9 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowPOList(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -1974,14 +1887,14 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <button
                 onClick={handleAddPO}
                 style={{
                   padding: '6px 12px',
-                  background: '#cc6600',
+                  background: '#f59e0b',
                   color: '#ffffff',
-                  border: '2px outset #ffffff',
+                  border: 'none',
                   fontSize: '11px',
                   fontWeight: 'bold',
                   cursor: 'pointer',
@@ -1992,11 +1905,11 @@ function WasteReport({ analytics, records }) {
               </button>
 
               {purchaseOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#808080' }}>
+                <div style={{ textAlign: 'center', padding: '20px', color: '#8b8b9e' }}>
                   No purchase orders yet
                 </div>
               ) : (
-                <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px' }}>
+                <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
                   {purchaseOrders.map(po => {
                     const vendor = vendors.find(v => v.id === po.vendorId);
                     return (
@@ -2009,15 +1922,15 @@ function WasteReport({ analytics, records }) {
                       }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '12px', fontWeight: 'bold' }}>PO #{po.id.slice(-6)}</div>
-                          <div style={{ fontSize: '11px', color: '#808080' }}>
+                          <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
                             Vendor: {vendor?.name || 'Unknown'} • Total: ₹{po.totalCost?.toFixed(2) || '0.00'}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#808080' }}>
+                          <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
                             Items: {po.items?.length || 0} • Expected: {po.expectedDate ? new Date(po.expectedDate).toLocaleDateString() : 'N/A'}
                           </div>
                           <div style={{ fontSize: '11px' }}>
                             Status: <span style={{
-                              background: po.status === 'received' ? '#008000' : po.status === 'approved' ? '#0066cc' : '#ff6600',
+                              background: po.status === 'received' ? '#10b981' : po.status === 'approved' ? '#0066cc' : '#f59e0b',
                               color: '#ffffff',
                               padding: '2px 6px',
                               borderRadius: '4px',
@@ -2032,9 +1945,9 @@ function WasteReport({ analytics, records }) {
                               onClick={() => handleApprovePO(po.id)}
                               style={{
                                 padding: '4px 8px',
-                                background: '#0066cc',
+                                background: '#3b82f6',
                                 color: '#ffffff',
-                                border: '2px outset #ffffff',
+                                border: 'none',
                                 fontSize: '10px',
                                 fontWeight: 'bold',
                                 cursor: 'pointer'
@@ -2048,9 +1961,9 @@ function WasteReport({ analytics, records }) {
                               onClick={() => handleReceivePO(po.id)}
                               style={{
                                 padding: '4px 8px',
-                                background: '#008000',
+                                background: '#10b981',
                                 color: '#ffffff',
-                                border: '2px outset #ffffff',
+                                border: 'none',
                                 fontSize: '10px',
                                 fontWeight: 'bold',
                                 cursor: 'pointer'
@@ -2063,9 +1976,9 @@ function WasteReport({ analytics, records }) {
                             onClick={() => handleEditPO(po)}
                             style={{
                               padding: '4px 8px',
-                              background: '#c0c0c0',
-                              border: '2px outset #ffffff',
-                              color: '#000000',
+                              background: '#252538',
+                              border: 'none',
+                              color: '#ffffff',
                               fontSize: '10px',
                               fontWeight: 'bold',
                               cursor: 'pointer'
@@ -2077,8 +1990,8 @@ function WasteReport({ analytics, records }) {
                             onClick={() => handleDeletePO(po.id)}
                             style={{
                               padding: '4px 8px',
-                              background: '#ff0000',
-                              border: '2px outset #ffffff',
+                              background: '#ef4444',
+                              border: 'none',
                               color: '#ffffff',
                               fontSize: '10px',
                               fontWeight: 'bold',
@@ -2113,8 +2026,8 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '700px',
             width: '90%',
@@ -2122,7 +2035,7 @@ function WasteReport({ analytics, records }) {
             overflow: 'auto'
           }}>
             <div style={{
-              background: '#cc6600',
+              background: '#f59e0b',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -2135,9 +2048,9 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowPOModal(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -2149,7 +2062,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <PurchaseOrderForm
                 po={editingPO}
                 vendors={vendors}
@@ -2180,8 +2093,8 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
+            background: '#252538',
+            border: 'none',
             padding: '4px',
             maxWidth: '900px',
             width: '90%',
@@ -2189,7 +2102,7 @@ function WasteReport({ analytics, records }) {
             overflow: 'auto'
           }}>
             <div style={{
-              background: '#660099',
+              background: '#7c3aed',
               color: '#ffffff',
               padding: '4px 8px',
               fontSize: '12px',
@@ -2202,9 +2115,9 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowAnalytics(false)}
                 style={{
-                  background: '#c0c0c0',
-                  border: '2px outset #ffffff',
-                  color: '#000000',
+                  background: '#252538',
+                  border: 'none',
+                  color: '#ffffff',
                   fontSize: '10px',
                   fontWeight: 'bold',
                   padding: '2px 6px',
@@ -2216,7 +2129,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#c0c0c0' }}>
+            <div style={{ padding: '12px', background: '#252538' }}>
               <InventoryAnalytics analytics={getInventoryAnalytics()} />
             </div>
           </div>
@@ -2247,7 +2160,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
     <form onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Vendor Name *
           </label>
           <input
@@ -2258,7 +2171,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="e.g., ABC Supplies"
@@ -2266,7 +2179,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Phone *
           </label>
           <input
@@ -2277,7 +2190,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="e.g., 9876543210"
@@ -2285,7 +2198,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Email
           </label>
           <input
@@ -2295,7 +2208,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="e.g., vendor@example.com"
@@ -2303,7 +2216,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Address
           </label>
           <textarea
@@ -2313,7 +2226,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="Vendor address"
@@ -2321,7 +2234,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Payment Terms
           </label>
           <input
@@ -2331,7 +2244,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="e.g., Net 30, COD"
@@ -2339,7 +2252,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             GSTIN
           </label>
           <input
@@ -2349,7 +2262,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="GSTIN number"
@@ -2364,9 +2277,9 @@ function VendorForm({ vendor, onSave, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
-            color: '#000000',
+            background: '#252538',
+            border: 'none',
+            color: '#ffffff',
             fontSize: '11px',
             fontWeight: 'bold',
             cursor: 'pointer'
@@ -2379,9 +2292,9 @@ function VendorForm({ vendor, onSave, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#0066cc',
+            background: '#3b82f6',
             color: '#ffffff',
-            border: '2px outset #ffffff',
+            border: 'none',
             fontSize: '11px',
             fontWeight: 'bold',
             cursor: 'pointer'
@@ -2437,7 +2350,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
     <form onSubmit={handleSubmit}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Vendor *
           </label>
           <select
@@ -2447,9 +2360,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px',
-              background: '#ffffff'
+              background: '#1a1a2e'
             }}
           >
             <option value="">Select vendor</option>
@@ -2461,7 +2374,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
 
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#000000' }}>
+            <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#ffffff' }}>
               Items
             </label>
             <button
@@ -2469,9 +2382,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
               onClick={addItem}
               style={{
                 padding: '4px 8px',
-                background: '#cc6600',
+                background: '#f59e0b',
                 color: '#ffffff',
-                border: '2px outset #ffffff',
+                border: 'none',
                 fontSize: '10px',
                 fontWeight: 'bold',
                 cursor: 'pointer'
@@ -2489,7 +2402,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ flex: 2 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#808080', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
                     Item Name
                   </label>
                   <select
@@ -2498,9 +2411,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '2px inset #808080',
+                      border: '1px solid #2d2d44',
                       fontSize: '11px',
-                      background: '#ffffff'
+                      background: '#1a1a2e'
                     }}
                   >
                     <option value="">Select item</option>
@@ -2510,7 +2423,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#808080', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
                     Quantity
                   </label>
                   <input
@@ -2522,13 +2435,13 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '2px inset #808080',
+                      border: '1px solid #2d2d44',
                       fontSize: '11px'
                     }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#808080', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
                     Unit
                   </label>
                   <input
@@ -2538,13 +2451,13 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '2px inset #808080',
+                      border: '1px solid #2d2d44',
                       fontSize: '11px'
                     }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#808080', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
                     Cost
                   </label>
                   <input
@@ -2556,7 +2469,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '2px inset #808080',
+                      border: '1px solid #2d2d44',
                       fontSize: '11px'
                     }}
                   />
@@ -2566,9 +2479,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                   onClick={() => removeItem(index)}
                   style={{
                     padding: '4px 8px',
-                    background: '#ff0000',
+                    background: '#ef4444',
                     color: '#ffffff',
-                    border: '2px outset #ffffff',
+                    border: 'none',
                     fontSize: '10px',
                     fontWeight: 'bold',
                     cursor: 'pointer'
@@ -2582,7 +2495,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Expected Delivery Date
           </label>
           <input
@@ -2592,14 +2505,14 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
           />
         </div>
 
         <div>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: '#ffffff', marginBottom: '4px' }}>
             Notes
           </label>
           <textarea
@@ -2609,7 +2522,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '2px inset #808080',
+              border: '1px solid #2d2d44',
               fontSize: '12px'
             }}
             placeholder="Additional notes"
@@ -2619,7 +2532,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
         <div style={{
           background: '#f0f0f0',
           padding: '8px',
-          border: '2px inset #808080',
+          border: '1px solid #2d2d44',
           fontSize: '12px',
           fontWeight: 'bold'
         }}>
@@ -2634,9 +2547,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#c0c0c0',
-            border: '2px outset #ffffff',
-            color: '#000000',
+            background: '#252538',
+            border: 'none',
+            color: '#ffffff',
             fontSize: '11px',
             fontWeight: 'bold',
             cursor: 'pointer'
@@ -2649,9 +2562,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#cc6600',
+            background: '#f59e0b',
             color: '#ffffff',
-            border: '2px outset #ffffff',
+            border: 'none',
             fontSize: '11px',
             fontWeight: 'bold',
             cursor: 'pointer'
@@ -2671,53 +2584,53 @@ function InventoryAnalytics({ analytics }) {
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Overview</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Total Items</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Items</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{analytics.totalItems}</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Total Value</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Value</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0066cc' }}>₹{analytics.totalValue.toFixed(2)}</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Low Stock</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ff6600' }}>{analytics.lowStockCount}</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Low Stock</div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#f59e0b' }}>{analytics.lowStockCount}</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Expired</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ff0000' }}>{analytics.expiredCount}</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Expired</div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ef4444' }}>{analytics.expiredCount}</div>
           </div>
         </div>
       </div>
 
       <div style={{ marginBottom: '16px' }}>
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Category Breakdown</div>
-        <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px' }}>
+        <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
           {Object.entries(analytics.categoryBreakdown).length === 0 ? (
-            <div style={{ fontSize: '11px', color: '#808080' }}>No data</div>
+            <div style={{ fontSize: '11px', color: '#8b8b9e' }}>No data</div>
           ) : (
             Object.entries(analytics.categoryBreakdown).map(([category, value]) => (
               <div key={category} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
@@ -2733,33 +2646,33 @@ function InventoryAnalytics({ analytics }) {
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Financial Summary</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Waste Cost</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Waste Cost</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#800000' }}>₹{analytics.wasteCost.toFixed(2)}</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>Waste %</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Waste %</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#800000' }}>{analytics.wastePercentage.toFixed(1)}%</div>
           </div>
           <div style={{
-            background: '#ffffff',
-            border: '2px inset #808080',
+            background: '#1a1a2e',
+            border: '1px solid #2d2d44',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#808080', marginBottom: '2px' }}>PO Total</div>
+            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>PO Total</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#cc6600' }}>₹{analytics.poTotal.toFixed(2)}</div>
           </div>
         </div>
@@ -2767,24 +2680,24 @@ function InventoryAnalytics({ analytics }) {
 
       <div>
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Alerts</div>
-        <div style={{ background: '#ffffff', border: '2px inset #808080', padding: '8px' }}>
+        <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
           {analytics.expiringCount > 0 && (
-            <div style={{ marginBottom: '4px', fontSize: '11px', color: '#ff6600' }}>
+            <div style={{ marginBottom: '4px', fontSize: '11px', color: '#f59e0b' }}>
               ⚠️ {analytics.expiringCount} items expiring soon
             </div>
           )}
           {analytics.expiredCount > 0 && (
-            <div style={{ marginBottom: '4px', fontSize: '11px', color: '#ff0000' }}>
+            <div style={{ marginBottom: '4px', fontSize: '11px', color: '#ef4444' }}>
               ⛔ {analytics.expiredCount} expired items
             </div>
           )}
           {analytics.lowStockCount > 0 && (
-            <div style={{ marginBottom: '4px', fontSize: '11px', color: '#ff6600' }}>
+            <div style={{ marginBottom: '4px', fontSize: '11px', color: '#f59e0b' }}>
               📉 {analytics.lowStockCount} items low on stock
             </div>
           )}
           {analytics.expiringCount === 0 && analytics.expiredCount === 0 && analytics.lowStockCount === 0 && (
-            <div style={{ fontSize: '11px', color: '#008000' }}>
+            <div style={{ fontSize: '11px', color: '#10b981' }}>
               ✓ No alerts - inventory is healthy
             </div>
           )}

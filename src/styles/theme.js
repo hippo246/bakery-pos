@@ -112,14 +112,14 @@ export const THEME_CSS = `
   :root {
     /* ── Modern Minimalist Theme (Dark Mode) ───────────────────── */
     
-    /* Backgrounds — clean dark tones */
-    --cafe-bg:              #1e1e2e;
-    --cafe-bg-elevated:     #252535;
-    --cafe-bg-surface:      #2a2a3a;
-    --cafe-bg-card:         #323242;
-    --cafe-bg-hover:        #3a3a4a;
-    --cafe-bg-primary:      #1e1e2e;
-    --cafe-bg-secondary:    #2a2a3a;
+    /* Backgrounds — premium purple-navy dark palette */
+    --cafe-bg:              #1a1a2e;
+    --cafe-bg-elevated:     #1f1f35;
+    --cafe-bg-surface:      #252538;
+    --cafe-bg-card:         #2d2d48;
+    --cafe-bg-hover:        #34345a;
+    --cafe-bg-primary:      #1a1a2e;
+    --cafe-bg-secondary:    #252538;
     
     /* Accent — modern amber */
     --cafe-accent:          #f59e0b;
@@ -153,8 +153,8 @@ export const THEME_CSS = `
     --cafe-info-border:     rgba(59,130,246,0.2);
     
     /* Borders — subtle, modern */
-    --cafe-border:          #3f3f5f;
-    --cafe-border-light:    #4f4f6f;
+    --cafe-border:          #2d2d44;
+    --cafe-border-light:    #3a3a55;
     --cafe-border-focus:    var(--cafe-accent);
     
     /* Shadows — soft, modern */

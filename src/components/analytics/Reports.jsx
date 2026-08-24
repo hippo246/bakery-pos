@@ -4,444 +4,1087 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import useScreenSize from '../../hooks/useScreenSize';
 
-export default function SimpleReports({ orders = [], menuItems = [], staff = [], customers = [], inventory = [], onNavigate }) {
-  const [selectedReport, setSelectedReport] = useState('sales');
+export default function SimpleReports({ orders = [], menuItems = [], staff = [], customers = [], inventory = [], settings = {}, onNavigate, darkMode = true }) {
+  const [selectedReport, setSelectedReport] = useState('sales-summary');
   const [dateRange, setDateRange] = useState('today');
   const screenSize = useScreenSize();
+
+  // Local data from localStorage for richer reports
+  const [wasteRecords, setWasteRecords] = useState([]);
+  const [recipes, setRecipes] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [qrOrders, setQrOrders] = useState([]);
+
+  useEffect(() => {
+    try {
+      const w = JSON.parse(localStorage.getItem('bakerypos_waste') || '[]');
+      setWasteRecords(Array.isArray(w) ? w : []);
+    } catch {}
+    try {
+      const r = JSON.parse(localStorage.getItem('bakerypos_recipes') || '[]');
+      setRecipes(Array.isArray(r) ? r : []);
+    } catch {}
+    try {
+      const res = JSON.parse(localStorage.getItem('bakerypos_reservations') || '[]');
+      setReservations(Array.isArray(res) ? res : []);
+    } catch {}
+    try {
+      const qr = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+      setQrOrders(Array.isArray(qr) ? qr : []);
+    } catch {}
+  }, [selectedReport]);
+
+  const reportCategories = [
+    {
+      name: 'Operations Reports',
+      reports: [
+        { id: 'reservation-report', name: 'Reservation Report' },
+        { id: 'qr-orders-report', name: 'QR Orders Report' },
+        { id: 'waste-report', name: 'Waste Report (Ops)' },
+        { id: 'kitchen-costs', name: 'Kitchen Costs (Ops)' }
+      ]
+    },
+    {
+      name: 'Sales Reports',
+      reports: [
+        { id: 'sales-summary', name: 'Sales Summary' },
+        { id: 'sales-by-hour', name: 'Sales by Hour' },
+        { id: 'sales-by-day', name: 'Sales by Day' },
+        { id: 'sales-by-week', name: 'Sales by Week' },
+        { id: 'sales-by-month', name: 'Sales by Month' },
+        { id: 'sales-by-category', name: 'Sales by Category' },
+        { id: 'sales-by-item', name: 'Sales by Item' },
+        { id: 'sales-by-payment', name: 'Sales by Payment Method' },
+        { id: 'sales-by-staff', name: 'Sales by Staff' },
+        { id: 'sales-by-table', name: 'Sales by Table' }
+      ]
+    },
+    {
+      name: 'Inventory Reports',
+      reports: [
+        { id: 'inventory-summary', name: 'Inventory Summary' },
+        { id: 'low-stock', name: 'Low Stock Items' },
+        { id: 'inventory-value', name: 'Inventory Value' },
+        { id: 'inventory-turnover', name: 'Inventory Turnover' },
+        { id: 'waste-report', name: 'Waste Report' },
+        { id: 'stock-movement', name: 'Stock Movement' },
+        { id: 'expiry-report', name: 'Expiry Report' },
+        { id: 'supplier-performance', name: 'Supplier Performance' },
+        { id: 'cost-variance', name: 'Cost Variance' },
+        { id: 'reorder-report', name: 'Reorder Report' }
+      ]
+    },
+    {
+      name: 'Staff Reports',
+      reports: [
+        { id: 'staff-performance', name: 'Staff Performance' },
+        { id: 'staff-hours', name: 'Staff Hours' },
+        { id: 'staff-sales', name: 'Staff Sales' },
+        { id: 'staff-productivity', name: 'Staff Productivity' },
+        { id: 'staff-attendance', name: 'Staff Attendance' },
+        { id: 'commission-report', name: 'Commission Report' },
+        { id: 'staff-ranking', name: 'Staff Ranking' },
+        { id: 'shift-report', name: 'Shift Report' },
+        { id: 'overtime-report', name: 'Overtime Report' },
+        { id: 'training-report', name: 'Training Report' }
+      ]
+    },
+    {
+      name: 'Customer Reports',
+      reports: [
+        { id: 'customer-summary', name: 'Customer Summary' },
+        { id: 'customer-spending', name: 'Customer Spending' },
+        { id: 'customer-frequency', name: 'Customer Frequency' },
+        { id: 'customer-lifetime', name: 'Customer Lifetime Value' },
+        { id: 'new-customers', name: 'New Customers' },
+        { id: 'returning-customers', name: 'Returning Customers' },
+        { id: 'customer-segments', name: 'Customer Segments' },
+        { id: 'loyalty-report', name: 'Loyalty Report' },
+        { id: 'feedback-report', name: 'Feedback Report' },
+        { id: 'churn-report', name: 'Churn Report' }
+      ]
+    },
+    {
+      name: 'Financial Reports',
+      reports: [
+        { id: 'revenue-report', name: 'Revenue Report' },
+        { id: 'profit-loss', name: 'Profit & Loss' },
+        { id: 'cost-analysis', name: 'Cost Analysis' },
+        { id: 'margin-report', name: 'Margin Report' },
+        { id: 'gst-report', name: 'GST Report' },
+        { id: 'tax-report', name: 'Tax Report' },
+        { id: 'cash-flow', name: 'Cash Flow' },
+        { id: 'expense-report', name: 'Expense Report' },
+        { id: 'budget-variance', name: 'Budget Variance' },
+        { id: 'financial-ratios', name: 'Financial Ratios' }
+      ]
+    },
+    {
+      name: 'Menu Reports',
+      reports: [
+        { id: 'menu-performance', name: 'Menu Performance' },
+        { id: 'item-profitability', name: 'Item Profitability' },
+        { id: 'menu-engineering', name: 'Menu Engineering' },
+        { id: 'popularity-report', name: 'Popularity Report' },
+        { id: 'price-sensitivity', name: 'Price Sensitivity' },
+        { id: 'combo-analysis', name: 'Combo Analysis' },
+        { id: 'seasonal-items', name: 'Seasonal Items' },
+        { id: 'recipe-cost', name: 'Recipe Cost' },
+        { id: 'portion-analysis', name: 'Portion Analysis' },
+        { id: 'menu-mix', name: 'Menu Mix' }
+      ]
+    },
+    {
+      name: 'Kitchen Reports',
+      reports: [
+        { id: 'kitchen-performance', name: 'Kitchen Performance' },
+        { id: 'prep-time', name: 'Prep Time Analysis' },
+        { id: 'bottleneck-report', name: 'Bottleneck Report' },
+        { id: 'wastage-report', name: 'Wastage Report' },
+        { id: 'station-efficiency', name: 'Station Efficiency' },
+        { id: 'order-fulfillment', name: 'Order Fulfillment' },
+        { id: 'quality-report', name: 'Quality Report' },
+        { id: 'kitchen-capacity', name: 'Kitchen Capacity' },
+        { id: 'peak-hours', name: 'Peak Hours' },
+        { id: 'kitchen-costs', name: 'Kitchen Costs' }
+      ]
+    },
+    {
+      name: 'Time-based Reports',
+      reports: [
+        { id: 'daily-report', name: 'Daily Report' },
+        { id: 'weekly-report', name: 'Weekly Report' },
+        { id: 'monthly-report', name: 'Monthly Report' },
+        { id: 'quarterly-report', name: 'Quarterly Report' },
+        { id: 'yearly-report', name: 'Yearly Report' },
+        { id: 'period-comparison', name: 'Period Comparison' },
+        { id: 'ytd-report', name: 'Year to Date' },
+        { id: 'mtd-report', name: 'Month to Date' },
+        { id: 'holiday-report', name: 'Holiday Report' },
+        { id: 'seasonal-report', name: 'Seasonal Report' }
+      ]
+    },
+    {
+      name: 'Performance Reports',
+      reports: [
+        { id: 'kpi-report', name: 'KPI Report' },
+        { id: 'trend-analysis', name: 'Trend Analysis' },
+        { id: 'growth-report', name: 'Growth Report' },
+        { id: 'benchmark-report', name: 'Benchmark Report' },
+        { id: 'efficiency-report', name: 'Efficiency Report' },
+        { id: 'productivity-report', name: 'Productivity Report' },
+        { id: 'utilization-report', name: 'Utilization Report' },
+        { id: 'performance-scorecard', name: 'Performance Scorecard' },
+        { id: 'goal-tracking', name: 'Goal Tracking' },
+        { id: 'variance-report', name: 'Variance Report' }
+      ]
+    },
+    {
+      name: 'Custom Reports',
+      reports: [
+        { id: 'custom-1', name: 'Custom Report 1' },
+        { id: 'custom-2', name: 'Custom Report 2' },
+        { id: 'custom-3', name: 'Custom Report 3' },
+        { id: 'custom-4', name: 'Custom Report 4' },
+        { id: 'custom-5', name: 'Custom Report 5' },
+        { id: 'custom-6', name: 'Custom Report 6' },
+        { id: 'custom-7', name: 'Custom Report 7' },
+        { id: 'custom-8', name: 'Custom Report 8' },
+        { id: 'custom-9', name: 'Custom Report 9' },
+        { id: 'custom-10', name: 'Custom Report 10' }
+      ]
+    }
+  ];
 
   // Export functions
   const exportToPDF = () => {
     const doc = new jsPDF();
-    const reportTitle = `ANALYTICS REPORT - ${dateRange.toUpperCase()}`;
+    const reportName = reportCategories.flatMap(c => c.reports).find(r => r.id === selectedReport)?.name || 'Report';
+    const reportTitle = `${reportName} - ${dateRange.toUpperCase()}`;
+    
+    // Cafe Info
+    const cafeName = settings?.cafeName || 'BakeryPOS Cafe';
+    const fssai = settings?.fssai || 'N/A';
+    const gstin = settings?.gstin || 'N/A';
+    const address = settings?.address || '';
+    const phone = settings?.phone || '';
     
     // Header
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.text('🥐 BakeryPOS Analytics Hub', 14, 15);
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(reportTitle, 14, 25);
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text(cafeName, 14, 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(`FSSAI: ${fssai}`, 14, 22);
+    doc.text(`GSTIN: ${gstin}`, 14, 27);
+    
+    if (address) {
+      doc.text(address, 14, 32);
+    }
+    if (phone) {
+      doc.text(`Phone: ${phone}`, 14, address ? 37 : 32);
+    }
+    
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    const yPos = address && phone ? 44 : address || phone ? 39 : 34;
+    doc.text(reportName, 14, yPos);
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(reportTitle, 14, yPos + 6);
     
     // Date
-    doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Downloaded on: ${new Date().toLocaleString()}`, 14, yPos + 12);
     
     // Summary Stats
     doc.setDrawColor(200, 200, 200);
-    doc.line(14, 38, 196, 38);
+    doc.line(14, yPos + 16, 196, yPos + 16);
     
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text('KEY METRICS', 14, 48);
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Summary', 14, yPos + 22);
     
-    const summaryData = [
-      ['Total Revenue', `₹${reportData.totalSales.toLocaleString()}`],
-      ['Total Orders', reportData.totalOrders.toString()],
-      ['Average Order Value', `₹${Math.round(reportData.avgOrderValue)}`],
-      ['GST Collected', `₹${reportData.totalGST.toLocaleString()}`]
-    ];
+    const summaryData = getReportData(selectedReport);
     
     autoTable(doc, {
-      startY: 52,
+      startY: yPos + 28,
       head: [['Metric', 'Value']],
-      body: summaryData,
+      body: summaryData.summary,
       theme: 'striped',
       headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
-      styles: { fontSize: 10 }
+      styles: { fontSize: 9 }
     });
     
-    // Top Items
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text('TOP SELLING ITEMS', 14, doc.lastAutoTable.finalY + 15);
-    
-    const itemsData = reportData.topItems.slice(0, 5).map((item, index) => [
-      index + 1,
-      item.name,
-      item.quantity,
-      `₹${item.revenue.toLocaleString()}`
-    ]);
-    
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 20,
-      head: [['Rank', 'Item Name', 'Quantity', 'Revenue']],
-      body: itemsData,
-      theme: 'striped',
-      headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
-      styles: { fontSize: 10 }
-    });
-    
-    // Payment Methods
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text('PAYMENT METHODS BREAKDOWN', 14, doc.lastAutoTable.finalY + 15);
-    
-    const paymentData = Object.entries(reportData.paymentMethods).map(([method, amount]) => {
-      const percentage = reportData.totalSales > 0 ? (amount / reportData.totalSales * 100).toFixed(1) : 0;
-      return [method, `₹${amount.toLocaleString()}`, `${percentage}%`];
-    });
-    
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 20,
-      head: [['Method', 'Amount', 'Percentage']],
-      body: paymentData,
-      theme: 'striped',
-      headStyles: { fillColor: [245, 158, 11], textColor: [255, 255, 255] },
-      styles: { fontSize: 10 }
-    });
-    
-    // Category Distribution
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text('CATEGORY DISTRIBUTION', 14, doc.lastAutoTable.finalY + 15);
-    
-    const categoryData = Object.entries(reportData.categorySales).map(([category, data]) => [
-      category,
-      data.quantity,
-      `₹${data.revenue.toLocaleString()}`
-    ]);
-    
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 20,
-      head: [['Category', 'Quantity', 'Revenue']],
-      body: categoryData,
-      theme: 'striped',
-      headStyles: { fillColor: [139, 92, 246], textColor: [255, 255, 255] },
-      styles: { fontSize: 10 }
-    });
-    
-    // Quick Insights
-    doc.setFontSize(11);
-    doc.setTextColor(40, 40, 40);
-    doc.text('QUICK INSIGHTS', 14, doc.lastAutoTable.finalY + 15);
-    
-    const insightsData = [
-      ['Peak Hour', '12:00 PM'],
-      ['Best Seller', reportData.topItems[0]?.name || 'N/A'],
-      ['Growth Rate', '+12.5%']
-    ];
-    
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 20,
-      head: [['Insight', 'Value']],
-      body: insightsData,
-      theme: 'striped',
-      headStyles: { fillColor: [239, 68, 68], textColor: [255, 255, 255] },
-      styles: { fontSize: 10 }
-    });
+    // Detailed Data
+    if (summaryData.details && summaryData.details.length > 0) {
+      doc.addPage();
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.text('Details', 14, 15);
+      
+      autoTable(doc, {
+        startY: 20,
+        head: [summaryData.headers],
+        body: summaryData.details,
+        theme: 'striped',
+        headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
+        styles: { fontSize: 8 }
+      });
+    }
     
     // Footer
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Generated by BakeryPOS - Professional Bakery Management System', 14, doc.lastAutoTable.finalY + 15);
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    doc.text('BakeryPOS', 14, doc.lastAutoTable.finalY + 8);
     
-    doc.save(`bakerypos_analytics_${dateRange}_${Date.now()}.pdf`);
+    doc.save(`bakerypos_${selectedReport}_${dateRange}_${Date.now()}.pdf`);
   };
 
   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
+    const reportName = reportCategories.flatMap(c => c.reports).find(r => r.id === selectedReport)?.name || 'Report';
+    const data = getReportData(selectedReport);
     
-    // Summary sheet
-    const summaryData = [
-      ['Metric', 'Value'],
-      ['Total Revenue', reportData.totalSales],
-      ['Total Orders', reportData.totalOrders],
-      ['Average Order Value', reportData.avgOrderValue],
-      ['GST Collected', reportData.totalGST]
+    // Cafe Info
+    const cafeName = settings?.cafeName || 'BakeryPOS Cafe';
+    const fssai = settings?.fssai || 'N/A';
+    const gstin = settings?.gstin || 'N/A';
+    const address = settings?.address || '';
+    const phone = settings?.phone || '';
+    
+    // Info sheet with cafe and report information
+    const infoData = [
+      ['BAKERYPOS - PROFESSIONAL REPORT'],
+      [],
+      ['Cafe Details'],
+      ['Field', 'Value'],
+      ['Cafe Name', cafeName],
+      ['FSSAI Number', fssai],
+      ['GSTIN', gstin],
+      ['Address', address],
+      ['Phone Number', phone],
+      [],
+      ['Report Details'],
+      ['Field', 'Value'],
+      ['Report Name', reportName],
+      ['Report ID', selectedReport],
+      ['Date Range', dateRange.toUpperCase()],
+      ['Generated On', new Date().toLocaleString()],
+      ['Generated By', 'BakeryPOS System']
     ];
     
+    const infoSheet = XLSX.utils.aoa_to_sheet(infoData);
+    
+    // Style the info sheet
+    if (infoSheet['!ref']) {
+      const range = XLSX.utils.decode_range(infoSheet['!ref']);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!infoSheet[cellAddress]) continue;
+          
+          // Title row
+          if (R === 0) {
+            infoSheet[cellAddress].s = { 
+              font: { bold: true, sz: 16 }, 
+              fill: { fgColor: { rgb: "1F4E78" } }, 
+              alignment: { horizontal: "center" }
+            };
+          }
+          // Section headers
+          else if (R === 2 || R === 9) {
+            infoSheet[cellAddress].s = { 
+              font: { bold: true, sz: 12 }, 
+              fill: { fgColor: { rgb: "D9E1F2" } }
+            };
+          }
+          // Field labels
+          else if ((R >= 3 && R <= 7) || (R >= 10 && R <= 15)) {
+            if (C === 0) {
+              infoSheet[cellAddress].s = { 
+                font: { bold: true }, 
+                fill: { fgColor: { rgb: "F2F2F2" } }
+              };
+            }
+          }
+        }
+      }
+      // Set column widths
+      infoSheet['!cols'] = [{ wch: 20 }, { wch: 40 }];
+    }
+    XLSX.utils.book_append_sheet(workbook, infoSheet, 'Info');
+    
+    // Summary sheet
+    const summaryData = [['Metric', 'Value'], ...data.summary];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    
+    // Style the summary sheet
+    if (summarySheet['!ref']) {
+      const range = XLSX.utils.decode_range(summarySheet['!ref']);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!summarySheet[cellAddress]) continue;
+          if (R === 0) {
+            summarySheet[cellAddress].s = { 
+              font: { bold: true }, 
+              fill: { fgColor: { rgb: "4472C4" } }, 
+              alignment: { horizontal: "center" }
+            };
+          } else {
+            summarySheet[cellAddress].s = { 
+              fill: { fgColor: { rgb: R % 2 === 0 ? "FFFFFF" : "F2F2F2" } }
+            };
+          }
+        }
+      }
+      summarySheet['!cols'] = [{ wch: 30 }, { wch: 25 }];
+    }
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
     
-    // Top Items sheet
-    const itemsData = [['Rank', 'Item Name', 'Quantity', 'Revenue']];
-    reportData.topItems.forEach((item, index) => {
-      itemsData.push([index + 1, item.name, item.quantity, item.revenue]);
-    });
+    // Details sheet
+    if (data.details && data.details.length > 0) {
+      const detailsData = [data.headers, ...data.details];
+      const detailsSheet = XLSX.utils.aoa_to_sheet(detailsData);
+      
+      // Style the details sheet
+      if (detailsSheet['!ref']) {
+        const range = XLSX.utils.decode_range(detailsSheet['!ref']);
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            if (!detailsSheet[cellAddress]) continue;
+            if (R === 0) {
+              detailsSheet[cellAddress].s = { 
+                font: { bold: true }, 
+                fill: { fgColor: { rgb: "70AD47" } }, 
+                alignment: { horizontal: "center" }
+              };
+            } else {
+              detailsSheet[cellAddress].s = { 
+                fill: { fgColor: { rgb: R % 2 === 0 ? "FFFFFF" : "E2EFDA" } },
+                alignment: { horizontal: C === 0 ? "left" : "right" }
+              };
+            }
+          }
+        }
+        // Auto-fit column widths based on content
+        const colWidths = data.headers.map((h, i) => {
+          const maxWidth = Math.max(
+            h.length,
+            ...data.details.map(row => String(row[i] || '').length)
+          );
+          return { wch: Math.min(Math.max(maxWidth + 2, 12), 30) };
+        });
+        detailsSheet['!cols'] = colWidths;
+      }
+      XLSX.utils.book_append_sheet(workbook, detailsSheet, 'Details');
+    }
     
-    const itemsSheet = XLSX.utils.aoa_to_sheet(itemsData);
-    XLSX.utils.book_append_sheet(workbook, itemsSheet, 'Top Items');
+    XLSX.writeFile(workbook, `bakerypos_${selectedReport}_${dateRange}_${Date.now()}.xlsx`);
+  };
+
+  const getReportData = (reportId) => {
+    const completedOrders = orders.filter(o => o.status === 'COMPLETED');
     
-    // Payment Methods sheet
-    const paymentData = [['Payment Method', 'Amount', 'Percentage']];
-    Object.entries(reportData.paymentMethods).forEach(([method, amount]) => {
-      const percentage = reportData.totalSales > 0 ? (amount / reportData.totalSales * 100).toFixed(1) : 0;
-      paymentData.push([method, amount, percentage]);
-    });
+    // Common data calculations
+    const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+    const totalOrders = completedOrders.length;
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    const totalItemsSold = completedOrders.reduce((sum, o) => sum + (o.items?.reduce((itemSum, item) => itemSum + (item.qty || 1), 0) || 0), 0);
+    const totalGST = completedOrders.reduce((sum, o) => sum + (o.tax || 0), 0);
     
-    const paymentSheet = XLSX.utils.aoa_to_sheet(paymentData);
-    XLSX.utils.book_append_sheet(workbook, paymentSheet, 'Payment Methods');
+    // Date range info
+    const today = new Date();
+    let dateRangeText = dateRange.toUpperCase();
+    if (dateRange === 'today') {
+      dateRangeText = today.toLocaleDateString();
+    } else if (dateRange === 'yesterday') {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      dateRangeText = yesterday.toLocaleDateString();
+    } else if (dateRange === 'week') {
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      dateRangeText = `${weekAgo.toLocaleDateString()} - ${today.toLocaleDateString()}`;
+    } else if (dateRange === 'month') {
+      const monthAgo = new Date(today);
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      dateRangeText = `${monthAgo.toLocaleDateString()} - ${today.toLocaleDateString()}`;
+    }
     
-    // Categories sheet
-    const categoryData = [['Category', 'Quantity', 'Revenue']];
-    Object.entries(reportData.categorySales).forEach(([category, data]) => {
-      categoryData.push([category, data.quantity, data.revenue]);
-    });
-    
-    const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
-    XLSX.utils.book_append_sheet(workbook, categorySheet, 'Categories');
-    
-    // Hourly Sales sheet
-    const hourlyData = [['Hour', 'Orders', 'Revenue']];
-    Object.entries(reportData.hourlySales).forEach(([hour, data]) => {
-      hourlyData.push([`${parseInt(hour)}:00`, data.orders, data.revenue]);
-    });
-    
-    const hourlySheet = XLSX.utils.aoa_to_sheet(hourlyData);
-    XLSX.utils.book_append_sheet(workbook, hourlySheet, 'Hourly Sales');
-    
-    // Quick Insights sheet
-    const insightsData = [['Insight', 'Value', 'Description']];
-    insightsData.push(['Peak Hour', '12:00 PM', 'Highest sales volume']);
-    insightsData.push(['Best Seller', reportData.topItems[0]?.name || 'N/A', 'Top revenue generator']);
-    insightsData.push(['Growth Rate', '+12.5%', 'vs previous period']);
-    
-    const insightsSheet = XLSX.utils.aoa_to_sheet(insightsData);
-    XLSX.utils.book_append_sheet(workbook, insightsSheet, 'Quick Insights');
-    
-    // Raw data sheet
-    const rawData = [['Order ID', 'Date', 'Customer', 'Total', 'Payment Method', 'Status']];
-    orders.forEach(order => {
-      rawData.push([
-        order.id,
-        new Date(order.createdAt).toLocaleString(),
-        order.customerName || 'Walk-in',
-        order.total,
-        order.paymentMethod,
-        order.status
-      ]);
-    });
-    
-    const rawSheet = XLSX.utils.aoa_to_sheet(rawData);
-    XLSX.utils.book_append_sheet(workbook, rawSheet, 'Raw Orders Data');
-    
-    XLSX.writeFile(workbook, `bakerypos_analytics_${dateRange}_${Date.now()}.xlsx`);
+    // Generate data based on report type
+    switch (reportId) {
+      case 'sales-summary':
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Total Items Sold', totalItemsSold.toString()],
+            ['Average Order Value', `₹${Math.round(avgOrderValue)}`],
+            ['GST Collected', `₹${totalGST.toLocaleString()}`],
+            ['Unique Customers', new Set(completedOrders.map(o => o.customerName || 'Walk-in')).size.toString()]
+          ],
+          headers: ['Item', 'Quantity', 'Revenue'],
+          details: Object.entries(completedOrders.reduce((acc, o) => {
+            o.items?.forEach(item => {
+              const name = item.name || 'Unknown';
+              if (!acc[name]) acc[name] = { qty: 0, revenue: 0 };
+              acc[name].qty += item.qty || 1;
+              acc[name].revenue += (item.price || 0) * (item.qty || 1);
+            });
+            return acc;
+          }, {})).map(([name, data]) => [name, data.qty, `₹${data.revenue.toFixed(2)}`])
+        };
+      
+      case 'sales-by-hour':
+        const hourlyData = {};
+        completedOrders.forEach(o => {
+          const hour = new Date(o.createdAt).getHours();
+          if (!hourlyData[hour]) hourlyData[hour] = { orders: 0, revenue: 0, items: 0 };
+          hourlyData[hour].orders++;
+          hourlyData[hour].revenue += o.total || 0;
+          hourlyData[hour].items += o.items?.length || 0;
+        });
+        const peakHour = Object.entries(hourlyData).sort((a, b) => b[1].revenue - a[1].revenue)[0];
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Peak Hour', peakHour ? `${peakHour[0]}:00` : 'N/A'],
+            ['Peak Hour Revenue', peakHour ? `₹${peakHour[1].revenue.toFixed(2)}` : 'N/A'],
+            ['Operating Hours', Object.keys(hourlyData).length.toString()]
+          ],
+          headers: ['Hour', 'Orders', 'Revenue', 'Avg Order Value'],
+          details: Object.entries(hourlyData).map(([hour, data]) => [
+            `${hour}:00`, 
+            data.orders, 
+            `₹${data.revenue.toFixed(2)}`,
+            `₹${data.orders > 0 ? (data.revenue / data.orders).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'sales-by-category':
+        const categoryData = {};
+        completedOrders.forEach(o => {
+          o.items?.forEach(item => {
+            const cat = item.category || 'Other';
+            if (!categoryData[cat]) categoryData[cat] = { qty: 0, revenue: 0, orders: new Set() };
+            categoryData[cat].qty += item.qty || 1;
+            categoryData[cat].revenue += (item.price || 0) * (item.qty || 1);
+            categoryData[cat].orders.add(o.id);
+          });
+        });
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Categories', Object.keys(categoryData).length.toString()],
+            ['Top Category', Object.entries(categoryData).sort((a, b) => b[1].revenue - a[1].revenue)[0]?.[0] || 'N/A']
+          ],
+          headers: ['Category', 'Quantity', 'Revenue', 'Orders', 'Avg per Item'],
+          details: Object.entries(categoryData).map(([cat, data]) => [
+            cat, 
+            data.qty, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.orders.size,
+            `₹${data.qty > 0 ? (data.revenue / data.qty).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'sales-by-payment':
+        const paymentData = {};
+        completedOrders.forEach(o => {
+          const method = o.paymentMethod || 'CASH';
+          if (!paymentData[method]) paymentData[method] = { count: 0, amount: 0 };
+          paymentData[method].count++;
+          paymentData[method].amount += o.total || 0;
+        });
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Payment Methods', Object.keys(paymentData).length.toString()],
+            ['Most Used', Object.entries(paymentData).sort((a, b) => b[1].count - a[1].count)[0]?.[0] || 'N/A']
+          ],
+          headers: ['Payment Method', 'Count', 'Amount', 'Percentage', 'Avg per Transaction'],
+          details: Object.entries(paymentData).map(([method, data]) => [
+            method, 
+            data.count, 
+            `₹${data.amount.toFixed(2)}`,
+            `${totalRevenue > 0 ? ((data.amount / totalRevenue) * 100).toFixed(1) : 0}%`,
+            `₹${data.count > 0 ? (data.amount / data.count).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'sales-by-staff':
+        const staffData = {};
+        completedOrders.forEach(o => {
+          const staffName = o.employeeName || 'Unassigned';
+          if (!staffData[staffName]) staffData[staffName] = { orders: 0, revenue: 0, items: 0 };
+          staffData[staffName].orders++;
+          staffData[staffName].revenue += o.total || 0;
+          staffData[staffName].items += o.items?.length || 0;
+        });
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Staff Members', Object.keys(staffData).length.toString()],
+            ['Top Performer', Object.entries(staffData).sort((a, b) => b[1].revenue - a[1].revenue)[0]?.[0] || 'N/A']
+          ],
+          headers: ['Staff Name', 'Orders', 'Revenue', 'Items Sold', 'Avg Ticket'],
+          details: Object.entries(staffData).map(([name, data]) => [
+            name, 
+            data.orders, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.items,
+            `₹${data.orders > 0 ? (data.revenue / data.orders).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'sales-by-table':
+        const tableData = {};
+        completedOrders.forEach(o => {
+          const table = o.tableNumber || 'Counter';
+          if (!tableData[table]) tableData[table] = { orders: 0, revenue: 0, customers: 0 };
+          tableData[table].orders++;
+          tableData[table].revenue += o.total || 0;
+          tableData[table].customers += o.customerName ? 1 : 0;
+        });
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Tables Used', Object.keys(tableData).length.toString()],
+            ['Top Table', Object.entries(tableData).sort((a, b) => b[1].revenue - a[1].revenue)[0]?.[0] || 'N/A']
+          ],
+          headers: ['Table', 'Orders', 'Revenue', 'Customers', 'Avg per Order'],
+          details: Object.entries(tableData).map(([table, data]) => [
+            table, 
+            data.orders, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.customers,
+            `₹${data.orders > 0 ? (data.revenue / data.orders).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'inventory-summary':
+        const totalInventoryValue = inventory.reduce((sum, i) => sum + (i.quantity * (i.cost || 0)), 0);
+        const lowStockCount = inventory.filter(i => i.quantity <= (i.minStock || 5)).length;
+        return {
+          summary: [
+            ['Report Date', new Date().toLocaleDateString()],
+            ['Total Items', inventory.length.toString()],
+            ['Total Inventory Value', `₹${totalInventoryValue.toLocaleString()}`],
+            ['Low Stock Items', lowStockCount.toString()],
+            ['Categories', new Set(inventory.map(i => i.category || 'Other')).size.toString()]
+          ],
+          headers: ['Item', 'Quantity', 'Cost', 'Value', 'Status'],
+          details: inventory.map(i => [
+            i.name, 
+            i.quantity, 
+            `₹${(i.cost || 0).toFixed(2)}`, 
+            `₹${(i.quantity * (i.cost || 0)).toFixed(2)}`,
+            i.quantity <= (i.minStock || 5) ? 'Low Stock' : 'OK'
+          ])
+        };
+      
+      case 'low-stock':
+        const lowStock = inventory.filter(i => i.quantity <= (i.minStock || 5));
+        return {
+          summary: [
+            ['Report Date', new Date().toLocaleDateString()],
+            ['Low Stock Items', lowStock.length.toString()],
+            ['Total Items', inventory.length.toString()],
+            ['Reorder Value', `₹${lowStock.reduce((sum, i) => sum + ((i.minStock || 5) * 2 - i.quantity) * (i.cost || 0), 0).toLocaleString()}`]
+          ],
+          headers: ['Item', 'Current Stock', 'Min Stock', 'Reorder Qty', 'Reorder Cost'],
+          details: lowStock.map(i => [
+            i.name, 
+            i.quantity, 
+            i.minStock || 5, 
+            Math.max(0, (i.minStock || 5) * 2 - i.quantity),
+            `₹${Math.max(0, (i.minStock || 5) * 2 - i.quantity) * (i.cost || 0).toFixed(2)}`
+          ])
+        };
+      
+      case 'inventory-value':
+        return {
+          summary: [
+            ['Report Date', new Date().toLocaleDateString()],
+            ['Total Inventory Value', `₹${inventory.reduce((sum, i) => sum + (i.quantity * (i.cost || 0)), 0).toLocaleString()}`],
+            ['Total Items', inventory.length.toString()],
+            ['Categories', new Set(inventory.map(i => i.category || 'Other')).size.toString()]
+          ],
+          headers: ['Category', 'Items', 'Total Value', 'Avg Cost per Item'],
+          details: Object.entries(inventory.reduce((acc, i) => {
+            const cat = i.category || 'Other';
+            if (!acc[cat]) acc[cat] = { count: 0, value: 0, totalQty: 0 };
+            acc[cat].count++;
+            acc[cat].value += i.quantity * (i.cost || 0);
+            acc[cat].totalQty += i.quantity;
+            return acc;
+          }, {})).map(([cat, data]) => [
+            cat, 
+            data.count, 
+            `₹${data.value.toFixed(2)}`,
+            `₹${data.totalQty > 0 ? (data.value / data.totalQty).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'staff-performance':
+        const staffPerf = {};
+        completedOrders.forEach(o => {
+          const name = o.employeeName || 'Unassigned';
+          if (!staffPerf[name]) staffPerf[name] = { orders: 0, revenue: 0, avgTicket: 0, items: 0 };
+          staffPerf[name].orders++;
+          staffPerf[name].revenue += o.total || 0;
+          staffPerf[name].items += o.items?.length || 0;
+        });
+        Object.values(staffPerf).forEach(s => s.avgTicket = s.orders > 0 ? s.revenue / s.orders : 0);
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Staff', Object.keys(staffPerf).length.toString()],
+            ['Total Orders', totalOrders.toString()],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Avg per Staff', totalOrders > 0 ? (totalOrders / Object.keys(staffPerf).length).toFixed(1) : '0']
+          ],
+          headers: ['Staff', 'Orders', 'Revenue', 'Items Sold', 'Avg Ticket', 'Items per Order'],
+          details: Object.entries(staffPerf).map(([name, data]) => [
+            name, 
+            data.orders, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.items,
+            `₹${data.avgTicket.toFixed(2)}`,
+            data.orders > 0 ? (data.items / data.orders).toFixed(1) : 0
+          ])
+        };
+      
+      case 'customer-summary':
+        const customerData = {};
+        completedOrders.forEach(o => {
+          const cust = o.customerName || 'Walk-in';
+          if (!customerData[cust]) customerData[cust] = { orders: 0, spent: 0, lastVisit: o.createdAt };
+          customerData[cust].orders++;
+          customerData[cust].spent += o.total || 0;
+          if (new Date(o.createdAt) > new Date(customerData[cust].lastVisit)) {
+            customerData[cust].lastVisit = o.createdAt;
+          }
+        });
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Customers', Object.keys(customerData).length.toString()],
+            ['Total Orders', totalOrders.toString()],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Avg per Customer', `₹${(totalRevenue / Object.keys(customerData).length).toFixed(2)}`]
+          ],
+          headers: ['Customer', 'Orders', 'Total Spent', 'Avg per Order', 'Last Visit'],
+          details: Object.entries(customerData).map(([name, data]) => [
+            name, 
+            data.orders, 
+            `₹${data.spent.toFixed(2)}`,
+            `₹${(data.spent / data.orders).toFixed(2)}`,
+            new Date(data.lastVisit).toLocaleDateString()
+          ])
+        };
+      
+      case 'revenue-report':
+        const revenueByDate = completedOrders.reduce((acc, o) => {
+          const date = new Date(o.createdAt).toLocaleDateString();
+          if (!acc[date]) acc[date] = { orders: 0, revenue: 0, items: 0 };
+          acc[date].orders++;
+          acc[date].revenue += o.total || 0;
+          acc[date].items += o.items?.length || 0;
+          return acc;
+        }, {});
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Days with Sales', Object.keys(revenueByDate).length.toString()],
+            ['Avg Daily Revenue', `₹${(totalRevenue / Object.keys(revenueByDate).length).toFixed(2)}`]
+          ],
+          headers: ['Date', 'Orders', 'Revenue', 'Items Sold', 'Avg per Order'],
+          details: Object.entries(revenueByDate).map(([date, data]) => [
+            date, 
+            data.orders, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.items,
+            `₹${data.orders > 0 ? (data.revenue / data.orders).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'profit-loss':
+        const totalCost = completedOrders.reduce((sum, o) => {
+          return sum + (o.items?.reduce((itemSum, item) => {
+            const menuItem = menuItems.find(m => m.name === item.name);
+            return itemSum + ((menuItem?.cost || 0) * (item.qty || 1));
+          }, 0) || 0);
+        }, 0);
+        const grossProfit = totalRevenue - totalCost;
+        const totalTax = completedOrders.reduce((sum, o) => sum + (o.tax || 0), 0);
+        const netProfit = grossProfit - totalTax;
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Cost', `₹${totalCost.toLocaleString()}`],
+            ['Gross Profit', `₹${grossProfit.toLocaleString()}`],
+            ['Total Tax', `₹${totalTax.toLocaleString()}`],
+            ['Net Profit', `₹${netProfit.toLocaleString()}`],
+            ['Profit Margin', `${totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%`],
+            ['Cost Percentage', `${totalRevenue > 0 ? ((totalCost / totalRevenue) * 100).toFixed(1) : 0}%`]
+          ],
+          headers: ['Item', 'Revenue', 'Cost', 'Profit', 'Margin %', 'Qty Sold'],
+          details: completedOrders.reduce((acc, o) => {
+            o.items?.forEach(item => {
+              const name = item.name || 'Unknown';
+              const menuItem = menuItems.find(m => m.name === name);
+              const cost = menuItem?.cost || 0;
+              const revenue = (item.price || 0) * (item.qty || 1);
+              const totalItemCost = cost * (item.qty || 1);
+              const profit = revenue - totalItemCost;
+              if (!acc[name]) acc[name] = { revenue: 0, cost: 0, profit: 0, qty: 0 };
+              acc[name].revenue += revenue;
+              acc[name].cost += totalItemCost;
+              acc[name].profit += profit;
+              acc[name].qty += item.qty || 1;
+            });
+            return acc;
+          }, {}).map((data, name) => [
+            name, 
+            `₹${data.revenue.toFixed(2)}`, 
+            `₹${data.cost.toFixed(2)}`, 
+            `₹${data.profit.toFixed(2)}`,
+            `${data.revenue > 0 ? (data.profit / data.revenue * 100).toFixed(1) : 0}%`,
+            data.qty
+          ])
+        };
+      
+      case 'menu-performance':
+        const menuPerf = {};
+        completedOrders.forEach(o => {
+          o.items?.forEach(item => {
+            const name = item.name || 'Unknown';
+            if (!menuPerf[name]) menuPerf[name] = { qty: 0, revenue: 0, orders: new Set() };
+            menuPerf[name].qty += item.qty || 1;
+            menuPerf[name].revenue += (item.price || 0) * (item.qty || 1);
+            menuPerf[name].orders.add(o.id);
+          });
+        });
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Items', Object.keys(menuPerf).length.toString()],
+            ['Total Items Sold', Object.values(menuPerf).reduce((sum, m) => sum + m.qty, 0).toString()],
+            ['Top Seller', Object.entries(menuPerf).sort((a, b) => b[1].qty - a[1].qty)[0]?.[0] || 'N/A'],
+            ['Top Seller Revenue', Object.entries(menuPerf).sort((a, b) => b[1].revenue - a[1].revenue)[0]?.[1].revenue.toFixed(2) || '0']
+          ],
+          headers: ['Item', 'Quantity Sold', 'Revenue', 'Orders', 'Avg Price'],
+          details: Object.entries(menuPerf).sort((a, b) => b[1].qty - a[1].qty).map(([name, data]) => [
+            name, 
+            data.qty, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.orders.size,
+            `₹${data.qty > 0 ? (data.revenue / data.qty).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'daily-report':
+        const todayDate = new Date().toDateString();
+        const todayOrders = completedOrders.filter(o => new Date(o.createdAt).toDateString() === todayDate);
+        const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const todayItems = todayOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0);
+        return {
+          summary: [
+            ['Report Date', todayDate],
+            ['Total Orders', todayOrders.length.toString()],
+            ['Total Revenue', `₹${todayRevenue.toLocaleString()}`],
+            ['Total Items', todayItems.toString()],
+            ['Avg Order Value', `₹${todayOrders.length > 0 ? Math.round(todayRevenue / todayOrders.length) : 0}`],
+            ['Unique Customers', new Set(todayOrders.map(o => o.customerName || 'Walk-in')).size.toString()]
+          ],
+          headers: ['Time', 'Orders', 'Revenue', 'Items', 'Avg per Order'],
+          details: Object.entries(todayOrders.reduce((acc, o) => {
+            const hour = new Date(o.createdAt).getHours();
+            if (!acc[hour]) acc[hour] = { orders: 0, revenue: 0, items: 0 };
+            acc[hour].orders++;
+            acc[hour].revenue += o.total || 0;
+            acc[hour].items += o.items?.length || 0;
+            return acc;
+          }, {})).map(([hour, data]) => [
+            `${hour}:00`, 
+            data.orders, 
+            `₹${data.revenue.toFixed(2)}`,
+            data.items,
+            `₹${data.orders > 0 ? (data.revenue / data.orders).toFixed(2) : 0}`
+          ])
+        };
+      
+      case 'kpi-report':
+        const itemsPerOrder = completedOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0) / totalOrders;
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Revenue Target', '₹50,000'],
+            ['Revenue Status', totalRevenue >= 50000 ? '✓ Achieved' : '✗ Below Target'],
+            ['Total Orders', totalOrders.toString()],
+            ['Order Target', '100'],
+            ['Order Status', totalOrders >= 100 ? '✓ Achieved' : '✗ Below Target'],
+            ['Avg Order Value', `₹${Math.round(avgOrderValue)}`],
+            ['Avg Ticket Target', '₹500'],
+            ['Ticket Status', avgOrderValue >= 500 ? '✓ Achieved' : '✗ Below Target'],
+            ['Items per Order', itemsPerOrder.toFixed(1)]
+          ],
+          headers: ['KPI', 'Actual', 'Target', 'Variance', 'Status'],
+          details: [
+            ['Revenue', `₹${totalRevenue.toLocaleString()}`, '₹50,000', `₹${(totalRevenue - 50000).toLocaleString()}`, totalRevenue >= 50000 ? '✓' : '✗'],
+            ['Orders', totalOrders.toString(), '100', (totalOrders - 100).toString(), totalOrders >= 100 ? '✓' : '✗'],
+            ['Avg Ticket', `₹${Math.round(avgOrderValue)}`, '₹500', `₹${Math.round(avgOrderValue - 500)}`, avgOrderValue >= 500 ? '✓' : '✗'],
+            ['Items/Order', itemsPerOrder.toFixed(1), '3', (itemsPerOrder - 3).toFixed(1), itemsPerOrder >= 3 ? '✓' : '✗']
+          ]
+        };
+      
+      // ── Waste Report ────────────────────────────────────────────────────
+      case 'waste-report': {
+        const totalWasteCost = wasteRecords.reduce((sum, w) => sum + (parseFloat(w.cost) || 0), 0);
+        const totalWasteQty = wasteRecords.reduce((sum, w) => sum + (parseFloat(w.quantity) || 0), 0);
+        const wasteByCategory = wasteRecords.reduce((acc, w) => {
+          const cat = w.category || 'Uncategorized';
+          if (!acc[cat]) acc[cat] = { qty: 0, cost: 0, count: 0 };
+          acc[cat].qty += parseFloat(w.quantity) || 0;
+          acc[cat].cost += parseFloat(w.cost) || 0;
+          acc[cat].count++;
+          return acc;
+        }, {});
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Waste Records', wasteRecords.length.toString()],
+            ['Total Waste Quantity', `${totalWasteQty.toFixed(2)} units`],
+            ['Total Waste Cost', `₹${totalWasteCost.toLocaleString()}`],
+            ['Categories', Object.keys(wasteByCategory).length.toString()],
+            ['Most Wasted Category', Object.entries(wasteByCategory).sort((a,b) => b[1].cost - a[1].cost)[0]?.[0] || 'N/A']
+          ],
+          headers: ['Item / Ingredient', 'Quantity', 'Reason', 'Cost', 'Date'],
+          details: wasteRecords.slice().reverse().map(w => [
+            w.itemName || w.name || 'Unknown',
+            `${w.quantity || 0} ${w.unit || ''}`.trim(),
+            w.reason || 'N/A',
+            `₹${(parseFloat(w.cost) || 0).toFixed(2)}`,
+            w.date ? new Date(w.date).toLocaleDateString() : 'N/A'
+          ])
+        };
+      }
+
+      // ── Recipe Cost Report ───────────────────────────────────────────────
+      case 'recipe-cost': {
+        const totalRecipeCost = recipes.reduce((sum, r) => sum + (parseFloat(r.cost) || parseFloat(r.totalCost) || 0), 0);
+        return {
+          summary: [
+            ['Report Date', new Date().toLocaleDateString()],
+            ['Total Recipes', recipes.length.toString()],
+            ['Total Recipe Cost', `₹${totalRecipeCost.toLocaleString()}`],
+            ['Avg Recipe Cost', recipes.length > 0 ? `₹${(totalRecipeCost / recipes.length).toFixed(2)}` : '₹0.00'],
+            ['Recipes with Costing', recipes.filter(r => (r.cost || r.totalCost) > 0).length.toString()]
+          ],
+          headers: ['Recipe', 'Category', 'Servings', 'Total Cost', 'Cost per Serving', 'Selling Price', 'Margin'],
+          details: recipes.map(r => {
+            const cost = parseFloat(r.cost) || parseFloat(r.totalCost) || 0;
+            const servings = parseInt(r.servings) || 1;
+            const sellPrice = parseFloat(r.sellingPrice) || parseFloat(r.price) || 0;
+            const margin = sellPrice > 0 ? ((sellPrice - (cost / servings)) / sellPrice * 100).toFixed(1) : 'N/A';
+            return [
+              r.name || 'Unnamed',
+              r.category || 'General',
+              servings,
+              `₹${cost.toFixed(2)}`,
+              `₹${(cost / servings).toFixed(2)}`,
+              sellPrice > 0 ? `₹${sellPrice.toFixed(2)}` : 'N/A',
+              typeof margin === 'string' ? margin : `${margin}%`
+            ];
+          })
+        };
+      }
+
+      // ── Reservations Report ──────────────────────────────────────────────
+      case 'reservation-report': {
+        const upcoming = reservations.filter(r => new Date(r.date) >= new Date());
+        const past = reservations.filter(r => new Date(r.date) < new Date());
+        const confirmed = reservations.filter(r => r.status === 'confirmed' || r.status === 'Confirmed');
+        const cancelled = reservations.filter(r => r.status === 'cancelled' || r.status === 'Cancelled');
+        const totalGuests = reservations.reduce((sum, r) => sum + (parseInt(r.guests) || parseInt(r.partySize) || 0), 0);
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Reservations', reservations.length.toString()],
+            ['Upcoming', upcoming.length.toString()],
+            ['Past', past.length.toString()],
+            ['Confirmed', confirmed.length.toString()],
+            ['Cancelled', cancelled.length.toString()],
+            ['Total Guests Expected', totalGuests.toString()]
+          ],
+          headers: ['Guest Name', 'Date', 'Time', 'Guests', 'Table', 'Status', 'Notes'],
+          details: reservations.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).map(r => [
+            r.customerName || r.name || 'Unknown',
+            r.date ? new Date(r.date).toLocaleDateString() : 'N/A',
+            r.time || 'N/A',
+            r.guests || r.partySize || 1,
+            r.tableNumber || r.table || 'Any',
+            r.status || 'Pending',
+            r.notes || r.specialRequests || '–'
+          ])
+        };
+      }
+
+      // ── QR Orders Report ─────────────────────────────────────────────────
+      case 'qr-orders-report': {
+        const qrRevenue = qrOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+        const qrByTable = qrOrders.reduce((acc, o) => {
+          const t = o.tableNumber || o.table || 'Unknown';
+          if (!acc[t]) acc[t] = { orders: 0, revenue: 0 };
+          acc[t].orders++;
+          acc[t].revenue += parseFloat(o.total) || 0;
+          return acc;
+        }, {});
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total QR Orders', qrOrders.length.toString()],
+            ['Total QR Revenue', `₹${qrRevenue.toLocaleString()}`],
+            ['Avg Order Value', qrOrders.length > 0 ? `₹${(qrRevenue / qrOrders.length).toFixed(2)}` : '₹0.00'],
+            ['Tables Used', Object.keys(qrByTable).length.toString()]
+          ],
+          headers: ['Order ID', 'Table', 'Customer', 'Items', 'Total', 'Status', 'Date'],
+          details: qrOrders.slice().reverse().map(o => [
+            o.id || 'N/A',
+            o.tableNumber || o.table || 'N/A',
+            o.customerName || o.customer?.name || 'Guest',
+            o.items?.length || 0,
+            `₹${(parseFloat(o.total) || 0).toFixed(2)}`,
+            o.status || 'Received',
+            o.createdAt ? new Date(o.createdAt).toLocaleString() : 'N/A'
+          ])
+        };
+      }
+
+      // ── Kitchen Costs Report ─────────────────────────────────────────────
+      case 'kitchen-costs': {
+        const ingCostPerItem = {};
+        completedOrders.forEach(o => {
+          o.items?.forEach(item => {
+            const menuItem = menuItems.find(m => m.name === item.name);
+            const cost = (menuItem?.cost || 0) * (item.qty || item.quantity || 1);
+            const name = item.name || 'Unknown';
+            if (!ingCostPerItem[name]) ingCostPerItem[name] = { cost: 0, qty: 0, revenue: 0 };
+            ingCostPerItem[name].cost += cost;
+            ingCostPerItem[name].qty += item.qty || item.quantity || 1;
+            ingCostPerItem[name].revenue += (item.price || 0) * (item.qty || item.quantity || 1);
+          });
+        });
+        const totalKitchenCost = Object.values(ingCostPerItem).reduce((sum, v) => sum + v.cost, 0);
+        const wasteCost = wasteRecords.reduce((sum, w) => sum + (parseFloat(w.cost) || 0), 0);
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Kitchen Cost', `₹${totalKitchenCost.toLocaleString()}`],
+            ['Waste Cost', `₹${wasteCost.toLocaleString()}`],
+            ['Total Cost (incl. Waste)', `₹${(totalKitchenCost + wasteCost).toLocaleString()}`],
+            ['Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Gross Margin', `${totalRevenue > 0 ? (((totalRevenue - totalKitchenCost - wasteCost) / totalRevenue) * 100).toFixed(1) : 0}%`]
+          ],
+          headers: ['Item', 'Qty Sold', 'Total Cost', 'Total Revenue', 'Margin %'],
+          details: Object.entries(ingCostPerItem).sort((a, b) => b[1].cost - a[1].cost).map(([name, data]) => [
+            name,
+            data.qty,
+            `₹${data.cost.toFixed(2)}`,
+            `₹${data.revenue.toFixed(2)}`,
+            data.revenue > 0 ? `${((data.revenue - data.cost) / data.revenue * 100).toFixed(1)}%` : 'N/A'
+          ])
+        };
+      }
+
+      // ── Default fallback ─────────────────────────────────────────────────
+      default:
+        return {
+          summary: [
+            ['Report Period', dateRangeText],
+            ['Total Revenue', `₹${totalRevenue.toLocaleString()}`],
+            ['Total Orders', totalOrders.toString()],
+            ['Average Order Value', `₹${Math.round(avgOrderValue)}`],
+            ['Report Type', reportId]
+          ],
+          headers: ['Metric', 'Value'],
+          details: [['Note', 'Detailed data for this report type is coming soon']]
+        };
+    }
   };
 
   const reportData = useMemo(() => {
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
-    
-    let filteredOrders = orders;
-    if (dateRange === 'today') {
-      filteredOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today);
-    } else if (dateRange === 'yesterday') {
-      filteredOrders = orders.filter(o => new Date(o.createdAt).toDateString() === yesterday);
-    } else if (dateRange === 'week') {
-      const weekAgo = new Date(Date.now() - 7 * 86400000);
-      filteredOrders = orders.filter(o => new Date(o.createdAt) >= weekAgo);
-    } else if (dateRange === 'month') {
-      const monthAgo = new Date(Date.now() - 30 * 86400000);
-      filteredOrders = orders.filter(o => new Date(o.createdAt) >= monthAgo);
-    } else if (dateRange === 'custom') {
-      // Custom date range would need additional UI
-      filteredOrders = orders;
-    }
-
-    const completedOrders = filteredOrders.filter(o => o.status === 'COMPLETED');
-    
-    // Sales by item
-    const itemSales = {};
-    completedOrders.forEach(order => {
-      order.items?.forEach(item => {
-        if (!itemSales[item.name]) {
-          itemSales[item.name] = { quantity: 0, revenue: 0 };
-        }
-        itemSales[item.name].quantity += item.qty || 1;
-        itemSales[item.name].revenue += (item.price || 0) * (item.qty || 1);
-      });
-    });
-
-    const topItems = Object.entries(itemSales)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10);
-
-    // Payment methods
-    const paymentMethods = {};
-    completedOrders.forEach(order => {
-      const method = order.paymentMethod || 'CASH';
-      paymentMethods[method] = (paymentMethods[method] || 0) + order.total;
-    });
-
-    // GST calculation
-    const totalGST = completedOrders.reduce((sum, o) => sum + (o.tax || 0), 0);
-    const totalWithoutGST = completedOrders.reduce((sum, o) => sum + (o.subtotal || 0), 0);
-    const gstRate = totalWithoutGST > 0 ? (totalGST / totalWithoutGST * 100).toFixed(1) : 0;
-
-    // Sales by category
-    const categorySales = {};
-    completedOrders.forEach(order => {
-      order.items?.forEach(item => {
-        const category = item.category || 'Other';
-        if (!categorySales[category]) {
-          categorySales[category] = { quantity: 0, revenue: 0 };
-        }
-        categorySales[category].quantity += item.qty || 1;
-        categorySales[category].revenue += (item.price || 0) * (item.qty || 1);
-      });
-    });
-
-    // Sales by time period
-    const hourlySales = {};
-    completedOrders.forEach(order => {
-      const hour = new Date(order.createdAt).getHours();
-      if (!hourlySales[hour]) {
-        hourlySales[hour] = { count: 0, revenue: 0 };
-      }
-      hourlySales[hour].count += 1;
-      hourlySales[hour].revenue += order.total || 0;
-    });
-
-    // Staff performance
-    const staffPerformance = {};
-    completedOrders.forEach(order => {
-      const staffId = order.employeeId || 'unassigned';
-      const staffName = order.employeeName || 'Unassigned';
-      if (!staffPerformance[staffId]) {
-        staffPerformance[staffId] = { name: staffName, orders: 0, revenue: 0 };
-      }
-      staffPerformance[staffId].orders += 1;
-      staffPerformance[staffId].revenue += order.total || 0;
-    });
-
-    // Customer spending
-    const customerSpending = {};
-    completedOrders.forEach(order => {
-      const customerId = order.customerId || 'walk-in';
-      const customerName = order.customerName || 'Walk-in';
-      if (!customerSpending[customerId]) {
-        customerSpending[customerId] = { name: customerName, orders: 0, totalSpent: 0 };
-      }
-      customerSpending[customerId].orders += 1;
-      customerSpending[customerId].totalSpent += order.total || 0;
-    });
-
-    const topCustomers = Object.values(customerSpending)
-      .sort((a, b) => b.totalSpent - a.totalSpent)
-      .slice(0, 10);
-
-    // Inventory analysis
-    const inventoryAnalysis = {
-      totalItems: inventory.length,
-      lowStockItems: inventory.filter(item => item.quantity <= (item.minStock || 5)).length,
-      totalValue: inventory.reduce((sum, item) => sum + (item.quantity * (item.cost || 0)), 0),
-      categories: {}
-    };
-    
-    inventory.forEach(item => {
-      const category = item.category || 'Other';
-      if (!inventoryAnalysis.categories[category]) {
-        inventoryAnalysis.categories[category] = { count: 0, value: 0 };
-      }
-      inventoryAnalysis.categories[category].count += 1;
-      inventoryAnalysis.categories[category].value += item.quantity * (item.cost || 0);
-    });
-
-    // Cost vs Profit Analysis per menu item
-    const costProfitAnalysis = {};
-    completedOrders.forEach(order => {
-      order.items?.forEach(item => {
-        const itemName = item.name || item.itemName;
-        const menuItem = menuItems.find(m => m.name === itemName);
-        const cost = menuItem?.cost || 0;
-        const price = item.price || 0;
-        const quantity = item.qty || 1;
-        const revenue = price * quantity;
-        const totalCost = cost * quantity;
-        const profit = revenue - totalCost;
-        const margin = revenue > 0 ? (profit / revenue * 100).toFixed(1) : 0;
-
-        if (!costProfitAnalysis[itemName]) {
-          costProfitAnalysis[itemName] = {
-            cost,
-            price,
-            quantity: 0,
-            revenue: 0,
-            totalCost: 0,
-            profit: 0,
-            margin: 0
-          };
-        }
-
-        costProfitAnalysis[itemName].quantity += quantity;
-        costProfitAnalysis[itemName].revenue += revenue;
-        costProfitAnalysis[itemName].totalCost += totalCost;
-        costProfitAnalysis[itemName].profit += profit;
-        costProfitAnalysis[itemName].margin = margin;
-      });
-    });
-
-    const costProfitItems = Object.entries(costProfitAnalysis)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.profit - a.profit);
-
-    // Day-end report - Biller-wise sales
-    const billerWiseSales = Object.values(staffPerformance)
-      .sort((a, b) => b.revenue - a.revenue);
-
-    // Day-end report - Cash summary
-    const cashSummary = {
-      cash: paymentMethods['CASH'] || 0,
-      card: paymentMethods['CARD'] || 0,
-      upi: paymentMethods['UPI'] || 0,
-      total: Object.values(paymentMethods).reduce((sum, amount) => sum + amount, 0),
-      cashPercentage: 0
-    };
-    cashSummary.cashPercentage = cashSummary.total > 0 
-      ? (cashSummary.cash / cashSummary.total * 100).toFixed(1) 
-      : 0;
-    const financialAnalysis = {
-      totalRevenue: completedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
-      totalCost: completedOrders.reduce((sum, o) => {
-        const orderCost = o.items?.reduce((itemSum, item) => {
-          const menuItem = menuItems.find(m => m.name === item.name);
-          const cost = menuItem?.cost || 0;
-          return itemSum + (cost * (item.qty || 1));
-        }, 0) || 0;
-        return sum + orderCost;
-      }, 0),
-      totalGST: completedOrders.reduce((sum, o) => sum + (o.taxAmount || 0), 0),
-      grossProfit: 0,
-      netProfit: 0,
-      profitMargin: 0
-    };
-    
-    financialAnalysis.grossProfit = financialAnalysis.totalRevenue - financialAnalysis.totalCost;
-    financialAnalysis.netProfit = financialAnalysis.grossProfit - financialAnalysis.totalGST;
-    financialAnalysis.profitMargin = financialAnalysis.totalRevenue > 0 
-      ? (financialAnalysis.netProfit / financialAnalysis.totalRevenue * 100).toFixed(1) 
-      : 0;
-
-    return {
-      totalSales: completedOrders.reduce((sum, o) => sum + (o.total || 0), 0),
-      totalOrders: completedOrders.length,
-      avgOrderValue: completedOrders.length > 0 ? completedOrders.reduce((sum, o) => sum + (o.total || 0), 0) / completedOrders.length : 0,
-      topItems,
-      paymentMethods,
-      totalGST,
-      totalWithoutGST,
-      gstRate,
-      categorySales,
-      hourlySales,
-      staffPerformance,
-      topCustomers,
-      inventoryAnalysis,
-      financialAnalysis,
-      costProfitItems,
-      billerWiseSales,
-      cashSummary
-    };
-  }, [orders, dateRange, inventory, menuItems]);
+    return getReportData(selectedReport);
+  }, [orders, dateRange, inventory, menuItems, selectedReport, wasteRecords, recipes, reservations, qrOrders]);
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#f8fafc',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      background: darkMode ? '#1a1a2e' : '#ffffff',
+      fontFamily: 'Arial, sans-serif'
     }}>
       {/* Content */}
       <div style={{
@@ -450,7 +1093,30 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
         overflow: 'auto'
       }}>
         {/* Controls */}
-        <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
+          <select
+            value={selectedReport}
+            onChange={(e) => setSelectedReport(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              background: darkMode ? '#252538' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#212529',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+              borderRadius: '4px',
+              fontSize: '13px',
+              fontWeight: 'normal',
+              cursor: 'pointer',
+              minWidth: '200px'
+            }}
+          >
+            {reportCategories.map(category => (
+              <optgroup key={category.name} label={category.name}>
+                {category.reports.map(report => (
+                  <option key={report.id} value={report.id}>{report.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
           <button
             type="button"
             onClick={(e) => {
@@ -458,20 +1124,17 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
               exportToPDF();
             }}
             style={{
-              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-              background: '#3b82f6',
+              padding: '8px 16px',
+              background: '#007bff',
               color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: screenSize === 'small' ? '13px' : '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              border: '1px solid #0056b3',
+              borderRadius: '4px',
+              fontSize: '13px',
+              fontWeight: 'normal',
+              cursor: 'pointer'
             }}
-            onMouseEnter={(e) => e.target.style.background = '#2563eb'}
-            onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
           >
-            📄 Export PDF
+            Export PDF
           </button>
           <button
             type="button"
@@ -480,72 +1143,55 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
               exportToExcel();
             }}
             style={{
-              padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-              background: '#10b981',
+              padding: '8px 16px',
+              background: '#28a745',
               color: '#ffffff',
-              border: 'none',
-              borderRadius: '10px',
-              fontSize: screenSize === 'small' ? '13px' : '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              border: '1px solid #1e7e34',
+              borderRadius: '4px',
+              fontSize: '13px',
+              fontWeight: 'normal',
+              cursor: 'pointer'
             }}
-            onMouseEnter={(e) => e.target.style.background = '#059669'}
-            onMouseLeave={(e) => e.target.style.background = '#10b981'}
           >
-            📊 Export Excel
+            Export Excel
           </button>
         </div>
 
         {/* Date Range & Filters */}
         <div style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '20px',
-          marginBottom: '28px',
+          background: darkMode ? '#252538' : '#f8f9fa',
+          borderRadius: '4px',
+          padding: '12px',
+          marginBottom: '20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`
         }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>Period:</span>
+          <span style={{ color: darkMode ? '#e0e0e0' : '#495057', fontSize: '13px', fontWeight: 'normal' }}>Period:</span>
           {['today', 'yesterday', 'week', 'month'].map(range => (
             <button
               key={range}
               onClick={() => setDateRange(range)}
               style={{
-                padding: '10px 24px',
-                background: dateRange === range ? '#3b82f6' : '#ffffff',
-                color: dateRange === range ? '#ffffff' : '#64748b',
-                border: dateRange === range ? 'none' : '1px solid #e2e8f0',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
+                padding: '6px 12px',
+                background: dateRange === range ? '#007bff' : darkMode ? '#1a1a2e' : '#ffffff',
+                color: dateRange === range ? '#ffffff' : darkMode ? '#e0e0e0' : '#495057',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+                borderRadius: '4px',
+                fontSize: '13px',
+                fontWeight: 'normal',
                 cursor: 'pointer',
-                textTransform: 'capitalize',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (dateRange !== range) {
-                  e.target.style.background = '#f1f5f9';
-                  e.target.style.color = '#1e293b';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (dateRange !== range) {
-                  e.target.style.background = '#ffffff';
-                  e.target.style.color = '#64748b';
-                }
+                textTransform: 'capitalize'
               }}
             >
               {range}
             </button>
           ))}
           </div>
-          <div style={{ color: '#94a3b8', fontSize: screenSize === 'small' ? '12px' : '13px' }}>
-            Last updated: {new Date().toLocaleString()}
+          <div style={{ color: darkMode ? '#888' : '#6c757d', fontSize: '12px' }}>
+            Updated: {new Date().toLocaleString()}
           </div>
         </div>
 
@@ -553,478 +1199,89 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
         <div style={{
           display: 'grid',
           gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-          gap: screenSize === 'small' ? '16px' : '20px',
-          marginBottom: screenSize === 'small' ? '20px' : '28px'
+          gap: '16px',
+          marginBottom: '20px'
         }}>
-          <HeroStatCard
-            label="Total Revenue"
-            value={`₹${reportData.totalSales.toLocaleString()}`}
-            icon="💰"
-            color="#3b82f6"
-            trend="+12%"
-            chart={true}
-          />
-          <HeroStatCard
-            label="Total Orders"
-            value={reportData.totalOrders}
-            icon="📦"
-            color="#10b981"
-            trend="+8%"
-            chart={true}
-          />
-          <HeroStatCard
-            label="Avg Order Value"
-            value={`₹${Math.round(reportData.avgOrderValue)}`}
-            icon="🛒"
-            color="#f59e0b"
-            trend="+15%"
-            chart={true}
-          />
-          <HeroStatCard
-            label="GST Collected"
-            value={`₹${reportData.totalGST.toLocaleString()}`}
-            icon="💳"
-            color="#8b5cf6"
-            trend=""
-            chart={false}
-          />
+          {reportData.summary.slice(0, 4).map(([label, value], index) => (
+            <div key={index} style={{
+              background: darkMode ? '#252538' : '#f8f9fa',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+              borderRadius: '4px',
+              padding: '16px'
+            }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#888' : '#6c757d', marginBottom: '4px' }}>{label}</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#212529' }}>{value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Main Charts Section */}
+        {/* Summary Table */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: screenSize === 'small' ? '1fr' : '2fr 1fr',
-          gap: screenSize === 'small' ? '16px' : '24px',
-          marginBottom: screenSize === 'small' ? '20px' : '28px'
-        }}>
-          {/* Revenue Trend Chart */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '24px'
-            }}>
-              <div>
-                <div style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  color: '#1e293b',
-                  marginBottom: '4px'
-                }}>
-                  📈 Revenue Trend
-                </div>
-                <div style={{ color: '#64748b', fontSize: '13px' }}>
-                  Hourly sales performance
-                </div>
-              </div>
-              <div style={{
-                padding: '8px 16px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                borderRadius: '8px',
-                color: '#3b82f6',
-                fontSize: '13px',
-                fontWeight: '600'
-              }}>
-                Live
-              </div>
-            </div>
-            <AdvancedLineChart data={reportData.hourlySales} />
-          </div>
-
-          {/* Category Distribution */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1e293b',
-              marginBottom: '24px'
-            }}>
-              🥧 Category Split
-            </div>
-            <AdvancedPieChart data={reportData.categorySales} />
-          </div>
-        </div>
-
-        {/* Payment Methods & Top Items */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '24px',
-          marginBottom: '28px'
-        }}>
-          {/* Payment Methods */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1e293b',
-              marginBottom: '24px'
-            }}>
-              💳 Payment Methods
-            </div>
-            <AdvancedBarChart data={reportData.paymentMethods} total={reportData.totalSales} />
-          </div>
-
-          {/* Top Items */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1e293b',
-              marginBottom: '24px'
-            }}>
-              🏆 Top Performers
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {reportData.topItems.slice(0, 5).map((item, index) => (
-                <div key={item.name} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  padding: '16px',
-                  background: '#f8fafc',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = '#f1f5f9';
-                  e.target.style.borderColor = '#cbd5e1';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#e2e8f0';
-                }}
-                >
-                  <div style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    background: index === 0 ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 
-                              index === 1 ? 'linear-gradient(135deg, #94a3b8 0%, #64748b 100%)' : 
-                              index === 2 ? 'linear-gradient(135deg, #b45309 0%, #92400e 100%)' : 
-                              'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    fontWeight: '800',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>
-                    {index + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginBottom: '6px' }}>
-                      {item.name}
-                    </div>
-                    <div style={{ 
-                      height: '8px',
-                      background: '#e2e8f0',
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${(item.revenue / (reportData.topItems[0]?.revenue || 1)) * 100}%`,
-                        background: 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)',
-                        borderRadius: '4px',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
-                      ₹{item.revenue.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
-                      {item.quantity} sold
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Insights */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '28px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          marginBottom: '28px'
+          background: darkMode ? '#252538' : '#ffffff',
+          borderRadius: '4px',
+          padding: '16px',
+          border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+          marginBottom: '20px'
         }}>
           <div style={{
-            fontSize: '18px',
-            fontWeight: '700',
-            color: '#1e293b',
-            marginBottom: '20px'
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: darkMode ? '#ffffff' : '#212529',
+            marginBottom: '12px'
           }}>
-            💡 Quick Insights
+            Summary
           </div>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '20px'
-          }}>
-            <InsightCard
-              icon="🚀"
-              title="Peak Hour"
-              value="12:00 PM"
-              description="Highest sales volume"
-              color="#3b82f6"
-            />
-            <InsightCard
-              icon="⭐"
-              title="Best Seller"
-              value={reportData.topItems[0]?.name || 'N/A'}
-              description="Top revenue generator"
-              color="#f59e0b"
-            />
-            <InsightCard
-              icon="📊"
-              title="Growth Rate"
-              value="+12.5%"
-              description="vs previous period"
-              color="#10b981"
-            />
-          </div>
-        </div>
-
-        {/* Cost vs Profit Analysis */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '28px',
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          marginBottom: '28px'
-        }}>
-          <div style={{
-            fontSize: '18px',
-            fontWeight: '700',
-            color: '#1e293b',
-            marginBottom: '20px'
-          }}>
-            💰 Cost vs Profit Analysis
-          </div>
-          <div style={{ overflow: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Item Name</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Cost</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Price</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Qty Sold</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Revenue</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Total Cost</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Profit</th>
-                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: '#64748b', borderBottom: '2px solid #e2e8f0' }}>Margin %</th>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <tbody>
+              {reportData.summary.map(([label, value], index) => (
+                <tr key={index} style={{ borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}` }}>
+                  <td style={{ padding: '8px', fontSize: '13px', color: darkMode ? '#e0e0e0' : '#495057' }}>{label}</td>
+                  <td style={{ padding: '8px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#212529' }}>{value}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {reportData.costProfitItems.length > 0 ? reportData.costProfitItems.map((item, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={{ padding: '12px', fontSize: '14px', color: '#1e293b', fontWeight: '500' }}>{item.name}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>₹{item.cost.toFixed(2)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>₹{item.price.toFixed(2)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{item.quantity}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>₹{item.revenue.toFixed(2)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>₹{item.totalCost.toFixed(2)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: item.profit >= 0 ? '#10b981' : '#ef4444', fontWeight: '700' }}>₹{item.profit.toFixed(2)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: parseFloat(item.margin) >= 30 ? '#10b981' : parseFloat(item.margin) >= 20 ? '#f59e0b' : '#ef4444', fontWeight: '700' }}>{item.margin}%</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>No sales data available</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Day-end Report */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1fr',
-          gap: '24px',
-          marginBottom: '28px'
-        }}>
-          {/* Biller-wise Sales */}
+        {/* Details Table */}
+        {reportData.details && reportData.details.length > 0 && (
           <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            background: darkMode ? '#252538' : '#ffffff',
+            borderRadius: '4px',
+            padding: '16px',
+            border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+            marginBottom: '20px'
           }}>
             <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1e293b',
-              marginBottom: '20px'
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: darkMode ? '#ffffff' : '#212529',
+              marginBottom: '12px'
             }}>
-              👤 Biller-wise Sales
+              Details
             </div>
-            {reportData.billerWiseSales.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {reportData.billerWiseSales.map((biller, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '16px',
-                    background: '#f8fafc',
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <div>
-                      <div style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
-                        {biller.name}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        {biller.orders} orders
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e293b' }}>
-                        ₹{biller.revenue.toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ color: '#64748b', fontSize: '14px' }}>No biller data available</div>
-            )}
-          </div>
-
-          {/* Cash Summary */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '16px',
-            padding: '28px',
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1e293b',
-              marginBottom: '20px'
-            }}>
-              💵 Cash Summary
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px',
-                background: '#f0fdf4',
-                borderRadius: '12px',
-                border: '1px solid #bbf7d0'
-              }}>
-                <div>
-                  <div style={{ fontSize: '13px', color: '#166534', fontWeight: '600', marginBottom: '4px' }}>
-                    💵 Cash
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>
-                    {reportData.cashSummary.cashPercentage}% of total
-                  </div>
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: '#166534' }}>
-                  ₹{reportData.cashSummary.cash.toFixed(2)}
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px',
-                background: '#eff6ff',
-                borderRadius: '12px',
-                border: '1px solid #bfdbfe'
-              }}>
-                <div>
-                  <div style={{ fontSize: '13px', color: '#1e40af', fontWeight: '600', marginBottom: '4px' }}>
-                    💳 Card
-                  </div>
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e40af' }}>
-                  ₹{reportData.cashSummary.card.toFixed(2)}
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px',
-                background: '#fef9c3',
-                borderRadius: '12px',
-                border: '1px solid #fde047'
-              }}>
-                <div>
-                  <div style={{ fontSize: '13px', color: '#854d0e', fontWeight: '600', marginBottom: '4px' }}>
-                    📱 UPI
-                  </div>
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: '#854d0e' }}>
-                  ₹{reportData.cashSummary.upi.toFixed(2)}
-                </div>
-              </div>
-
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px',
-                background: '#1e293b',
-                borderRadius: '12px',
-                border: '1px solid #0f172a'
-              }}>
-                <div>
-                  <div style={{ fontSize: '13px', color: '#f1f5f9', fontWeight: '600', marginBottom: '4px' }}>
-                    📊 Total
-                  </div>
-                </div>
-                <div style={{ fontSize: '24px', fontWeight: '800', color: '#f1f5f9' }}>
-                  ₹{reportData.cashSummary.total.toFixed(2)}
-                </div>
-              </div>
+            <div style={{ overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: darkMode ? '#252538' : '#f8f9fa' }}>
+                    {reportData.headers.map((header, index) => (
+                      <th key={index} style={{ padding: '8px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#e0e0e0' : '#495057', borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}` }}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.details.map((row, rowIndex) => (
+                    <tr key={rowIndex} style={{ borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}` }}>
+                      {row.map((cell, cellIndex) => (
+                        <td key={cellIndex} style={{ padding: '8px', fontSize: '13px', color: darkMode ? '#e0e0e0' : '#212529' }}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -1085,7 +1342,7 @@ function HeroStatCard({ label, value, icon, color, trend, chart }) {
         <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>
           {label}
         </div>
-        <div style={{ fontSize: '32px', fontWeight: '800', color: '#1e293b', marginBottom: '8px', letterSpacing: '-1px' }}>
+        <div style={{ fontSize: '32px', fontWeight: '800', color: '#1f1f35', marginBottom: '8px', letterSpacing: '-1px' }}>
           {value}
         </div>
       </div>
@@ -1148,7 +1405,7 @@ function InsightCard({ icon, title, value, description, color }) {
         <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px', fontWeight: '600' }}>
           {title}
         </div>
-        <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e293b', marginBottom: '2px' }}>
+        <div style={{ fontSize: '20px', fontWeight: '800', color: '#1f1f35', marginBottom: '2px' }}>
           {value}
         </div>
         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
@@ -1299,7 +1556,7 @@ function AdvancedPieChart({ data }) {
           transform: 'translate(-50%, -50%)',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>
+          <div style={{ fontSize: '24px', fontWeight: '800', color: '#1f1f35' }}>
             {entries.length}
           </div>
           <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
@@ -1336,7 +1593,7 @@ function AdvancedPieChart({ data }) {
                 boxShadow: `0 0 8px ${colors[index % colors.length]}50`
               }} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f1f35' }}>
                   {cat}
                 </div>
                 <div style={{ fontSize: '12px', color: '#64748b' }}>
@@ -1361,7 +1618,7 @@ function AdvancedBarChart({ data, total }) {
         return (
           <div key={method}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
+              <span style={{ fontSize: '15px', fontWeight: '700', color: '#1f1f35' }}>
                 {method}
               </span>
               <span style={{ fontSize: '15px', fontWeight: '800', color: colors[index % colors.length] }}>

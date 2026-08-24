@@ -272,6 +272,7 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
   const [staffAssignments, setStaffAssignments] = useState({});
   const [previewTickets, setPreviewTickets] = useState([]);
   const [showPreviewPanel, setShowPreviewPanel] = useState(false);
+  const [showAllDayPrep, setShowAllDayPrep] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const audioRef = useRef(null);
   const speechManagerRef = useRef(null);
@@ -416,6 +417,8 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
     { id: 'printer-2', name: 'Kitchen Printer 2', type: 'thermal', status: 'online' },
     { id: 'printer-3', name: 'Bar Printer', type: 'thermal', status: 'offline' }
   ]);
+  const [selectedPrinter, setSelectedPrinter] = useState('printer-1');
+  const [showPrinterSelect, setShowPrinterSelect] = useState(false);
 
   // Initialize speech manager
   useEffect(() => {
@@ -465,29 +468,35 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
           const existingKOT = allKOTs.find(kot => kot.orderNumber === qrOrder.id);
           if (!existingKOT) {
             // Create KOT from QR order
-            const kot = {
-              id: `KOT-${qrOrder.id}`,
+            const orderData = {
+              orderId: `QR-${qrOrder.id}`,
               orderNumber: qrOrder.id,
-              items: qrOrder.items.map(item => ({
+              items: (qrOrder.items || []).map(item => ({
                 id: item.id,
                 name: item.name,
-                quantity: item.qty,
-                price: item.price,
+                quantity: parseInt(item.qty || item.quantity) || 1,
+                price: parseFloat(item.price) || 0,
+                category: item.category || 'General',
                 notes: item.notes || ''
               })),
-              customer: {
-                name: qrOrder.customerName,
-                table: qrOrder.tableName || 'QR Order'
-              },
-              station: 'all',
-              status: 'PENDING',
-              priority: 'NORMAL',
+              customerName: qrOrder.customerName,
+              tableNumber: qrOrder.tableName || 'QR Order',
               createdAt: qrOrder.createdAt,
-              isQROrder: true
+              token: qrOrder.token || null,
+              orderType: 'qr'
             };
             
-            kotManager.createKOT(qrOrder.id, kot);
-            console.log('Created KOT from QR order:', kot);
+            const res = kotManager.createKOT(orderData);
+            if (res.success && res.kot) {
+              res.kot.isQROrder = true;
+              // Force creation time from QR order if provided
+              if (qrOrder.createdAt) {
+                res.kot.createdAt = qrOrder.createdAt;
+              }
+              kotManager.kots.set(res.kot.kotId, res.kot);
+              kotManager.saveState();
+              console.log('Created KOT from QR order:', res.kot);
+            }
           }
         });
         
@@ -1229,8 +1238,18 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
     try {
       console.log('Updating item status:', kotId, kotItemId, newStatus);
       kotManager.updateItemStatus(kotId, kotItemId, newStatus);
-      console.log('Item status updated, reloading KOTs');
-      loadKOTs(); // Reload KOTs to show updated status
+      
+      // Immediately update React state for instant item status badge feedback
+      setKots(prev => prev.map(k => {
+        if (k.kotId === kotId) {
+          const updatedItems = k.items.map(item =>
+            item.kotItemId === kotItemId ? { ...item, status: newStatus.toLowerCase() } : item
+          );
+          // Re-calculate overall status if all items are prepared
+          return { ...k, items: updatedItems, updatedAt: new Date().toISOString() };
+        }
+        return k;
+      }));
     } catch (error) {
       console.error('Error updating item status:', error);
     }
@@ -1240,8 +1259,10 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
     try {
       kotManager.updateKOTStatus(kotId, newStatus);
 
-      // Update status filter to match the new status
-      setSelectedStatusFilter(newStatus);
+      // Immediately update React kots state so card re-renders without waiting for the event cycle
+      setKots(prev => prev.map(k =>
+        k.kotId === kotId ? { ...k, status: newStatus, updatedAt: new Date().toISOString() } : k
+      ));
 
       // Also update the main orders array to reflect the status change
       if (setOrders) {
@@ -1266,6 +1287,11 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
   const handleMarkUrgent = (kotId) => {
     try {
       kotManager.markAsUrgent(kotId);
+      
+      // Immediately update React state so priority sorting and border updates render instantly
+      setKots(prev => prev.map(k =>
+        k.kotId === kotId ? { ...k, priority: 'urgent' } : k
+      ));
     } catch (error) {
       console.error('Error marking KOT as urgent:', error);
     }
@@ -1340,8 +1366,9 @@ Printed: ${new Date().toLocaleString()}
           <body>${ticketContent}</body>
         </html>
       `);
-      printWindow.document.close();
+       printWindow.document.close();
       printWindow.print();
+      printWindow.close();
       
       console.log('Printed runner ticket for order', kot.orderNumber);
     } catch (error) {
@@ -1448,6 +1475,21 @@ Printed: ${new Date().toLocaleString()}
     return labels[station] || station;
   };
 
+  const getAllDayPrepList = () => {
+    const counts = {};
+    (kots || []).forEach(kot => {
+      if (kot && (kot.status === 'PENDING' || kot.status === 'PREPARING')) {
+        (kot.items || []).forEach(item => {
+          if (item && (item.status === 'PENDING' || item.status === 'PREPARING')) {
+            counts[item.name] = (counts[item.name] || 0) + (item.quantity || 1);
+          }
+        });
+      }
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  };
+  const prepList = getAllDayPrepList();
+
   return (
     <div style={{
       background: '#000000',
@@ -1455,6 +1497,18 @@ Printed: ${new Date().toLocaleString()}
       color: '#00ff00',
       fontFamily: '"Courier New", monospace'
     }}>
+      <style>{`
+        @keyframes kds-pulse-border {
+          0% { border-color: #ff0000; box-shadow: 0 0 5px rgba(255,0,0,0.3); }
+          100% { border-color: #ff3333; box-shadow: 0 0 15px rgba(255,0,0,0.7); }
+        }
+        @keyframes kds-blink-allergy {
+          0% { background: #ff0000; color: #ffffff; }
+          50% { background: #ffff00; color: #000000; }
+          100% { background: #ff0000; color: #ffffff; }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{
         padding: screenSize === 'small' ? '16px' : '20px 24px',
@@ -1635,6 +1689,76 @@ Printed: ${new Date().toLocaleString()}
               READY
             </button>
           </div>
+ 
+          {/* Order Type Filter */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>ORDER TYPE:</span>
+            <button
+              onClick={() => setSelectedOrderTypeFilter('all')}
+              style={{
+                padding: '6px 12px',
+                background: selectedOrderTypeFilter === 'all' ? '#00ff00' : '#000000',
+                color: selectedOrderTypeFilter === 'all' ? '#000000' : '#00ff00',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace'
+              }}
+            >
+              ALL
+            </button>
+            <button
+              onClick={() => setSelectedOrderTypeFilter('qr')}
+              style={{
+                padding: '6px 12px',
+                background: selectedOrderTypeFilter === 'qr' ? '#00ff00' : '#000000',
+                color: selectedOrderTypeFilter === 'qr' ? '#000000' : '#00ff00',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace'
+              }}
+            >
+              QR ORDER
+            </button>
+            <button
+              onClick={() => setSelectedOrderTypeFilter('dine-in')}
+              style={{
+                padding: '6px 12px',
+                background: selectedOrderTypeFilter === 'dine-in' ? '#00ff00' : '#000000',
+                color: selectedOrderTypeFilter === 'dine-in' ? '#000000' : '#00ff00',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace'
+              }}
+            >
+              DINE IN
+            </button>
+            <button
+              onClick={() => setSelectedOrderTypeFilter('takeaway')}
+              style={{
+                padding: '6px 12px',
+                background: selectedOrderTypeFilter === 'takeaway' ? '#00ff00' : '#000000',
+                color: selectedOrderTypeFilter === 'takeaway' ? '#000000' : '#00ff00',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace'
+              }}
+            >
+              TAKEAWAY
+            </button>
+          </div>
+
 
           {/* Speech Toggle */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1658,6 +1782,84 @@ Printed: ${new Date().toLocaleString()}
             >
               {notificationSettings.speechAnnouncements ? 'ON' : 'OFF'}
             </button>
+          </div>
+
+          {/* Printer Selector */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => { setShowPrinterSelect(!showPrinterSelect); setShowQuickSettings(false); }}
+              style={{
+                padding: '6px 12px',
+                background: '#000000',
+                color: '#00ff00',
+                border: '1px solid #00ff00',
+                borderRadius: '0px',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontFamily: '"Courier New", monospace',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🖨 [ PRINTER ]
+              <span style={{ fontSize: '9px', padding: '1px 5px', background: printers.find(p => p.id === selectedPrinter)?.status === 'online' ? '#00ff00' : '#ff0000', color: '#000000', fontWeight: 'bold' }}>
+                {printers.find(p => p.id === selectedPrinter)?.status?.toUpperCase() || 'N/A'}
+              </span>
+            </button>
+
+            {showPrinterSelect && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: '0',
+                marginTop: '4px',
+                background: '#000000',
+                border: '2px solid #00ff00',
+                minWidth: '260px',
+                zIndex: 1001,
+                fontFamily: '"Courier New", monospace'
+              }}>
+                <div style={{ padding: '8px 12px', borderBottom: '1px solid #00ff00', fontSize: '11px', fontWeight: 'bold', color: '#00ff00' }}>
+                  &gt; SELECT PRINTER
+                </div>
+                {printers.map(printer => (
+                  <div
+                    key={printer.id}
+                    onClick={() => { setSelectedPrinter(printer.id); setShowPrinterSelect(false); }}
+                    style={{
+                      padding: '10px 12px',
+                      cursor: printer.status === 'online' ? 'pointer' : 'not-allowed',
+                      background: selectedPrinter === printer.id ? '#00ff00' : '#000000',
+                      color: selectedPrinter === printer.id ? '#000000' : printer.status === 'online' ? '#00ff00' : '#444444',
+                      borderBottom: '1px dashed #00ff00',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '11px',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseEnter={e => { if (selectedPrinter !== printer.id && printer.status === 'online') e.currentTarget.style.background = '#111111'; }}
+                    onMouseLeave={e => { if (selectedPrinter !== printer.id) e.currentTarget.style.background = '#000000'; }}
+                  >
+                    <span style={{ fontWeight: 'bold' }}>{printer.name}</span>
+                    <span style={{
+                      fontSize: '9px',
+                      padding: '2px 6px',
+                      background: printer.status === 'online' ? (selectedPrinter === printer.id ? '#000000' : '#00ff00') : '#ff0000',
+                      color: printer.status === 'online' ? (selectedPrinter === printer.id ? '#00ff00' : '#000000') : '#ffffff',
+                      fontWeight: 'bold'
+                    }}>
+                      {printer.status === 'online' ? (selectedPrinter === printer.id ? '✓ ACTIVE' : 'ONLINE') : 'OFFLINE'}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ padding: '8px 12px', fontSize: '10px', color: '#444444', borderTop: '1px solid #333' }}>
+                  {printers.filter(p => p.status === 'online').length}/{printers.length} printers online
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Settings Toggle */}
@@ -2031,6 +2233,64 @@ Printed: ${new Date().toLocaleString()}
           </div>
         </div>
 
+      {/* All-Day Prep Panel (Collapsible Summary bar) */}
+      {prepList.length > 0 && (
+        <div style={{
+          background: '#000000',
+          borderBottom: '2px solid #00ff00',
+          padding: '8px 24px',
+          fontFamily: '"Courier New", monospace'
+        }}>
+          <div 
+            onClick={() => setShowAllDayPrep(!showAllDayPrep)}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            <span>
+              &gt; ALL-DAY BATCH PREP LIST ({prepList.length} items pending)
+            </span>
+            <span style={{ color: '#00ff00' }}>
+              {showAllDayPrep ? '[-] HIDE PREP MATRIX' : '[+] SHOW PREP MATRIX'}
+            </span>
+          </div>
+          {showAllDayPrep && (
+            <div style={{
+              marginTop: '8px',
+              padding: '12px',
+              border: '1px solid #00ff00',
+              display: 'grid',
+              gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '8px',
+              background: '#000000'
+            }}>
+              {prepList.map(([name, count]) => (
+                <div 
+                  key={name} 
+                  style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    padding: '4px 8px',
+                    background: '#111111',
+                    border: '1px dashed #00ff00'
+                  }}
+                >
+                  <span style={{ fontWeight: 'bold' }}>{name}</span>
+                  <span style={{ background: '#00ff00', color: '#000000', padding: '0 6px', fontWeight: 'bold' }}>
+                    x{count}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* KOT Grid */}
       <div style={{
         padding: screenSize === 'small' ? '16px' : '24px',
@@ -2077,23 +2337,94 @@ Printed: ${new Date().toLocaleString()}
                 displaySettings={displaySettings}
                 menuItems={menuItems}
                 advancedSettings={advancedSettings}
+                onViewRecipe={setSelectedRecipe}
               />
             ))
           )}
         </div>
       </div>
+
+      {/* Recipe Panel Modal */}
+      {selectedRecipe && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: '#000000',
+            border: '2px solid #00ff00',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '100%',
+            color: '#00ff00',
+            fontFamily: '"Courier New", monospace',
+            boxShadow: '0 0 20px rgba(0, 255, 0, 0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #00ff00', paddingBottom: '10px', marginBottom: '16px' }}>
+              <span style={{ fontWeight: 'bold', fontSize: '16px' }}>&gt; RECIPE: {selectedRecipe.name.toUpperCase()}</span>
+              <button 
+                onClick={() => setSelectedRecipe(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ff0000',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                [X]
+              </button>
+            </div>
+            
+            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>
+              {selectedRecipe.recipe || 'No detailed recipe steps specified for this item.'}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSelectedRecipe(null)}
+                style={{
+                  padding: '6px 16px',
+                  background: '#00ff00',
+                  color: '#000000',
+                  border: 'none',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                CLOSE [ESC]
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // KOT Card Component
-function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMarkUrgent, onCancelKOT, onSpeakItem, getStatusColor, hasAllergyAlert, getItemCourse, calculateFireTime, displaySettings, menuItems, advancedSettings }) {
+function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMarkUrgent, onCancelKOT, onSpeakItem, getStatusColor, hasAllergyAlert, getItemCourse, calculateFireTime, displaySettings, menuItems, advancedSettings, onViewRecipe }) {
   const [expanded, setExpanded] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
 
   const timeElapsed = Math.floor((Date.now() - new Date(kot.createdAt).getTime()) / 60000);
   const orderAge = kot.orderAge || timeElapsed;
   const isOverdue = kot.estimatedReadyAt ? new Date() > new Date(kot.estimatedReadyAt) && kot.status !== KOTStatus.SERVED : false;
+  const hasAllergy = hasAllergyAlert ? hasAllergyAlert(kot) : false;
+
+  const totalCount = kot.items?.length || 0;
+  const readyCount = kot.items?.filter(item => (item.status || 'pending').toLowerCase() === 'ready').length || 0;
+  const percentage = totalCount > 0 ? Math.round((readyCount / totalCount) * 100) : 0;
 
   // Format timestamp
   const formatTimestamp = (date) => {
@@ -2162,9 +2493,10 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
     <div style={{
       background: '#ffffff',
       borderRadius: '0px',
-      border: '2px solid #000000',
+      border: isOverdue ? '3px solid #ff0000' : '2px solid #000000',
       overflow: 'hidden',
-      boxShadow: '2px 2px 0px rgba(0, 0, 0, 0.1)',
+      boxShadow: isOverdue ? '0 0 12px rgba(255, 0, 0, 0.7)' : '2px 2px 0px rgba(0, 0, 0, 0.1)',
+      animation: isOverdue ? 'kds-pulse-border 1.5s infinite alternate' : 'none',
       transition: 'all 0.2s ease',
       display: 'flex',
       flexDirection: 'column',
@@ -2174,12 +2506,26 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
       transformOrigin: 'top left'
     }}
     onMouseEnter={(e) => {
-      e.target.style.boxShadow = '4px 4px 0px rgba(0, 0, 0, 0.2)';
+      e.currentTarget.style.boxShadow = isOverdue ? '0 0 16px rgba(255, 0, 0, 0.9)' : '4px 4px 0px rgba(0, 0, 0, 0.2)';
     }}
     onMouseLeave={(e) => {
-      e.target.style.boxShadow = '2px 2px 0px rgba(0, 0, 0, 0.1)';
+      e.currentTarget.style.boxShadow = isOverdue ? '0 0 12px rgba(255, 0, 0, 0.7)' : '2px 2px 0px rgba(0, 0, 0, 0.1)';
     }}
     >
+      {hasAllergy && (
+        <div style={{
+          animation: 'kds-blink-allergy 1s infinite',
+          padding: '5px 10px',
+          textAlign: 'center',
+          fontSize: '11px',
+          fontWeight: '900',
+          letterSpacing: '1px',
+          borderBottom: '2px solid #000000',
+          fontFamily: '"Courier New", monospace'
+        }}>
+          ⚠️ ALLERGY ALERT / CUSTOM DETAILS ⚠️
+        </div>
+      )}
       {/* Card Header */}
       <div style={{
         padding: screenSize === 'small' ? '12px' : '16px',
@@ -2197,17 +2543,26 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
           position: 'absolute',
           top: screenSize === 'small' ? '12px' : '16px',
           right: screenSize === 'small' ? '12px' : '16px',
-          padding: screenSize === 'small' ? '4px 8px' : '6px 12px',
+          padding: screenSize === 'small' ? '6px 12px' : '10px 18px',
           background: isOverdue ? '#ff0000' : kot.status === KOTStatus.READY ? '#00ff00' : kot.status === KOTStatus.PREPARING ? '#0000ff' : kot.status === KOTStatus.PENDING ? '#ffaa00' : '#808080',
           color: kot.status === KOTStatus.PENDING ? '#000000' : '#ffffff',
           borderRadius: '0px',
-          fontSize: screenSize === 'small' ? '11px' : '12px',
-          fontWeight: 'bold',
+          fontSize: screenSize === 'small' ? '12px' : '14px',
+          fontWeight: '900',
           textTransform: 'uppercase',
-          border: '1px solid #000000',
-          zIndex: 10
+          border: '2px solid #000000',
+          zIndex: 10,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          lineHeight: '1.3',
+          boxShadow: '2px 2px 0px rgba(0,0,0,0.15)'
         }}>
-          {kot.status}
+          <div>{kot.status}</div>
+          <div style={{ fontSize: screenSize === 'small' ? '9px' : '11px', marginTop: '4px', borderTop: '2px solid currentColor', width: '100%', paddingTop: '4px', fontWeight: 'bold' }}>
+            {percentage}% DONE
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: screenSize === 'small' ? 'flex-start' : 'flex-start', marginBottom: screenSize === 'small' ? '8px' : '12px', flexDirection: screenSize === 'small' ? 'column' : 'row', gap: screenSize === 'small' ? '8px' : '0', paddingRight: screenSize === 'small' ? '80px' : '100px' }}>
@@ -2320,10 +2675,10 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
                       <button
                         onClick={() => {
                           const recipe = menuItems?.find(m => m.id === item.menuItemId);
-                          if (recipe && recipe.recipe) {
-                            alert(`RECIPE: ${item.name}\n\n${recipe.recipe}`);
+                          if (recipe) {
+                            onViewRecipe(recipe);
                           } else {
-                            alert(`No recipe available for ${item.name}`);
+                            onViewRecipe({ name: item.name, recipe: 'No detailed recipe steps specified for this item.' });
                           }
                         }}
                         style={{
@@ -2355,17 +2710,30 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
                     </div>
                   )}
                 </div>
-                <div style={{
-                  padding: '4px 8px',
-                  background: item.status === 'READY' ? '#00ff00' : item.status === 'PREPARING' ? '#ffff00' : '#808080',
-                  color: '#000000',
-                  border: '1px solid #000000',
-                  fontSize: '10px',
-                  fontWeight: 'bold',
-                  borderRadius: '0px'
-                }}>
-                  {item.status}
-                </div>
+                <button
+                  onClick={() => {
+                    const current = (item.status || 'pending').toLowerCase();
+                    const next = current === 'pending' ? 'preparing' : current === 'preparing' ? 'ready' : 'pending';
+                    onItemStatusChange(kot.kotId, item.kotItemId, next);
+                  }}
+                  title="Click to cycle status: Pending -> Preparing -> Ready"
+                  style={{
+                    padding: '4px 8px',
+                    background: (item.status || 'pending').toLowerCase() === 'ready' ? '#00ff00' : (item.status || 'pending').toLowerCase() === 'preparing' ? '#ffff00' : '#808080',
+                    color: '#000000',
+                    border: '1px solid #000000',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    borderRadius: '0px',
+                    cursor: 'pointer',
+                    fontFamily: '"Courier New", monospace',
+                    outline: 'none'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  {(item.status || 'pending').toUpperCase()}
+                </button>
               </div>
             ))}
           </div>
