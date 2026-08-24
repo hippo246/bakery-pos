@@ -2302,9 +2302,9 @@ Printed: ${new Date().toLocaleString()}
           display: displaySettings.ticketLayout === 'list' ? 'flex' : 'grid',
           flexDirection: displaySettings.ticketLayout === 'list' ? 'column' : undefined,
           gridTemplateColumns: displaySettings.ticketLayout === 'compact' 
-            ? screenSize === 'small' ? 'repeat(auto-fill, minmax(250px, 1fr))' : 'repeat(auto-fill, minmax(280px, 1fr))'
+            ? screenSize === 'small' ? 'repeat(auto-fill, minmax(180px, 1fr))' : 'repeat(auto-fill, minmax(280px, 1fr))'
             : screenSize === 'small' ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: displaySettings.ticketLayout === 'compact' ? '8px' : screenSize === 'small' ? '12px' : '16px'
+          gap: displaySettings.ticketLayout === 'compact' ? '6px' : screenSize === 'small' ? '8px' : '16px'
         }}>
           {kots.length === 0 ? (
             <div style={{

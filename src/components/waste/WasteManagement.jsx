@@ -6,6 +6,9 @@ export default function WasteManagement({ inventory, onNavigate, darkMode = true
   const [editingRecord, setEditingRecord] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterReason, setFilterReason] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState('all'); // 'all', 'today', 'week', 'month'
+  const [sortBy, setSortBy] = useState('date-desc'); // 'date-desc', 'date-asc', 'cost-desc', 'cost-asc'
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
 
   // Screen size detection
@@ -81,7 +84,48 @@ export default function WasteManagement({ inventory, onNavigate, darkMode = true
   const filteredRecords = wasteRecords.filter(r => {
     if (filterCategory !== 'all' && r.category !== filterCategory) return false;
     if (filterReason !== 'all' && r.reason !== filterReason) return false;
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        (r.itemName && r.itemName.toLowerCase().includes(query)) ||
+        (r.category && r.category.toLowerCase().includes(query)) ||
+        (r.reason && r.reason.toLowerCase().includes(query)) ||
+        (r.notes && r.notes.toLowerCase().includes(query));
+      if (!matchesSearch) return false;
+    }
+    
+    // Date range filter
+    if (dateRange !== 'all') {
+      const recordDate = new Date(r.createdAt);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      if (dateRange === 'today') {
+        if (recordDate < today) return false;
+      } else if (dateRange === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        if (recordDate < weekAgo) return false;
+      } else if (dateRange === 'month') {
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        if (recordDate < monthAgo) return false;
+      }
+    }
+    
     return true;
+  }).sort((a, b) => {
+    // Sorting
+    const dateA = new Date(a.createdAt);
+    const dateB = new Date(b.createdAt);
+    
+    if (sortBy === 'date-desc') return dateB - dateA;
+    if (sortBy === 'date-asc') return dateA - dateB;
+    if (sortBy === 'cost-desc') return (b.totalCost || 0) - (a.totalCost || 0);
+    if (sortBy === 'cost-asc') return (a.totalCost || 0) - (b.totalCost || 0);
+    return 0;
   });
 
   return (
@@ -128,12 +172,31 @@ export default function WasteManagement({ inventory, onNavigate, darkMode = true
               padding: '16px',
               marginBottom: '24px',
               display: 'flex',
-              gap: '16px',
+              gap: '12px',
               flexWrap: 'wrap',
               alignItems: 'center',
               boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
               <span style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>Filters:</span>
+              
+              <input
+                type="text"
+                placeholder="Search items, reasons, notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: '200px',
+                  padding: '10px 16px',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
@@ -156,6 +219,7 @@ export default function WasteManagement({ inventory, onNavigate, darkMode = true
                 <option value="Dry Goods">Dry Goods</option>
                 <option value="Beverages">Beverages</option>
               </select>
+              
               <select
                 value={filterReason}
                 onChange={(e) => setFilterReason(e.target.value)}
@@ -177,6 +241,44 @@ export default function WasteManagement({ inventory, onNavigate, darkMode = true
                 <option value="quality">Quality Issue</option>
                 <option value="mistake">Mistake</option>
                 <option value="other">Other</option>
+              </select>
+              
+              <select
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value)}
+                style={{
+                  padding: '10px 16px',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+              </select>
+              
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  padding: '10px 16px',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              >
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="cost-desc">Highest Cost</option>
+                <option value="cost-asc">Lowest Cost</option>
               </select>
             </div>
 
