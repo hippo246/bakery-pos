@@ -299,13 +299,13 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
     bgEle:    darkMode ? '#1f1f35' : '#ffffff',
     bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
-    border:   darkMode ? '#2d2d44' : '#e2e8f0',
-    text:     darkMode ? '#ffffff' : '#111827',
-    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
+    border:   darkMode ? '#2d2d44' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#1f2937',
+    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
     textMute: darkMode ? '#8b8b9e' : '#6b7280',
     accent:   '#6366f1',
     accentHover: '#4f46e5',

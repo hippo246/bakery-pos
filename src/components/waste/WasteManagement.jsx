@@ -519,9 +519,21 @@ function WasteForm({ record, inventory, onSave, onCancel, darkMode = true }) {
   const [reason, setReason] = useState(record?.reason || 'expired');
   const [category, setCategory] = useState(record?.category || '');
   const [notes, setNotes] = useState(record?.notes || '');
+  const [itemSearch, setItemSearch] = useState('');
+  const [showItemDropdown, setShowItemDropdown] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
 
   const selectedItem = inventory.find(i => i.id === inventoryId);
   const totalCost = selectedItem ? (selectedItem.cost || 0) * quantity : 0;
+
+  // Filter inventory based on search
+  const filteredInventory = inventory.filter(item => 
+    item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+    item.category.toLowerCase().includes(itemSearch.toLowerCase())
+  );
+
+  const categories = ['Bakery', 'Dairy', 'Meat', 'Vegetables', 'Fruits', 'Dry Goods', 'Beverages', 'Other'];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -553,13 +565,20 @@ function WasteForm({ record, inventory, onSave, onCancel, darkMode = true }) {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px', position: 'relative' }}>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Item *
           </label>
-          <select
-            value={inventoryId}
-            onChange={(e) => setInventoryId(e.target.value)}
+          <input
+            type="text"
+            value={selectedItem ? selectedItem.name : itemSearch}
+            onChange={(e) => {
+              setItemSearch(e.target.value);
+              setShowItemDropdown(true);
+            }}
+            onFocus={() => setShowItemDropdown(true)}
+            onBlur={() => setTimeout(() => setShowItemDropdown(false), 200)}
+            placeholder="Search items..."
             required
             style={{
               width: '100%',
@@ -571,43 +590,144 @@ function WasteForm({ record, inventory, onSave, onCancel, darkMode = true }) {
               fontSize: '14px',
               outline: 'none'
             }}
-          >
-            <option value="">Select item</option>
-            {inventory.map(item => (
-              <option key={item.id} value={item.id}>{item.name} (₹{item.cost}/unit)</option>
-            ))}
-          </select>
+          />
+          {showItemDropdown && filteredInventory.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              maxHeight: '200px',
+              overflowY: 'auto',
+              background: darkMode ? '#252538' : '#ffffff',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              borderRadius: '6px',
+              marginTop: '4px',
+              zIndex: 1000,
+              boxShadow: darkMode ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)'
+            }}>
+              {filteredInventory.map(item => (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    setInventoryId(item.id);
+                    setItemSearch(item.name);
+                    setShowItemDropdown(false);
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    cursor: 'pointer',
+                    borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#1a1a2e' : '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111827' }}>
+                    {item.name}
+                  </div>
+                  <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+                    {item.category} • ₹{item.cost}/unit
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#e0e0e0', marginBottom: '8px' }}>
             Category *
           </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            required
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: darkMode ? '#1a1a2e' : '#ffffff',
-              color: darkMode ? '#ffffff' : '#111827',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-              borderRadius: '6px',
-              fontSize: '14px',
-              outline: 'none'
-            }}
-          >
-            <option value="">Select category</option>
-            <option value="Bakery">Bakery</option>
-            <option value="Dairy">Dairy</option>
-            <option value="Meat">Meat</option>
-            <option value="Vegetables">Vegetables</option>
-            <option value="Fruits">Fruits</option>
-            <option value="Dry Goods">Dry Goods</option>
-            <option value="Beverages">Beverages</option>
-            <option value="Other">Other</option>
-          </select>
+          {showCustomCategory ? (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                placeholder="Enter custom category..."
+                autoFocus
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (customCategory.trim()) {
+                    setCategory(customCategory.trim());
+                  }
+                  setShowCustomCategory(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  background: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                ✓
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomCategory(false);
+                  setCustomCategory('');
+                }}
+                style={{
+                  padding: '12px 16px',
+                  background: darkMode ? '#1a1a2e' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#111827',
+                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <select
+              value={category}
+              onChange={(e) => {
+                if (e.target.value === '__custom__') {
+                  setShowCustomCategory(true);
+                } else {
+                  setCategory(e.target.value);
+                }
+              }}
+              required
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                background: darkMode ? '#1a1a2e' : '#ffffff',
+                color: darkMode ? '#ffffff' : '#111827',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                borderRadius: '6px',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            >
+              <option value="">Select category</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+              <option value="__custom__">+ Custom Category</option>
+            </select>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>

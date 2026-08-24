@@ -280,13 +280,13 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
     bgEle:    darkMode ? '#1f1f35' : '#ffffff',
     bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
-    border:   darkMode ? '#2d2d44' : '#e2e8f0',
-    text:     darkMode ? '#ffffff' : '#111827',
-    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
+    border:   darkMode ? '#2d2d44' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#1f2937',
+    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
     textMute: darkMode ? '#8b8b9e' : '#6b7280',
     accent:   '#6366f1',
   };
@@ -300,26 +300,107 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
 
-      {/* Ready Orders Pickup Banner */}
+      {/* Header */}
+      <div style={{
+        padding: '20px 24px',
+        background: t.bgEle,
+        borderBottom: `1px solid ${t.border}`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            onClick={() => onNavigate?.('dashboard')}
+            style={{
+              padding: '8px 16px',
+              background: t.border,
+              color: t.text,
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            ← Back
+          </button>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: t.text }}>🛎️ Waiter Service</h2>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {waiterCalls.length > 0 && (
+            <button
+              onClick={() => setShowWaiterCallsModal(true)}
+              style={{
+                padding: '8px 16px',
+                background: '#f43f5e',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🔔 {waiterCalls.length}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Bar */}
+      <div style={{
+        padding: '16px 24px',
+        background: t.bgEle,
+        borderBottom: `1px solid ${t.border}`,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+        gap: '12px'
+      }}>
+        <div style={{ background: t.bgCard, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: '#6366f1' }}>{stats.total}</div>
+          <div style={{ fontSize: '10px', color: t.textMute, marginTop: '2px', textTransform: 'uppercase' }}>Active</div>
+        </div>
+        <div style={{ background: t.bgCard, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{stats.completed}</div>
+          <div style={{ fontSize: '10px', color: t.textMute, marginTop: '2px', textTransform: 'uppercase' }}>Completed</div>
+        </div>
+        <div style={{ background: t.bgCard, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: '#f59e0b' }}>{stats.pending}</div>
+          <div style={{ fontSize: '10px', color: t.textMute, marginTop: '2px', textTransform: 'uppercase' }}>Pending</div>
+        </div>
+        <div style={{ background: t.bgCard, padding: '12px', borderRadius: '8px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
+          <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>₹{stats.revenue.toLocaleString()}</div>
+          <div style={{ fontSize: '10px', color: t.textMute, marginTop: '2px', textTransform: 'uppercase' }}>Revenue</div>
+        </div>
+      </div>
+
+      {/* Ready Orders Banner */}
       {(() => {
         const readyList = allOrders.filter(o => o && (o.status || '').toLowerCase() === 'ready');
         if (readyList.length === 0) return null;
         return (
           <div style={{
             background: 'linear-gradient(90deg, #10b981, #059669)',
-            color: t.text,
-            padding: '14px 24px',
+            color: '#ffffff',
+            padding: '12px 24px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            fontWeight: '700',
-            fontSize: '14px',
-            boxShadow: '0 4px 20px rgba(16,185,129,0.25)'
+            fontWeight: '600',
+            fontSize: '13px',
+            boxShadow: '0 2px 12px rgba(16,185,129,0.2)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '20px' }}>🛎️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '16px' }}>🛎️</span>
               <span>
-                {readyList.length} ORDER{readyList.length > 1 ? 'S' : ''} READY FOR PICK-UP &nbsp;—&nbsp;
+                {readyList.length} ORDER{readyList.length > 1 ? 'S' : ''} READY &nbsp;—&nbsp;
                 {readyList.map(o => `${o.tableName || 'Counter'} (${o.token || '#' + String(o.id).slice(-4)})`).join(' · ')}
               </span>
             </div>
@@ -329,9 +410,9 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
                 background: '#ffffff',
                 color: '#059669',
                 border: 'none',
-                padding: '8px 16px',
-                borderRadius: '8px',
-                fontSize: '12px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '11px',
                 fontWeight: '700',
                 cursor: 'pointer'
               }}
@@ -342,106 +423,30 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
         );
       })()}
 
-      {/* Top Header Controls */}
+      {/* Filters Bar */}
       <div style={{
-        padding: '24px 32px',
+        padding: '12px 24px',
         background: t.bgEle,
         borderBottom: `1px solid ${t.border}`,
         display: 'flex',
-        flexDirection: 'column',
-        gap: '20px'
+        gap: '16px',
+        alignItems: 'center',
+        flexWrap: 'wrap'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button
-              onClick={() => onNavigate?.('dashboard')}
-              style={{
-                padding: '10px 20px',
-                background: t.border,
-                color: t.text,
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              ← Back to Dashboard
-            </button>
-
-            {waiterCalls.length > 0 && (
-              <button
-                onClick={() => setShowWaiterCallsModal(true)}
-                style={{
-                  padding: '10px 20px',
-                  background: '#f43f5e',
-                  color: t.text,
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                🔔 {waiterCalls.length} Waiter Calls
-              </button>
-            )}
-          </div>
-
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: t.text }}>🛎️ Waiter Service Station</h2>
-        </div>
-
-        {/* Stats Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '16px'
-        }}>
-          <div style={{ background: t.bgCard, padding: '16px', borderRadius: '12px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#6366f1' }}>{stats.total}</div>
-            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px', textTransform: 'uppercase' }}>Total Active</div>
-          </div>
-          <div style={{ background: t.bgCard, padding: '16px', borderRadius: '12px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>{stats.completed}</div>
-            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px', textTransform: 'uppercase' }}>Completed</div>
-          </div>
-          <div style={{ background: t.bgCard, padding: '16px', borderRadius: '12px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>{stats.pending}</div>
-            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px', textTransform: 'uppercase' }}>Pending</div>
-          </div>
-          <div style={{ background: t.bgCard, padding: '16px', borderRadius: '12px', border: `1px solid ${t.border}`, textAlign: 'center' }}>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>₹{stats.revenue.toLocaleString()}</div>
-            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px', textTransform: 'uppercase' }}>Revenue Served</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and search parameters */}
-      <div style={{
-        background: t.bgEle,
-        padding: '16px 32px',
-        borderBottom: `1px solid ${t.border}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        {/* Staff Row */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '12px', color: t.textMute, fontWeight: 'bold' }}>STAFF FILTER:</span>
-          {waiters.map(waiter => (
+        {/* Staff Filter */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', color: t.textMute, fontWeight: 'bold', letterSpacing: '0.5px' }}>STAFF</span>
+          {waiters.slice(0, 5).map(waiter => (
             <button
               key={waiter.id}
               onClick={() => setSelectedStaff(waiter.id === 'all' ? null : waiter)}
               style={{
-                padding: '6px 14px',
-                background: (selectedStaff?.id === waiter.id || (!selectedStaff && waiter.id === 'all')) ? '#6366f1' : '#252538',
-                color: t.text,
-                border: `1px solid ${(selectedStaff?.id === waiter.id || (!selectedStaff && waiter.id === 'all')) ? '#6366f1' : '#2d2d44'}`,
-                borderRadius: '20px',
-                fontSize: '12px',
+                padding: '5px 12px',
+                background: (selectedStaff?.id === waiter.id || (!selectedStaff && waiter.id === 'all')) ? t.accent : t.bgCard,
+                color: (selectedStaff?.id === waiter.id || (!selectedStaff && waiter.id === 'all')) ? '#ffffff' : t.text,
+                border: `1px solid ${(selectedStaff?.id === waiter.id || (!selectedStaff && waiter.id === 'all')) ? t.accent : t.border}`,
+                borderRadius: '16px',
+                fontSize: '11px',
                 fontWeight: '500',
                 cursor: 'pointer'
               }}
@@ -451,69 +456,68 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
           ))}
         </div>
 
-        {/* Status and Search Row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', color: t.textMute, fontWeight: 'bold' }}>STATUS:</span>
-            {['all', 'PENDING', 'IN_PROGRESS', 'READY', 'COMPLETED'].map(status => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                style={{
-                  padding: '6px 12px',
-                  background: filterStatus === status ? '#10b981' : '#252538',
-                  color: t.text,
-                  border: 'none',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  cursor: 'pointer'
-                }}
-              >
-                {status === 'all' ? 'All' : status}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input
-              type="text"
-              placeholder="Search table, token, customer..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Status Filter */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', color: t.textMute, fontWeight: 'bold', letterSpacing: '0.5px' }}>STATUS</span>
+          {['all', 'PENDING', 'IN_PROGRESS', 'READY', 'COMPLETED'].map(status => (
+            <button
+              key={status}
+              onClick={() => setFilterStatus(status)}
               style={{
-                padding: '8px 12px',
-                background: t.bgCard,
-                border: `1px solid ${t.border}`,
-                borderRadius: '6px',
-                color: t.text,
-                fontSize: '13px',
-                outline: 'none',
-                width: '200px'
-              }}
-            />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={{
-                padding: '8px 12px',
-                background: t.bgCard,
-                border: `1px solid ${t.border}`,
-                borderRadius: '6px',
-                color: t.text,
-                fontSize: '13px',
-                outline: 'none'
+                padding: '5px 10px',
+                background: filterStatus === status ? '#10b981' : t.bgCard,
+                color: filterStatus === status ? '#ffffff' : t.text,
+                border: `1px solid ${filterStatus === status ? '#10b981' : t.border}`,
+                borderRadius: '16px',
+                fontSize: '11px',
+                cursor: 'pointer'
               }}
             >
-              <option value="date">Sort: Time</option>
-              <option value="total">Sort: Total Revenue</option>
-              <option value="status">Sort: Status</option>
-            </select>
-          </div>
+              {status === 'all' ? 'All' : status.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+
+        {/* Search & Sort */}
+        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              background: t.bgCard,
+              border: `1px solid ${t.border}`,
+              borderRadius: '6px',
+              color: t.text,
+              fontSize: '12px',
+              outline: 'none',
+              width: '160px'
+            }}
+          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              background: t.bgCard,
+              border: `1px solid ${t.border}`,
+              borderRadius: '6px',
+              color: t.text,
+              fontSize: '12px',
+              outline: 'none'
+            }}
+          >
+            <option value="date">Time</option>
+            <option value="total">Revenue</option>
+            <option value="status">Status</option>
+          </select>
         </div>
       </div>
 
-      {/* Orders Grid Display */}
-      <div style={{ padding: '24px', flex: 1, overflow: 'auto' }}>
+      {/* Orders Grid */}
+      <div style={{ padding: '20px 24px', flex: 1, overflow: 'auto' }}>
         {filteredOrders.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px', color: t.textMute }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>📋</div>
@@ -553,9 +557,16 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '12px', color: t.textMute, display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '12px', color: t.textMute, display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <span>🪑 Table {order.tableName || order.tableNumber || 'N/A'}</span>
                     <span>👤 {order.customerName || 'Walk-in'}</span>
+                    {(() => {
+                      const assignedWaiter = staff.find(s => s.id === order.staffId || s.id === order.employeeId);
+                      if (assignedWaiter) {
+                        return <span style={{ color: t.accent, fontWeight: '500' }}>👨‍🍳 {assignedWaiter.name}</span>;
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* List of items */}
@@ -569,7 +580,7 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
                   </div>
                 </div>
 
-                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #2d2d44' }}>
+                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: `1px solid ${t.border}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <span style={{ fontSize: '12px', color: t.textMute }}>Total Amount</span>
                     <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>₹{order.total || 0}</span>
@@ -582,7 +593,7 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
                       style={{
                         width: '100%',
                         padding: '10px',
-                        background: (order.status || '').toLowerCase() === 'ready' ? '#10b981' : '#2d2d44',
+                        background: (order.status || '').toLowerCase() === 'ready' ? '#10b981' : t.border,
                         color: t.text,
                         border: 'none',
                         borderRadius: '6px',

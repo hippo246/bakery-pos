@@ -853,6 +853,10 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
   const [selectedItem, setSelectedItem] = useState(null);
   const [sortBy, setSortBy] = useState('name');
   const screenSize = useScreenSize();
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customDietary, setCustomDietary] = useState('');
+  const [showCustomDietary, setShowCustomDietary] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -1438,32 +1442,116 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
 
               <div>
                 <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
-                >
-                  <option value="Breads">Breads</option>
-                  <option value="Pastries">Pastries</option>
-                  <option value="Cakes">Cakes</option>
-                  <option value="Coffee">Coffee</option>
-                  <option value="Beverages">Beverages</option>
-                  <option value="Savory">Savory</option>
-                </select>
+                {showCustomCategory ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="Enter custom category..."
+                      autoFocus
+                      style={{ flex: 1, padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customCategory.trim()) {
+                          setFormData({ ...formData, category: customCategory.trim() });
+                        }
+                        setShowCustomCategory(false);
+                      }}
+                      style={{ padding: '10px 16px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomCategory(false);
+                        setCustomCategory('');
+                      }}
+                      style={{ padding: '10px 16px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.category}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setShowCustomCategory(true);
+                      } else {
+                        setFormData({ ...formData, category: e.target.value });
+                      }
+                    }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                  >
+                    <option value="Breads">Breads</option>
+                    <option value="Pastries">Pastries</option>
+                    <option value="Cakes">Cakes</option>
+                    <option value="Coffee">Coffee</option>
+                    <option value="Beverages">Beverages</option>
+                    <option value="Savory">Savory</option>
+                    <option value="__custom__">+ Custom Category</option>
+                  </select>
+                )}
               </div>
 
               <div>
                 <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Dietary Tag</label>
-                <select
-                  value={formData.dietary}
-                  onChange={(e) => setFormData({ ...formData, dietary: e.target.value })}
-                  style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
-                >
-                  <option value="veg">Vegetarian (Veg)</option>
-                  <option value="non-veg">Non-Vegetarian (Non-Veg)</option>
-                  <option value="vegan">Vegan</option>
-                  <option value="gf">Gluten Free (GF)</option>
-                </select>
+                {showCustomDietary ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      value={customDietary}
+                      onChange={(e) => setCustomDietary(e.target.value)}
+                      placeholder="Enter custom dietary tag..."
+                      autoFocus
+                      style={{ flex: 1, padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customDietary.trim()) {
+                          setFormData({ ...formData, dietary: customDietary.trim() });
+                        }
+                        setShowCustomDietary(false);
+                      }}
+                      style={{ padding: '10px 16px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomDietary(false);
+                        setCustomDietary('');
+                      }}
+                      style={{ padding: '10px 16px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.dietary}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setShowCustomDietary(true);
+                      } else {
+                        setFormData({ ...formData, dietary: e.target.value });
+                      }
+                    }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                  >
+                    <option value="veg">Vegetarian (Veg)</option>
+                    <option value="non-veg">Non-Vegetarian (Non-Veg)</option>
+                    <option value="vegan">Vegan</option>
+                    <option value="gf">Gluten Free (GF)</option>
+                    <option value="__custom__">+ Custom Tag</option>
+                  </select>
+                )}
               </div>
 
               <div>

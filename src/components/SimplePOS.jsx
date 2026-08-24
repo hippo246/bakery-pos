@@ -45,6 +45,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [receiptDelivery, setReceiptDelivery] = useState('none'); // none, email, sms, both
   const [receiptEmail, setReceiptEmail] = useState('');
   const [receiptPhone, setReceiptPhone] = useState('');
+  const [showUPIQR, setShowUPIQR] = useState(false);
+  const [upiQRData, setUpiQRData] = useState('');
+  const [savedCards, setSavedCards] = useState([]);
+  const [useSavedCard, setUseSavedCard] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncQueue, setSyncQueue] = useState([]);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, syncing, error
   
   // Filter staff based on terminal assignment
   const availableStaff = useMemo(() => {
@@ -84,7 +91,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [showCartDrawer, setShowCartDrawer] = useState(false);
   const [activeView, setActiveView] = useState('menu'); // 'menu', 'cart', 'customer', 'table', 'notes', 'payment', 'promo'
-  const [numpadMode, setNumpadMode] = useState('quantity'); // 'quantity', 'discount', 'amount'
+  const [numpadMode, setNumpadMode] = useState('quantity'); // 'quantity', 'discount', 'amount', 'tip', 'gst'
+  const [checkoutNumpadMode, setCheckoutNumpadMode] = useState('amount'); // 'amount', 'discount', 'tip', 'gst'
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [customerPhone, setCustomerPhone] = useState('');
@@ -215,6 +223,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   // Screen size detection
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const handleResize = () => {
       const width = window.innerWidth;
       if (width < 768) {
@@ -320,7 +330,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   // Auto-save cart to localStorage for recovery
   useEffect(() => {
-    if (posMode === 'advanced' && cart.length > 0) {
+    if (posMode === 'advanced' && cart.length > 0 && typeof window !== 'undefined') {
       try {
         localStorage.setItem('pos_cart_backup', JSON.stringify(cart));
         localStorage.setItem('pos_cart_backup_timestamp', Date.now().toString());
@@ -333,30 +343,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   // Restore cart on mount if available
   useEffect(() => {
-    if (posMode === 'advanced') {
+    if (posMode === 'advanced' && typeof window !== 'undefined') {
       try {
         const savedCart = localStorage.getItem('pos_cart_backup');
         const savedTimestamp = localStorage.getItem('pos_cart_backup_timestamp');
         const savedReason = localStorage.getItem('pos_cart_backup_reason');
-        
+
         if (savedCart && cart.length === 0) {
           const parsedCart = JSON.parse(savedCart);
-          if (parsedCart && parsedCart.length > 0) {
-            // Determine restore reason
-            let reason = savedReason || 'Previous session';
-            if (savedTimestamp) {
-              const timeDiff = Date.now() - parseInt(savedTimestamp);
-              const minutesAgo = Math.floor(timeDiff / 60000);
-              if (minutesAgo < 1) {
-                reason = 'Page refreshed';
-              } else if (minutesAgo < 60) {
-                reason = `Session interrupted (${minutesAgo}m ago)`;
-              } else {
-                reason = 'Previous session';
-              }
-            }
-            
-            setCartRestoreReason(reason);
+          const timestamp = parseInt(savedTimestamp || '0');
+          const timeDiff = Date.now() - timestamp;
+
+          // Only restore if less than 24 hours old
+          if (timeDiff < 24 * 60 * 60 * 1000) {
+            setCartRestoreReason(savedReason || 'Session recovery');
             setRestoredCart(parsedCart);
             setShowCartRestore(true);
           }
@@ -751,7 +751,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     
     // Check payment method availability
     if (workflowSteps.includes('payment')) {
-      const allowedMethods = settings.allowedPaymentMethods || ['CASH', 'CARD', 'UPI', 'SPLIT'];
+      const allowedMethods = settings.allowedPaymentMethods || ['CASH', 'CARD', 'UPI', 'UPI_QR', 'SPLIT'];
       if (!allowedMethods.includes(paymentMethod)) {
         return `Payment method ${paymentMethod} is not allowed. Allowed methods: ${allowedMethods.join(', ')}`;
       }
@@ -849,16 +849,60 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
 
       try {
+        const orderId = `ORD-${Date.now().toString().slice(-6)}`;
+        
+        // Standard Razorpay checkout options
         const options = {
           key: razorpayKey,
-          amount: Math.round(Math.abs(paymentAmount || cartTotal || 0) * 100), // Amount in paise, ensure it's an integer
+          amount: Math.round(Math.abs(paymentAmount || cartTotal || 0) * 100), // Amount in paise
           currency: 'INR',
           name: settings.storeName || 'BakeryPOS',
           description: 'Order Payment',
-          order_id: null, // Optional - create order on server for better security
           handler: function(response) {
             // Payment successful
             console.log('Payment successful:', response);
+            
+            // Save payment details for refund management
+            const paymentData = {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              amount: Math.round(Math.abs(paymentAmount || cartTotal || 0) * 100),
+              currency: 'INR',
+              order_id: orderId,
+              customer_id: selectedCustomer?.id || null,
+              payment_method: paymentMethod,
+              timestamp: new Date().toISOString(),
+              status: 'success'
+            };
+            
+            // Save to localStorage for refund management
+            try {
+              const payments = JSON.parse(localStorage.getItem('payment_transactions') || '[]');
+              payments.push(paymentData);
+              localStorage.setItem('payment_transactions', JSON.stringify(payments));
+            } catch (e) {
+              console.error('Error saving payment data:', e);
+            }
+            
+            // If card was used and user wants to save it
+            if (response.razorpay_payment_id && paymentMethod === 'CARD') {
+              // Extract card details from response if available
+              const cardData = {
+                card_network: response.card?.network || 'unknown',
+                last4: response.card?.last4 || '****',
+                card_name: response.card?.name || 'Card',
+                expiry_month: response.card?.expiry_month || '',
+                expiry_year: response.card?.expiry_year || '',
+                token: response.razorpay_payment_id // Use payment ID as token for now
+              };
+              
+              // Auto-save card if customer is selected
+              if (selectedCustomer) {
+                saveCardForFuture(cardData);
+              }
+            }
+            
             completeOrder(response.razorpay_payment_id);
           },
           prefill: {
@@ -866,31 +910,52 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             email: selectedCustomer?.email || '',
             contact: selectedCustomer?.phone || ''
           },
+          notes: {
+            order_id: orderId,
+            customer: selectedCustomer?.name || 'Walk-in',
+            table: selectedTable?.name || 'Counter',
+            items: (cart || []).map(item => item?.name || 'Unknown').join(', ')
+          },
+          theme: {
+            color: '#C9A227'
+          },
           modal: {
             ondismiss: function() {
               console.log('Payment modal dismissed');
             },
             escape: true,
             confirm_close: true,
-            backdrop_close: false
-          },
-          notes: {
-            order_id: `ORD-${Date.now().toString().slice(-6)}`,
-            customer: selectedCustomer?.name || 'Walk-in'
-          },
-          theme: {
-            color: '#C9A227'
+            backdrop_close: false,
+            animation: true
           }
         };
 
         if (typeof window !== 'undefined' && window.Razorpay) {
-          console.log('Opening Razorpay with key:', razorpayKey);
+          console.log('Opening Razorpay checkout with key:', razorpayKey);
           const rzp = new window.Razorpay(options);
           rzp.open();
 
           rzp.on('payment.failed', function(response) {
             console.error('Payment failed:', response.error);
             const errorMsg = response.error?.description || response.error?.reason || 'Unknown error';
+            
+            // Save failed payment for tracking
+            const failedPayment = {
+              order_id: orderId,
+              error: response.error,
+              amount: Math.round(Math.abs(paymentAmount || cartTotal || 0) * 100),
+              timestamp: new Date().toISOString(),
+              status: 'failed'
+            };
+            
+            try {
+              const payments = JSON.parse(localStorage.getItem('payment_transactions') || '[]');
+              payments.push(failedPayment);
+              localStorage.setItem('payment_transactions', JSON.stringify(payments));
+            } catch (e) {
+              console.error('Error saving failed payment:', e);
+            }
+            
             setAlertMessage('Payment failed: ' + errorMsg);
             setShowAlert(true);
           });
@@ -908,18 +973,208 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     }
   };
 
+  // Generate UPI QR code for contactless payments
+  const generateUPIQR = () => {
+    if (!cartTotal || cartTotal <= 0) {
+      setAlertMessage('Cart total must be greater than 0 to generate UPI QR.');
+      setShowAlert(true);
+      return;
+    }
+
+    // Get UPI ID from settings or use default
+    const upiId = settings.upiId || 'yourupi@paytm';
+    const storeName = (settings.storeName || 'BakeryPOS').replace(/\s+/g, '');
+    const amount = Math.round(cartTotal * 100); // Amount in paise
+    
+    // Build UPI payment string
+    const upiString = `upi://pay?pa=${upiId}&pn=${storeName}&am=${amount/100}&cu=INR&tn=Order-${Date.now()}`;
+    
+    setUpiQRData(upiString);
+    setShowUPIQR(true);
+  };
+
+  // Verify UPI payment (this would typically be done via webhook or polling)
+  const verifyUPIPayment = () => {
+    // In production, this would verify with Razorpay backend
+    // For now, we'll simulate verification
+    setAlertMessage('UPI payment verification requires backend integration. Please complete payment manually.');
+    setShowAlert(true);
+    setShowUPIQR(false);
+  };
+
+  // Save card for future use (tokenization)
+  const saveCardForFuture = (cardData) => {
+    try {
+      const savedCards = JSON.parse(localStorage.getItem('saved_cards') || '[]');
+      
+      // Check if card already exists
+      const cardExists = savedCards.some(card => 
+        card.last4 === cardData.last4 && 
+        card.card_network === cardData.card_network
+      );
+      
+      if (!cardExists) {
+        savedCards.push({
+          id: `card_${Date.now()}`,
+          card_network: cardData.card_network,
+          last4: cardData.last4,
+          card_name: cardData.card_name || 'Card',
+          expiry_month: cardData.expiry_month,
+          expiry_year: cardData.expiry_year,
+          token: cardData.token, // Razorpay card token
+          customer_id: selectedCustomer?.id || null,
+          created_at: new Date().toISOString()
+        });
+        
+        localStorage.setItem('saved_cards', JSON.stringify(savedCards));
+        setSavedCards(savedCards);
+        setAlertMessage('Card saved successfully for future payments');
+        setShowAlert(true);
+      }
+    } catch (e) {
+      console.error('Error saving card:', e);
+    }
+  };
+
+  // Load saved cards from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const cards = JSON.parse(localStorage.getItem('saved_cards') || '[]');
+      setSavedCards(cards);
+    } catch (e) {
+      console.error('Error loading saved cards:', e);
+    }
+  }, []);
+
+  // Load sync queue from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+      setSyncQueue(queue);
+    } catch (e) {
+      console.error('Error loading sync queue:', e);
+    }
+  }, []);
+
+  // Monitor online/offline status
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      setSyncStatus('syncing');
+      syncOfflineData();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setAlertMessage('You are offline. Orders will be saved and synced when you reconnect.');
+      setShowAlert(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Sync offline data when back online
+  const syncOfflineData = async () => {
+    try {
+      const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+      
+      if (queue.length === 0) {
+        setSyncStatus('idle');
+        return;
+      }
+
+      for (const item of queue) {
+        // Sync orders
+        if (item.type === 'order') {
+          // In production, this would sync with your backend
+          console.log('Syncing order:', item.data);
+        }
+        // Sync payments
+        if (item.type === 'payment') {
+          // In production, this would sync with Razorpay
+          console.log('Syncing payment:', item.data);
+        }
+      }
+
+      // Clear sync queue after successful sync
+      localStorage.setItem('sync_queue', JSON.stringify([]));
+      setSyncQueue([]);
+      setSyncStatus('idle');
+      setAlertMessage(`Successfully synced ${queue.length} items`);
+      setShowAlert(true);
+    } catch (e) {
+      console.error('Error syncing data:', e);
+      setSyncStatus('error');
+      setAlertMessage('Error syncing data. Will retry automatically.');
+      setShowAlert(true);
+    }
+  };
+
+  // Add item to sync queue
+  const addToSyncQueue = (type, data) => {
+    try {
+      const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+      queue.push({
+        id: Date.now(),
+        type,
+        data,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('sync_queue', JSON.stringify(queue));
+      setSyncQueue(queue);
+    } catch (e) {
+      console.error('Error adding to sync queue:', e);
+    }
+  };
+
+  // Remove saved card
+  const removeSavedCard = (cardId) => {
+    try {
+      const cards = JSON.parse(localStorage.getItem('saved_cards') || '[]');
+      const updatedCards = cards.filter(card => card.id !== cardId);
+      localStorage.setItem('saved_cards', JSON.stringify(updatedCards));
+      setSavedCards(updatedCards);
+      setAlertMessage('Card removed successfully');
+      setShowAlert(true);
+    } catch (e) {
+      console.error('Error removing card:', e);
+    }
+  };
+
   const sendEmailReceipt = async (order, email) => {
     if (!email || !email.includes('@')) {
       console.error('Invalid email address');
       return false;
     }
 
+    if (!order) {
+      console.error('Invalid order data');
+      return false;
+    }
+
     try {
       // Generate receipt HTML
       const receiptHTML = generateReceiptHTML(order);
-      
-      const apiKey = settings.brevoApiKey || 'xsmtpsib-409d85d7333f90f17511052fe49099bc8f8eb7d3afeaf29dac797f38d2cf3a6a-lnXkG4GFIZoEq99l';
-      
+
+      const apiKey = settings.brevoApiKey || process.env.VITE_BREVO_API_KEY || '';
+
+      if (!apiKey) {
+        console.error('Brevo API key not configured');
+        setAlertMessage('Email service not configured');
+        setShowAlert(true);
+        return false;
+      }
+
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
@@ -942,7 +1197,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         console.log('Email sent successfully via Brevo:', data);
         setAlertMessage(`Receipt sent to ${email}`);
@@ -968,22 +1223,27 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       return false;
     }
 
+    if (!order) {
+      console.error('Invalid order data');
+      return false;
+    }
+
     try {
       // Generate receipt text
       const receiptText = generateReceiptText(order);
-      
+
       // In a real implementation, you would send this to your SMS service
       // For now, we'll log it and show a success message
       console.log('SMS receipt would be sent to:', phone);
       console.log('Receipt content:', receiptText);
-      
+
       // Placeholder for actual SMS sending
       // await fetch('/api/send-receipt-sms', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({ phone, receipt: receiptText, orderId: order.id })
       // });
-      
+
       setAlertMessage(`Receipt sent to ${phone}`);
       setShowAlert(true);
       return true;
@@ -1021,20 +1281,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style="font-size: 10px;">Customer: ${order.customerName || 'Walk-in'}</div>
           <div style="font-size: 10px;">Staff: ${order.staffName || 'N/A'}</div>
         </div>
-        ${order.items.map(item => `
+        ${(order.items || []).map(item => `
           <div style="margin-bottom: 8px; border-bottom: 1px dashed #000; padding-bottom: 8px;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-              <span style="font-weight: 500;">${item.name}</span>
-              <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+              <span style="font-weight: 500;">${item?.name || 'Unknown'}</span>
+              <span>₹${((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}</span>
             </div>
-            <div style="font-size: 10px; color: #666;">${item.quantity} x ₹${item.price.toFixed(2)}</div>
-            ${item.isCustom ? `
+            <div style="font-size: 10px; color: #666;">${item?.quantity || 0} x ₹${(item?.price || 0).toFixed(2)}</div>
+            ${item?.isCustom ? `
               <div style="font-size: 10px; color: #92400e; margin-top: 2px;">
                 ⚙️ Custom
-                ${item.baseItemName ? ` (Base: ${item.baseItemName})` : ''}
+                ${item?.baseItemName ? ` (Base: ${item.baseItemName})` : ''}
               </div>
             ` : ''}
-            ${item.notes ? `
+            ${item?.notes ? `
               <div style="font-size: 10px; color: ${item.noteType === 'allergy' ? '#dc2626' : '#666'}; margin-top: 2px; ${item.noteType === 'allergy' ? 'font-weight: bold;' : ''}">
                 ${item.noteType === 'allergy' ? '⚠️ ' : '📝 '}${item.notes}
               </div>
@@ -1205,6 +1465,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setReceiptDelivery('none');
     setReceiptEmail('');
     setReceiptPhone('');
+
+    // Add to sync queue if offline
+    if (!isOnline) {
+      addToSyncQueue('order', newOrder);
+      newOrder.synced = false;
+      newOrder.offline = true;
+      setAlertMessage('Order saved offline. Will sync when you reconnect.');
+      setShowAlert(true);
+    } else {
+      newOrder.synced = true;
+      newOrder.offline = false;
+    }
 
     // Send receipts if requested
     if (receiptDelivery === 'email' && receiptEmail) {
@@ -1388,13 +1660,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   // Aggregator_ORDER handlers
   const handleAcceptAggregatorOrder = async (orderId) => {
+    if (!orderId) {
+      console.error('Invalid order ID');
+      return;
+    }
+
     try {
       // Call real API through aggregator service
       await aggregatorService.acceptOrder(orderId, 30); // 30 min prep time
-      
+
       // Update local state
       setAggregatorOrders(aggregatorService.getOrders());
-      
+
       // Convert aggregator order to POS cart
       const order = aggregatorService.getOrder(orderId);
       if (order) {
@@ -1412,37 +1689,47 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
     } catch (error) {
       console.error('Failed to accept aggregator order:', error);
-      setAlertMessage(`Failed to accept order: ${error.message}`);
+      setAlertMessage(`Failed to accept order: ${error.message || 'Unknown error'}`);
       setShowAlert(true);
     }
   };
 
   const handleRejectAggregatorOrder = async (orderId) => {
+    if (!orderId) {
+      console.error('Invalid order ID');
+      return;
+    }
+
     try {
       if (confirm('Are you sure you want to reject this order?')) {
         // Call real API through aggregator service
         await aggregatorService.rejectOrder(orderId, 'Restaurant rejected');
-        
+
         // Update local state
         setAggregatorOrders(aggregatorService.getOrders());
       }
     } catch (error) {
       console.error('Failed to reject aggregator order:', error);
-      setAlertMessage(`Failed to reject order: ${error.message}`);
+      setAlertMessage(`Failed to reject order: ${error.message || 'Unknown error'}`);
       setShowAlert(true);
     }
   };
 
   const handleAggregatorOrderStatusChange = async (orderId, newStatus) => {
+    if (!orderId || !newStatus) {
+      console.error('Invalid order ID or status');
+      return;
+    }
+
     try {
       // Call real API through aggregator service
       await aggregatorService.updateOrderStatus(orderId, newStatus);
-      
+
       // Update local state
       setAggregatorOrders(aggregatorService.getOrders());
     } catch (error) {
       console.error('Failed to update aggregator order status:', error);
-      setAlertMessage(`Failed to update status: ${error.message}`);
+      setAlertMessage(`Failed to update status: ${error.message || 'Unknown error'}`);
       setShowAlert(true);
     }
   };
@@ -1814,6 +2101,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         if (numpadMode === 'quantity') setQuantityInput('');
         else if (numpadMode === 'discount') setDiscount(0);
         else if (numpadMode === 'amount') setQuantityInput('');
+        else if (numpadMode === 'tip') setTipAmount(0);
+        else if (numpadMode === 'gst') setGstRate(18);
       } else if (value === '⌫') {
         if (numpadMode === 'quantity') {
           setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '');
@@ -1825,10 +2114,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           });
         } else if (numpadMode === 'amount') {
           setQuantityInput(prev => prev.length > 1 ? prev.slice(0, -1) : '');
+        } else if (numpadMode === 'tip') {
+          setTipAmount(prev => {
+            const prevStr = prev.toString();
+            const nextStr = prevStr.length > 1 ? prevStr.slice(0, -1) : '0';
+            return parseFloat(nextStr) || 0;
+          });
+        } else if (numpadMode === 'gst') {
+          setGstRate(prev => {
+            const prevStr = prev.toString();
+            const nextStr = prevStr.length > 1 ? prevStr.slice(0, -1) : '18';
+            return parseInt(nextStr) || 18;
+          });
         }
       } else if (value === '.') {
-        if (numpadMode === 'amount') {
-          setQuantityInput(prev => prev.includes('.') ? prev : prev + '.');
+        if (numpadMode === 'amount' || numpadMode === 'tip') {
+          if (numpadMode === 'amount') {
+            setQuantityInput(prev => prev.includes('.') ? prev : prev + '.');
+          } else {
+            setTipAmount(prev => {
+              const prevStr = prev.toString();
+              return prevStr.includes('.') ? prevStr : prevStr + '.';
+            });
+          }
         }
       } else {
         // Digits
@@ -1843,14 +2151,43 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           });
         } else if (numpadMode === 'amount') {
           setQuantityInput(prev => (!prev || prev === '0') ? value : prev + value);
+        } else if (numpadMode === 'tip') {
+          setTipAmount(prev => {
+            const prevStr = prev.toString();
+            const nextStr = prevStr === '0' ? value : prevStr + value;
+            const parsed = parseFloat(nextStr);
+            return (!isNaN(parsed) && parsed >= 0) ? parsed : prev;
+          });
+        } else if (numpadMode === 'gst') {
+          setGstRate(prev => {
+            const prevStr = prev.toString();
+            const nextStr = prevStr === '0' ? value : prevStr + value;
+            const parsed = parseInt(nextStr);
+            return (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? parsed : prev;
+          });
         }
       }
     }
   };
 
+  // Auto-detect checkout numpad mode based on what's being modified (only on initial open)
+  useEffect(() => {
+    if (showPaymentModal) {
+      if (paymentAmount && paymentAmount !== '' && paymentAmount !== '0') {
+        setCheckoutNumpadMode('amount');
+      } else if (discount > 0) {
+        setCheckoutNumpadMode('discount');
+      } else if (tipAmount > 0) {
+        setCheckoutNumpadMode('tip');
+      } else if (gstRate !== 18) {
+        setCheckoutNumpadMode('gst');
+      }
+    }
+  }, [showPaymentModal]);
+
   // Keyboard shortcuts for advanced mode (added after function definitions)
   useEffect(() => {
-    if (posMode !== 'advanced') return;
+    if (posMode !== 'advanced' || typeof window === 'undefined') return;
 
     const handleKeyDown = (e) => {
       // Don't trigger shortcuts when typing in inputs
@@ -1898,7 +2235,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       else if (e.key === 'F4') {
         e.preventDefault();
         if (cart.length > 0) {
-          setShowVoidConfirm(true);
+          setCart(cart.slice(0, -1));
         }
       }
       // F5 - Discount Toggle
@@ -1909,7 +2246,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       // F6 - Tax Toggle
       else if (e.key === 'F6') {
         e.preventDefault();
-        setGstRate(gstRate === 0 ? 18 : 0);
+        setGstEnabled(!gstEnabled);
       }
       // F7 - Print Receipt
       else if (e.key === 'F7') {
@@ -1918,24 +2255,21 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           const subtotal = lastOrder.subtotal || lastOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
           const discountAmt = lastOrder.discountAmount || (subtotal * (lastOrder.discount || 0)) / 100;
           const taxAmt = lastOrder.taxAmount || ((subtotal - discountAmt) * (lastOrder.gstRate || 0)) / 100;
-          
+
           const receiptWindow = window.open('', '_blank');
           receiptWindow.document.write(`
             <html>
               <head>
-                <title>Receipt - ${lastOrder.id}</title>
+                <title>Receipt #${lastOrder.id}</title>
                 <style>
                   body { font-family: monospace; padding: 20px; max-width: 300px; margin: 0 auto; }
                   .header { text-align: center; margin-bottom: 20px; }
-                  .header h1 { margin: 0; font-size: 18px; }
-                  .header p { margin: 5px 0; font-size: 12px; }
-                  .store-info { margin-bottom: 15px; font-size: 11px; color: #666; }
                   .items { margin: 20px 0; }
-                  .item { display: flex; justify-content: space-between; margin: 5px 0; font-size: 12px; }
-                  .total { border-top: 1px dashed #000; padding-top: 10px; margin-top: 20px; font-weight: bold; }
-                  .footer { text-align: center; margin-top: 30px; font-size: 11px; }
-                  .discount { color: green; }
-                  .tax { color: orange; }
+                  .item { display: flex; justify-content: space-between; margin: 5px 0; }
+                  .total { border-top: 1px solid #000; padding-top: 10px; margin-top: 10px; }
+                  .discount { color: red; }
+                  .tax { color: blue; }
+                  .footer { text-align: center; margin-top: 20px; }
                 </style>
               </head>
               <body>
@@ -1947,10 +2281,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   <p>${new Date(lastOrder.createdAt).toLocaleString()}</p>
                 </div>
                 <div class="items">
-                  ${lastOrder.items.map(item => `
+                  ${(lastOrder.items || []).map(item => `
                     <div class="item">
-                      <span>${item.name} x${item.quantity}</span>
-                      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+                      <span>${item?.name || 'Unknown'} x${item?.quantity || 0}</span>
+                      <span>₹${((item?.price || 0) * (item?.quantity || 0)).toFixed(2)}</span>
                     </div>
                   `).join('')}
                 </div>
@@ -2070,15 +2404,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       height: '100%',
       width: '100%',
       maxWidth: '100%',
-      background: darkMode ? '#1a1a1a' : '#f5f5f5',
+      background: darkMode ? '#1a1a1a' : '#f5f7fa',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      overflow: 'hidden'
+      overflow: screenSize === 'small' ? 'auto' : 'hidden'
     }}>
       {/* Professional Header */}
       <div style={{
         background: darkMode ? '#2a2a2a' : '#ffffff',
         padding: '8px 16px',
-        borderBottom: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+        borderBottom: `1px solid ${darkMode ? '#444' : '#d1d5db'}`,
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2180,13 +2514,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     </button>
                   </div>
 
-                  {aggregatorOrders.filter(o => o.status === 'pending').length === 0 ? (
+                  {(aggregatorOrders || []).filter(o => o && o.status === 'pending').length === 0 ? (
                     <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af' }}>
                       <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
                       <div style={{ fontSize: '13px' }}>No pending orders</div>
                     </div>
                   ) : (
-                    aggregatorOrders.filter(o => o.status === 'pending').map(order => (
+                    (aggregatorOrders || []).filter(o => o && o.status === 'pending').map(order => (
                       <div key={order.id} style={{
                         padding: '12px 16px',
                         borderBottom: '1px solid #f3f4f6',
@@ -3349,26 +3683,26 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
             {/* Numpad Mode Toggle */}
             <div style={{ display: 'flex', gap: screenSize === 'small' ? '3px' : '4px', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
-              {['quantity', 'discount', 'amount'].map(mode => (
+              {['quantity', 'discount', 'amount', 'tip', 'gst'].map(mode => (
                 <button
                   key={mode}
                   onClick={() => {
                     setNumpadMode(mode);
-                    if (isEditingCartItems) setItemActionMode(mode);
+                    if (isEditingCartItems && mode !== 'tip' && mode !== 'gst') setItemActionMode(mode);
                   }}
                   style={{
                     flex: 1,
-                    padding: screenSize === 'small' ? '3px' : '4px',
+                    padding: screenSize === 'small' ? '4px' : '5px',
                     background: numpadMode === mode ? '#2563eb' : '#f3f4f6',
                     color: numpadMode === mode ? '#ffffff' : '#374151',
                     border: isEditingCartItems && itemActionMode === mode ? '2px solid #3b82f6' : 'none',
-                    borderRadius: '3px',
+                    borderRadius: '4px',
                     fontSize: screenSize === 'small' ? '9px' : '10px',
                     fontWeight: '500',
                     cursor: 'pointer'
                   }}
                 >
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                  {mode === 'tip' ? '💖 Tip' : mode === 'gst' ? '📊 GST' : mode.charAt(0).toUpperCase() + mode.slice(1)}
                 </button>
               ))}
             </div>
@@ -3454,23 +3788,23 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               )}
             </div>
             
-            <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', fontWeight: '600', color: '#64748b', marginBottom: screenSize === 'small' ? '3px' : '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {numpadMode === 'quantity' ? 'Quantity' : numpadMode === 'discount' ? 'Discount %' : 'Amount'}
+            <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: '#64748b', marginBottom: screenSize === 'small' ? '4px' : '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {numpadMode === 'quantity' ? 'Quantity' : numpadMode === 'discount' ? 'Discount %' : numpadMode === 'tip' ? 'Tip Amount' : numpadMode === 'gst' ? 'GST Rate %' : 'Amount'}
             </div>
-            <div style={{ position: 'relative', width: '100%', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
+            <div style={{ position: 'relative', width: '100%', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>
               <input
                 type="text"
                 readOnly
-                value={numpadMode === 'discount' ? (isEditingCartItems ? (quantityInput ? `${quantityInput}%` : '') : (discount > 0 ? `${discount}%` : '')) : numpadMode === 'amount' ? (quantityInput ? `₹${quantityInput}` : '') : quantityInput}
-                placeholder={numpadMode === 'quantity' ? 'Enter quantity' : numpadMode === 'discount' ? 'Enter discount %' : 'Enter amount'}
+                value={numpadMode === 'discount' ? (isEditingCartItems ? (quantityInput ? `${quantityInput}%` : '') : (discount > 0 ? `${discount}%` : '')) : numpadMode === 'tip' ? (tipAmount > 0 ? `₹${tipAmount}` : '') : numpadMode === 'gst' ? (gstRate > 0 ? `${gstRate}%` : '') : numpadMode === 'amount' ? (quantityInput ? `₹${quantityInput}` : '') : quantityInput}
+                placeholder={numpadMode === 'quantity' ? 'Enter quantity' : numpadMode === 'discount' ? 'Enter discount %' : numpadMode === 'tip' ? 'Enter tip amount' : numpadMode === 'gst' ? 'Enter GST %' : 'Enter amount'}
                 style={{
                   width: '100%',
-                  padding: screenSize === 'small' ? '6px 28px 6px 8px' : '8px 32px 8px 8px',
+                  padding: screenSize === 'small' ? '8px 32px 8px 10px' : '10px 36px 10px 10px',
                   background: '#ffffff',
                   color: '#0f172a',
                   border: '2px solid #e2e8f0',
-                  borderRadius: '6px',
-                  fontSize: screenSize === 'small' ? '14px' : '16px',
+                  borderRadius: '8px',
+                  fontSize: screenSize === 'small' ? '16px' : '18px',
                   fontWeight: '700',
                   textAlign: 'center',
                   fontFamily: 'monospace',
@@ -3487,19 +3821,21 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   } else {
                     if (numpadMode === 'quantity') setQuantityInput('');
                     else if (numpadMode === 'discount') setDiscount(0);
+                    else if (numpadMode === 'tip') setTipAmount(0);
+                    else if (numpadMode === 'gst') setGstRate(18);
                     else if (numpadMode === 'amount') setQuantityInput('');
                   }
                 }}
                 title="Clear input"
                 style={{
                   position: 'absolute',
-                  right: screenSize === 'small' ? '6px' : '8px',
+                  right: screenSize === 'small' ? '8px' : '10px',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
                   color: '#dc2626',
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: '700',
                   cursor: 'pointer',
                   padding: '4px',
@@ -3513,7 +3849,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '3px' : '4px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '4px' : '5px' }}>
               {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map(key => {
                 const isActionKey = key === '⌫' || key === '.';
                 return (
@@ -3521,12 +3857,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     key={key}
                     onClick={() => handleNumpadClick(key)}
                     style={{
-                      padding: screenSize === 'small' ? '8px' : '10px',
+                      padding: screenSize === 'small' ? '12px' : '14px',
                       background: key === '⌫' ? '#fee2e2' : '#f3f4f6',
                       color: key === '⌫' ? '#dc2626' : '#1f2937',
                       border: 'none',
-                      borderRadius: '4px',
-                      fontSize: screenSize === 'small' ? '13px' : '14px',
+                      borderRadius: '6px',
+                      fontSize: screenSize === 'small' ? '16px' : '18px',
                       fontWeight: '700',
                       cursor: 'pointer',
                       transition: 'all 0.1s ease',
@@ -4875,7 +5211,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   {/* Settings Row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: screenSize === 'small' ? '8px' : '10px' }}>
                     <button
-                      onClick={() => setDiscount(discount === 0 ? 10 : 0)}
+                      onClick={() => {
+                        setShowPaymentModal(true);
+                        setCheckoutNumpadMode('discount');
+                      }}
                       style={{
                         padding: '12px 10px',
                         background: discount > 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)',
@@ -4891,7 +5230,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       🏷️ {discount > 0 ? `${discount}% Off` : 'Add Discount'}
                     </button>
                     <button
-                      onClick={() => setGstEnabled(!gstEnabled)}
+                      onClick={() => {
+                        setShowPaymentModal(true);
+                        setCheckoutNumpadMode('gst');
+                      }}
                       style={{
                         padding: '12px 10px',
                         background: gstEnabled ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
@@ -4907,7 +5249,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       🧾 GST: {gstEnabled ? 'Enabled' : 'Disabled'}
                     </button>
                     <button
-                      onClick={() => setShowTipInput(!showTipInput)}
+                      onClick={() => {
+                        setShowPaymentModal(true);
+                        setCheckoutNumpadMode('tip');
+                      }}
                       style={{
                         padding: '12px 10px',
                         background: tipAmount > 0 ? 'rgba(129, 140, 248, 0.15)' : 'rgba(255, 255, 255, 0.03)',
@@ -5109,7 +5454,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         { id: 'CARD', label: 'Card', icon: '💳' },
                         { id: 'UPI', label: 'UPI', icon: '📱' },
                         { id: 'WALLET', label: 'Wallet', icon: '👛' },
-                        { id: 'SPLIT', label: 'Split', icon: '💰' }
+                        { id: 'SPLIT', label: 'Split', icon: '💰' },
+                        { id: 'UPI_QR', label: 'UPI QR', icon: '🔳' }
                       ].map(method => {
                         const active = paymentMethod === method.id;
                         return (
@@ -5119,6 +5465,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                               setPaymentMethod(method.id);
                               if (method.id === 'SPLIT') {
                                 setSplitPayments([{ method: 'CASH', amount: cartTotal }]);
+                              } else if (method.id === 'UPI_QR') {
+                                generateUPIQR();
                               } else {
                                 // Default to exact amount on method switch
                                 setPaymentAmount(cartTotal.toFixed(2));
@@ -5172,6 +5520,63 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           ₹{val}
                         </button>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Saved Cards - only for CARD */}
+                  {paymentMethod === 'CARD' && savedCards.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#8b8b9e', fontWeight: '600' }}>Saved Cards</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {savedCards.map(card => (
+                          <div
+                            key={card.id}
+                            onClick={() => setUseSavedCard(card.id)}
+                            style={{
+                              padding: '10px 12px',
+                              background: useSavedCard === card.id ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+                              border: useSavedCard === card.id ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.05)',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '16px' }}>
+                                {card.card_network === 'VISA' ? '💳' : card.card_network === 'MASTERCARD' ? '💳' : '💳'}
+                              </span>
+                              <div>
+                                <div style={{ fontSize: '13px', color: '#ffffff', fontWeight: '500' }}>
+                                  {card.card_name}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                                  {card.card_network} •••• {card.last4}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeSavedCard(card.id);
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                borderRadius: '4px',
+                                fontSize: '11px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -5294,15 +5699,73 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 {/* Dedicated Numpad Panel */}
                 {(paymentMethod !== 'SPLIT') && (() => {
                   const handleCheckoutNumpad = (val) => {
-                    let current = paymentAmount === undefined || paymentAmount === null ? '' : String(paymentAmount);
-                    if (val === 'C') {
-                      setPaymentAmount('');
-                    } else if (val === '⌫') {
-                      setPaymentAmount(current.slice(0, -1));
-                    } else if (val === '.') {
-                      if (!current.includes('.')) setPaymentAmount(current + '.');
-                    } else {
-                      setPaymentAmount(current + val);
+                    if (checkoutNumpadMode === 'amount') {
+                      let current = paymentAmount === undefined || paymentAmount === null ? '' : String(paymentAmount);
+                      if (val === 'C') {
+                        setPaymentAmount('');
+                      } else if (val === '⌫') {
+                        setPaymentAmount(current.slice(0, -1));
+                      } else if (val === '.') {
+                        if (!current.includes('.')) setPaymentAmount(current + '.');
+                      } else {
+                        setPaymentAmount(current + val);
+                      }
+                    } else if (checkoutNumpadMode === 'discount') {
+                      if (val === 'C') {
+                        setDiscount(0);
+                      } else if (val === '⌫') {
+                        setDiscount(prev => {
+                          const prevStr = prev.toString();
+                          const nextStr = prevStr.length > 1 ? prevStr.slice(0, -1) : '0';
+                          return parseInt(nextStr) || 0;
+                        });
+                      } else {
+                        setDiscount(prev => {
+                          const prevStr = prev.toString();
+                          const nextStr = prevStr === '0' ? val : prevStr + val;
+                          const parsed = parseInt(nextStr);
+                          return (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? parsed : prev;
+                        });
+                      }
+                    } else if (checkoutNumpadMode === 'tip') {
+                      if (val === 'C') {
+                        setTipAmount(0);
+                      } else if (val === '⌫') {
+                        setTipAmount(prev => {
+                          const prevStr = prev.toString();
+                          const nextStr = prevStr.length > 1 ? prevStr.slice(0, -1) : '0';
+                          return parseFloat(nextStr) || 0;
+                        });
+                      } else if (val === '.') {
+                        setTipAmount(prev => {
+                          const prevStr = prev.toString();
+                          return prevStr.includes('.') ? prevStr : prevStr + '.';
+                        });
+                      } else {
+                        setTipAmount(prev => {
+                          const prevStr = prev.toString();
+                          const nextStr = prevStr === '0' ? val : prevStr + val;
+                          const parsed = parseFloat(nextStr);
+                          return (!isNaN(parsed) && parsed >= 0) ? parsed : prev;
+                        });
+                      }
+                    } else if (checkoutNumpadMode === 'gst') {
+                      if (val === 'C') {
+                        setGstRate(18);
+                      } else if (val === '⌫') {
+                        setGstRate(prev => {
+                          const prevStr = prev.toString();
+                          const nextStr = prevStr.length > 1 ? prevStr.slice(0, -1) : '18';
+                          return parseInt(nextStr) || 18;
+                        });
+                      } else {
+                        setGstRate(prev => {
+                          const prevStr = prev.toString();
+                          const nextStr = prevStr === '0' ? val : prevStr + val;
+                          const parsed = parseInt(nextStr);
+                          return (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? parsed : prev;
+                        });
+                      }
                     }
                   };
 
@@ -5311,6 +5774,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   const diff = parsedDisplay - cartTotal;
                   const hasAmount = displayAmount !== '';
                   const numpadWidth = screenSize === 'small' ? '100%' : '220px';
+
+                  const getDisplayValue = () => {
+                    if (checkoutNumpadMode === 'amount') return `₹${displayAmount || '0'}`;
+                    if (checkoutNumpadMode === 'discount') return `${discount}%`;
+                    if (checkoutNumpadMode === 'tip') return `₹${tipAmount || '0'}`;
+                    if (checkoutNumpadMode === 'gst') return `${gstRate}%`;
+                    return '';
+                  };
+
+                  const getDisplayLabel = () => {
+                    if (checkoutNumpadMode === 'amount') return 'Amount Tendered';
+                    if (checkoutNumpadMode === 'discount') return 'Discount %';
+                    if (checkoutNumpadMode === 'tip') return 'Tip Amount';
+                    if (checkoutNumpadMode === 'gst') return 'GST Rate %';
+                    return '';
+                  };
 
                   return (
                     <div style={{
@@ -5325,13 +5804,58 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       overflow: 'hidden'
                     }}>
 
+                      {/* Mode Toggle - Small Strips */}
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '2px', 
+                        padding: '6px 12px',
+                        background: 'rgba(0,0,0,0.3)',
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        {['amount', 'discount', 'tip', 'gst'].map(mode => (
+                          <div
+                            key={mode}
+                            onClick={() => setCheckoutNumpadMode(mode)}
+                            style={{
+                              flex: 1,
+                              height: '4px',
+                              background: checkoutNumpadMode === mode 
+                                ? (mode === 'amount' ? '#10b981' : mode === 'discount' ? '#f59e0b' : mode === 'tip' ? '#ec4899' : '#6366f1')
+                                : 'rgba(255,255,255,0.1)',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              position: 'relative'
+                            }}
+                            title={mode === 'amount' ? 'Amount' : mode === 'discount' ? 'Discount' : mode === 'tip' ? 'Tip' : 'GST'}
+                          >
+                            {checkoutNumpadMode === mode && (
+                              <div style={{
+                                position: 'absolute',
+                                top: '-20px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                fontSize: '9px',
+                                fontWeight: '600',
+                                color: checkoutNumpadMode === mode 
+                                  ? (mode === 'amount' ? '#10b981' : mode === 'discount' ? '#f59e0b' : mode === 'tip' ? '#ec4899' : '#6366f1')
+                                  : '#8b8b9e',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {mode === 'amount' ? '💰' : mode === 'discount' ? '🏷️' : mode === 'tip' ? '💖' : '📊'}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
                       {/* Display Screen */}
                       <div style={{
                         background: 'rgba(0,0,0,0.4)',
                         padding: screenSize === 'small' ? '14px 16px 12px' : '16px 18px 14px',
                         borderBottom: '1px solid rgba(255,255,255,0.05)'
                       }}>
-                        <div style={{ fontSize: '11px', color: '#8b8b9e', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Amount Tendered</div>
+                        <div style={{ fontSize: '11px', color: '#8b8b9e', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{getDisplayLabel()}</div>
                         <div style={{
                           fontSize: screenSize === 'small' ? '24px' : '28px',
                           fontWeight: '800',
@@ -5340,7 +5864,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           minHeight: '32px',
                           fontVariantNumeric: 'tabular-nums'
                         }}>
-                          ₹{displayAmount || '0'}
+                          {getDisplayValue()}
                         </div>
                         {hasAmount && (
                           <div style={{
@@ -5362,7 +5886,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           </div>
                         )}
                         <button
-                          onClick={() => setPaymentAmount(cartTotal.toFixed(2))}
+                          onClick={() => {
+                            setPaymentAmount(cartTotal.toFixed(2));
+                            setCheckoutNumpadMode('amount');
+                          }}
                           style={{
                             marginTop: '8px',
                             width: '100%',
@@ -5461,6 +5988,55 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
+                  {/* Actions buttons */}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: screenSize === 'small' ? '4px' : '8px' }}>
+                    <button
+                      onClick={() => {
+                        setShowPaymentModal(false);
+                        setPaymentAmount('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: screenSize === 'small' ? '16px' : '14px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        color: '#ffffff',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        fontSize: screenSize === 'small' ? '15px' : '14px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
+                    >
+                      ← Cancel
+                    </button>
+                    <button
+                      onClick={processPayment}
+                      disabled={!isPaymentValid}
+                      style={{
+                        flex: 2,
+                        padding: screenSize === 'small' ? '16px' : '14px',
+                        background: isPaymentValid 
+                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                          : 'rgba(255, 255, 255, 0.03)',
+                        color: isPaymentValid ? '#ffffff' : '#8b8b9e',
+                        border: isPaymentValid ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
+                        borderRadius: '10px',
+                        fontSize: screenSize === 'small' ? '15px' : '14px',
+                        fontWeight: '700',
+                        cursor: isPaymentValid ? 'pointer' : 'not-allowed',
+                        transition: 'all 0.2s',
+                        boxShadow: isPaymentValid ? '0 4px 14px rgba(16, 185, 129, 0.25)' : 'none',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                    >
+                      Complete Payment ✓
+                    </button>
+                  </div>
+
                   {/* Receipt Options */}
                   <div style={{
                     background: 'rgba(255, 255, 255, 0.02)',
@@ -5469,7 +6045,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     border: '1px solid rgba(255, 255, 255, 0.04)'
                   }}>
                     <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Receipt Delivery
+                      📄 Receipt Delivery
                     </label>
                     <select
                       value={receiptDelivery}
@@ -5532,55 +6108,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     )}
                   </div>
 
-                  {/* Actions buttons */}
-                  <div style={{ display: 'flex', gap: '10px', marginTop: screenSize === 'small' ? '4px' : '8px' }}>
-                    <button
-                      onClick={() => {
-                        setShowPaymentModal(false);
-                        setPaymentAmount('');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: screenSize === 'small' ? '16px' : '14px',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        color: '#ffffff',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        borderRadius: '10px',
-                        fontSize: screenSize === 'small' ? '15px' : '14px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s',
-                        WebkitTapHighlightColor: 'transparent'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
-                    >
-                      Go Back
-                    </button>
-                    <button
-                      onClick={processPayment}
-                      disabled={!isPaymentValid}
-                      style={{
-                        flex: 1.5,
-                        padding: screenSize === 'small' ? '16px' : '14px',
-                        background: isPaymentValid 
-                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
-                          : 'rgba(255, 255, 255, 0.03)',
-                        color: isPaymentValid ? '#ffffff' : '#8b8b9e',
-                        border: isPaymentValid ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
-                        borderRadius: '10px',
-                        fontSize: screenSize === 'small' ? '15px' : '14px',
-                        fontWeight: '700',
-                        cursor: isPaymentValid ? 'pointer' : 'not-allowed',
-                        transition: 'all 0.2s',
-                        boxShadow: isPaymentValid ? '0 4px 14px rgba(16, 185, 129, 0.25)' : 'none',
-                        WebkitTapHighlightColor: 'transparent'
-                      }}
-                    >
-                      Complete & Print
-                    </button>
-                  </div>
-
                 </div>
 
                 </div>
@@ -5591,6 +6118,112 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           </div>
         );
       })()}
+
+      {/* UPI QR Code Modal */}
+      {showUPIQR && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(8, 8, 16, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 999999,
+          fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #181829 0%, #0f0f18 100%)',
+            borderRadius: '20px',
+            padding: '32px',
+            width: '90vw',
+            maxWidth: '400px',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            alignItems: 'center'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: '0 0 8px 0' }}>
+                Scan to Pay
+              </h3>
+              <p style={{ margin: 0, fontSize: '14px', color: '#8b8b9e' }}>
+                Total: <span style={{ color: '#6366f1', fontWeight: '600' }}>₹{cartTotal.toFixed(2)}</span>
+              </p>
+            </div>
+
+            {upiQRData && (
+              <div style={{
+                background: '#ffffff',
+                padding: '20px',
+                borderRadius: '16px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiQRData)}`}
+                  alt="UPI QR Code"
+                  style={{ borderRadius: '8px', width: '200px', height: '200px' }}
+                />
+              </div>
+            )}
+
+            <div style={{ textAlign: 'center', fontSize: '12px', color: '#8b8b9e', lineHeight: '1.5' }}>
+              Scan this QR code with any UPI app<br/>
+              (PhonePe, Paytm, Google Pay, etc.)
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+              <button
+                onClick={() => {
+                  setShowUPIQR(false);
+                  setUpiQRData('');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={verifyUPIPayment}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.25)'
+                }}
+              >
+                Verify Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Split Bill Modal */}
       {showSplitBillModal && (

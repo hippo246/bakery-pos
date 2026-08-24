@@ -176,7 +176,7 @@ export default function BakeryPOS({
       maxWidth: '100%',
       background: 'var(--cafe-bg)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      overflow: 'hidden'
+      overflow: isMobile ? 'auto' : 'hidden'
     }}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar {

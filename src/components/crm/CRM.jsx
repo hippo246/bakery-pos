@@ -273,11 +273,11 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: darkMode ? '#1a1a2e' : '#f8fafc',
+      background: darkMode ? '#1a1a2e' : '#f5f7fa',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     }}>
       {/* Content */}
-      <div style={{ padding: screenSize === 'small' ? '20px' : '32px', overflow: 'auto', flex: 1, background: darkMode ? '#14142a' : '#f1f5f9' }}>
+      <div style={{ padding: screenSize === 'small' ? '20px' : '32px', overflow: 'auto', flex: 1, background: darkMode ? '#14142a' : '#f8fafc' }}>
         {/* Header */}
         <div style={{
           marginBottom: screenSize === 'small' ? '24px' : '32px',
@@ -291,7 +291,7 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
             <h1 style={{
               fontSize: screenSize === 'small' ? '26px' : '34px',
               fontWeight: '700',
-              color: darkMode ? '#ffffff' : '#111827',
+              color: darkMode ? '#ffffff' : '#1f2937',
               margin: 0,
               marginBottom: '6px',
               letterSpacing: '-0.5px'
@@ -300,7 +300,7 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
             </h1>
             <p style={{
               fontSize: screenSize === 'small' ? '13px' : '15px',
-              color: darkMode ? '#8b8b9e' : '#64748b',
+              color: darkMode ? '#8b8b9e' : '#6b7280',
               margin: 0,
               lineHeight: '1.5'
             }}>

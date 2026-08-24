@@ -1083,7 +1083,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: darkMode ? '#1a1a2e' : '#ffffff',
+      background: darkMode ? '#1a1a2e' : '#f5f7fa',
       fontFamily: 'Arial, sans-serif'
     }}>
       {/* Content */}
@@ -1100,8 +1100,8 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
             style={{
               padding: '8px 12px',
               background: darkMode ? '#252538' : '#ffffff',
-              color: darkMode ? '#ffffff' : '#212529',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+              color: darkMode ? '#ffffff' : '#1f2937',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '4px',
               fontSize: '13px',
               fontWeight: 'normal',
@@ -1159,17 +1159,17 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
 
         {/* Date Range & Filters */}
         <div style={{
-          background: darkMode ? '#252538' : '#f8f9fa',
+          background: darkMode ? '#252538' : '#f8fafc',
           borderRadius: '4px',
           padding: '12px',
           marginBottom: '20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`
+          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`
         }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ color: darkMode ? '#e0e0e0' : '#495057', fontSize: '13px', fontWeight: 'normal' }}>Period:</span>
+          <span style={{ color: darkMode ? '#e0e0e0' : '#4b5563', fontSize: '13px', fontWeight: 'normal' }}>Period:</span>
           {['today', 'yesterday', 'week', 'month'].map(range => (
             <button
               key={range}
@@ -1177,8 +1177,8 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
               style={{
                 padding: '6px 12px',
                 background: dateRange === range ? '#007bff' : darkMode ? '#1a1a2e' : '#ffffff',
-                color: dateRange === range ? '#ffffff' : darkMode ? '#e0e0e0' : '#495057',
-                border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+                color: dateRange === range ? '#ffffff' : darkMode ? '#e0e0e0' : '#4b5563',
+                border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                 borderRadius: '4px',
                 fontSize: '13px',
                 fontWeight: 'normal',
@@ -1190,27 +1190,27 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
             </button>
           ))}
           </div>
-          <div style={{ color: darkMode ? '#888' : '#6c757d', fontSize: '12px' }}>
+          <div style={{ color: darkMode ? '#888' : '#6b7280', fontSize: '12px' }}>
             Updated: {new Date().toLocaleString()}
           </div>
         </div>
 
-        {/* Hero Stats */}
+        {/* Summary Cards */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-          gap: '16px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px',
           marginBottom: '20px'
         }}>
           {reportData.summary.slice(0, 4).map(([label, value], index) => (
             <div key={index} style={{
-              background: darkMode ? '#252538' : '#f8f9fa',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+              background: darkMode ? '#252538' : '#f8fafc',
+              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
               borderRadius: '4px',
               padding: '16px'
             }}>
-              <div style={{ fontSize: '12px', color: darkMode ? '#888' : '#6c757d', marginBottom: '4px' }}>{label}</div>
-              <div style={{ fontSize: '20px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#212529' }}>{value}</div>
+              <div style={{ fontSize: '12px', color: darkMode ? '#888' : '#6b7280', marginBottom: '4px' }}>{label}</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#1f2937' }}>{value}</div>
             </div>
           ))}
         </div>
@@ -1220,13 +1220,13 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
           background: darkMode ? '#252538' : '#ffffff',
           borderRadius: '4px',
           padding: '16px',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
           marginBottom: '20px'
         }}>
           <div style={{
             fontSize: '14px',
             fontWeight: 'bold',
-            color: darkMode ? '#ffffff' : '#212529',
+            color: darkMode ? '#ffffff' : '#1f2937',
             marginBottom: '12px'
           }}>
             Summary
@@ -1234,9 +1234,9 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               {reportData.summary.map(([label, value], index) => (
-                <tr key={index} style={{ borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}` }}>
-                  <td style={{ padding: '8px', fontSize: '13px', color: darkMode ? '#e0e0e0' : '#495057' }}>{label}</td>
-                  <td style={{ padding: '8px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#212529' }}>{value}</td>
+                <tr key={index} style={{ borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}` }}>
+                  <td style={{ padding: '8px', fontSize: '13px', color: darkMode ? '#e0e0e0' : '#4b5563' }}>{label}</td>
+                  <td style={{ padding: '8px', textAlign: 'right', fontSize: '13px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#1f2937' }}>{value}</td>
                 </tr>
               ))}
             </tbody>
@@ -1249,13 +1249,13 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
             background: darkMode ? '#252538' : '#ffffff',
             borderRadius: '4px',
             padding: '16px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}`,
+            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
             marginBottom: '20px'
           }}>
             <div style={{
               fontSize: '14px',
               fontWeight: 'bold',
-              color: darkMode ? '#ffffff' : '#212529',
+              color: darkMode ? '#ffffff' : '#1f2937',
               marginBottom: '12px'
             }}>
               Details
@@ -1263,17 +1263,17 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
             <div style={{ overflow: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: darkMode ? '#252538' : '#f8f9fa' }}>
+                  <tr style={{ background: darkMode ? '#252538' : '#f8fafc' }}>
                     {reportData.headers.map((header, index) => (
-                      <th key={index} style={{ padding: '8px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#e0e0e0' : '#495057', borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}` }}>{header}</th>
+                      <th key={index} style={{ padding: '8px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#e0e0e0' : '#4b5563', borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}` }}>{header}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {reportData.details.map((row, rowIndex) => (
-                    <tr key={rowIndex} style={{ borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#dee2e6'}` }}>
+                    <tr key={rowIndex} style={{ borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}` }}>
                       {row.map((cell, cellIndex) => (
-                        <td key={cellIndex} style={{ padding: '8px', fontSize: '13px', color: darkMode ? '#e0e0e0' : '#212529' }}>{cell}</td>
+                        <td key={cellIndex} style={{ padding: '8px', fontSize: '13px', color: darkMode ? '#e0e0e0' : '#1f2937' }}>{cell}</td>
                       ))}
                     </tr>
                   ))}

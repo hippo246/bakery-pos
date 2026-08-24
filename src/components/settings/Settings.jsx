@@ -16,8 +16,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     language: settings.language || 'en',
     receiptFooter: settings.receiptFooter || '',
     codeType: settings.codeType || 'alphanumeric',
-    razorpayKeyId: settings.razorpayKeyId || '',
+    razorpayKeyId: settings.razorpayKeyId || process.env.VITE_RAZORPAY_KEY_ID || '',
     razorpayKeySecret: settings.razorpayKeySecret || '',
+    upiId: settings.upiId || '',
     brevoApiKey: settings.brevoApiKey || '',
     printerType: settings.printerType || 'thermal',
     autoPrintReceipt: settings.autoPrintReceipt !== false,
@@ -85,7 +86,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     allowWalkIn: settings.allowWalkIn !== false,
     requirePaymentBeforeKOT: settings.requirePaymentBeforeKOT || false,
     autoCreateKOT: settings.autoCreateKOT !== false,
-    allowedPaymentMethods: settings.allowedPaymentMethods || ['CASH', 'CARD', 'UPI'],
+    allowedPaymentMethods: settings.allowedPaymentMethods || ['CASH', 'CARD', 'UPI', 'UPI_QR', 'SPLIT'],
     enableSplitPayment: settings.enableSplitPayment !== false,
     maxSplitPayments: settings.maxSplitPayments || 5,
     enableDiscount: settings.enableDiscount !== false,
@@ -113,7 +114,40 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     showCashierOnReceipt: settings.showCashierOnReceipt !== false,
     showEmailOnReceipt: settings.showEmailOnReceipt !== false,
     showPaymentDetailsOnReceipt: settings.showPaymentDetailsOnReceipt !== false,
-    showBillIdOnReceipt: settings.showBillIdOnReceipt !== false
+    showBillIdOnReceipt: settings.showBillIdOnReceipt !== false,
+    enableAutoRefund: settings.enableAutoRefund || false,
+    refundTimeLimit: settings.refundTimeLimit || 24,
+    // PCI DSS Compliance
+    enablePciDssLogging: settings.enablePciDssLogging || false,
+    enableCardTokenization: settings.enableCardTokenization !== false,
+    requireCvvForSavedCards: settings.requireCvvForSavedCards || false,
+    cardDataRetentionDays: settings.cardDataRetentionDays || 30,
+    // GDPR Compliance
+    enableGdprCompliance: settings.enableGdprCompliance !== false,
+    requireDataConsent: settings.requireDataConsent || false,
+    enableRightToDeletion: settings.enableRightToDeletion !== false,
+    customerDataRetentionDays: settings.customerDataRetentionDays || 365,
+    // Security Settings
+    enableEncryption: settings.enableEncryption !== false,
+    enableAuditLog: settings.enableAuditLog !== false,
+    sessionTimeout: settings.sessionTimeout || 30,
+    // Tab-specific settings
+    orders: settings.orders || { enabled: true, autoRefresh: true, showTokens: true },
+    dashboard: settings.dashboard || { enabled: true, showStats: true, showCharts: true },
+    reports: settings.reports || { enabled: true, autoGenerate: false, reportTime: '23:00' },
+    crm: settings.crm || { enabled: true, showLoyalty: true, allowGuestCheckout: true },
+    staff: settings.staff || { enabled: true, showPerformance: true, allowSchedule: true },
+    menu: settings.menu || { enabled: true, showImages: true, allowCustomItems: true },
+    inventory: settings.inventory || { enabled: true, lowStockAlert: true, autoReorder: false },
+    recipes: settings.recipes || { enabled: true, showCost: true, showYield: true },
+    waste: settings.waste || { enabled: true, requireReason: true, trackCost: true },
+    reservations: settings.reservations || { enabled: true, autoConfirm: false, maxAdvanceDays: 30 },
+    tokens: settings.tokens || { enabled: false, prefix: 'T', autoReset: true },
+    tables: settings.tables || { enabled: true, showCapacity: true, allowMerge: true },
+    waiters: settings.waiters || { enabled: true, showAssignedOrders: true, allowCallWaiter: true },
+    kitchen: settings.kitchen || { enabled: true, showTimers: true, autoPrintKOT: true },
+    onlineOrdering: settings.onlineOrdering || { enabled: false, autoAccept: false, preparationTime: 30 },
+    qrOrdering: settings.qrOrdering || { enabled: false, autoAccept: false, showMenuImages: true }
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -158,6 +192,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
   };
 
   const saveStationConfiguration = () => {
+    if (typeof window === 'undefined') return;
     try {
       localStorage.setItem('cafeos_kitchen_stations', JSON.stringify(stations));
       alert('Station configuration saved!');
@@ -168,6 +203,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
   };
 
   const loadStationConfiguration = () => {
+    if (typeof window === 'undefined') return;
     try {
       const saved = localStorage.getItem('cafeos_kitchen_stations');
       if (saved) {
@@ -179,7 +215,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
   };
 
   useEffect(() => {
-    loadStationConfiguration();
+    if (typeof window !== 'undefined') {
+      loadStationConfiguration();
+    }
   }, []);
 
   // Helper function for station icons
@@ -234,38 +272,40 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     }
 
     // Sync QR settings to localStorage so the HTML ordering page can read them
-    try {
-      const qrConfig = {
-        enabled: formData.qrOrderingEnabled,
-        restaurantName: formData.qrRestaurantName || formData.storeName,
-        welcomeMessage: formData.qrWelcomeMessage,
-        gstRate: Number(formData.qrGstRate) || 18,
-        splitGst: formData.qrSplitGst,
-        allowSpecialRequests: formData.qrAllowSpecialRequests,
-        autoAcceptOrders: formData.qrAutoAcceptOrders,
-        showItemDescriptions: formData.qrShowItemDescriptions,
-        showCategoryFilter: formData.qrShowCategoryFilter,
-        showSearch: formData.qrShowSearch,
-        allowCallWaiter: formData.qrAllowCallWaiter,
-        primaryColor: formData.qrPrimaryColor,
-        accentColor: formData.qrAccentColor,
-        googleReviewUrl: formData.googleReviewUrl || '',
-        storeName: formData.storeName,
-        storeAddress: formData.storeAddress,
-        // Receipt controls
-        receiptFooter: formData.qrReceiptFooter || formData.receiptFooter || '',
-        showReceiptOnOrder: formData.qrShowReceiptOnOrder,
-        receiptShowFssai: formData.qrReceiptShowFssai,
-        receiptShowTariff: formData.qrReceiptShowTariff,
-        receiptShowReviewQr: formData.qrReceiptShowReviewQr,
-        // Pass through licence/compliance fields
-        gstin: formData.gstin,
-        fssaiLicense: formData.fssaiLicense,
-        tariffCode: formData.tariffCode,
-        phone: formData.phone,
-      };
-      localStorage.setItem('qr_settings', JSON.stringify(qrConfig));
-    } catch (e) { console.error('Failed to sync QR settings', e); }
+    if (typeof window !== 'undefined') {
+      try {
+        const qrConfig = {
+          enabled: formData.qrOrderingEnabled,
+          restaurantName: formData.qrRestaurantName || formData.storeName,
+          welcomeMessage: formData.qrWelcomeMessage,
+          gstRate: Number(formData.qrGstRate) || 18,
+          splitGst: formData.qrSplitGst,
+          allowSpecialRequests: formData.qrAllowSpecialRequests,
+          autoAcceptOrders: formData.qrAutoAcceptOrders,
+          showItemDescriptions: formData.qrShowItemDescriptions,
+          showCategoryFilter: formData.qrShowCategoryFilter,
+          showSearch: formData.qrShowSearch,
+          allowCallWaiter: formData.qrAllowCallWaiter,
+          primaryColor: formData.qrPrimaryColor,
+          accentColor: formData.qrAccentColor,
+          googleReviewUrl: formData.googleReviewUrl || '',
+          storeName: formData.storeName,
+          storeAddress: formData.storeAddress,
+          // Receipt controls
+          receiptFooter: formData.qrReceiptFooter || formData.receiptFooter || '',
+          showReceiptOnOrder: formData.qrShowReceiptOnOrder,
+          receiptShowFssai: formData.qrReceiptShowFssai,
+          receiptShowTariff: formData.qrReceiptShowTariff,
+          receiptShowReviewQr: formData.qrReceiptShowReviewQr,
+          // Pass through licence/compliance fields
+          gstin: formData.gstin,
+          fssaiLicense: formData.fssaiLicense,
+          tariffCode: formData.tariffCode,
+          phone: formData.phone,
+        };
+        localStorage.setItem('qr_settings', JSON.stringify(qrConfig));
+      } catch (e) { console.error('Failed to sync QR settings', e); }
+    }
 
     setHasChanges(false);
   };
@@ -333,8 +373,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       language: settings.language || 'en',
       receiptFooter: settings.receiptFooter || '',
       codeType: settings.codeType || 'alphanumeric',
-      razorpayKeyId: settings.razorpayKeyId || '',
+      razorpayKeyId: settings.razorpayKeyId || process.env.VITE_RAZORPAY_KEY_ID || '',
       razorpayKeySecret: settings.razorpayKeySecret || '',
+      upiId: settings.upiId || '',
       brevoApiKey: settings.brevoApiKey || '',
       printerType: settings.printerType || 'thermal',
       autoPrintReceipt: settings.autoPrintReceipt !== false,
@@ -372,7 +413,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       allowWalkIn: settings.allowWalkIn !== false,
       requirePaymentBeforeKOT: settings.requirePaymentBeforeKOT || false,
       autoCreateKOT: settings.autoCreateKOT !== false,
-      allowedPaymentMethods: settings.allowedPaymentMethods || ['CASH', 'CARD', 'UPI'],
+      allowedPaymentMethods: settings.allowedPaymentMethods || ['CASH', 'CARD', 'UPI', 'UPI_QR', 'SPLIT'],
       enableSplitPayment: settings.enableSplitPayment !== false,
       maxSplitPayments: settings.maxSplitPayments || 5,
       enableDiscount: settings.enableDiscount !== false,
@@ -400,7 +441,23 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       showCashierOnReceipt: settings.showCashierOnReceipt !== false,
       showEmailOnReceipt: settings.showEmailOnReceipt !== false,
       showPaymentDetailsOnReceipt: settings.showPaymentDetailsOnReceipt !== false,
-      showBillIdOnReceipt: settings.showBillIdOnReceipt !== false
+      showBillIdOnReceipt: settings.showBillIdOnReceipt !== false,
+      enableAutoRefund: settings.enableAutoRefund || false,
+      refundTimeLimit: settings.refundTimeLimit || 24,
+      // PCI DSS Compliance
+      enablePciDssLogging: settings.enablePciDssLogging || false,
+      enableCardTokenization: settings.enableCardTokenization !== false,
+      requireCvvForSavedCards: settings.requireCvvForSavedCards || false,
+      cardDataRetentionDays: settings.cardDataRetentionDays || 30,
+      // GDPR Compliance
+      enableGdprCompliance: settings.enableGdprCompliance !== false,
+      requireDataConsent: settings.requireDataConsent || false,
+      enableRightToDeletion: settings.enableRightToDeletion !== false,
+      customerDataRetentionDays: settings.customerDataRetentionDays || 365,
+      // Security Settings
+      enableEncryption: settings.enableEncryption !== false,
+      enableAuditLog: settings.enableAuditLog !== false,
+      sessionTimeout: settings.sessionTimeout || 30
     });
     setHasChanges(false);
   };
@@ -423,6 +480,27 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       ]
     },
     { 
+      group: 'Tabs',
+      items: [
+        { id: 'tab-orders', label: 'Orders', icon: '🛒' },
+        { id: 'tab-dashboard', label: 'Dashboard', icon: '📊' },
+        { id: 'tab-reports', label: 'Reports', icon: '📈' },
+        { id: 'tab-crm', label: 'CRM', icon: '👥' },
+        { id: 'tab-staff', label: 'Staff', icon: '👨‍🍳' },
+        { id: 'tab-menu', label: 'Menu', icon: '🍽️' },
+        { id: 'tab-inventory', label: 'Inventory', icon: '📦' },
+        { id: 'tab-recipes', label: 'Recipes', icon: '📝' },
+        { id: 'tab-waste', label: 'Waste', icon: '🗑️' },
+        { id: 'tab-reservations', label: 'Reservations', icon: '📅' },
+        { id: 'tab-tokens', label: 'Tokens', icon: '🎫' },
+        { id: 'tab-tables', label: 'Tables', icon: '🪑' },
+        { id: 'tab-waiters', label: 'Waiters', icon: '🛎️' },
+        { id: 'tab-kitchen', label: 'Kitchen', icon: '👨‍🍳' },
+        { id: 'tab-online', label: 'Online Ordering', icon: '🌐' },
+        { id: 'tab-qr', label: 'QR Ordering', icon: '📱' }
+      ]
+    },
+    { 
       group: 'POS',
       items: [
         { id: 'pos', label: 'POS Settings', icon: '🛒' },
@@ -438,7 +516,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     { 
       group: 'Operations',
       items: [
-        { id: 'kitchen', label: 'Kitchen', icon: '👨‍🍳' },
+        { id: 'kitchen', label: 'Kitchen Ops', icon: '👨‍🍳' },
         { id: 'qr', label: 'QR Ordering', icon: '📱' }
       ]
     },
@@ -446,6 +524,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       group: 'System',
       items: [
         { id: 'backup', label: 'Backup & Restore', icon: '💾' },
+        { id: 'refunds', label: 'Refunds', icon: '💸' },
+        { id: 'compliance', label: 'Compliance', icon: '🔒' },
         { id: 'debug', label: 'Debug & Logs', icon: '🐛' }
       ]
     }
@@ -625,13 +705,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
     bgEle:    darkMode ? '#1f1f35' : '#ffffff',
     bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
-    border:   darkMode ? '#2d2d44' : '#e2e8f0',
-    text:     darkMode ? '#ffffff' : '#111827',
-    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
+    border:   darkMode ? '#2d2d44' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#1f2937',
+    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
     textMute: darkMode ? '#8b8b9e' : '#6b7280',
     accent:   '#6366f1',
   };
@@ -1337,6 +1417,72 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Razorpay Key ID
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.razorpayKeyId}
+                        onChange={(e) => handleInputChange('razorpayKeyId', e.target.value)}
+                        placeholder="rzp_test_..."
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Your Razorpay key ID for card, UPI, and wallet payments
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Razorpay Key Secret
+                      </label>
+                      <input
+                        type="password"
+                        value={formData.razorpayKeySecret}
+                        onChange={(e) => handleInputChange('razorpayKeySecret', e.target.value)}
+                        placeholder="Enter your Razorpay key secret"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Used for refund processing and order creation
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        UPI ID (for QR payments)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.upiId}
+                        onChange={(e) => handleInputChange('upiId', e.target.value)}
+                        placeholder="yourupi@paytm"
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Your UPI ID for generating QR codes (e.g., yourupi@paytm)
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Brevo API Key (for email receipts)
                       </label>
                       <input
@@ -1362,7 +1508,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         Allowed Payment Methods
                       </label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {['CASH', 'CARD', 'UPI', 'NETBANKING', 'WALLET'].map(method => (
+                        {['CASH', 'CARD', 'UPI', 'UPI_QR', 'WALLET', 'SPLIT'].map(method => (
                           <label key={method} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '500', color: t.textSub, padding: '6px 10px', background: t.bgInput, border: formData.allowedPaymentMethods?.includes(method) ? '2px solid #8b5cf6' : '1px solid #d1d5db', borderRadius: '4px', cursor: 'pointer' }}>
                             <input
                               type="checkbox"
@@ -2547,6 +2693,391 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               </div>
             )}
 
+            {activeSection === 'refunds' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    💸 Refund Management
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ fontSize: '13px', color: t.textSub, lineHeight: '1.6' }}>
+                      Process refunds for completed payments. All refunds are processed through Razorpay.
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (typeof window === 'undefined') return;
+                        try {
+                          const payments = JSON.parse(localStorage.getItem('payment_transactions') || '[]');
+                          const successfulPayments = payments.filter(p => p.status === 'success');
+                          setAlertMessage(`Found ${successfulPayments.length} successful payments available for refund`);
+                          setShowAlert(true);
+                        } catch (e) {
+                          setAlertMessage('Error loading payment transactions');
+                          setShowAlert(true);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: '#6366f1',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Load Payment Transactions
+                    </button>
+                  </div>
+                </div>
+
+                {/* Payment Transactions List */}
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    Recent Transactions
+                  </div>
+                  <div style={{ fontSize: '13px', color: t.textMute, marginBottom: '12px' }}>
+                    Showing last 10 successful payments
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(() => {
+                      if (typeof window === 'undefined') {
+                        return <div style={{ fontSize: '13px', color: t.textMute, padding: '20px', textAlign: 'center' }}>
+                          Payment transactions not available
+                        </div>;
+                      }
+                      try {
+                        const payments = JSON.parse(localStorage.getItem('payment_transactions') || '[]');
+                        const recentPayments = payments.filter(p => p.status === 'success').slice(-10).reverse();
+
+                        if (recentPayments.length === 0) {
+                          return <div style={{ fontSize: '13px', color: t.textMute, padding: '20px', textAlign: 'center' }}>
+                            No payment transactions found
+                          </div>;
+                        }
+
+                        return recentPayments.map(payment => (
+                          <div key={payment.razorpay_payment_id} style={{
+                            padding: '12px',
+                            background: t.bgCard,
+                            borderRadius: '6px',
+                            border: `1px solid ${t.border}`,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>
+                                ₹{(payment.amount / 100).toFixed(2)}
+                              </div>
+                              <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>
+                                {new Date(payment.timestamp).toLocaleString()}
+                              </div>
+                              <div style={{ fontSize: '11px', color: t.textMute }}>
+                                {payment.payment_method} • {payment.order_id}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setAlertMessage(`Refund processing requires backend integration. Payment ID: ${payment.razorpay_payment_id}`);
+                                setShowAlert(true);
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Refund
+                            </button>
+                          </div>
+                        ));
+                      } catch (e) {
+                        return <div style={{ fontSize: '13px', color: t.textMute, padding: '20px', textAlign: 'center' }}>
+                          Error loading transactions
+                        </div>;
+                      }
+                    })()}
+                  </div>
+                </div>
+
+                {/* Refund Settings */}
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    ⚙️ Refund Settings
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enableAutoRefund || false}
+                        onChange={(e) => handleInputChange('enableAutoRefund', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Enable automatic refunds for failed orders
+                    </label>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Refund time limit (hours)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="168"
+                        value={formData.refundTimeLimit || 24}
+                        onChange={(e) => handleInputChange('refundTimeLimit', parseInt(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Maximum time after purchase when refunds are allowed
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeSection === 'compliance' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* PCI DSS Compliance */}
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    🔒 PCI DSS Compliance
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ fontSize: '13px', color: t.textSub, lineHeight: '1.6' }}>
+                      Payment Card Industry Data Security Standard compliance settings for secure payment processing.
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enablePciDssLogging || false}
+                        onChange={(e) => handleInputChange('enablePciDssLogging', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Enable PCI DSS compliant logging (mask sensitive data)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enableCardTokenization !== false}
+                        onChange={(e) => handleInputChange('enableCardTokenization', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Enable card tokenization (save cards securely)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.requireCvvForSavedCards || false}
+                        onChange={(e) => handleInputChange('requireCvvForSavedCards', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Require CVV for saved card payments
+                    </label>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Card data retention period (days)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="365"
+                        value={formData.cardDataRetentionDays || 30}
+                        onChange={(e) => handleInputChange('cardDataRetentionDays', parseInt(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Days to retain card data before automatic deletion (0 = never retain)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* GDPR Compliance */}
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    🇪🇺 GDPR Compliance
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ fontSize: '13px', color: t.textSub, lineHeight: '1.6' }}>
+                      General Data Protection Regulation compliance settings for customer data privacy.
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enableGdprCompliance !== false}
+                        onChange={(e) => handleInputChange('enableGdprCompliance', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Enable GDPR compliance mode
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.requireDataConsent || false}
+                        onChange={(e) => handleInputChange('requireDataConsent', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Require explicit consent for data collection
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enableRightToDeletion !== false}
+                        onChange={(e) => handleInputChange('enableRightToDeletion', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Enable customer data deletion (Right to be Forgotten)
+                    </label>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Customer data retention period (days)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="3650"
+                        value={formData.customerDataRetentionDays || 365}
+                        onChange={(e) => handleInputChange('customerDataRetentionDays', parseInt(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Days to retain customer data before automatic deletion
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setAlertMessage('Data export feature requires backend integration. Customers can request their data export.');
+                        setShowAlert(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        background: '#6366f1',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Export All Customer Data (GDPR)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Security Settings */}
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    🛡️ Security Settings
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enableEncryption !== false}
+                        onChange={(e) => handleInputChange('enableEncryption', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Encrypt sensitive data at rest
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '500', color: t.textSub }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.enableAuditLog !== false}
+                        onChange={(e) => handleInputChange('enableAuditLog', e.target.checked)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Enable audit logging for all transactions
+                    </label>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Session timeout (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="480"
+                        value={formData.sessionTimeout || 30}
+                        onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          outline: 'none'
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>
+                        Auto-logout after inactivity
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeSection === 'debug' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{
@@ -2567,6 +3098,162 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 </div>
               </div>
             )}
+
+            {/* Tab-specific settings */}
+            {activeSection.startsWith('tab-') && (() => {
+              const tabId = activeSection.replace('tab-', '');
+              const tabSettings = formData[tabId] || {};
+              const tabConfig = {
+                'orders': { icon: '🛒', label: 'Orders', settings: [
+                  { key: 'enabled', label: 'Enable Orders Tab', desc: 'Show/hide the Orders tab in navigation' },
+                  { key: 'autoRefresh', label: 'Auto Refresh', desc: 'Automatically refresh order list' },
+                  { key: 'showTokens', label: 'Show Tokens', desc: 'Display token numbers on orders' }
+                ]},
+                'dashboard': { icon: '📊', label: 'Dashboard', settings: [
+                  { key: 'enabled', label: 'Enable Dashboard Tab', desc: 'Show/hide the Dashboard tab' },
+                  { key: 'showStats', label: 'Show Statistics', desc: 'Display key metrics' },
+                  { key: 'showCharts', label: 'Show Charts', desc: 'Display visual charts' }
+                ]},
+                'reports': { icon: '📈', label: 'Reports', settings: [
+                  { key: 'enabled', label: 'Enable Reports Tab', desc: 'Show/hide the Reports tab' },
+                  { key: 'autoGenerate', label: 'Auto Generate', desc: 'Automatically generate daily reports' },
+                  { key: 'reportTime', label: 'Report Time', desc: 'Time to generate reports', type: 'time' }
+                ]},
+                'crm': { icon: '👥', label: 'CRM', settings: [
+                  { key: 'enabled', label: 'Enable CRM Tab', desc: 'Show/hide the CRM tab' },
+                  { key: 'showLoyalty', label: 'Show Loyalty', desc: 'Display customer loyalty points' },
+                  { key: 'allowGuestCheckout', label: 'Guest Checkout', desc: 'Allow checkout without registration' }
+                ]},
+                'staff': { icon: '👨‍🍳', label: 'Staff', settings: [
+                  { key: 'enabled', label: 'Enable Staff Tab', desc: 'Show/hide the Staff tab' },
+                  { key: 'showPerformance', label: 'Show Performance', desc: 'Display staff performance metrics' },
+                  { key: 'allowSchedule', label: 'Allow Scheduling', desc: 'Enable staff scheduling' }
+                ]},
+                'menu': { icon: '🍽️', label: 'Menu', settings: [
+                  { key: 'enabled', label: 'Enable Menu Tab', desc: 'Show/hide the Menu tab' },
+                  { key: 'showImages', label: 'Show Images', desc: 'Display item images' },
+                  { key: 'allowCustomItems', label: 'Custom Items', desc: 'Allow adding custom menu items' }
+                ]},
+                'inventory': { icon: '📦', label: 'Inventory', settings: [
+                  { key: 'enabled', label: 'Enable Inventory Tab', desc: 'Show/hide the Inventory tab' },
+                  { key: 'lowStockAlert', label: 'Low Stock Alert', desc: 'Alert when stock is low' },
+                  { key: 'autoReorder', label: 'Auto Reorder', desc: 'Suggest reorder quantities' }
+                ]},
+                'recipes': { icon: '📝', label: 'Recipes', settings: [
+                  { key: 'enabled', label: 'Enable Recipes Tab', desc: 'Show/hide the Recipes tab' },
+                  { key: 'showCost', label: 'Show Cost', desc: 'Display recipe cost breakdown' },
+                  { key: 'showYield', label: 'Show Yield', desc: 'Display recipe yield information' }
+                ]},
+                'waste': { icon: '🗑️', label: 'Waste', settings: [
+                  { key: 'enabled', label: 'Enable Waste Tab', desc: 'Show/hide the Waste tab' },
+                  { key: 'requireReason', label: 'Require Reason', desc: 'Mandatory reason for waste entry' },
+                  { key: 'trackCost', label: 'Track Cost', desc: 'Calculate waste cost impact' }
+                ]},
+                'reservations': { icon: '📅', label: 'Reservations', settings: [
+                  { key: 'enabled', label: 'Enable Reservations Tab', desc: 'Show/hide the Reservations tab' },
+                  { key: 'autoConfirm', label: 'Auto Confirm', desc: 'Automatically confirm reservations' },
+                  { key: 'maxAdvanceDays', label: 'Max Advance Days', desc: 'Maximum days in advance for booking', type: 'number' }
+                ]},
+                'tokens': { icon: '🎫', label: 'Tokens', settings: [
+                  { key: 'enabled', label: 'Enable Token System', desc: 'Enable token-based ordering' },
+                  { key: 'prefix', label: 'Token Prefix', desc: 'Prefix for token numbers', type: 'text' },
+                  { key: 'autoReset', label: 'Auto Reset', desc: 'Reset tokens daily' }
+                ]},
+                'tables': { icon: '🪑', label: 'Tables', settings: [
+                  { key: 'enabled', label: 'Enable Tables Tab', desc: 'Show/hide the Tables tab' },
+                  { key: 'showCapacity', label: 'Show Capacity', desc: 'Display table capacity' },
+                  { key: 'allowMerge', label: 'Allow Merge', desc: 'Allow merging tables' }
+                ]},
+                'waiters': { icon: '🛎️', label: 'Waiters', settings: [
+                  { key: 'enabled', label: 'Enable Waiters Tab', desc: 'Show/hide the Waiters tab' },
+                  { key: 'showAssignedOrders', label: 'Show Assigned Orders', desc: 'Display orders assigned to waiters' },
+                  { key: 'allowCallWaiter', label: 'Allow Call Waiter', desc: 'Enable call waiter feature' }
+                ]},
+                'kitchen': { icon: '👨‍🍳', label: 'Kitchen', settings: [
+                  { key: 'enabled', label: 'Enable Kitchen Tab', desc: 'Show/hide the Kitchen tab' },
+                  { key: 'showTimers', label: 'Show Timers', desc: 'Display order preparation timers' },
+                  { key: 'autoPrintKOT', label: 'Auto Print KOT', desc: 'Automatically print KOT tickets' }
+                ]},
+                'onlineOrdering': { icon: '🌐', label: 'Online Ordering', settings: [
+                  { key: 'enabled', label: 'Enable Online Ordering', desc: 'Enable online ordering platform' },
+                  { key: 'autoAccept', label: 'Auto Accept', desc: 'Automatically accept online orders' },
+                  { key: 'preparationTime', label: 'Preparation Time (min)', desc: 'Default preparation time', type: 'number' }
+                ]},
+                'qrOrdering': { icon: '📱', label: 'QR Ordering', settings: [
+                  { key: 'enabled', label: 'Enable QR Ordering', desc: 'Enable QR-based ordering' },
+                  { key: 'autoAccept', label: 'Auto Accept', desc: 'Automatically accept QR orders' },
+                  { key: 'showMenuImages', label: 'Show Menu Images', desc: 'Display images in QR menu' }
+                ]}
+              };
+              const config = tabConfig[tabId];
+              if (!config) return null;
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div style={{
+                    padding: '16px',
+                    background: t.bgEle,
+                    borderRadius: '8px',
+                    border: `1px solid ${t.border}`
+                  }}>
+                    <div style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                      {config.icon} {config.label} Settings
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {config.settings.map(setting => (
+                        <div key={setting.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{setting.label}</div>
+                            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>{setting.desc}</div>
+                          </div>
+                          {setting.type === 'time' ? (
+                            <input
+                              type="time"
+                              value={tabSettings[setting.key] || '23:00'}
+                              onChange={(e) => handleInputChange(tabId, { ...tabSettings, [setting.key]: e.target.value })}
+                              style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, background: t.bgInput, color: t.text, fontSize: '13px' }}
+                            />
+                          ) : setting.type === 'number' ? (
+                            <input
+                              type="number"
+                              value={tabSettings[setting.key] || 0}
+                              onChange={(e) => handleInputChange(tabId, { ...tabSettings, [setting.key]: parseInt(e.target.value) || 0 })}
+                              style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, background: t.bgInput, color: t.text, fontSize: '13px', width: '80px' }}
+                            />
+                          ) : setting.type === 'text' ? (
+                            <input
+                              type="text"
+                              value={tabSettings[setting.key] || ''}
+                              onChange={(e) => handleInputChange(tabId, { ...tabSettings, [setting.key]: e.target.value })}
+                              style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, background: t.bgInput, color: t.text, fontSize: '13px', width: '100px' }}
+                            />
+                          ) : (
+                            <div
+                              onClick={() => handleInputChange(tabId, { ...tabSettings, [setting.key]: !tabSettings[setting.key] })}
+                              style={{
+                                width: '40px', height: '22px', flexShrink: 0,
+                                background: tabSettings[setting.key] ? '#10b981' : '#2d2d48',
+                                borderRadius: '11px', position: 'relative', cursor: 'pointer',
+                                transition: 'background 0.2s', marginLeft: '12px'
+                              }}
+                            >
+                              <div style={{
+                                position: 'absolute', top: '3px',
+                                left: tabSettings[setting.key] ? '21px' : '3px',
+                                width: '16px', height: '16px',
+                                background: t.bgInput, borderRadius: '50%',
+                                transition: 'left 0.2s',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                              }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Action Buttons */}
             <div style={{

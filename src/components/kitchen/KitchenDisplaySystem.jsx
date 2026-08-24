@@ -1558,14 +1558,14 @@ Printed: ${new Date().toLocaleString()}
 
         {/* Controls - Simplified */}
         <div style={{
-          padding: screenSize === 'small' ? '12px 16px' : '16px 20px',
+          padding: screenSize === 'small' ? '12px 16px' : screenSize === 'medium' ? '12px 16px' : '16px 20px',
           background: '#000000',
           borderBottom: '1px solid #00ff00',
           display: 'flex',
-          gap: screenSize === 'small' ? '12px' : '20px',
+          gap: screenSize === 'small' ? '8px' : screenSize === 'medium' ? '10px' : '20px',
           alignItems: screenSize === 'small' ? 'flex-start' : 'center',
           flexWrap: 'wrap',
-          justifyContent: screenSize === 'small' ? 'flex-start' : 'space-between',
+          justifyContent: screenSize === 'small' ? 'flex-start' : 'flex-start',
           flexDirection: screenSize === 'small' ? 'column' : 'row'
         }}>
           {/* Station Filter */}
@@ -1813,11 +1813,13 @@ Printed: ${new Date().toLocaleString()}
               <div style={{
                 position: 'absolute',
                 top: '100%',
-                right: '0',
+                right: screenSize === 'small' || screenSize === 'medium' ? 'auto' : '0',
+                left: screenSize === 'small' || screenSize === 'medium' ? '0' : 'auto',
                 marginTop: '4px',
                 background: '#000000',
                 border: '2px solid #00ff00',
-                minWidth: '260px',
+                minWidth: screenSize === 'small' ? '220px' : '260px',
+                maxWidth: screenSize === 'small' ? '90vw' : 'none',
                 zIndex: 1001,
                 fontFamily: '"Courier New", monospace'
               }}>
@@ -1886,12 +1888,14 @@ Printed: ${new Date().toLocaleString()}
               <div style={{
                 position: 'absolute',
                 top: '100%',
-                right: '0',
+                right: screenSize === 'small' || screenSize === 'medium' ? 'auto' : '0',
+                left: screenSize === 'small' || screenSize === 'medium' ? '0' : 'auto',
                 marginTop: '4px',
                 background: '#000000',
                 border: '1px solid #00ff00',
                 padding: '12px',
-                minWidth: '280px',
+                minWidth: screenSize === 'small' ? '240px' : '280px',
+                maxWidth: screenSize === 'small' ? '90vw' : 'none',
                 zIndex: 1000,
                 fontFamily: '"Courier New", monospace'
               }}>
@@ -2302,9 +2306,17 @@ Printed: ${new Date().toLocaleString()}
           display: displaySettings.ticketLayout === 'list' ? 'flex' : 'grid',
           flexDirection: displaySettings.ticketLayout === 'list' ? 'column' : undefined,
           gridTemplateColumns: displaySettings.ticketLayout === 'compact' 
-            ? screenSize === 'small' ? 'repeat(auto-fill, minmax(180px, 1fr))' : 'repeat(auto-fill, minmax(280px, 1fr))'
-            : screenSize === 'small' ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: displaySettings.ticketLayout === 'compact' ? '6px' : screenSize === 'small' ? '8px' : '16px'
+            ? screenSize === 'small' ? 'repeat(auto-fill, minmax(160px, 1fr))' 
+            : screenSize === 'medium' ? 'repeat(auto-fill, minmax(200px, 1fr))' 
+            : 'repeat(auto-fill, minmax(240px, 1fr))'
+            : screenSize === 'small' ? '1fr' 
+            : screenSize === 'medium' ? 'repeat(auto-fill, minmax(220px, 1fr))' 
+            : 'repeat(auto-fill, minmax(260px, 1fr))',
+          gap: displaySettings.ticketLayout === 'compact' 
+            ? '4px' 
+            : screenSize === 'small' ? '6px' 
+            : screenSize === 'medium' ? '8px' 
+            : '12px'
         }}>
           {kots.length === 0 ? (
             <div style={{

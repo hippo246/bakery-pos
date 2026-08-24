@@ -25,6 +25,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
   const [editingVendor, setEditingVendor] = useState(null);
   const [editingPO, setEditingPO] = useState(null);
   const screenSize = useScreenSize();
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customUnit, setCustomUnit] = useState('');
+  const [showCustomUnit, setShowCustomUnit] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: 'Ingredients',
@@ -511,13 +515,13 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f8fafc',
+    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
     bgEle:    darkMode ? '#1f1f35' : '#ffffff',
     bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f1f5f9',
-    border:   darkMode ? '#2d2d44' : '#e2e8f0',
-    text:     darkMode ? '#ffffff' : '#111827',
-    textSub:  darkMode ? '#e0e0e0' : '#374151',
+    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
+    border:   darkMode ? '#2d2d44' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#1f2937',
+    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
     textMute: darkMode ? '#8b8b9e' : '#6b7280',
     accent:   '#6366f1',
   };
@@ -871,22 +875,71 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                     Category *
                   </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '4px',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                      fontSize: '12px',
-                      background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827'
-                    }}
-                  >
-                    {categories.filter(c => c !== 'ALL').map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                  {showCustomCategory ? (
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <input
+                        type="text"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        placeholder="Enter custom category..."
+                        autoFocus
+                        style={{
+                          flex: 1,
+                          padding: '4px',
+                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          fontSize: '12px',
+                          background: darkMode ? '#1a1a2e' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#111827'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (customCategory.trim()) {
+                            setFormData({ ...formData, category: customCategory.trim() });
+                          }
+                          setShowCustomCategory(false);
+                        }}
+                        style={{ padding: '4px 8px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCustomCategory(false);
+                          setCustomCategory('');
+                        }}
+                        style={{ padding: '4px 8px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.category}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setShowCustomCategory(true);
+                        } else {
+                          setFormData({ ...formData, category: e.target.value });
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '4px',
+                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        fontSize: '12px',
+                        background: darkMode ? '#1a1a2e' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#111827'
+                      }}
+                    >
+                      {categories.filter(c => c !== 'ALL').map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                      <option value="__custom__">+ Custom Category</option>
+                    </select>
+                  )}
                 </div>
                 
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -914,20 +967,77 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
                       Unit *
                     </label>
-                    <input
-                      type="text"
-                      value={formData.unit}
-                      onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                      placeholder="pcs, kg, L"
-                      style={{
-                        width: '100%',
-                        padding: '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                        fontSize: '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
-                      }}
-                    />
+                    {showCustomUnit ? (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input
+                          type="text"
+                          value={customUnit}
+                          onChange={(e) => setCustomUnit(e.target.value)}
+                          placeholder="Enter custom unit..."
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            padding: '4px',
+                            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                            fontSize: '12px',
+                            background: darkMode ? '#1a1a2e' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#111827'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customUnit.trim()) {
+                              setFormData({ ...formData, unit: customUnit.trim() });
+                            }
+                            setShowCustomUnit(false);
+                          }}
+                          style={{ padding: '4px 8px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCustomUnit(false);
+                            setCustomUnit('');
+                          }}
+                          style={{ padding: '4px 8px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.unit}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setShowCustomUnit(true);
+                          } else {
+                            setFormData({ ...formData, unit: e.target.value });
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '4px',
+                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          fontSize: '12px',
+                          background: darkMode ? '#1a1a2e' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#111827'
+                        }}
+                      >
+                        <option value="pieces">pieces</option>
+                        <option value="kg">kg</option>
+                        <option value="g">g</option>
+                        <option value="liters">liters</option>
+                        <option value="ml">ml</option>
+                        <option value="boxes">boxes</option>
+                        <option value="packs">packs</option>
+                        <option value="bottles">bottles</option>
+                        <option value="dozens">dozens</option>
+                        <option value="__custom__">+ Custom Unit</option>
+                      </select>
+                    )}
                   </div>
                 </div>
                 
