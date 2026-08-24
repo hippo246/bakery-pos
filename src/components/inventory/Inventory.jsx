@@ -693,7 +693,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
           padding: '8px',
           overflow: 'auto'
-        }>
+        }}>
           {filteredItems.length === 0 ? (
             <div style={{ padding: '20px', textAlign: 'center', color: darkMode ? '#8b8b9e' : '#64748b' }}>
               {search || categoryFilter !== 'ALL' ? 'No items found' : 'No inventory items yet. Add your first item!'}
