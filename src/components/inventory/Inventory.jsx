@@ -581,7 +581,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               size="small"
             />
             <button
-              onClick={() => onNavigate?.('dashboard')}
+              onClick={() => onNavigate && onNavigate('dashboard')}
               style={{
                 background: '#2d2d48',
                 border: 'none',
@@ -644,9 +644,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               outline: 'none'
             }}
           >
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
+            {categories.map(cat => {
+              return <option key={cat} value={cat}>{cat}</option>;
+            })}
           </select>
           <button onClick={handleAddItem} style={{ background: darkMode ? '#6366f1' : '#3b82f6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>+ Add Item</button>
           <button onClick={() => setShowExpiryAlerts(true)} style={{ background: expiredCount > 0 ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>⏰ Expiry ({expiredCount})</button>
@@ -680,8 +680,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           <div style={{
             background: darkMode ? '#1a1a2e' : '#f8f9fa',
             border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-            padding: '8px',
-            flex: 1
+            padding: '8px'
           }}>
             <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '2px' }}>TOTAL VALUE</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827' }}>₹{totalValue.toLocaleString()}</div>
@@ -700,7 +699,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               {search || categoryFilter !== 'ALL' ? 'No items found' : 'No inventory items yet. Add your first item!'}
             </div>
           ) : (
-            filteredItems.map(item => {
+            filteredItems.map((item) => {
               const isLowStock = item.quantity <= item.minStock;
               const itemValue = (item.quantity || 0) * (item.cost || 0);
               
