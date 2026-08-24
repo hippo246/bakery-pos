@@ -1,0 +1,137 @@
+[
+  {
+    "id": 1,
+    "name": "Croissant",
+    "category": "Bakery",
+    "price": 45,
+    "description": "Buttery, flaky pastry",
+    "emoji": "🥐",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 2,
+    "name": "Pain au Chocolat",
+    "category": "Bakery",
+    "price": 55,
+    "description": "Chocolate-filled pastry",
+    "emoji": "🍫",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 3,
+    "name": "Baguette",
+    "category": "Bakery",
+    "price": 35,
+    "description": "Fresh French bread",
+    "emoji": "🥖",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 4,
+    "name": "Cappuccino",
+    "category": "Coffee",
+    "price": 80,
+    "description": "Espresso with steamed milk",
+    "emoji": "☕",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 5,
+    "name": "Latte",
+    "category": "Coffee",
+    "price": 90,
+    "description": "Espresso with lots of milk",
+    "emoji": "🥛",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 6,
+    "name": "Espresso",
+    "category": "Coffee",
+    "price": 60,
+    "description": "Strong black coffee",
+    "emoji": "☕",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 7,
+    "name": "Chocolate Cake",
+    "category": "Desserts",
+    "price": 120,
+    "description": "Rich chocolate layer cake",
+    "emoji": "🍰",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 8,
+    "name": "Cheesecake",
+    "category": "Desserts",
+    "price": 110,
+    "description": "Creamy New York style",
+    "emoji": "🧀",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 9,
+    "name": "Tiramisu",
+    "category": "Desserts",
+    "price": 130,
+    "description": "Italian coffee dessert",
+    "emoji": "🍮",
+    "veg": true,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 10,
+    "name": "Spicy Chicken Sandwich",
+    "category": "Food",
+    "price": 115,
+    "description": "Club sandwich with fries and tender chicken",
+    "emoji": "🥪",
+    "veg": false,
+    "spicy": 2,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 11,
+    "name": "Spicy Salad",
+    "category": "Food",
+    "price": 75,
+    "description": "Fresh garden salad with chili dressing",
+    "emoji": "🥗",
+    "veg": true,
+    "spicy": 1,
+    "active": true,
+    "eightySixed": false
+  },
+  {
+    "id": 12,
+    "name": "Hot Pot Soup",
+    "category": "Food",
+    "price": 65,
+    "description": "Spicy soup of the day",
+    "emoji": "🍲",
+    "veg": true,
+    "spicy": 3,
+    "active": true,
+    "eightySixed": false
+  }
+]

@@ -782,16 +782,40 @@
     <div class="success-message" id="success-message">Order placed successfully!</div>
     
     <script>
-        // Sample menu data - in production, this would come from an API
-        // Try to load from localStorage first, fall back to sample data
+        // Load menu data from localStorage with fallback to sample data
         let menuItems = [];
-        try {
-            const savedMenu = localStorage.getItem('bakery_menu');
-            if (savedMenu) {
-                menuItems = JSON.parse(savedMenu);
+        
+        // Try localStorage with multiple possible keys
+        const localStorageKeys = ['brewcrm_local_menuItems', 'bakery_menu', 'cafeos_menu'];
+        for (const key of localStorageKeys) {
+            try {
+                const savedMenu = localStorage.getItem(key);
+                if (savedMenu) {
+                    menuItems = JSON.parse(savedMenu);
+                    console.log('Loaded menu from localStorage key:', key, '-', menuItems.length, 'items');
+                    break;
+                }
+            } catch (error) {
+                console.error('Error loading menu from localStorage key:', key, error);
             }
-        } catch (error) {
-            console.error('Error loading menu from localStorage:', error);
+        }
+        
+        // If localStorage is empty, try fetching from JSON file (for deployment)
+        if (menuItems.length === 0) {
+            fetch('/menu-data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch menu data');
+                    return response.json();
+                })
+                .then(data => {
+                    menuItems = data;
+                    console.log('Loaded menu from JSON file:', menuItems.length, 'items');
+                    renderMenu();
+                })
+                .catch(error => {
+                    console.error('Error loading menu from JSON file:', error);
+                    // Will fall back to sample data below
+                });
         }
         
         // Fallback sample data if no menu found

@@ -866,7 +866,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
     dietary: 'veg' // 'veg', 'non-veg', 'vegan', 'gf'
   });
 
-  // Sync menu items to localStorage
+  // Sync menu items to localStorage for QR ordering
   useEffect(() => {
     try {
       localStorage.setItem('bakery_menu', JSON.stringify(menuItems));
