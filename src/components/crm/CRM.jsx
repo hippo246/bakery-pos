@@ -272,8 +272,10 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       background: darkMode ? '#1a1a2e' : '#f5f7fa',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Content */}
       <div style={{ padding: screenSize === 'small' ? '20px' : '32px', overflow: 'auto', flex: 1, background: darkMode ? '#14142a' : '#f8fafc' }}>

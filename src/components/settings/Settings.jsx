@@ -720,8 +720,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       background: t.bg,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>

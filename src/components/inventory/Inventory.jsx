@@ -530,8 +530,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       background: t.bg,
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{

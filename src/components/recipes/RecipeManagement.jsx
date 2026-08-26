@@ -142,8 +142,10 @@ export default function RecipeManagement({ menuItems, inventory, onNavigate, dar
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       background: darkMode ? '#1a1a2e' : '#ffffff',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Content */}
       <div style={{ flex: 1, padding: '24px', overflow: 'auto', background: darkMode ? '#14142a' : '#f9fafb' }}>

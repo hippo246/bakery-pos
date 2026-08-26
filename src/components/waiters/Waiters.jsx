@@ -295,8 +295,10 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       background: t.bg,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      overflow: 'hidden'
     }}>
 
       {/* Header */}

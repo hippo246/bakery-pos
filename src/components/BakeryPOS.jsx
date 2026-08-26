@@ -173,10 +173,12 @@ export default function BakeryPOS({
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100vh',
       width: '100vw',
       maxWidth: '100%',
       background: 'var(--cafe-bg)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
@@ -598,7 +600,7 @@ export default function BakeryPOS({
       </header>
 
       {/* Main Content */}
-      <main style={{ padding: '0' }}>
+      <main style={{ flex: 1, overflow: 'auto', padding: '0', minHeight: 0 }}>
         {renderContent()}
       </main>
     </div>

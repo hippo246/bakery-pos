@@ -7,10 +7,10 @@ import { getCurrentUserId } from "../../utils/authService.js";
 import AlertDialog from "../common/AlertDialog.jsx";
 
 const S = {
-  container: { display: "flex", background: "var(--cafe-bg)", flexDirection: "column" },
+  container: { display: "flex", height: "100%", background: "var(--cafe-bg)", flexDirection: "column", overflow: "hidden" },
   header: { padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
   title: { fontSize: 24, fontWeight: 900, color: "var(--cafe-text-primary)", letterSpacing: "-0.03em" },
-  main: { display: "flex", flex: 1 },
+  main: { display: "flex", flex: 1, overflow: "hidden" },
   sidebar: { width: 280, borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", background: "var(--cafe-bg-card)", flexShrink: 0 },
   searchBar: { padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" },
   searchInput: { width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "10px 14px", color: "var(--cafe-text-primary)", fontSize: 13, outline: "none" },

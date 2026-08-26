@@ -698,9 +698,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      minHeight: '100%',
+      height: '100%',
       background: darkMode ? '#1a1a2e' : '#f8fafc',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      overflow: 'hidden'
     }}>
       <style>
         {`
@@ -729,8 +730,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
         padding: screenSize === 'small' ? '16px' : '28px 32px',
         background: darkMode ? '#1a1a2e' : '#f8fafc',
         flex: 1,
-        overflow: screenSize === 'small' ? 'auto' : 'auto',
-        height: screenSize === 'small' ? 'calc(100vh - 60px)' : 'auto'
+        overflow: 'auto',
+        minHeight: 0
       }}>
         {/* Tab Navigation */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>

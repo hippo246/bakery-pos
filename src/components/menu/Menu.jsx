@@ -1030,8 +1030,10 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       background: darkMode ? '#1a1a2e' : '#f8fafc',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Sub-tabs */}
       <div style={{

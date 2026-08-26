@@ -2401,10 +2401,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     <div style={{
       display: 'flex',
       flexDirection: 'column',
+      height: '100%',
       width: '100%',
       maxWidth: '100%',
       background: darkMode ? '#1a1a1a' : '#f5f7fa',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      overflow: 'hidden'
     }}>
       {/* Professional Header */}
       <div style={{
@@ -2718,7 +2720,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         display: 'flex',
         gap: screenSize === 'small' ? '8px' : screenSize === 'medium' ? '8px' : '12px',
         padding: screenSize === 'small' ? '8px' : screenSize === 'medium' ? '8px' : '12px',
-        overflow: 'visible',
+        overflow: 'auto',
         minHeight: 0,
         maxWidth: '100%',
         flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row'
