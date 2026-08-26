@@ -32,7 +32,6 @@ export default function Kitchen({ onNavigate, orders = [], setOrders, menuItems 
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
       background: '#000000',
       fontFamily: '"Courier New", monospace'
     }}>

@@ -7,10 +7,10 @@ import { getCurrentUserId } from "../../utils/authService.js";
 import AlertDialog from "../common/AlertDialog.jsx";
 
 const S = {
-  container: { display: "flex", height: "100%", background: "var(--cafe-bg)", overflow: "hidden", flexDirection: "column" },
+  container: { display: "flex", background: "var(--cafe-bg)", flexDirection: "column" },
   header: { padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 },
   title: { fontSize: 24, fontWeight: 900, color: "var(--cafe-text-primary)", letterSpacing: "-0.03em" },
-  main: { display: "flex", flex: 1, overflow: "hidden" },
+  main: { display: "flex", flex: 1 },
   sidebar: { width: 280, borderRight: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", background: "var(--cafe-bg-card)", flexShrink: 0 },
   searchBar: { padding: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" },
   searchInput: { width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "10px 14px", color: "var(--cafe-text-primary)", fontSize: 13, outline: "none" },
@@ -22,7 +22,7 @@ const S = {
   reportLink: { padding: "8px 16px 8px 48px", cursor: "pointer", fontSize: 13, color: "var(--cafe-text-tertiary)", display: "flex", alignItems: "center", transition: "color 0.1s" },
   reportLinkActive: { color: "var(--cafe-text-primary)", fontWeight: 700 },
   contentArea: { flex: 1, overflowY: "auto", padding: 32, background: "rgba(0,0,0,0.2)" },
-  emptyState: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--cafe-text-tertiary)" }
+  emptyState: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--cafe-text-tertiary)" }
 };
 
 export default function Analytics({ orders, customers, inventory, staff }) {

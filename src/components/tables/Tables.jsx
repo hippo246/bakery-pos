@@ -316,7 +316,6 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
       background: darkMode ? '#1a1a2e' : '#f8fafc',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>

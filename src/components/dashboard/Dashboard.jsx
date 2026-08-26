@@ -698,8 +698,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
-      maxHeight: screenSize === 'small' ? '100vh' : 'auto',
+      minHeight: '100%',
       background: darkMode ? '#1a1a2e' : '#f8fafc',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>

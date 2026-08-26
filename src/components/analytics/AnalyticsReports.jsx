@@ -384,7 +384,7 @@ function AnalyticsReports({
   };
 
   return (
-    <div style={{ padding: isMobile ? 18 : 28, maxWidth: '100%', overflow: 'hidden' }}>
+    <div style={{ padding: isMobile ? 18 : 28, maxWidth: '100%' }}>
       {/* Header */}
       <div style={{ 
         display: "flex", justifyContent: "space-between",
