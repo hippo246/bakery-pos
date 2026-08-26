@@ -614,32 +614,24 @@
             animation: bounceIn 0.3s ease;
         }
         #floating-assist-button {
-            position: fixed;
-            bottom: 24px;
-            right: 20px;
-            z-index: 1000;
-            padding: 16px 22px;
+            padding: 10px 16px;
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
             border: none;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 15px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
-            box-shadow: 0 6px 24px rgba(239, 68, 68, 0.45);
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             transition: all 0.2s ease;
-            animation: floatPulse 3s ease-in-out infinite;
+            white-space: nowrap;
         }
         #floating-assist-button:hover {
-            transform: scale(1.06) translateY(-2px);
-            box-shadow: 0 10px 28px rgba(239, 68, 68, 0.5);
-        }
-        @keyframes floatPulse {
-            0%, 100% { box-shadow: 0 6px 24px rgba(239,68,68,0.45); }
-            50% { box-shadow: 0 6px 32px rgba(239,68,68,0.65); }
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.45);
         }
         @keyframes fadeIn {
             from { opacity: 0; } to { opacity: 1; }
@@ -657,9 +649,15 @@
     <div class="header">
         <div class="header-content">
             <div class="logo">🥐 BakeryPOS</div>
-            <button class="cart-button" onclick="showCart()">
-                🛒 Cart (<span id="cart-count">0</span>)
-            </button>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="floating-assist-button" onclick="showAssistModal()">
+                    <span style="font-size:16px;">🛎️</span>
+                    Assistance
+                </button>
+                <button class="cart-button" onclick="showCart()">
+                    🛒 Cart (<span id="cart-count">0</span>)
+                </button>
+            </div>
         </div>
     </div>
     
@@ -730,12 +728,6 @@
         </div>
     </div>
 
-
-    <!-- Floating Assistance FAB -->
-    <button id="floating-assist-button" onclick="showAssistModal()">
-        <span style="font-size:20px;">🛎️</span>
-        Request Assistance
-    </button>
 
     <!-- Assistance Bottom Sheet Backdrop -->
     <div id="assist-backdrop" onclick="hideAssistModal()"></div>
@@ -822,6 +814,20 @@
     <div class="success-message" id="success-message">Order placed successfully!</div>
     
     <script>
+        // Escape user/URL-supplied text before it goes into innerHTML.
+        // (table info comes straight from the URL query string, and the
+        // customer name/special-request fields are free text, so both
+        // need to be neutralized before being rendered anywhere.)
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         // Load menu data from localStorage with fallback to sample data
         let menuItems = [];
         
@@ -1056,11 +1062,11 @@
                                 <div style="display:flex; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
                                     ${tagHtml}
                                 </div>
-                                <div class="menu-item-name" style="font-weight:700; font-size:15px; color:#0f172a; margin-bottom:2px;">${item.name}</div>
-                                <div class="menu-item-description" style="font-size:12px; color:#64748b; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${item.description}</div>
+                                <div class="menu-item-name" style="font-weight:700; font-size:15px; color:#0f172a; margin-bottom:2px;">${escapeHtml(item.name)}</div>
+                                <div class="menu-item-description" style="font-size:12px; color:#64748b; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${escapeHtml(item.description)}</div>
                             </div>
                             <div class="menu-item-footer" style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                                <div class="menu-item-price" style="font-weight:800; font-size:16px; color:#0f172a;">₹${item.price.toFixed(2)}</div>
+                                <div class="menu-item-price" style="font-weight:800; font-size:16px; color:#0f172a;">₹${(Number(item.price) || 0).toFixed(2)}</div>
                                 ${actionButtonHtml}
                             </div>
                         </div>
@@ -1075,6 +1081,10 @@
         
         function addToCart(itemId) {
             const item = menuItems.find(i => String(i.id) === String(itemId));
+            if (!item) {
+                console.error('addToCart: no menu item found for id', itemId);
+                return;
+            }
             const existing = cart.find(c => String(c.id) === String(itemId));
             
             if (existing) {
@@ -1127,7 +1137,7 @@
                 container.innerHTML = cart.map(item => `
                     <div class="cart-item">
                         <div class="cart-item-info">
-                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-name">${escapeHtml(item.name)}</div>
                             <div class="cart-item-price">₹${item.price.toFixed(2)} × ${item.qty} = <strong>₹${(item.price * item.qty).toFixed(2)}</strong></div>
                         </div>
                         <div class="cart-item-controls">
@@ -1144,11 +1154,11 @@
         }
         
         function updateQty(itemId, delta) {
-            const item = cart.find(c => c.id === itemId);
+            const item = cart.find(c => String(c.id) === String(itemId));
             if (item) {
                 item.qty += delta;
                 if (item.qty <= 0) {
-                    cart = cart.filter(c => c.id !== itemId);
+                    cart = cart.filter(c => String(c.id) !== String(itemId));
                 }
                 saveCart();
                 updateCartUI();
@@ -1316,10 +1326,10 @@
 
                     // — Order meta —
                     html += `<div style="margin-bottom:12px;border-bottom:1px dashed #000;padding-bottom:8px;">`;
-                    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Order #: ${order.id.slice(-6)}</span><span>Token: ${order.token || 'N/A'}</span></div>`;
+                    html += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Order #: ${order.id.slice(-6)}</span><span>Token: ${escapeHtml(order.token) || 'N/A'}</span></div>`;
                     html += `<div style="font-size:10px;margin-bottom:2px;">${new Date(order.createdAt).toLocaleString()}</div>`;
-                    if (order.tableName) html += `<div style="font-size:10px;margin-bottom:2px;">Table: ${order.tableName}</div>`;
-                    html += `<div style="font-size:10px;margin-bottom:2px;">Customer: ${order.customerName || 'Guest'}</div>`;
+                    if (order.tableName) html += `<div style="font-size:10px;margin-bottom:2px;">Table: ${escapeHtml(order.tableName)}</div>`;
+                    html += `<div style="font-size:10px;margin-bottom:2px;">Customer: ${escapeHtml(order.customerName) || 'Guest'}</div>`;
                     html += `<div style="font-size:10px;">Staff: QR Self-Order</div>`;
                     html += `</div>`;
 
@@ -1329,7 +1339,7 @@
                         const qty   = item.quantity || item.qty || 1;
                         const price = item.price || 0;
                         html += `<div style="margin-bottom:8px;">`;
-                        html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:500;">${item.name}</span><span>₹${(qty * price).toFixed(2)}</span></div>`;
+                        html += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:500;">${escapeHtml(item.name)}</span><span>₹${(qty * price).toFixed(2)}</span></div>`;
                         html += `<div style="font-size:10px;color:#666;">${qty} x ₹${price.toFixed(2)}</div>`;
                         html += `</div>`;
                     });
@@ -1404,7 +1414,7 @@
                     let statusColor = '#f59e0b';
                     let statusPulse = false;
 
-                    if (status === 'preparing' || status === 'preparing') {
+                    if (status === 'preparing') {
                         statusLabel = '🍳 Preparing';
                         statusColor = '#8b5cf6';
                     } else if (status === 'in_progress' || status === 'in-progress') {
@@ -1419,12 +1429,12 @@
                         statusColor = '#6b7280';
                     }
 
-                    const itemsStr = (order.items || []).map(item => `${item.quantity || item.qty || 1}× ${item.name}`).join(', ');
+                    const itemsStr = (order.items || []).map(item => `${item.quantity || item.qty || 1}× ${escapeHtml(item.name)}`).join(', ');
 
                     html += `
                         <div style="background:#ffffff; border-radius:12px; border:1px solid #e5e7eb; padding:16px; margin-bottom:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative;">
                              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <span style="font-size:12px; font-weight:700; color:#475569;">ORDER #${id.slice(-6)}${order.token ? ` • TOKEN: ${order.token}` : ''}</span>
+                                <span style="font-size:12px; font-weight:700; color:#475569;">ORDER #${id.slice(-6)}${order.token ? ` • TOKEN: ${escapeHtml(order.token)}` : ''}</span>
                                 <span style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; color:#fff; background:${statusColor}; ${statusPulse ? 'animation: pulse 1.5s infinite;' : ''}">
                                     ${statusLabel}
                                 </span>
@@ -1433,7 +1443,7 @@
                                 ${itemsStr}
                             </div>
                             <div style="font-size:12px; color:#6b7280; display:flex; justify-content:space-between; align-items:center;">
-                                <span>Table: ${order.tableName || 'Counter'}</span>
+                                <span>Table: ${escapeHtml(order.tableName) || 'Counter'}</span>
                                 <span style="font-weight:700; color:#10b981;">₹${(order.total || 0).toFixed(2)}</span>
                             </div>
                             <div style="margin-top:12px; display:flex; gap:8px;">
@@ -1513,10 +1523,10 @@
 
                 // Order meta
                 receiptHTML += `<div style="margin-bottom:12px;border-bottom:1px dashed #000;padding-bottom:8px;">`;
-                receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Order #: ${order.id.slice(-6)}</span><span>Token: ${order.token || 'N/A'}</span></div>`;
+                receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Order #: ${order.id.slice(-6)}</span><span>Token: ${escapeHtml(order.token) || 'N/A'}</span></div>`;
                 receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">${new Date(order.createdAt).toLocaleString()}</div>`;
-                if (order.tableName) receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Table: ${order.tableName}</div>`;
-                receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Customer: ${order.customerName || 'Guest'}</div>`;
+                if (order.tableName) receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Table: ${escapeHtml(order.tableName)}</div>`;
+                receiptHTML += `<div style="font-size:10px;margin-bottom:2px;">Customer: ${escapeHtml(order.customerName) || 'Guest'}</div>`;
                 receiptHTML += `<div style="font-size:10px;">Staff: QR Self-Order</div>`;
                 receiptHTML += `</div>`;
 
@@ -1526,7 +1536,7 @@
                     const qty   = item.quantity || item.qty || 1;
                     const price = item.price || 0;
                     receiptHTML += `<div style="margin-bottom:8px;">`;
-                    receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:500;">${item.name}</span><span>&#8377;${(qty * price).toFixed(2)}</span></div>`;
+                    receiptHTML += `<div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-weight:500;">${escapeHtml(item.name)}</span><span>&#8377;${(qty * price).toFixed(2)}</span></div>`;
                     receiptHTML += `<div style="font-size:10px;color:#666;">${qty} x &#8377;${price.toFixed(2)}</div>`;
                     receiptHTML += `</div>`;
                 });

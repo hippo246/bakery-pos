@@ -160,6 +160,8 @@ export default function BakeryPOS({
         return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} darkMode={getTabDarkMode('waiters')} />;
       case 'kitchen':
         return <Kitchen onNavigate={handleNavigate} orders={orders} setOrders={setOrders} menuItems={menuItems} />;
+      case 'qrodering':
+        return <QROrdering menuItems={menuItems} onNavigate={handleNavigate} darkMode={getTabDarkMode('qrodering')} />;
       case 'settings':
         return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} darkMode={getTabDarkMode('settings')} />;
       default:
@@ -235,253 +237,6 @@ export default function BakeryPOS({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : isMedium ? '10px' : isTablet ? '11px' : '12px', flex: 1, justifyContent: 'center', maxWidth: isMobile || isMedium ? '800px' : isTablet ? '900px' : '1000px' }}>
-          {isMobile ? (
-          <div style={{ position: 'relative' }}>
-            <button
-              data-dropdown-trigger
-              data-mobile-menu
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              style={{
-                padding: isMobile ? '6px 10px' : '8px 14px',
-                background: 'var(--cafe-accent)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: isMobile ? '6px' : '8px',
-                fontSize: isMobile ? '11px' : '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: 'var(--cafe-shadow-glow)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span>{activeTab.toUpperCase()}</span>
-              <span>▼</span>
-            </button>
-            {isMenuOpen && (
-              <div data-dropdown style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                background: 'var(--cafe-bg-elevated)',
-                border: '1px solid var(--cafe-border)',
-                borderRadius: '12px',
-                boxShadow: 'var(--cafe-shadow-lg)',
-                zIndex: 3000,
-                marginTop: '8px',
-                width: '180px',
-                maxHeight: '260px',
-                overflowY: 'auto',
-                padding: '4px'
-              }}>
-                {[
-                  { id: 'orders', label: 'Orders' },
-                  { id: 'dashboard', label: 'Dashboard' },
-                  { id: 'reports', label: 'Reports' },
-                  { id: 'crm', label: 'Customers', hasDropdown: true },
-                  { id: 'staff', label: 'Staff' },
-                  { id: 'menu', label: 'Menu', hasDropdown: true },
-                  { id: 'recipes', label: 'Recipes', subItem: true },
-                  { id: 'waste', label: 'Waste', subItem: true },
-                  { id: 'reservations', label: 'Reservations', subItem: true },
-                  { id: 'tokens', label: 'Tokens' },
-                  { id: 'tables', label: 'Tables' },
-                  { id: 'waiters', label: 'Waiters' },
-                  { id: 'kitchen', label: 'Kitchen' },
-                  { id: 'settings', label: 'Settings' }
-                ].filter(item => !item.subItem).map(item => (
-                  <div key={item.id} style={{ position: 'relative' }}>
-                    <button
-                      data-dropdown-trigger
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (item.hasDropdown) {
-                          toggleMenuDropdown(e, item.id);
-                        } else {
-                          handleNavigate(item.id);
-                          setIsMenuOpen(false);
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        padding: '10px 14px',
-                        background: activeTab === item.id ? 'var(--cafe-accent-dim)' : 'transparent',
-                        color: activeTab === item.id ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: activeTab === item.id ? '600' : '400',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeTab !== item.id) {
-                          e.currentTarget.style.background = 'var(--cafe-bg-hover)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeTab !== item.id) {
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      <span>{item.label}</span>
-                      {item.hasDropdown && <span style={{ fontSize: '10px' }}>▼</span>}
-                    </button>
-                    
-                    {item.hasDropdown && (
-                      <div 
-                        ref={item.id === 'menu' ? menuDropdownRef : customersDropdownRef}
-                        data-dropdown
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          marginLeft: '12px',
-                          marginTop: '4px',
-                          display: (item.id === 'menu' && menuDropdownOpen) || (item.id === 'crm' && customersDropdownOpen) ? 'block' : 'none'
-                        }}>
-                        {item.id === 'menu' && (
-                          <>
-                            <button
-                              data-dropdown-trigger
-                              type="button"
-                              onClick={(e) => {
-                                handleNavigate('menu');
-                                setMenuDropdownOpen(false);
-                                setIsMenuOpen(false);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '8px 14px',
-                                background: activeTab === 'menu' ? 'var(--cafe-accent-dim)' : 'transparent',
-                                color: activeTab === 'menu' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: activeTab === 'menu' ? '600' : '400',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              Menu Items
-                            </button>
-                            <button
-                              data-dropdown-trigger
-                              type="button"
-                              onClick={(e) => {
-                                handleNavigate('recipes');
-                                setMenuDropdownOpen(false);
-                                setIsMenuOpen(false);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '8px 14px',
-                                background: activeTab === 'recipes' ? 'var(--cafe-accent-dim)' : 'transparent',
-                                color: activeTab === 'recipes' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: activeTab === 'recipes' ? '600' : '400',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              Recipes
-                            </button>
-                            <button
-                              data-dropdown-trigger
-                              type="button"
-                              onClick={(e) => {
-                                handleNavigate('waste');
-                                setMenuDropdownOpen(false);
-                                setIsMenuOpen(false);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '8px 14px',
-                                background: activeTab === 'waste' ? 'var(--cafe-accent-dim)' : 'transparent',
-                                color: activeTab === 'waste' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: activeTab === 'waste' ? '600' : '400',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              Waste
-                            </button>
-                          </>
-                        )}
-                        
-                        {item.id === 'crm' && (
-                          <>
-                            <button
-                              data-dropdown-trigger
-                              type="button"
-                              onClick={(e) => {
-                                handleNavigate('crm');
-                                setCustomersDropdownOpen(false);
-                                setIsMenuOpen(false);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '8px 14px',
-                                background: activeTab === 'crm' ? 'var(--cafe-accent-dim)' : 'transparent',
-                                color: activeTab === 'crm' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: activeTab === 'crm' ? '600' : '400',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              Customers
-                            </button>
-                            <button
-                              data-dropdown-trigger
-                              type="button"
-                              onClick={(e) => {
-                                handleNavigate('reservations');
-                                setCustomersDropdownOpen(false);
-                                setIsMenuOpen(false);
-                              }}
-                              style={{
-                                width: '100%',
-                                textAlign: 'left',
-                                padding: '8px 14px',
-                                background: activeTab === 'reservations' ? 'var(--cafe-accent-dim)' : 'transparent',
-                                color: activeTab === 'reservations' ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: activeTab === 'reservations' ? '600' : '400',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              Reservations
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : isMedium ? '5px' : isTablet ? '5px' : '6px', flex: 1, minWidth: 0, maxWidth: isMobile || isMedium ? '800px' : isTablet ? '900px' : '1000px' }}>
             <button
               onClick={() => scrollTabs('left')}
@@ -540,6 +295,7 @@ export default function BakeryPOS({
                 { id: 'tables', label: 'Tables' },
                 { id: 'waiters', label: 'Waiters' },
                 { id: 'kitchen', label: 'Kitchen' },
+                { id: 'qrodering', label: 'QR Ordering' },
                 { id: 'settings', label: 'Settings' }
               ].filter(item => !item.subItem).map(item => (
                 <div key={item.id} style={{ position: 'relative' }}>
@@ -632,11 +388,10 @@ export default function BakeryPOS({
               ›
             </button>
           </div>
-        )}
       </div>
 
       {/* Desktop Dropdowns positioned fixed to avoid overflow clipping */}
-      {!isMobile && menuDropdownOpen && (
+      {menuDropdownOpen && (
         <div 
           ref={menuDropdownRef}
           data-dropdown
@@ -756,7 +511,7 @@ export default function BakeryPOS({
         </div>
       )}
 
-      {!isMobile && customersDropdownOpen && (
+      {customersDropdownOpen && (
         <div 
           ref={customersDropdownRef}
           data-dropdown

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function QROrdering({ menuItems = [], onPlaceOrder }) {
+export default function QROrdering({ menuItems = [], onPlaceOrder, onNavigate, darkMode = true }) {
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [customerName, setCustomerName] = useState('');
