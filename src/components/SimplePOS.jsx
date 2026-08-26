@@ -8,6 +8,7 @@ import { getAggregatorService } from '../services/aggregators/AggregatorService.
 import VoiceOrderRecorder from './voice/VoiceOrderRecorder';
 import SpeakButton from './voice/SpeakButton';
 import textToSpeechService from '../services/voice/TextToSpeechService';
+import { getPrinterService } from '../utils/thermalPrinter.js';
 
 export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables, darkMode = true }) {
   const { currentTerminal } = useTerminal();
@@ -93,11 +94,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [activeView, setActiveView] = useState('menu'); // 'menu', 'cart', 'customer', 'table', 'notes', 'payment', 'promo'
   const [numpadMode, setNumpadMode] = useState('quantity'); // 'quantity', 'discount', 'amount', 'tip', 'gst'
   const [checkoutNumpadMode, setCheckoutNumpadMode] = useState('amount'); // 'amount', 'discount', 'tip', 'gst'
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showCustomOrder, setShowCustomOrder] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [customerPhone, setCustomerPhone] = useState('');
   const [showCustomerLookup, setShowCustomerLookup] = useState(false);
-  const [showCustomOrder, setShowCustomOrder] = useState(false);
+  const [qrOrders, setQrOrders] = useState([]); // QR orders from localStorage
+  const [showQrOrdersPanel, setShowQrOrdersPanel] = useState(false);
+  const [selectedQrOrder, setSelectedQrOrder] = useState(null);
   const [customOrderName, setCustomOrderName] = useState('');
   const [customOrderPrice, setCustomOrderPrice] = useState('');
   const [customOrderQuantity, setCustomOrderQuantity] = useState('1');
@@ -115,6 +118,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [splitMode, setSplitMode] = useState('equal'); // 'equal', 'custom', 'percentage'
   const [showTableSelector, setShowTableSelector] = useState(false);
   const [numpadSearch, setNumpadSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [orderType, setOrderType] = useState('dine-in'); // 'dine-in' or 'takeaway'
@@ -141,6 +145,114 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showAggregatorDropdown, setShowAggregatorDropdown] = useState(false);
   const [showAggregatorPanel, setShowAggregatorPanel] = useState(false);
   const [aggregatorInitialized, setAggregatorInitialized] = useState(false);
+
+  // Load QR orders from localStorage and auto-add Pay at Counter orders to main orders
+  useEffect(() => {
+    const loadQrOrders = () => {
+      try {
+        const storedOrders = localStorage.getItem('qr_orders');
+        if (storedOrders) {
+          const qrOrdersData = JSON.parse(storedOrders);
+          console.log('Loaded QR orders:', qrOrdersData.length, 'orders');
+          setQrOrders(qrOrdersData);
+
+          // Auto-add Pay at Counter orders to main orders list
+          setOrders(prevOrders => {
+            const newOrders = [...prevOrders];
+            qrOrdersData.forEach(qrOrder => {
+              if (qrOrder.paymentMethod === 'cash' && !prevOrders.find(o => o.id === qrOrder.id)) {
+                const newOrder = {
+                  id: qrOrder.id,
+                  invoiceNumber: qrOrder.invoiceNumber || qrOrder.id,
+                  items: qrOrder.items,
+                  total: qrOrder.total,
+                  paymentMethod: qrOrder.paymentMethod,
+                  paymentStatus: 'pending',
+                  status: 'PENDING',
+                  tableName: qrOrder.tableName || 'Counter',
+                  customerName: qrOrder.customerName || 'Walk-in',
+                  createdAt: qrOrder.createdAt,
+                  source: 'qr-ordering',
+                  isQROrder: true
+                };
+                newOrders.push(newOrder);
+                console.log('Auto-added Pay at Counter order to main orders:', qrOrder.id);
+              }
+            });
+            return newOrders;
+          });
+        } else {
+          console.log('No QR orders found in localStorage');
+          setQrOrders([]);
+        }
+      } catch (error) {
+        console.error('Error loading QR orders:', error);
+        setQrOrders([]);
+      }
+    };
+
+    loadQrOrders();
+
+    // Set up interval to refresh QR orders
+    const interval = setInterval(loadQrOrders, 3000); // Refresh every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Function to process QR order payment
+  const processQrOrderPayment = (qrOrder) => {
+    // Add QR order to main orders list
+    const newOrder = {
+      id: qrOrder.id,
+      invoiceNumber: qrOrder.invoiceNumber || qrOrder.id,
+      items: qrOrder.items,
+      total: qrOrder.total,
+      paymentMethod: paymentMethod,
+      paymentStatus: 'paid',
+      status: 'completed',
+      tableName: qrOrder.tableName,
+      customerName: qrOrder.customerName || 'Walk-in',
+      createdAt: qrOrder.createdAt,
+      completedAt: new Date().toISOString(),
+      source: 'qr-ordering'
+    };
+
+    setOrders([...orders, newOrder]);
+
+    // Remove from QR orders and update status
+    const updatedQrOrders = qrOrders.filter(o => o.id !== qrOrder.id);
+    setQrOrders(updatedQrOrders);
+    localStorage.setItem('qr_orders', JSON.stringify(updatedQrOrders));
+
+    // Update order status in localStorage
+    const statuses = JSON.parse(localStorage.getItem('qr_order_statuses') || '{}');
+    statuses[qrOrder.id] = 'completed';
+    localStorage.setItem('qr_order_statuses', JSON.stringify(statuses));
+
+    // Broadcast status update via BroadcastChannel for real-time updates
+    try {
+      const statusChannel = new BroadcastChannel('qr_order_status');
+      statusChannel.postMessage({ type: 'STATUS_UPDATE', orderId: qrOrder.id, status: 'completed' });
+      statusChannel.close();
+    } catch (error) {
+      console.error('BroadcastChannel not supported:', error);
+    }
+
+    // Print thermal receipt if enabled
+    if (settings.qrEnableThermalPrinter) {
+      const printer = getPrinterService({
+        enabled: settings.qrEnableThermalPrinter,
+        port: settings.qrPrinterPort || 9100,
+        paperWidth: settings.qrPrinterPaperWidth || 80
+      });
+      printer.printReceipt(newOrder, settings).catch(err => {
+        console.error('Failed to print receipt:', err);
+      });
+    }
+
+    setShowAlert(true);
+    setAlertMessage(`Order #${qrOrder.id.slice(-6)} payment completed!`);
+  };
 
   // Initialize aggregator service
   useEffect(() => {
@@ -1404,10 +1516,26 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       return;
     }
 
-    const orderNumber = `ORD-${Date.now().toString().slice(-6)}`;
+    // Generate sequential invoice number if enabled
+    let invoiceNumber;
+    if (settings.qrEnableSequentialInvoices) {
+      const lastNumber = settings.qrLastInvoiceNumber || settings.qrInvoiceStartNumber || 0;
+      const newNumber = lastNumber + 1;
+      const prefix = settings.qrInvoicePrefix || 'INV';
+      invoiceNumber = `${prefix}${String(newNumber).padStart(6, '0')}`;
+      
+      // Update settings
+      setSettings({ ...settings, qrLastInvoiceNumber: newNumber });
+      localStorage.setItem('pos_settings', JSON.stringify({ ...settings, qrLastInvoiceNumber: newNumber }));
+    } else {
+      invoiceNumber = `ORD-${Date.now().toString().slice(-6)}`;
+    }
+
+    const orderNumber = invoiceNumber;
     const tokenNumber = `${settings.tokenPrefix || 'T'}-${Date.now().toString().slice(-4)}`;
     const newOrder = {
       id: orderNumber,
+      invoiceNumber: invoiceNumber,
       orderNumber: orderNumber,
       token: tokenNumber,
       items: cart,
@@ -1486,6 +1614,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     } else if (receiptDelivery === 'both') {
       if (receiptEmail) sendEmailReceipt(newOrder, receiptEmail);
       if (receiptPhone) sendSMSReceipt(newOrder, receiptPhone);
+    }
+
+    // Print thermal receipt if enabled
+    if (settings.qrEnableThermalPrinter) {
+      const printer = getPrinterService({
+        enabled: settings.qrEnableThermalPrinter,
+        port: settings.qrPrinterPort || 9100,
+        paperWidth: settings.qrPrinterPaperWidth || 80
+      });
+      printer.printReceipt(newOrder, settings).catch(err => {
+        console.error('Failed to print receipt:', err);
+        setAlertMessage('Failed to print receipt. Please check printer connection.');
+        setShowAlert(true);
+      });
     }
 
     // Create KOT for kitchen based on workflow settings
@@ -2411,57 +2553,96 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       {/* Professional Header */}
       <div style={{
         background: darkMode ? '#2a2a2a' : '#ffffff',
-        padding: '8px 16px',
+        padding: screenSize === 'small' ? '12px 16px' : '8px 16px',
         borderBottom: `1px solid ${darkMode ? '#444' : '#d1d5db'}`,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        minHeight: screenSize === 'small' ? '60px' : 'auto'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap', gap: screenSize === 'small' ? '12px' : '0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px' }}>
             <div style={{ 
-              fontSize: '16px', 
+              fontSize: screenSize === 'small' ? '18px' : '16px', 
               fontWeight: '700', 
               color: '#2563eb',
               letterSpacing: '-0.5px'
             }}>
               POS
             </div>
-            <div style={{ 
-              fontSize: '10px', 
-              color: '#6b7280',
-              background: '#f3f4f6',
-              padding: '3px 8px',
-              borderRadius: '8px'
-            }}>
-              Advanced Mode
-            </div>
+            {screenSize !== 'small' && (
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#6b7280',
+                background: '#f3f4f6',
+                padding: '3px 8px',
+                borderRadius: '8px'
+              }}>
+                Advanced Mode
+              </div>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap' }}>
+            {/* QR Orders Button */}
+            <button
+              onClick={() => setShowQrOrdersPanel(true)}
+              style={{
+                padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
+                background: qrOrders.length > 0 ? '#10b981' : '#f3f4f6',
+                color: qrOrders.length > 0 ? '#ffffff' : '#6b7280',
+                border: '1px solid #e5e7eb',
+                borderRadius: screenSize === 'small' ? '8px' : '4px',
+                fontSize: screenSize === 'small' ? '13px' : '11px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: '600',
+                minHeight: screenSize === 'small' ? '44px' : 'auto'
+              }}
+            >
+              <span style={{ fontSize: screenSize === 'small' ? '16px' : '14px' }}>📱</span>
+              {screenSize !== 'small' && <span>QR Orders</span>}
+              {qrOrders.length > 0 && (
+                <span style={{
+                  background: '#ffffff',
+                  color: '#10b981',
+                  padding: screenSize === 'small' ? '4px 8px' : '1px 6px',
+                  borderRadius: '10px',
+                  fontSize: screenSize === 'small' ? '12px' : '10px',
+                  fontWeight: '700'
+                }}>
+                  {qrOrders.length}
+                </span>
+              )}
+            </button>
+
             {/* Aggregator Orders Dropdown */}
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowAggregatorDropdown(!showAggregatorDropdown)}
                 style={{
-                  padding: '6px 12px',
+                  padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
                   background: pendingAggregatorOrders > 0 ? '#ef4444' : '#f3f4f6',
                   color: pendingAggregatorOrders > 0 ? '#ffffff' : '#6b7280',
                   border: '1px solid #e5e7eb',
-                  borderRadius: '4px',
-                  fontSize: '11px',
+                  borderRadius: screenSize === 'small' ? '8px' : '4px',
+                  fontSize: screenSize === 'small' ? '13px' : '11px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  fontWeight: '600'
+                  fontWeight: '600',
+                  minHeight: screenSize === 'small' ? '44px' : 'auto'
                 }}
               >
-                🍔 Aggregators
+                <span style={{ fontSize: screenSize === 'small' ? '16px' : '14px' }}>🍔</span>
+                {screenSize !== 'small' && <span>Aggregators</span>}
                 {pendingAggregatorOrders > 0 && (
                   <span style={{
                     background: '#ffffff',
                     color: '#ef4444',
-                    padding: '1px 6px',
+                    padding: screenSize === 'small' ? '4px 8px' : '1px 6px',
                     borderRadius: '10px',
-                    fontSize: '10px',
+                    fontSize: screenSize === 'small' ? '12px' : '10px',
                     fontWeight: '700'
                   }}>
                     {pendingAggregatorOrders}
@@ -2476,8 +2657,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   top: '100%',
                   right: 0,
                   marginTop: '8px',
-                  background: '#ffffff',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#2a2a2a' : '#ffffff',
+                  border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
                   borderRadius: '8px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
                   zIndex: 5000,
@@ -2488,11 +2669,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 }}>
                   <div style={{
                     padding: '12px 16px',
-                    borderBottom: '1px solid #e5e7eb',
-                    background: '#f9fafb',
+                    borderBottom: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                    background: darkMode ? '#333' : '#f9fafb',
                     fontSize: '13px',
                     fontWeight: '700',
-                    color: '#1e293b',
+                    color: darkMode ? '#fff' : '#1e293b',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
@@ -2515,7 +2696,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   </div>
 
                   {(aggregatorOrders || []).filter(o => o && o.status === 'pending').length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: '#9ca3af' }}>
+                    <div style={{ padding: '24px', textAlign: 'center', color: darkMode ? '#999' : '#9ca3af' }}>
                       <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
                       <div style={{ fontSize: '13px' }}>No pending orders</div>
                     </div>
@@ -2523,8 +2704,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     (aggregatorOrders || []).filter(o => o && o.status === 'pending').map(order => (
                       <div key={order.id} style={{
                         padding: '12px 16px',
-                        borderBottom: '1px solid #f3f4f6',
-                        background: '#ffffff'
+                        borderBottom: `1px solid ${darkMode ? '#444' : '#f3f4f6'}`,
+                        background: darkMode ? '#2a2a2a' : '#ffffff'
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2538,20 +2719,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             }}>
                               {order.platform}
                             </span>
-                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: darkMode ? '#fff' : '#1e293b' }}>
                               {order.orderId}
                             </span>
                           </div>
-                          <span style={{ fontSize: '11px', color: '#6b7280' }}>{order.time}</span>
+                          <span style={{ fontSize: '11px', color: darkMode ? '#999' : '#6b7280' }}>{order.time}</span>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#bbb' : '#6b7280', marginBottom: '4px' }}>
                           {order.customer}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', color: darkMode ? '#888' : '#9ca3af', marginBottom: '8px' }}>
                           {order.items}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#fff' : '#1e293b' }}>
                             ₹{order.total}
                           </span>
                           <span style={{ fontSize: '11px', color: '#ef4444' }}>
@@ -2769,8 +2950,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 top: '100%',
                 left: '0',
                 right: '0',
-                background: '#ffffff',
-                border: '1px solid #e5e7eb',
+                background: darkMode ? '#2a2a2a' : '#ffffff',
+                border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 zIndex: 5000,
@@ -2788,18 +2969,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}
                     style={{
                       padding: '12px 16px',
-                      borderBottom: '1px solid #f3f4f6',
+                      borderBottom: `1px solid ${darkMode ? '#444' : '#f3f4f6'}`,
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#f9fafb'}
-                    onMouseLeave={(e) => e.target.style.background = '#ffffff'}
+                    onMouseEnter={(e) => e.target.style.background = darkMode ? '#333' : '#f9fafb'}
+                    onMouseLeave={(e) => e.target.style.background = darkMode ? '#2a2a2a' : '#ffffff'}
                   >
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: '500' }}>{item.name}</div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>{item.category}</div>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#fff' : '#1f2937' }}>{item.name}</div>
+                      <div style={{ fontSize: '12px', color: darkMode ? '#999' : '#6b7280' }}>{item.category}</div>
                     </div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#2563eb' }}>
                       ₹{item.price.toFixed(2)}
@@ -2875,7 +3056,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         Low
                       </div>
                     )}
-                    <span style={{ fontSize: screenSize === 'small' ? '28px' : '32px' }}>{item.emoji || '🥐'}</span>
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'block';
+                        }}
+                      />
+                    ) : null}
+                    <span style={{ fontSize: screenSize === 'small' ? '28px' : '32px', display: item.image ? 'none' : 'block' }}>{item.emoji || '🥐'}</span>
                     <span style={{ 
                       fontSize: screenSize === 'small' ? '11px' : '12px', 
                       fontWeight: '500', 
@@ -3749,8 +3941,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   top: '100%',
                   left: 0,
                   right: 0,
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
+                  background: darkMode ? '#2a2a2a' : '#ffffff',
+                  border: `1px solid ${darkMode ? '#444' : '#cbd5e1'}`,
                   borderRadius: '4px',
                   marginTop: '3px',
                   maxHeight: '150px',
@@ -3768,18 +3960,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       style={{
                         padding: '6px 8px',
                         cursor: 'pointer',
-                        borderBottom: '1px solid #f1f5f9',
+                        borderBottom: `1px solid ${darkMode ? '#444' : '#f1f5f9'}`,
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         fontSize: '11px',
-                        color: '#1e293b'
+                        color: darkMode ? '#fff' : '#1e293b'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#333' : '#f8fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = darkMode ? '#2a2a2a' : '#ffffff'}
                     >
                       <span>{item.name}</span>
-                      <span style={{ fontSize: '9px', color: '#64748b', background: '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>
+                      <span style={{ fontSize: '9px', color: '#64748b', background: darkMode ? '#444' : '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>
                         {item.code || 'N/A'}
                       </span>
                     </div>
@@ -3938,7 +4130,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                 Customer Lookup
               </h3>
               <button
@@ -3947,12 +4139,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   setCustomerPhone('');
                 }}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -4048,18 +4244,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                 Select Table
               </h3>
               <button
                 onClick={() => setShowTableSelector(false)}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -4206,13 +4406,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     setSelectedBaseItem(null);
                   }}
                   style={{
-                    padding: '8px 12px',
+                    padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                     background: 'rgba(255, 255, 255, 0.04)',
                     color: '#e0e0e0',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '18px',
+                    fontSize: screenSize === 'small' ? '24px' : '18px',
+                    fontWeight: '700',
+                    minWidth: screenSize === 'small' ? '48px' : 'auto',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto',
                     outline: 'none',
                     transition: 'background 0.2s'
                   }}
@@ -4567,18 +4770,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                 Held Orders ({heldOrders.length})
               </h3>
               <button
                 onClick={() => setShowHeldOrders(false)}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -4696,23 +4903,26 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
                   ⌨️ POS Keyboard Shortcuts
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b8b9e' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
                   Boost checkout speed with hardware keys
                 </p>
               </div>
               <button
                 onClick={() => setShowShortcuts(false)}
                 style={{
-                  padding: '6px 10px',
+                  padding: screenSize === 'small' ? '12px 16px' : '6px 10px',
                   background: 'rgba(255, 255, 255, 0.04)',
                   color: '#e0e0e0',
                   border: 'none',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  fontSize: '16px',
+                  fontSize: screenSize === 'small' ? '24px' : '16px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto',
                   outline: 'none'
                 }}
               >
@@ -4819,18 +5029,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                 GST Settings
               </h3>
               <button
                 onClick={() => setShowGstSettings(false)}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -4939,18 +5153,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                 Print Settings
               </h3>
               <button
                 onClick={() => setShowPrintSettings(false)}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -5134,10 +5352,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '16px' }}>
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
+                  <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '22px', fontWeight: '700', color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
                     Secure Checkout
                   </h3>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b8b9e' }}>
+                  <p style={{ margin: '4px 0 0 0', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
                     Order: <span style={{ color: '#6366f1', fontWeight: '600' }}>#{Date.now().toString().slice(-6)}</span>
                   </p>
                 </div>
@@ -5147,13 +5365,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     setPaymentAmount('');
                   }}
                   style={{
-                    padding: '8px 12px',
+                    padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                     background: 'rgba(255, 255, 255, 0.04)',
                     color: '#e0e0e0',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '18px',
+                    fontSize: screenSize === 'small' ? '24px' : '18px',
+                    fontWeight: '700',
+                    minWidth: screenSize === 'small' ? '48px' : 'auto',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto',
                     transition: 'background 0.2s',
                     outline: 'none'
                   }}
@@ -5774,6 +5995,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   const diff = parsedDisplay - cartTotal;
                   const hasAmount = displayAmount !== '';
                   const numpadWidth = screenSize === 'small' ? '100%' : '220px';
+                  const numpadButtonSize = screenSize === 'small' ? '48px' : '44px';
+                  const numpadFontSize = screenSize === 'small' ? '18px' : '16px';
 
                   const getDisplayValue = () => {
                     if (checkoutNumpadMode === 'amount') return `₹${displayAmount || '0'}`;
@@ -5924,7 +6147,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                               type="button"
                               onClick={() => handleCheckoutNumpad(key)}
                               style={{
-                                minHeight: screenSize === 'small' ? '52px' : '44px',
+                                minHeight: screenSize === 'small' ? '56px' : '44px',
                                 background: isBackspace
                                   ? 'rgba(239,68,68,0.1)'
                                   : isDot
@@ -5935,7 +6158,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                                   : '1px solid rgba(255,255,255,0.05)',
                                 borderRadius: '10px',
                                 color: isBackspace ? '#ef4444' : '#ffffff',
-                                fontSize: isBackspace ? '16px' : screenSize === 'small' ? '20px' : '18px',
+                                fontSize: isBackspace ? '16px' : screenSize === 'small' ? '22px' : '18px',
                                 fontWeight: '700',
                                 cursor: 'pointer',
                                 transition: 'background 0.1s, transform 0.1s',
@@ -5943,7 +6166,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                WebkitTapHighlightColor: 'transparent'
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.background = isBackspace ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)';
@@ -5964,17 +6188,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           onClick={() => handleCheckoutNumpad('C')}
                           style={{
                             gridColumn: '1 / -1',
-                            padding: screenSize === 'small' ? '14px' : '10px',
+                            padding: screenSize === 'small' ? '16px' : '10px',
                             background: 'rgba(99,102,241,0.08)',
                             border: '1px solid rgba(99,102,241,0.15)',
                             borderRadius: '10px',
                             color: '#818cf8',
-                            fontSize: '13px',
+                            fontSize: screenSize === 'small' ? '15px' : '13px',
                             fontWeight: '700',
                             cursor: 'pointer',
                             letterSpacing: '0.05em',
                             transition: 'background 0.15s',
-                            WebkitTapHighlightColor: 'transparent'
+                            WebkitTapHighlightColor: 'transparent',
+                            minHeight: screenSize === 'small' ? '48px' : 'auto'
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.15)'}
                           onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.08)'}
@@ -5989,14 +6214,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
                   {/* Actions buttons */}
-                  <div style={{ display: 'flex', gap: '10px', marginTop: screenSize === 'small' ? '4px' : '8px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: screenSize === 'small' ? '4px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                     <button
                       onClick={() => {
                         setShowPaymentModal(false);
                         setPaymentAmount('');
                       }}
                       style={{
-                        flex: 1,
+                        flex: screenSize === 'small' ? 'none' : 1,
+                        width: screenSize === 'small' ? '100%' : 'auto',
                         padding: screenSize === 'small' ? '16px' : '14px',
                         background: 'rgba(255, 255, 255, 0.04)',
                         color: '#ffffff',
@@ -6006,7 +6232,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         fontWeight: '600',
                         cursor: 'pointer',
                         transition: 'background 0.2s',
-                        WebkitTapHighlightColor: 'transparent'
+                        WebkitTapHighlightColor: 'transparent',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
@@ -6014,13 +6241,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       ← Cancel
                     </button>
                     <button
-                      onClick={processPayment}
+                      onClick={() => selectedQrOrder ? processQrOrderPayment(selectedQrOrder) : processPayment()}
                       disabled={!isPaymentValid}
                       style={{
-                        flex: 2,
+                        flex: screenSize === 'small' ? 'none' : 2,
+                        width: screenSize === 'small' ? '100%' : 'auto',
                         padding: screenSize === 'small' ? '16px' : '14px',
-                        background: isPaymentValid 
-                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                        background: isPaymentValid
+                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                           : 'rgba(255, 255, 255, 0.03)',
                         color: isPaymentValid ? '#ffffff' : '#8b8b9e',
                         border: isPaymentValid ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
@@ -6030,10 +6258,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         cursor: isPaymentValid ? 'pointer' : 'not-allowed',
                         transition: 'all 0.2s',
                         boxShadow: isPaymentValid ? '0 4px 14px rgba(16, 185, 129, 0.25)' : 'none',
-                        WebkitTapHighlightColor: 'transparent'
+                        WebkitTapHighlightColor: 'transparent',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     >
-                      Complete Payment ✓
+                      {selectedQrOrder ? 'Complete QR Payment ✓' : 'Complete Payment ✓'}
                     </button>
                   </div>
 
@@ -6247,7 +6476,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
                 Split Bill
               </h3>
               <button
@@ -6257,12 +6486,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   setSplitMode('equal');
                 }}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -6531,39 +6764,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '400px',
-            width: '90%',
+            maxWidth: screenSize === 'small' ? '95vw' : '400px',
+            width: screenSize === 'small' ? '95vw' : '90%',
             overflow: 'hidden'
           }}>
-            <div style={{
-              background: '#1a1a2e',
-              color: '#f5f5f5',
-              padding: '16px 20px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontFamily: 'Georgia, serif'
-            }}>
-              <span>Add Modifiers</span>
-              <button
-                onClick={() => setShowModifiersModal(false)}
-                style={{
-                  background: 'rgba(201, 162, 39, 0.2)',
-                  border: '1px solid #c9a227',
-                  color: '#c9a227',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
-                  cursor: 'pointer',
-                  borderRadius: '4px',
-                  fontFamily: 'Georgia, serif'
-                }}
-              >
-                ×
-              </button>
-            </div>
             <div style={{ padding: '20px', background: '#ffffff' }}>
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a2e', marginBottom: '12px', fontFamily: 'Georgia, serif' }}>
@@ -6663,8 +6867,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div style={{
               background: '#1a1a2e',
               color: '#f5f5f5',
-              padding: '16px 20px',
-              fontSize: '16px',
+              padding: screenSize === 'small' ? '16px 20px' : '16px 20px',
+              fontSize: screenSize === 'small' ? '16px' : '16px',
               fontWeight: '600',
               display: 'flex',
               justifyContent: 'space-between',
@@ -6678,12 +6882,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   background: 'rgba(201, 162, 39, 0.2)',
                   border: '1px solid #c9a227',
                   color: '#c9a227',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '4px 12px',
+                  fontSize: screenSize === 'small' ? '24px' : '14px',
+                  fontWeight: '700',
+                  padding: screenSize === 'small' ? '12px 16px' : '4px 12px',
                   cursor: 'pointer',
-                  borderRadius: '4px',
-                  fontFamily: 'Georgia, serif'
+                  borderRadius: screenSize === 'small' ? '8px' : '4px',
+                  fontFamily: 'Georgia, serif',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
@@ -6698,22 +6904,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 allOrders.slice(0, 20).map(order => (
                   <div
                     key={order.id}
-                    onClick={() => {
-                      setSelectedOrderForView(order);
-                      setShowOrderHistory(false);
-                    }}
                     style={{
                       background: '#f5f0e6',
                       border: order.isQROrder ? '2px solid #8b5cf6' : '1px solid #d4c4a8',
                       borderRadius: '8px',
                       padding: '16px',
-                      marginBottom: '12px',
-                      cursor: 'pointer'
+                      marginBottom: '12px'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>Order #{order.id.split('-')[1]}</span>
+                        <span style={{ fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>Order #{order.id.split('-')[1] || order.id.slice(-6)}</span>
                         {order.isQROrder && (
                           <span style={{
                             padding: '2px 8px',
@@ -6726,11 +6927,142 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             QR
                           </span>
                         )}
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          background: order.status === 'completed' ? '#10b981' : order.status === 'CANCELLED' ? '#ef4444' : '#f59e0b',
+                          color: '#ffffff'
+                        }}>
+                          {order.status || 'PENDING'}
+                        </span>
                       </div>
                       <span style={{ fontSize: '13px', color: '#8b7355' }}>{new Date(order.createdAt).toLocaleString()}</span>
                     </div>
-                    <div style={{ fontSize: '13px', color: '#8b7355' }}>
+                    <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '12px' }}>
                       Total: <span style={{ fontWeight: '500', color: '#1a1a2e', fontFamily: '"Courier New", monospace' }}>₹{order.total?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Load order into cart
+                          if (order.items && Array.isArray(order.items)) {
+                            setCart(order.items.map(item => ({
+                              ...item,
+                              qty: item.qty || item.quantity || 1
+                            })));
+                            setShowOrderHistory(false);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '80px',
+                          padding: '8px 12px',
+                          background: '#1a1a2e',
+                          color: '#f5f5f5',
+                          border: '1px solid #c9a227',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'Georgia, serif'
+                        }}
+                      >
+                        📋 Open
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Print receipt
+                          if (order.items) {
+                            const receiptData = {
+                              items: order.items,
+                              total: order.total,
+                              customerName: order.customerName,
+                              tableName: order.tableName,
+                              invoiceNumber: order.invoiceNumber || order.id,
+                              createdAt: order.createdAt
+                            };
+                            // Trigger print
+                            console.log('Printing receipt for order:', order.id);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '80px',
+                          padding: '8px 12px',
+                          background: '#ffffff',
+                          color: '#1a1a2e',
+                          border: '1px solid #d4c4a8',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'Georgia, serif'
+                        }}
+                      >
+                        🖨️ Print
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Refund order
+                          if (confirm(`Refund order #${order.id.slice(-6)}?`)) {
+                            const updatedOrders = orders.map(o => 
+                              o.id === order.id 
+                                ? { ...o, status: 'REFUNDED', refundedAt: new Date().toISOString() }
+                                : o
+                            );
+                            setOrders(updatedOrders);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '80px',
+                          padding: '8px 12px',
+                          background: '#ffffff',
+                          color: '#ef4444',
+                          border: '1px solid #ef4444',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'Georgia, serif'
+                        }}
+                      >
+                        💰 Refund
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Cancel order
+                          if (confirm(`Cancel order #${order.id.slice(-6)}?`)) {
+                            const updatedOrders = orders.map(o => 
+                              o.id === order.id 
+                                ? { ...o, status: 'CANCELLED', cancelledAt: new Date().toISOString() }
+                                : o
+                            );
+                            setOrders(updatedOrders);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '80px',
+                          padding: '8px 12px',
+                          background: '#ffffff',
+                          color: '#6b7280',
+                          border: '1px solid #6b7280',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                          fontFamily: 'Georgia, serif'
+                        }}
+                      >
+                        ❌ Cancel
+                      </button>
                     </div>
                   </div>
                 ))
@@ -7358,6 +7690,142 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         </div>
       )}
 
+      {/* QR Orders Panel Modal */}
+      {showQrOrdersPanel && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: screenSize === 'small' ? '0' : '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: screenSize === 'small' ? '0' : '12px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: '900px',
+            maxWidth: screenSize === 'small' ? '100vw' : '90vw',
+            maxHeight: screenSize === 'small' ? '100vh' : '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                📱 QR Orders ( Pay at Counter )
+              </h3>
+              <button
+                onClick={() => setShowQrOrdersPanel(false)}
+                style={{
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '14px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {qrOrders.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: screenSize === 'small' ? '20px' : '40px', color: '#64748b' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '36px' : '48px', marginBottom: '12px' }}>📱</div>
+                <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '600' }}>No pending QR orders</div>
+                <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', marginTop: '4px' }}>Orders placed via QR codes will appear here</div>
+              </div>
+            ) : (
+              <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Table</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Items</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Total</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Payment Method</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qrOrders.map((order, index) => (
+                      <tr key={order.id} style={{ borderBottom: index < qrOrders.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#1e293b', fontWeight: '600' }}>
+                          #{order.id.slice(-6)}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#64748b' }}>
+                          {order.tableName || 'Counter'}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#64748b', maxWidth: '250px' }}>
+                          {order.items?.map(item => `${item.name} x${item.qty}`).join(', ') || '-'}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#1e293b', fontWeight: '600' }}>
+                          ₹{order.total?.toFixed(2) || '0.00'}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: order.paymentMethod === 'cash' ? '#10b981' : order.paymentMethod === 'upi' ? '#3b82f6' : '#8b5cf6',
+                            color: '#ffffff'
+                          }}>
+                            {order.paymentMethod?.toUpperCase() || 'CASH'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: '#f59e0b',
+                            color: '#ffffff'
+                          }}>
+                            Pending Payment
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <button
+                            onClick={() => {
+                              setSelectedQrOrder(order);
+                              setShowPaymentModal(true);
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#10b981',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            💳 Process Payment
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Aggregator Panel Modal */}
       {showAggregatorPanel && (
         <div style={{
@@ -7370,38 +7838,43 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 2000,
+          padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
             background: '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
+            borderRadius: screenSize === 'small' ? '0' : '12px',
+            padding: screenSize === 'small' ? '16px' : '24px',
             width: '800px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
+            maxWidth: screenSize === 'small' ? '100vw' : '90vw',
+            maxHeight: screenSize === 'small' ? '100vh' : '90vh',
             overflow: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
                 📦 All Aggregator Orders
               </h3>
               <button
                 onClick={() => setShowAggregatorPanel(false)}
                 style={{
-                  padding: '8px 12px',
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
                   background: '#f3f4f6',
                   color: '#374151',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '14px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 ×
               </button>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Platform</th>

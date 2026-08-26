@@ -539,23 +539,24 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
       <div style={{
         background: darkMode ? '#1f1f35' : '#ffffff',
         borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-        padding: '20px 32px'
+        padding: screenSize === 'small' ? '16px 20px' : '20px 32px'
       }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
           gap: '12px',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          flexDirection: screenSize === 'small' ? 'column' : 'row'
         }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#ffffff' }}>📦 Inventory Management</h2>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <h2 style={{ margin: 0, fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: '#ffffff' }}>📦 Inventory Management</h2>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '10px', alignItems: 'center', flexWrap: 'wrap', width: screenSize === 'small' ? '100%' : 'auto', justifyContent: screenSize === 'small' ? 'flex-end' : 'flex-start' }}>
             {!isOnline && (
               <div style={{
                 background: '#ef4444',
                 color: '#ffffff',
-                padding: '4px 10px',
-                fontSize: '11px',
+                padding: screenSize === 'small' ? '4px 8px' : '4px 10px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 borderRadius: '6px'
               }}>
@@ -566,8 +567,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <div style={{
                 background: '#f59e0b',
                 color: '#ffffff',
-                padding: '4px 10px',
-                fontSize: '11px',
+                padding: screenSize === 'small' ? '4px 8px' : '4px 10px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 borderRadius: '6px'
               }}>
@@ -583,7 +584,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   unit: 'items'
                 });
               }}
-              size="small"
+              size={screenSize === 'small' ? 'small' : 'small'}
             />
             <button
               onClick={() => onNavigate && onNavigate('dashboard')}
@@ -591,11 +592,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 background: '#2d2d48',
                 border: 'none',
                 color: '#ffffff',
-                fontSize: '13px',
+                fontSize: screenSize === 'small' ? '12px' : '13px',
                 fontWeight: '600',
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '8px 12px' : '8px 16px',
                 borderRadius: '8px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                minHeight: screenSize === 'small' ? '36px' : 'auto'
               }}
             >
               ← Back
@@ -605,18 +607,19 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
       </div>
 
       {/* Content */}
-      <div style={{ padding: '24px 32px', overflow: 'auto', flex: 1 }}>
+      <div style={{ padding: screenSize === 'small' ? '16px 20px' : '24px 32px', overflow: 'auto', flex: 1 }}>
         {/* Controls */}
         <div style={{
           background: darkMode ? '#1f1f35' : '#ffffff',
           border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
           borderRadius: '12px',
-          padding: '16px 20px',
-          marginBottom: '20px',
+          padding: screenSize === 'small' ? '12px 16px' : '16px 20px',
+          marginBottom: screenSize === 'small' ? '16px' : '20px',
           display: 'flex',
-          gap: '10px',
-          alignItems: 'center',
-          flexWrap: 'wrap'
+          gap: screenSize === 'small' ? '8px' : '10px',
+          alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+          flexWrap: 'wrap',
+          flexDirection: screenSize === 'small' ? 'column' : 'row'
         }}>
           <input
             type="text"
@@ -624,51 +627,54 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
-              flex: 1,
-              minWidth: '180px',
-              padding: '8px 12px',
+              flex: screenSize === 'small' ? '1' : '1',
+              minWidth: screenSize === 'small' ? '100%' : '180px',
+              padding: screenSize === 'small' ? '12px' : '8px 12px',
               border: `1px solid ${darkMode ? '#2d2d44' : '#cbd5e1'}`,
               borderRadius: '8px',
-              fontSize: '13px',
+              fontSize: screenSize === 'small' ? '16px' : '13px',
               background: darkMode ? '#252538' : '#ffffff',
               color: darkMode ? '#ffffff' : '#1f2937',
-              outline: 'none'
+              outline: 'none',
+              minHeight: screenSize === 'small' ? '44px' : 'auto'
             }}
           />
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
-              padding: '8px 12px',
+              padding: screenSize === 'small' ? '12px' : '8px 12px',
               border: `1px solid ${darkMode ? '#2d2d44' : '#cbd5e1'}`,
               borderRadius: '8px',
-              fontSize: '13px',
+              fontSize: screenSize === 'small' ? '16px' : '13px',
               background: darkMode ? '#252538' : '#ffffff',
               color: darkMode ? '#ffffff' : '#1f2937',
               cursor: 'pointer',
-              outline: 'none'
+              outline: 'none',
+              minHeight: screenSize === 'small' ? '44px' : 'auto',
+              minWidth: screenSize === 'small' ? '100%' : 'auto'
             }}
           >
             {categories.map(cat => {
               return <option key={cat} value={cat}>{cat}</option>;
             })}
           </select>
-          <button onClick={handleAddItem} style={{ background: darkMode ? '#6366f1' : '#3b82f6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>+ Add Item</button>
-          <button onClick={() => setShowExpiryAlerts(true)} style={{ background: expiredCount > 0 ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>⏰ Expiry ({expiredCount})</button>
-          <button onClick={() => setShowFefoSuggestions(true)} style={{ background: '#10b981', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>📋 FEFO</button>
-          <button onClick={() => setShowWasteModal(true)} style={{ background: '#8b5cf6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>🗑 Log Waste</button>
-          <button onClick={() => setShowWasteReport(true)} style={{ background: '#ef4444', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>📊 Waste Report</button>
-          <button onClick={() => setShowVendorList(true)} style={{ background: '#3b82f6', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>🏭 Vendors ({vendors.length})</button>
-          <button onClick={() => setShowPOList(true)} style={{ background: '#f59e0b', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>🛒 POs ({purchaseOrders.length})</button>
-          <button onClick={() => setShowAnalytics(true)} style={{ background: '#7c3aed', color: '#fff', border: 'none', fontSize: '13px', fontWeight: '600', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer' }}>📈 Analytics</button>
+          <button onClick={handleAddItem} style={{ background: darkMode ? '#6366f1' : '#3b82f6', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>+ Add Item</button>
+          <button onClick={() => setShowExpiryAlerts(true)} style={{ background: expiredCount > 0 ? '#ef4444' : '#f59e0b', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>⏰ Expiry ({expiredCount})</button>
+          <button onClick={() => setShowFefoSuggestions(true)} style={{ background: '#10b981', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>📋 FEFO</button>
+          <button onClick={() => setShowWasteModal(true)} style={{ background: '#8b5cf6', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>🗑 Log Waste</button>
+          <button onClick={() => setShowWasteReport(true)} style={{ background: '#ef4444', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>📊 Waste Report</button>
+          <button onClick={() => setShowVendorList(true)} style={{ background: '#3b82f6', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>🏭 Vendors ({vendors.length})</button>
+          <button onClick={() => setShowPOList(true)} style={{ background: '#f59e0b', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>🛒 POs ({purchaseOrders.length})</button>
+          <button onClick={() => setShowAnalytics(true)} style={{ background: '#7c3aed', color: '#fff', border: 'none', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', padding: screenSize === 'small' ? '12px 16px' : '8px 16px', borderRadius: '8px', cursor: 'pointer', minHeight: screenSize === 'small' ? '44px' : 'auto', flex: screenSize === 'small' ? '1' : 'none' }}>📈 Analytics</button>
         </div>
 
         {/* Stats */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '12px',
-          marginBottom: '20px'
+          gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: screenSize === 'small' ? '10px' : '12px',
+          marginBottom: screenSize === 'small' ? '16px' : '20px'
         }}>
           <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Total Items</div>
@@ -696,11 +702,11 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
         <div style={{
           background: darkMode ? '#1a1a2e' : '#ffffff',
           border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-          padding: '8px',
+          padding: screenSize === 'small' ? '6px' : '8px',
           overflow: 'auto'
         }}>
           {filteredItems.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+            <div style={{ padding: screenSize === 'small' ? '16px' : '20px', textAlign: 'center', color: darkMode ? '#8b8b9e' : '#64748b', fontSize: screenSize === 'small' ? '13px' : '14px' }}>
               {search || categoryFilter !== 'ALL' ? 'No items found' : 'No inventory items yet. Add your first item!'}
             </div>
           ) : (
@@ -714,38 +720,42 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   style={{
                     background: darkMode ? '#1a1a2e' : '#f8f9fa',
                     border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-                    padding: '8px',
-                    marginBottom: '4px',
+                    padding: screenSize === 'small' ? '10px' : '8px',
+                    marginBottom: screenSize === 'small' ? '8px' : '4px',
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'center'
+                    alignItems: screenSize === 'small' ? 'flex-start' : 'center',
+                    flexDirection: screenSize === 'small' ? 'column' : 'row',
+                    gap: screenSize === 'small' ? '8px' : '0'
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '2px', color: darkMode ? '#ffffff' : '#111827' }}>
+                  <div style={{ flex: 1, minWidth: screenSize === 'small' ? '0' : 'auto' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '12px', fontWeight: 'bold', marginBottom: screenSize === 'small' ? '4px' : '2px', color: darkMode ? '#ffffff' : '#111827' }}>
                       {item.name}
                     </div>
-                    <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '2px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: screenSize === 'small' ? '4px' : '2px' }}>
                       {item.category}
                     </div>
-                    <div style={{ fontSize: '10px', color: isLowStock ? '#ff8c00' : '#10b981', fontWeight: 'bold' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: isLowStock ? '#ff8c00' : '#10b981', fontWeight: 'bold' }}>
                       Qty: {item.quantity} {item.unit} • Min: {item.minStock} {item.unit}
                     </div>
-                    <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
                       Value: ₹{itemValue.toFixed(2)}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '4px', alignSelf: screenSize === 'small' ? 'flex-start' : 'center' }}>
                     <button
                       onClick={() => handleAdjustStock(item, -1)}
                       style={{
-                        padding: '4px 8px',
+                        padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
                         background: darkMode ? '#252538' : '#e5e7eb',
                         border: 'none',
                         color: darkMode ? '#ffffff' : '#111827',
-                        fontSize: '10px',
+                        fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                        minHeight: screenSize === 'small' ? '36px' : 'auto'
                       }}
                     >
                       -
@@ -753,13 +763,15 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     <button
                       onClick={() => handleAdjustStock(item, 1)}
                       style={{
-                        padding: '4px 8px',
+                        padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
                         background: darkMode ? '#252538' : '#e5e7eb',
                         border: 'none',
                         color: darkMode ? '#ffffff' : '#111827',
-                        fontSize: '10px',
+                        fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                        minHeight: screenSize === 'small' ? '36px' : 'auto'
                       }}
                     >
                       +
@@ -767,13 +779,15 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     <button
                       onClick={() => handleEditItem(item)}
                       style={{
-                        padding: '4px 8px',
+                        padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
                         background: darkMode ? '#252538' : '#e5e7eb',
                         border: 'none',
                         color: darkMode ? '#ffffff' : '#111827',
-                        fontSize: '10px',
+                        fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                        minHeight: screenSize === 'small' ? '36px' : 'auto'
                       }}
                     >
                       ✏️
@@ -781,13 +795,15 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     <button
                       onClick={() => handleDeleteItem(item.id)}
                       style={{
-                        padding: '4px 8px',
+                        padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
                         background: darkMode ? '#252538' : '#e5e7eb',
                         border: 'none',
                         color: darkMode ? '#ffffff' : '#111827',
-                        fontSize: '10px',
+                        fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                        minHeight: screenSize === 'small' ? '36px' : 'auto'
                       }}
                     >
                       🗑
@@ -812,21 +828,25 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1000,
+          padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
             background: darkMode ? '#252538' : '#ffffff',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-            padding: '4px',
-            maxWidth: '450px',
-            width: '90%'
+            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            padding: screenSize === 'small' ? '0' : '4px',
+            maxWidth: screenSize === 'small' ? '100vw' : '450px',
+            width: screenSize === 'small' ? '100vw' : '90%',
+            maxHeight: screenSize === 'small' ? '100vh' : '90vh',
+            overflow: 'auto',
+            borderRadius: screenSize === 'small' ? '0' : '8px'
           }}>
             {/* Title Bar */}
             <div style={{
               background: '#6366f1',
               color: '#ffffff',
-              padding: '4px 8px',
-              fontSize: '12px',
+              padding: screenSize === 'small' ? '16px 20px' : '4px 8px',
+              fontSize: screenSize === 'small' ? '16px' : '12px',
               fontWeight: 'bold',
               display: 'flex',
               justifyContent: 'space-between',
@@ -839,11 +859,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   background: '#252538',
                   border: 'none',
                   color: '#ffffff',
-                  fontSize: '10px',
+                  fontSize: screenSize === 'small' ? '20px' : '10px',
                   fontWeight: 'bold',
-                  padding: '2px 6px',
+                  padding: screenSize === 'small' ? '8px 16px' : '2px 6px',
                   cursor: 'pointer',
-                  minWidth: '16px'
+                  minWidth: screenSize === 'small' ? '40px' : '16px',
+                  minHeight: screenSize === 'small' ? '40px' : 'auto'
                 }}
               >
                 ×
@@ -851,10 +872,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             </div>
             
             {/* Content */}
-            <div style={{ padding: '12px', background: darkMode ? '#252538' : '#ffffff' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: screenSize === 'small' ? '20px' : '12px', background: darkMode ? '#252538' : '#ffffff' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '14px' : '8px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                     Name *
                   </label>
                   <input
@@ -863,21 +884,22 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '4px',
+                      padding: screenSize === 'small' ? '14px' : '4px',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                      fontSize: '12px',
+                      fontSize: screenSize === 'small' ? '16px' : '12px',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827'
+                      color: darkMode ? '#ffffff' : '#111827',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                     Category *
                   </label>
                   {showCustomCategory ? (
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '4px' }}>
                       <input
                         type="text"
                         value={customCategory}
@@ -886,11 +908,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                         autoFocus
                         style={{
                           flex: 1,
-                          padding: '4px',
+                          padding: screenSize === 'small' ? '14px' : '4px',
                           border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                          fontSize: '12px',
+                          fontSize: screenSize === 'small' ? '16px' : '12px',
                           background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#111827'
+                          color: darkMode ? '#ffffff' : '#111827',
+                          minHeight: screenSize === 'small' ? '48px' : 'auto'
                         }}
                       />
                       <button
@@ -943,9 +966,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   )}
                 </div>
                 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Quantity *
                     </label>
                     <input
@@ -955,21 +978,22 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       min="0"
                       style={{
                         width: '100%',
-                        padding: '4px',
+                        padding: screenSize === 'small' ? '14px' : '4px',
                         border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                        fontSize: '12px',
+                        fontSize: screenSize === 'small' ? '16px' : '12px',
                         background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
+                        color: darkMode ? '#ffffff' : '#111827',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Unit *
                     </label>
                     {showCustomUnit ? (
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '4px' }}>
                         <input
                           type="text"
                           value={customUnit}
@@ -978,11 +1002,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                           autoFocus
                           style={{
                             flex: 1,
-                            padding: '4px',
+                            padding: screenSize === 'small' ? '14px' : '4px',
                             border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                            fontSize: '12px',
+                            fontSize: screenSize === 'small' ? '16px' : '12px',
                             background: darkMode ? '#1a1a2e' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#111827'
+                            color: darkMode ? '#ffffff' : '#111827',
+                            minHeight: screenSize === 'small' ? '48px' : 'auto'
                           }}
                         />
                         <button
@@ -993,7 +1018,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                             }
                             setShowCustomUnit(false);
                           }}
-                          style={{ padding: '4px 8px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                          style={{ padding: screenSize === 'small' ? '10px 16px' : '4px 8px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: screenSize === 'small' ? '14px' : '12px', cursor: 'pointer', minHeight: screenSize === 'small' ? '48px' : 'auto' }}
                         >
                           ✓
                         </button>
@@ -1003,7 +1028,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                             setShowCustomUnit(false);
                             setCustomUnit('');
                           }}
-                          style={{ padding: '4px 8px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                          style={{ padding: screenSize === 'small' ? '10px 16px' : '4px 8px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '4px', fontSize: screenSize === 'small' ? '14px' : '12px', cursor: 'pointer', minHeight: screenSize === 'small' ? '48px' : 'auto' }}
                         >
                           ✕
                         </button>
@@ -1020,11 +1045,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                         }}
                         style={{
                           width: '100%',
-                          padding: '4px',
+                          padding: screenSize === 'small' ? '14px' : '4px',
                           border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                          fontSize: '12px',
+                          fontSize: screenSize === 'small' ? '16px' : '12px',
                           background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#111827'
+                          color: darkMode ? '#ffffff' : '#111827',
+                          minHeight: screenSize === 'small' ? '48px' : 'auto'
                         }}
                       >
                         <option value="pieces">pieces</option>
@@ -1042,9 +1068,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   </div>
                 </div>
                 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Min Stock
                     </label>
                     <input
@@ -1054,17 +1080,18 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       min="0"
                       style={{
                         width: '100%',
-                        padding: '4px',
+                        padding: screenSize === 'small' ? '14px' : '4px',
                         border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                        fontSize: '12px',
+                        fontSize: screenSize === 'small' ? '16px' : '12px',
                         background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
+                        color: darkMode ? '#ffffff' : '#111827',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Cost per Unit (₹)
                     </label>
                     <input
@@ -1075,19 +1102,20 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       step="0.01"
                       style={{
                         width: '100%',
-                        padding: '4px',
+                        padding: screenSize === 'small' ? '14px' : '4px',
                         border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                        fontSize: '12px',
+                        fontSize: screenSize === 'small' ? '16px' : '12px',
                         background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
+                        color: darkMode ? '#ffffff' : '#111827',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Expiry Date
                     </label>
                     <input
@@ -1096,17 +1124,18 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                       style={{
                         width: '100%',
-                        padding: '4px',
+                        padding: screenSize === 'small' ? '14px' : '4px',
                         border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                        fontSize: '12px',
+                        fontSize: screenSize === 'small' ? '16px' : '12px',
                         background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
+                        color: darkMode ? '#ffffff' : '#111827',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Batch Number
                     </label>
                     <input
@@ -1116,29 +1145,32 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       placeholder="Optional"
                       style={{
                         width: '100%',
-                        padding: '4px',
+                        padding: screenSize === 'small' ? '14px' : '4px',
                         border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                        fontSize: '12px',
+                        fontSize: screenSize === 'small' ? '16px' : '12px',
                         background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
+                        color: darkMode ? '#ffffff' : '#111827',
+                        minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '8px', marginTop: screenSize === 'small' ? '20px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                 <button
                   onClick={() => setShowModal(false)}
                   style={{
                     flex: 1,
-                    padding: '6px',
+                    padding: screenSize === 'small' ? '14px' : '6px',
                     background: darkMode ? '#252538' : '#e5e7eb',
                     border: 'none',
                     color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
+                    fontSize: screenSize === 'small' ? '15px' : '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    borderRadius: '6px',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                 >
                   Cancel
@@ -1147,16 +1179,18 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   onClick={handleSaveItem}
                   style={{
                     flex: 1,
-                    padding: '6px',
-                    background: darkMode ? '#252538' : '#3b82f6',
+                    padding: screenSize === 'small' ? '14px' : '6px',
+                    background: '#6366f1',
                     border: 'none',
                     color: '#ffffff',
-                    fontSize: '11px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
+                    fontSize: screenSize === 'small' ? '15px' : '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    borderRadius: '6px',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                 >
-                  {selectedItem ? 'Update' : 'Add'} Item
+                  {selectedItem ? 'Update' : 'Add'}
                 </button>
               </div>
             </div>

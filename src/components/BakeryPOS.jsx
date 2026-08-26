@@ -16,7 +16,6 @@ import WasteManagement from './waste/WasteManagement';
 import Reservations from './reservations/Reservations';
 import OnlineOrdering from './onlineordering/OnlineOrdering';
 import TokenManagement from './tokens/TokenManagement';
-import QROrdering from './qrodering/QROrdering';
 
 export default function BakeryPOS({
   orders = [],
@@ -160,8 +159,6 @@ export default function BakeryPOS({
         return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} darkMode={getTabDarkMode('waiters')} />;
       case 'kitchen':
         return <Kitchen onNavigate={handleNavigate} orders={orders} setOrders={setOrders} menuItems={menuItems} />;
-      case 'qrodering':
-        return <QROrdering menuItems={menuItems} onNavigate={handleNavigate} darkMode={getTabDarkMode('qrodering')} />;
       case 'settings':
         return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} darkMode={getTabDarkMode('settings')} />;
       default:
@@ -295,7 +292,6 @@ export default function BakeryPOS({
                 { id: 'tables', label: 'Tables' },
                 { id: 'waiters', label: 'Waiters' },
                 { id: 'kitchen', label: 'Kitchen' },
-                { id: 'qrodering', label: 'QR Ordering' },
                 { id: 'settings', label: 'Settings' }
               ].filter(item => !item.subItem).map(item => (
                 <div key={item.id} style={{ position: 'relative' }}>

@@ -2767,19 +2767,21 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
           )}
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', flexWrap: 'wrap' }}>
             <button
               onClick={() => onSpeakItem && onSpeakItem(kot, true, 'full')}
               style={{
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '10px 12px' : '8px 16px',
                 background: '#000000',
                 color: '#00ff00',
                 border: '1px solid #00ff00',
                 borderRadius: '0px',
-                fontSize: '11px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                minHeight: screenSize === 'small' ? '40px' : 'auto',
+                flex: screenSize === 'small' ? '1 1 auto' : 'none'
               }}
             >
               [ SPEAK FULL ]
@@ -2787,15 +2789,17 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
             <button
               onClick={() => onSpeakItem && onSpeakItem(kot, true, 'items')}
               style={{
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '10px 12px' : '8px 16px',
                 background: '#000000',
                 color: '#00ff00',
                 border: '1px solid #00ff00',
                 borderRadius: '0px',
-                fontSize: '11px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                minHeight: screenSize === 'small' ? '40px' : 'auto',
+                flex: screenSize === 'small' ? '1 1 auto' : 'none'
               }}
             >
               [ SPEAK ITEMS ]
@@ -2803,15 +2807,17 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
             <button
               onClick={() => onKOTStatusChange(kot.kotId, KOTStatus.PREPARING)}
               style={{
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '10px 12px' : '8px 16px',
                 background: '#000000',
                 color: '#00ff00',
                 border: '1px solid #00ff00',
                 borderRadius: '0px',
-                fontSize: '11px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                minHeight: screenSize === 'small' ? '40px' : 'auto',
+                flex: screenSize === 'small' ? '1 1 auto' : 'none'
               }}
             >
               [ START ]
@@ -2819,15 +2825,17 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
             <button
               onClick={() => onKOTStatusChange(kot.kotId, KOTStatus.READY)}
               style={{
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '10px 12px' : '8px 16px',
                 background: '#00ff00',
                 color: '#000000',
                 border: '1px solid #000000',
                 borderRadius: '0px',
-                fontSize: '11px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                minHeight: screenSize === 'small' ? '40px' : 'auto',
+                flex: screenSize === 'small' ? '1 1 auto' : 'none'
               }}
             >
               [ READY ]
@@ -2835,15 +2843,17 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
             <button
               onClick={() => onMarkUrgent(kot.kotId)}
               style={{
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '10px 12px' : '8px 16px',
                 background: '#ff0000',
                 color: '#ffffff',
                 border: '1px solid #000000',
                 borderRadius: '0px',
-                fontSize: '11px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                minHeight: screenSize === 'small' ? '40px' : 'auto',
+                flex: screenSize === 'small' ? '1 1 auto' : 'none'
               }}
             >
               [ URGENT ]
@@ -2851,15 +2861,17 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
             <button
               onClick={() => onCancelKOT(kot.kotId)}
               style={{
-                padding: '8px 16px',
+                padding: screenSize === 'small' ? '10px 12px' : '8px 16px',
                 background: '#000000',
                 color: '#ff0000',
                 border: '1px solid #ff0000',
                 borderRadius: '0px',
-                fontSize: '11px',
+                fontSize: screenSize === 'small' ? '10px' : '11px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                minHeight: screenSize === 'small' ? '40px' : 'auto',
+                flex: screenSize === 'small' ? '1 1 auto' : 'none'
               }}
             >
               [ CANCEL ]

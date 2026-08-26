@@ -43,6 +43,42 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     qrReceiptShowFssai: settings.qrReceiptShowFssai !== false,
     qrReceiptShowTariff: settings.qrReceiptShowTariff !== false,
     qrReceiptShowReviewQr: settings.qrReceiptShowReviewQr !== false,
+    // QR Payment controls
+    qrEnablePaymentCash: settings.qrEnablePaymentCash !== false,
+    qrEnablePaymentUPI: settings.qrEnablePaymentUPI !== false,
+    qrEnablePaymentCard: settings.qrEnablePaymentCard !== false,
+    // QR Tipping controls
+    qrEnableTipping: settings.qrEnableTipping !== false,
+    qrDefaultTipPercent: settings.qrDefaultTipPercent || 0,
+    qrTipOptions: settings.qrTipOptions || [0, 5, 10, 15],
+    // QR Customization controls
+    qrEnableSizeOptions: settings.qrEnableSizeOptions !== false,
+    qrEnableSpiceOptions: settings.qrEnableSpiceOptions !== false,
+    qrEnableAddons: settings.qrEnableAddons !== false,
+    qrAddonCheesePrice: settings.qrAddonCheesePrice || 15,
+    qrAddonSaucePrice: settings.qrAddonSaucePrice || 10,
+    qrSizeLargePrice: settings.qrSizeLargePrice || 20,
+    // QR Order management
+    qrEnableOrderCancel: settings.qrEnableOrderCancel !== false,
+    qrEnableDarkMode: settings.qrEnableDarkMode !== false,
+    qrEnableCombos: settings.qrEnableCombos !== false,
+    qrEnableSplitBilling: settings.qrEnableSplitBilling !== false,
+    // QR Session & Business Hours
+    qrSessionTimeout: settings.qrSessionTimeout || 30, // minutes
+    qrEnableBusinessHours: settings.qrEnableBusinessHours !== false,
+    qrBusinessHoursStart: settings.qrBusinessHoursStart || '09:00',
+    qrBusinessHoursEnd: settings.qrBusinessHoursEnd || '22:00',
+    qrClosedMessage: settings.qrClosedMessage || 'We are currently closed. Please visit us during our business hours.',
+    // GST & Invoice settings
+    qrGstRoundingMode: settings.qrGstRoundingMode || 'standard', // 'standard', 'up', 'down', 'nearest'
+    qrEnableSequentialInvoices: settings.qrEnableSequentialInvoices !== false,
+    qrInvoicePrefix: settings.qrInvoicePrefix || 'INV',
+    qrInvoiceStartNumber: settings.qrInvoiceStartNumber || 1,
+    qrLastInvoiceNumber: settings.qrLastInvoiceNumber || 0,
+    // Printer settings
+    qrEnableThermalPrinter: settings.qrEnableThermalPrinter !== false,
+    qrPrinterPort: settings.qrPrinterPort || '9100',
+    qrPrinterPaperWidth: settings.qrPrinterPaperWidth || 80, // 58mm or 80mm
     theme: settings.theme || 'light',
     orderTimeout: settings.orderTimeout || '30',
     lowStockAlert: settings.lowStockAlert !== false,
@@ -302,6 +338,42 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
           fssaiLicense: formData.fssaiLicense,
           tariffCode: formData.tariffCode,
           phone: formData.phone,
+          // Payment controls
+          enablePaymentCash: formData.qrEnablePaymentCash,
+          enablePaymentUPI: formData.qrEnablePaymentUPI,
+          enablePaymentCard: formData.qrEnablePaymentCard,
+          // Tipping controls
+          enableTipping: formData.qrEnableTipping,
+          defaultTipPercent: formData.qrDefaultTipPercent,
+          tipOptions: formData.qrTipOptions,
+          // Customization controls
+          enableSizeOptions: formData.qrEnableSizeOptions,
+          enableSpiceOptions: formData.qrEnableSpiceOptions,
+          enableAddons: formData.qrEnableAddons,
+          addonCheesePrice: formData.qrAddonCheesePrice,
+          addonSaucePrice: formData.qrAddonSaucePrice,
+          sizeLargePrice: formData.qrSizeLargePrice,
+          // Order management
+          enableOrderCancel: formData.qrEnableOrderCancel,
+          enableDarkMode: formData.qrEnableDarkMode,
+          enableCombos: formData.qrEnableCombos,
+          enableSplitBilling: formData.qrEnableSplitBilling,
+          // Session & Business Hours
+          sessionTimeout: formData.qrSessionTimeout,
+          enableBusinessHours: formData.qrEnableBusinessHours,
+          businessHoursStart: formData.qrBusinessHoursStart,
+          businessHoursEnd: formData.qrBusinessHoursEnd,
+          closedMessage: formData.qrClosedMessage,
+          // GST & Invoice
+          gstRoundingMode: formData.qrGstRoundingMode,
+          enableSequentialInvoices: formData.qrEnableSequentialInvoices,
+          invoicePrefix: formData.qrInvoicePrefix,
+          invoiceStartNumber: formData.qrInvoiceStartNumber,
+          lastInvoiceNumber: formData.qrLastInvoiceNumber,
+          // Printer
+          enableThermalPrinter: formData.qrEnableThermalPrinter,
+          printerPort: formData.qrPrinterPort,
+          printerPaperWidth: formData.qrPrinterPaperWidth,
         };
         localStorage.setItem('qr_settings', JSON.stringify(qrConfig));
       } catch (e) { console.error('Failed to sync QR settings', e); }
@@ -496,8 +568,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         { id: 'tab-tables', label: 'Tables', icon: '🪑' },
         { id: 'tab-waiters', label: 'Waiters', icon: '🛎️' },
         { id: 'tab-kitchen', label: 'Kitchen', icon: '👨‍🍳' },
-        { id: 'tab-online', label: 'Online Ordering', icon: '🌐' },
-        { id: 'tab-qr', label: 'QR Ordering', icon: '📱' }
+        { id: 'tab-online', label: 'Online Ordering', icon: '🌐' }
       ]
     },
     { 
@@ -731,11 +802,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         <div style={{
           width: screenSize === 'small' ? '100%' : '280px',
           background: t.bgInput,
-          borderRight: `1px solid ${t.border}`,
-          borderBottom: `1px solid ${t.border}`,
+          borderRight: screenSize === 'small' ? 'none' : `1px solid ${t.border}`,
+          borderBottom: screenSize === 'small' ? `1px solid ${t.border}` : 'none',
           padding: screenSize === 'small' ? '12px' : '16px',
           overflowY: screenSize === 'small' ? 'auto' : 'auto',
-          overflowX: screenSize === 'small' ? 'auto' : 'hidden'
+          overflowX: screenSize === 'small' ? 'hidden' : 'hidden',
+          maxHeight: screenSize === 'small' ? '200px' : 'none',
+          flexShrink: 0
         }}>
           {sections.map(group => (
             <div key={group.group} style={{ marginBottom: screenSize === 'small' ? '12px' : '16px' }}>
@@ -796,12 +869,12 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         </div>
 
         {/* Main Content */}
-        <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: t.bgEle }}>
+        <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: t.bgEle, minHeight: 0 }}>
           <div style={{
             background: t.bgInput,
             borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
-            maxWidth: activeSection === 'qr' ? '1100px' : '700px',
+            maxWidth: screenSize === 'small' ? '100%' : (activeSection === 'qr' ? '1100px' : '700px'),
             border: `1px solid ${t.border}`,
             transition: 'max-width 0.2s ease-in-out'
           }}>
@@ -822,7 +895,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Currency
                       </label>
                       <select
@@ -830,12 +903,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         onChange={(e) => handleInputChange('currency', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '10px 12px',
+                          padding: screenSize === 'small' ? '12px' : '10px 12px',
                           border: `1px solid ${t.border}`,
                           borderRadius: '6px',
-                          fontSize: '14px',
+                          fontSize: screenSize === 'small' ? '16px' : '14px',
                           background: t.bgInput,
-                          outline: 'none'
+                          outline: 'none',
+                          minHeight: screenSize === 'small' ? '48px' : 'auto'
                         }}
                       >
                         <option value="INR">INR (₹)</option>
@@ -845,7 +919,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
                         Language
                       </label>
                       <select
@@ -853,12 +927,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         onChange={(e) => handleInputChange('language', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '10px 12px',
+                          padding: screenSize === 'small' ? '12px' : '10px 12px',
                           border: `1px solid ${t.border}`,
                           borderRadius: '6px',
-                          fontSize: '14px',
+                          fontSize: screenSize === 'small' ? '16px' : '14px',
                           background: t.bgInput,
-                          outline: 'none'
+                          outline: 'none',
+                          minHeight: screenSize === 'small' ? '48px' : 'auto'
                         }}
                       >
                         <option value="en">English</option>
@@ -2174,6 +2249,319 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Payment Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>💳 Payment Methods</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {[
+                        { key: 'qrEnablePaymentCash', label: 'Cash at Counter', desc: 'Pay when collecting order' },
+                        { key: 'qrEnablePaymentUPI', label: 'UPI Payment', desc: 'GPay, PhonePe, Paytm' },
+                        { key: 'qrEnablePaymentCard', label: 'Credit/Debit Card', desc: 'Visa, Mastercard, RuPay' },
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{label}</div>
+                            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>{desc}</div>
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                          >
+                            <div style={{ position: 'absolute', top: '3px', left: formData[key] ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tipping Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>💰 Tipping Options</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}`, marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Enable Tipping</div>
+                        <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>Allow customers to add tips at checkout</div>
+                      </div>
+                      <div
+                        onClick={() => handleInputChange('qrEnableTipping', !formData.qrEnableTipping)}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableTipping ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                      >
+                        <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableTipping ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Default Tip %</label>
+                        <input
+                          type="number"
+                          value={formData.qrDefaultTipPercent}
+                          onChange={e => handleInputChange('qrDefaultTipPercent', Number(e.target.value))}
+                          min="0"
+                          max="30"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Tip Options (%)</label>
+                        <input
+                          type="text"
+                          value={formData.qrTipOptions?.join(', ') || '0, 5, 10, 15'}
+                          onChange={e => handleInputChange('qrTipOptions', e.target.value.split(',').map(n => Number(n.trim())))}
+                          placeholder="0, 5, 10, 15"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Customization Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>🎨 Item Customization</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+                      {[
+                        { key: 'qrEnableSizeOptions', label: 'Size Options', desc: 'Regular/Large sizes with price diff' },
+                        { key: 'qrEnableSpiceOptions', label: 'Spice Level', desc: 'Mild/Medium/Hot spice options' },
+                        { key: 'qrEnableAddons', label: 'Add-ons', desc: 'Extra cheese, sauce, etc.' },
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{label}</div>
+                            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>{desc}</div>
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                          >
+                            <div style={{ position: 'absolute', top: '3px', left: formData[key] ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: t.textSub, marginBottom: '4px' }}>Large Size +₹</label>
+                        <input
+                          type="number"
+                          value={formData.qrSizeLargePrice}
+                          onChange={e => handleInputChange('qrSizeLargePrice', Number(e.target.value))}
+                          min="0"
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, fontSize: '12px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: t.textSub, marginBottom: '4px' }}>Cheese +₹</label>
+                        <input
+                          type="number"
+                          value={formData.qrAddonCheesePrice}
+                          onChange={e => handleInputChange('qrAddonCheesePrice', Number(e.target.value))}
+                          min="0"
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, fontSize: '12px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: t.textSub, marginBottom: '4px' }}>Sauce +₹</label>
+                        <input
+                          type="number"
+                          value={formData.qrAddonSaucePrice}
+                          onChange={e => handleInputChange('qrAddonSaucePrice', Number(e.target.value))}
+                          min="0"
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, fontSize: '12px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order Management Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>📋 Order Management</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {[
+                        { key: 'qrEnableOrderCancel', label: 'Allow Order Cancellation', desc: 'Customers can cancel pending orders' },
+                        { key: 'qrEnableDarkMode', label: 'Dark Mode Toggle', desc: 'Enable dark/light theme switch' },
+                        { key: 'qrEnableCombos', label: 'Combo/Meal Deals', desc: 'Show combo badge on bundled items' },
+                        { key: 'qrEnableSplitBilling', label: 'Split Billing', desc: 'Show table orders summary for multi-orderer' },
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>{label}</div>
+                            <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>{desc}</div>
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                          >
+                            <div style={{ position: 'absolute', top: '3px', left: formData[key] ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Session & Business Hours Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>⏰ Session & Business Hours</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}`, marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Enable Business Hours</div>
+                        <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>Prevent orders outside operating hours</div>
+                      </div>
+                      <div
+                        onClick={() => handleInputChange('qrEnableBusinessHours', !formData.qrEnableBusinessHours)}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableBusinessHours ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                      >
+                        <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableBusinessHours ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Opening Time</label>
+                        <input
+                          type="time"
+                          value={formData.qrBusinessHoursStart}
+                          onChange={e => handleInputChange('qrBusinessHoursStart', e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Closing Time</label>
+                        <input
+                          type="time"
+                          value={formData.qrBusinessHoursEnd}
+                          onChange={e => handleInputChange('qrBusinessHoursEnd', e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Closed Message</label>
+                      <textarea
+                        value={formData.qrClosedMessage}
+                        onChange={e => handleInputChange('qrClosedMessage', e.target.value)}
+                        rows={2}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', resize: 'none', background: t.bgCard, color: t.text, outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Session Timeout (minutes)</label>
+                      <input
+                        type="number"
+                        value={formData.qrSessionTimeout}
+                        onChange={e => handleInputChange('qrSessionTimeout', Number(e.target.value))}
+                        min="5"
+                        max="120"
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                      />
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>Cart expires after inactivity</div>
+                    </div>
+                  </div>
+
+                  {/* GST & Invoice Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>🧾 GST & Invoice Settings</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}`, marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Sequential Invoice Numbers</div>
+                        <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>Generate gap-free invoice numbers for GST compliance</div>
+                      </div>
+                      <div
+                        onClick={() => handleInputChange('qrEnableSequentialInvoices', !formData.qrEnableSequentialInvoices)}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableSequentialInvoices ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                      >
+                        <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableSequentialInvoices ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Invoice Prefix</label>
+                        <input
+                          type="text"
+                          value={formData.qrInvoicePrefix}
+                          onChange={e => handleInputChange('qrInvoicePrefix', e.target.value)}
+                          placeholder="INV"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Start Number</label>
+                        <input
+                          type="number"
+                          value={formData.qrInvoiceStartNumber}
+                          onChange={e => handleInputChange('qrInvoiceStartNumber', Number(e.target.value))}
+                          min="1"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>GST Rounding Mode</label>
+                      <select
+                        value={formData.qrGstRoundingMode}
+                        onChange={e => handleInputChange('qrGstRoundingMode', e.target.value)}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                      >
+                        <option value="standard">Standard (Banker's rounding)</option>
+                        <option value="up">Always Round Up</option>
+                        <option value="down">Always Round Down</option>
+                        <option value="nearest">Nearest Paisa</option>
+                      </select>
+                      <div style={{ fontSize: '11px', color: t.textMute, marginTop: '4px' }}>How to round tax amounts for GST compliance</div>
+                    </div>
+
+                    <div style={{ padding: '10px 12px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+                      <div style={{ fontSize: '12px', color: t.textSub, marginBottom: '4px' }}>Last Invoice Number</div>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>{formData.qrInvoicePrefix}{formData.qrLastInvoiceNumber}</div>
+                    </div>
+                  </div>
+
+                  {/* Thermal Printer Controls */}
+                  <div style={{ padding: '18px', background: t.bgEle, borderRadius: '12px', border: `1px solid ${t.border}` }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: t.text, marginBottom: '16px' }}>🖨️ Thermal Printer</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: t.bgCard, borderRadius: '10px', border: `1px solid ${t.border}`, marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text }}>Enable ESC/POS Printing</div>
+                        <div style={{ fontSize: '11px', color: t.textMute, marginTop: '2px' }}>Direct thermal printer integration</div>
+                      </div>
+                      <div
+                        onClick={() => handleInputChange('qrEnableThermalPrinter', !formData.qrEnableThermalPrinter)}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableThermalPrinter ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                      >
+                        <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableThermalPrinter ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Printer Port</label>
+                        <input
+                          type="number"
+                          value={formData.qrPrinterPort}
+                          onChange={e => handleInputChange('qrPrinterPort', e.target.value)}
+                          placeholder="9100"
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '6px' }}>Paper Width (mm)</label>
+                        <select
+                          value={formData.qrPrinterPaperWidth}
+                          onChange={e => handleInputChange('qrPrinterPaperWidth', Number(e.target.value))}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, fontSize: '13px', background: t.bgCard, color: t.text, outline: 'none' }}
+                        >
+                          <option value="58">58mm</option>
+                          <option value="80">80mm</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 

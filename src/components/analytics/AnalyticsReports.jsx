@@ -108,12 +108,12 @@ const ProgressBar = ({ value, max = 100, color = "var(--cafe-accent)", height = 
 };
 
 // ─── KPI Card with trend indicator ───────────────────────────────────────────
-const KPICard = ({ label, value, change, isPositive, isLoading }) => {
+const KPICard = ({ label, value, change, isPositive, isLoading, isMobile }) => {
   if (isLoading) {
     return (
       <div style={{
         background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
-        borderRadius: 12, padding: 18, minHeight: 110,
+        borderRadius: 12, padding: isMobile ? 14 : 18, minHeight: isMobile ? 90 : 110,
       }}>
         <div style={{ width: 60, height: 12, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 14 }} />
         <div style={{ width: 100, height: 26, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 10 }} />
@@ -132,30 +132,30 @@ const KPICard = ({ label, value, change, isPositive, isLoading }) => {
   return (
     <div style={{
       background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
-      borderRadius: 12, padding: 18,
+      borderRadius: 12, padding: isMobile ? 14 : 18,
       borderLeft: `4px solid ${  isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"}`,
       transition: 'all 0.2s ease',
     }}>
       <div style={{
-        fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-        textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 10,
+        fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: "0.08em",
+        textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: isMobile ? 8 : 10,
       }}>
         {label}
       </div>
       <div style={{
-        fontSize: 22, fontWeight: 800, fontFamily: "monospace",
-        color: valueColor, lineHeight: 1, marginBottom: 10,
+        fontSize: isMobile ? 18 : 22, fontWeight: 800, fontFamily: "monospace",
+        color: valueColor, lineHeight: 1, marginBottom: isMobile ? 8 : 10,
         letterSpacing: '-0.02em',
       }}>
         {value}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 14 }}>{trendEmoji}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: isMobile ? 12 : 14 }}>{trendEmoji}</span>
         <span style={{
-          fontSize: 12, fontWeight: 700, fontFamily: "monospace",
+          fontSize: isMobile ? 11 : 12, fontWeight: 700, fontFamily: "monospace",
           color: isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)",
           background: isNeutral ? "var(--cafe-bg-surface)" : isPositive ? "var(--cafe-success-bg)" : "var(--cafe-danger-bg)",
-          borderRadius: 6, padding: "4px 8px",
+          borderRadius: 6, padding: isMobile ? "3px 6px" : "4px 8px",
         }}>
           {changeDisplay}
         </span>
@@ -384,15 +384,15 @@ function AnalyticsReports({
   };
 
   return (
-    <div style={{ padding: isMobile ? 18 : 28, maxWidth: '100%' }}>
+    <div style={{ padding: isMobile ? 16 : 28, maxWidth: '100%', overflowX: 'hidden' }}>
       {/* Header */}
       <div style={{ 
         display: "flex", justifyContent: "space-between",
         alignItems: isMobile ? "flex-start" : "center",
-        marginBottom: 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0,
+        marginBottom: isMobile ? 20 : 28, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 14 : 0,
       }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.03em" }}>
+          <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, color: "var(--cafe-text-primary)", letterSpacing: "-0.03em" }}>
             Analytics &amp; Reports
           </div>
           <div style={{ fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-tertiary)" }}>
@@ -400,19 +400,20 @@ function AnalyticsReports({
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: isMobile ? 8 : 10, alignItems: "center", flexWrap: "wrap", width: isMobile ? '100%' : 'auto' }}>
           {/* Date Range Selector */}
-          <div style={{ display: "flex", gap: 2, background: "var(--cafe-bg-hover)", padding: 4, borderRadius: 10 }}>
-            {Object.values(DATE_PRESETS).slice(0, 6).map(preset => (
+          <div style={{ display: "flex", gap: 2, background: "var(--cafe-bg-hover)", padding: isMobile ? 3 : 4, borderRadius: 10, overflowX: 'auto', maxWidth: isMobile ? '100%' : 'none' }}>
+            {Object.values(DATE_PRESETS).slice(0, isMobile ? 4 : 6).map(preset => (
               <button
                 key={preset} type="button" aria-pressed={datePreset === preset}
                 onClick={() => setDatePreset(preset)}
                 style={{ 
-                  padding: isMobile ? "8px 14px" : "10px 18px", borderRadius: 8, border: "none",
+                  padding: isMobile ? "8px 12px" : "10px 18px", borderRadius: 8, border: "none",
                   background: datePreset === preset ? "var(--cafe-bg-card)" : "transparent",
                   color: datePreset === preset ? "var(--cafe-accent)" : "var(--cafe-text-tertiary)",
-                  fontSize: isMobile ? 12 : 13, cursor: "pointer",
-                  fontWeight: datePreset === preset ? 700 : 500, minHeight: 38, transition: "all .18s",
+                  fontSize: isMobile ? 11 : 13, cursor: "pointer",
+                  fontWeight: datePreset === preset ? 700 : 500, minHeight: isMobile ? 36 : 38, transition: "all .18s",
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {DATE_PRESET_LABELS[preset]}
@@ -427,7 +428,7 @@ function AnalyticsReports({
             style={{
               background: 'transparent', border: '1px solid var(--cafe-border-light)',
               borderRadius: 10, color: 'var(--cafe-text-primary)',
-              fontSize: isMobile ? 12 : 13, padding: isMobile ? "8px 14px" : "10px 18px", minHeight: 38,
+              fontSize: isMobile ? 11 : 13, padding: isMobile ? "8px 12px" : "10px 18px", minHeight: isMobile ? 36 : 38,
               opacity: (isExporting || currentPeriodOrders.length === 0) ? 0.5 : 1,
               cursor: (isExporting || currentPeriodOrders.length === 0) ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
@@ -442,7 +443,7 @@ function AnalyticsReports({
             style={{
               background: 'transparent', border: '1px solid var(--cafe-border-light)',
               borderRadius: 10, color: 'var(--cafe-text-primary)',
-              fontSize: isMobile ? 12 : 13, padding: isMobile ? "8px 14px" : "10px 18px", minHeight: 38,
+              fontSize: isMobile ? 11 : 13, padding: isMobile ? "8px 12px" : "10px 18px", minHeight: isMobile ? 36 : 38,
               opacity: currentPeriodOrders.length === 0 ? 0.5 : 1,
               cursor: currentPeriodOrders.length === 0 ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
@@ -455,19 +456,19 @@ function AnalyticsReports({
 
       {/* Date Range Display */}
       <div style={{ 
-        marginBottom: 24, padding: "14px 18px", background: "var(--cafe-bg-hover)",
-        borderRadius: 12, fontSize: 13, color: "var(--cafe-text-secondary)",
+        marginBottom: isMobile ? 16 : 24, padding: isMobile ? "12px 14px" : "14px 18px", background: "var(--cafe-bg-hover)",
+        borderRadius: 12, fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-secondary)",
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        border: "1px solid var(--cafe-border-light)",
+        border: "1px solid var(--cafe-border-light)", flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 6 : 0,
       }}>
         <div><strong>Period:</strong> {currentDateRange.label}</div>
-        <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)" }}>
+        <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)" }}>
           {currentPeriodOrders.length} orders in period
         </div>
       </div>
 
       {/* Report Navigation */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 24, scrollbarWidth: "none" }}>
+      <div style={{ display: "flex", gap: isMobile ? 4 : 6, overflowX: "auto", paddingBottom: 6, marginBottom: isMobile ? 16 : 24, scrollbarWidth: "none", WebkitOverflowScrolling: 'touch' }}>
         {REPORT_SECTIONS.map(section => {
           const count = sectionCounts[section.id] || 0;
           const isActive = activeSection === section.id;
@@ -475,22 +476,23 @@ function AnalyticsReports({
             <button key={section.id} type="button" aria-pressed={isActive}
               onClick={() => setActiveSection(section.id)}
               style={{ 
-                padding: "10px 16px", borderRadius: 10, border: "none",
+                padding: isMobile ? "8px 12px" : "10px 16px", borderRadius: 10, border: "none",
                 background: isActive ? "var(--cafe-accent)" : "transparent",
                 color: isActive ? "#1A1208" : "var(--cafe-text-secondary)",
-                fontSize: 13, cursor: "pointer", fontWeight: isActive ? 700 : 500,
+                fontSize: isMobile ? 11 : 13, cursor: "pointer", fontWeight: isActive ? 700 : 500,
                 whiteSpace: "nowrap", transition: "all .18s",
                 display: "flex", alignItems: "center", gap: 6, position: "relative",
+                flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 14 }}>{section.icon}</span>
+              <span style={{ fontSize: isMobile ? 12 : 14 }}>{section.icon}</span>
               {section.label}
               {count > 0 && (
                 <span style={{
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  minWidth: 18, height: 18, borderRadius: 9, fontSize: 10, fontWeight: 800,
+                  minWidth: isMobile ? 16 : 18, height: isMobile ? 16 : 18, borderRadius: isMobile ? 8 : 9, fontSize: isMobile ? 9 : 10, fontWeight: 800,
                   background: isActive ? "rgba(26,18,8,0.2)" : "var(--cafe-accent-bg)",
-                  color: isActive ? "#1A1208" : "var(--cafe-accent)", padding: "0 5px",
+                  color: isActive ? "#1A1208" : "var(--cafe-accent)", padding: "0 4px",
                 }}>
                   {count > 99 ? '99+' : count}
                 </span>
@@ -636,13 +638,13 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}              change={salesComparison.display}  isPositive={salesComparison.isPositive} />
-        <KPICard label="Orders"          value={currentKPIs.orders.total}                                change={ordersComparison.display} isPositive={ordersComparison.isPositive} />
-        <KPICard label="Avg Order Value" value={formatCurrency(currentKPIs.sales.averageOrderValue)}     change={aovComparison.display}    isPositive={aovComparison.isPositive} />
-        <KPICard label="Completion Rate" value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}      change={formatComparison(comparison?.completionRate).display} isPositive={true} />
-        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}               change="—"                        isPositive={false} />
-        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}          change="—"                        isPositive={true} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}              change={salesComparison.display}  isPositive={salesComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Orders"          value={currentKPIs.orders.total}                                change={ordersComparison.display} isPositive={ordersComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Avg Order Value" value={formatCurrency(currentKPIs.sales.averageOrderValue)}     change={aovComparison.display}    isPositive={aovComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Completion Rate" value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}      change={formatComparison(comparison?.completionRate).display} isPositive={true} isMobile={isMobile} />
+        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}               change="—"                        isPositive={false} isMobile={isMobile} />
+        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}          change="—"                        isPositive={true} isMobile={isMobile} />
       </div>
 
       {/* Hourly Revenue Chart */}
@@ -741,13 +743,13 @@ function SalesSection({ currentKPIs, comparison, channelPerformance, isMobile, f
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Gross Sales"     value={formatCurrency(currentKPIs.sales.grossSales)}    change={grossSalesComparison.display} isPositive={grossSalesComparison.isPositive} />
-        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}       change={netSalesComparison.display}   isPositive={netSalesComparison.isPositive} />
-        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}   change="—" isPositive={true} />
-        <KPICard label="Total Collected" value={formatCurrency(currentKPIs.sales.totalCollected)} change="—" isPositive={true} />
-        <KPICard label="Outstanding"     value={formatCurrency(currentKPIs.sales.outstanding)}    change="—" isPositive={false} />
-        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}        change={refundsComparison.display}    isPositive={false} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Gross Sales"     value={formatCurrency(currentKPIs.sales.grossSales)}    change={grossSalesComparison.display} isPositive={grossSalesComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}       change={netSalesComparison.display}   isPositive={netSalesComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}   change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Total Collected" value={formatCurrency(currentKPIs.sales.totalCollected)} change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Outstanding"     value={formatCurrency(currentKPIs.sales.outstanding)}    change="—" isPositive={false} isMobile={isMobile} />
+        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}        change={refundsComparison.display}    isPositive={false} isMobile={isMobile} />
       </div>
 
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
@@ -795,13 +797,13 @@ function OrdersSection({ currentKPIs, comparison, orders, isMobile, formatCurren
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Total Orders"     value={currentKPIs.orders.total}                              change={ordersComparison.display}      isPositive={ordersComparison.isPositive} />
-        <KPICard label="Completed"        value={currentKPIs.orders.completed}                          change="—"                             isPositive={true} />
-        <KPICard label="Cancelled"        value={currentKPIs.orders.cancelled}                          change="—"                             isPositive={false} />
-        <KPICard label="Completion Rate"  value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}    change={completionComparison.display}  isPositive={true} />
-        <KPICard label="Cancellation Rate"value={`${currentKPIs.orders.cancellationRate.toFixed(1)  }%`}  change={cancellationComparison.display} isPositive={cancellationComparison.isPositive} />
-        <KPICard label="Open Orders"      value={currentKPIs.orders.open}                               change="—"                             isPositive={true} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Total Orders"     value={currentKPIs.orders.total}                              change={ordersComparison.display}      isPositive={ordersComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Completed"        value={currentKPIs.orders.completed}                          change="—"                             isPositive={true} isMobile={isMobile} />
+        <KPICard label="Cancelled"        value={currentKPIs.orders.cancelled}                          change="—"                             isPositive={false} isMobile={isMobile} />
+        <KPICard label="Completion Rate"  value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}    change={completionComparison.display}  isPositive={true} isMobile={isMobile} />
+        <KPICard label="Cancellation Rate"value={`${currentKPIs.orders.cancellationRate.toFixed(1)  }%`}  change={cancellationComparison.display} isPositive={cancellationComparison.isPositive} isMobile={isMobile} />
+        <KPICard label="Open Orders"      value={currentKPIs.orders.open}                               change="—"                             isPositive={true} isMobile={isMobile} />
       </div>
 
       {/* Order Status Breakdown — pie-style row */}
@@ -958,11 +960,11 @@ function ChannelsSection({ channelPerformance, formatCurrency }) {
 function CustomersSection({ customerPerformance, newVsReturning, isMobile, formatCurrency }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="New Customers"         value={newVsReturning.newCustomerCount}               change="—" isPositive={true} />
-        <KPICard label="Returning Customers"   value={newVsReturning.returningCustomerCount}          change="—" isPositive={true} />
-        <KPICard label="New Customer Sales"    value={formatCurrency(newVsReturning.newCustomerSales)}      change="—" isPositive={true} />
-        <KPICard label="Returning Sales"       value={formatCurrency(newVsReturning.returningCustomerSales)} change="—" isPositive={true} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="New Customers"         value={newVsReturning.newCustomerCount}               change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Returning Customers"   value={newVsReturning.returningCustomerCount}          change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="New Customer Sales"    value={formatCurrency(newVsReturning.newCustomerSales)}      change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Returning Sales"       value={formatCurrency(newVsReturning.returningCustomerSales)} change="—" isPositive={true} isMobile={isMobile} />
       </div>
 
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
@@ -994,11 +996,11 @@ function PaymentsSection({ paymentBreakdown, currentKPIs, isMobile, formatCurren
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Total Collected" value={formatCurrency(currentKPIs.sales.totalCollected)} change="—" isPositive={true} />
-        <KPICard label="Outstanding"     value={formatCurrency(currentKPIs.sales.outstanding)}    change="—" isPositive={false} />
-        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}   change="—" isPositive={true} />
-        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}        change="—" isPositive={false} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Total Collected" value={formatCurrency(currentKPIs.sales.totalCollected)} change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Outstanding"     value={formatCurrency(currentKPIs.sales.outstanding)}    change="—" isPositive={false} isMobile={isMobile} />
+        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}   change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}        change="—" isPositive={false} isMobile={isMobile} />
       </div>
 
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
@@ -1118,11 +1120,11 @@ function ProfitabilitySection({ profitability, currentKPIs, isMobile, formatCurr
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)} change="—" isPositive={true} />
-        <KPICard label="Estimated COGS"  value={formatCurrency(cogs)}                      change="—" isPositive={false} />
-        <KPICard label="Gross Profit"    value={formatCurrency(grossProfit)}               change="—" isPositive={grossProfit >= 0} />
-        <KPICard label="Gross Margin"    value={`${marginPercent.toFixed(1)  }%`}             change="—" isPositive={marginPercent >= 0} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)} change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Estimated COGS"  value={formatCurrency(cogs)}                      change="—" isPositive={false} isMobile={isMobile} />
+        <KPICard label="Gross Profit"    value={formatCurrency(grossProfit)}               change="—" isPositive={grossProfit >= 0} isMobile={isMobile} />
+        <KPICard label="Gross Margin"    value={`${marginPercent.toFixed(1)  }%`}             change="—" isPositive={marginPercent >= 0} isMobile={isMobile} />
       </div>
 
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
@@ -1276,13 +1278,15 @@ function PurchasingSection({ purchasingPerformance, formatCurrency }) {
 function ProductionSection({ productionPerformance, isMobile }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Total Batches"  value={productionPerformance.totalBatches}               change="—" isPositive={true} />
-        <KPICard label="Completed"      value={productionPerformance.completedBatches}            change="—" isPositive={true} />
-        <KPICard label="In Progress"    value={productionPerformance.inProgressBatches}           change="—" isPositive={true} />
-        <KPICard label="Failed"         value={productionPerformance.failedBatches}               change="—" isPositive={false} />
-        <KPICard label="Average Yield"  value={`${productionPerformance.averageYield.toFixed(1)}%`} change="—" isPositive={true} />
-        <KPICard label="Waste Rate"     value={`${productionPerformance.wasteRate.toFixed(1)}%`}    change="—" isPositive={false} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Total Batches"  value={productionPerformance.totalBatches}               change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Completed"      value={productionPerformance.completedBatches}            change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="In Progress"    value={productionPerformance.inProgressBatches}           change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Failed"         value={productionPerformance.failedBatches}               change="—" isPositive={false} isMobile={isMobile} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Average Yield"  value={`${productionPerformance.averageYield.toFixed(1)}%`} change="—" isPositive={true} isMobile={isMobile} />
+        <KPICard label="Waste Rate"     value={`${productionPerformance.wasteRate.toFixed(1)}%`}    change="—" isPositive={false} isMobile={isMobile} />
       </div>
     </div>
   );
@@ -1292,8 +1296,8 @@ function ProductionSection({ productionPerformance, isMobile }) {
 function DocumentsSection({ documentStats, isMobile }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
-        <KPICard label="Total Documents" value={documentStats.totalDocuments} change="—" isPositive={true} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
+        <KPICard label="Total Documents" value={documentStats.totalDocuments} change="—" isPositive={true} isMobile={isMobile} />
       </div>
 
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>

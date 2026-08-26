@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import QROrdering from '../qrodering/QROrdering';
 
 export default function Tables({ onNavigate, orders = [], setOrders, tables: externalTables = [], setTables: setExternalTables, menuItems = [], settings = {}, darkMode = true }) {
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
@@ -997,37 +996,40 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
           position: 'fixed', inset: 0,
           background: 'rgba(0,0,0,0.75)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 2000, padding: '16px'
+          zIndex: 2000, padding: screenSize === 'small' ? '0' : '16px'
         }} onClick={() => setShowModal(false)}>
           <div style={{
             background: darkMode ? '#1e1e2e' : '#ffffff',
-            borderRadius: '20px',
-            width: '100%', maxWidth: '400px',
-            padding: '24px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            borderRadius: screenSize === 'small' ? '0' : '20px',
+            width: screenSize === 'small' ? '100vw' : '100%', maxWidth: screenSize === 'small' ? '100vw' : '400px',
+            maxHeight: screenSize === 'small' ? '100vh' : 'auto',
+            padding: screenSize === 'small' ? '24px 20px' : '24px',
+            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-            display: 'flex', flexDirection: 'column', gap: '16px'
+            display: 'flex', flexDirection: 'column', gap: '16px',
+            overflow: 'auto'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>
                 {selectedTable ? '✏️ Edit Table' : '➕ Add New Table'}
               </div>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  width: '32px', height: '32px',
+                  width: screenSize === 'small' ? '40px' : '32px', height: screenSize === 'small' ? '40px' : '32px',
                   background: darkMode ? '#2a2a3a' : '#f3f4f6',
                   color: darkMode ? '#ffffff' : '#e0e0e0',
                   border: 'none', borderRadius: '8px',
-                  fontSize: '16px', cursor: 'pointer', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center'
+                  fontSize: screenSize === 'small' ? '20px' : '16px', cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  minHeight: screenSize === 'small' ? '40px' : 'auto'
                 }}
               >×</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '16px' : '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: darkMode ? '#a0a0b0' : '#2d2d48', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: darkMode ? '#a0a0b0' : '#2d2d48', marginBottom: screenSize === 'small' ? '8px' : '6px' }}>
                   Table Name / Number
                 </label>
                 <input
@@ -1036,18 +1038,19 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   style={{
-                    width: '100%', padding: '10px 12px',
+                    width: '100%', padding: screenSize === 'small' ? '14px' : '10px 12px',
                     borderRadius: '8px', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                     background: darkMode ? '#252535' : '#ffffff',
                     color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: '14px', boxSizing: 'border-box'
+                    fontSize: screenSize === 'small' ? '16px' : '14px', boxSizing: 'border-box',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                   autoFocus
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: darkMode ? '#a0a0b0' : '#2d2d48', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: darkMode ? '#a0a0b0' : '#2d2d48', marginBottom: screenSize === 'small' ? '8px' : '6px' }}>
                   Seating Capacity
                 </label>
                 <input
@@ -1056,25 +1059,27 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                   value={formData.capacity}
                   onChange={(e) => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 2 }))}
                   style={{
-                    width: '100%', padding: '10px 12px',
+                    width: '100%', padding: screenSize === 'small' ? '14px' : '10px 12px',
                     borderRadius: '8px', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                     background: darkMode ? '#252535' : '#ffffff',
                     color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: '14px', boxSizing: 'border-box'
+                    fontSize: screenSize === 'small' ? '16px' : '14px', boxSizing: 'border-box',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', marginTop: screenSize === 'small' ? '16px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  flex: 1, padding: '12px',
+                  flex: 1, padding: screenSize === 'small' ? '14px' : '12px',
                   background: darkMode ? '#2a2a3a' : '#f3f4f6',
                   color: darkMode ? '#ffffff' : '#e0e0e0',
                   border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
-                  borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+                  borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: screenSize === 'small' ? '15px' : '14px',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 Cancel
@@ -1082,10 +1087,11 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
               <button
                 onClick={handleSaveTable}
                 style={{
-                  flex: 1, padding: '12px',
+                  flex: 1, padding: screenSize === 'small' ? '14px' : '12px',
                   background: '#10b981', color: '#ffffff',
                   border: 'none', borderRadius: '10px',
-                  fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+                  fontWeight: '600', cursor: 'pointer', fontSize: screenSize === 'small' ? '15px' : '14px',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 Save Table

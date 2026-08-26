@@ -474,19 +474,22 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000
+          zIndex: 1000,
+          padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
             background: darkMode ? '#252538' : '#ffffff',
-            borderRadius: '20px',
-            padding: '32px',
+            borderRadius: screenSize === 'small' ? '0' : '20px',
+            padding: screenSize === 'small' ? '20px' : '32px',
             width: '500px',
-            maxWidth: '90vw',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            maxWidth: screenSize === 'small' ? '100vw' : '90vw',
+            maxHeight: screenSize === 'small' ? '100vh' : '90vh',
+            overflow: 'auto',
+            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>
                 {selectedItem ? '✏️ Edit Item' : '➕ Add Item'}
               </h3>
               <button
@@ -498,8 +501,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   border: 'none',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  fontSize: '16px',
-                  transition: 'all 0.2s ease'
+                  fontSize: screenSize === 'small' ? '18px' : '16px',
+                  transition: 'all 0.2s ease',
+                  minHeight: screenSize === 'small' ? '44px' : 'auto'
                 }}
                 onMouseEnter={(e) => e.target.style.background = darkMode ? '#2d2d48' : '#e5e7eb'}
                 onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f3f4f6'}
@@ -508,9 +512,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               </button>
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '12px' : '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                   📦 Name
                 </label>
                 <input
@@ -519,19 +523,20 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '12px',
+                    padding: screenSize === 'small' ? '14px' : '12px',
                     background: darkMode ? '#1a1a2e' : '#ffffff',
                     color: darkMode ? '#ffffff' : '#111827',
                     border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                     borderRadius: '10px',
-                    fontSize: '14px',
-                    outline: 'none'
+                    fontSize: screenSize === 'small' ? '16px' : '14px',
+                    outline: 'none',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                   placeholder="Enter item name..."
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                   📂 Category
                 </label>
                 <select
@@ -539,13 +544,14 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   style={{
                     width: '100%',
-                    padding: '12px',
+                    padding: screenSize === 'small' ? '14px' : '12px',
                     background: darkMode ? '#1a1a2e' : '#ffffff',
                     color: darkMode ? '#ffffff' : '#111827',
                     border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                     borderRadius: '10px',
-                    fontSize: '14px',
-                    outline: 'none'
+                    fontSize: screenSize === 'small' ? '16px' : '14px',
+                    outline: 'none',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                 >
                   <option value="Ingredients">Ingredients</option>
@@ -554,9 +560,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   <option value="Equipment">Equipment</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                     🔢 Quantity
                   </label>
                   <input
@@ -565,19 +571,20 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px',
+                      padding: screenSize === 'small' ? '14px' : '12px',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
                       color: darkMode ? '#ffffff' : '#111827',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '10px',
-                      fontSize: '14px',
-                      outline: 'none'
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
+                      outline: 'none',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                     placeholder="0"
                   />
                 </div>
-                <div style={{ width: '120px' }}>
-                  <label style={{ display: 'block', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+                <div style={{ width: screenSize === 'small' ? '100%' : '120px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
                     📏 Unit
                   </label>
                   <select
@@ -585,13 +592,14 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px',
+                      padding: screenSize === 'small' ? '14px' : '12px',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
                       color: darkMode ? '#ffffff' : '#111827',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '10px',
-                      fontSize: '14px',
-                      outline: 'none'
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
+                      outline: 'none',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                   >
                     <option value="pieces">pcs</option>
@@ -601,9 +609,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                     ⚠️ Min Stock
                   </label>
                   <input
@@ -612,19 +620,20 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px',
+                      padding: screenSize === 'small' ? '14px' : '12px',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
                       color: darkMode ? '#ffffff' : '#111827',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '10px',
-                      fontSize: '14px',
-                      outline: 'none'
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
+                      outline: 'none',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                     placeholder="0"
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                     💰 Cost (₹)
                   </label>
                   <input
@@ -633,13 +642,14 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px',
+                      padding: screenSize === 'small' ? '14px' : '12px',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
                       color: darkMode ? '#ffffff' : '#111827',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '10px',
-                      fontSize: '14px',
-                      outline: 'none'
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
+                      outline: 'none',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                     placeholder="0.00"
                   />
@@ -647,18 +657,21 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', marginTop: screenSize === 'small' ? '16px' : '24px', justifyContent: 'flex-end', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  padding: '12px 24px',
+                  padding: screenSize === 'small' ? '14px' : '12px 24px',
                   background: darkMode ? '#2d2d44' : '#f3f4f6',
                   color: darkMode ? '#ffffff' : '#111827',
                   border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                   borderRadius: '10px',
-                  fontSize: '14px',
+                  fontSize: screenSize === 'small' ? '15px' : '14px',
                   fontWeight: '600',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  width: screenSize === 'small' ? '100%' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
               >
                 Cancel
@@ -666,16 +679,18 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               <button
                 onClick={handleSaveItem}
                 style={{
-                  padding: '12px 24px',
+                  padding: screenSize === 'small' ? '14px' : '12px 24px',
                   background: '#111827',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
-                  fontSize: '14px',
+                  fontSize: screenSize === 'small' ? '15px' : '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 4px rgba(17, 24, 39, 0.2)'
+                  boxShadow: '0 2px 4px rgba(17, 24, 39, 0.2)',
+                  width: screenSize === 'small' ? '100%' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = '#1f2937';
@@ -864,6 +879,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
     category: 'Coffee',
     description: '',
     emoji: '☕',
+    image: '',
     code: '',
     hsnCode: '',
     allergens: '',
@@ -924,17 +940,18 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
 
   const handleAddItem = () => {
     setSelectedItem(null);
-    setFormData({ 
-      name: '', 
-      price: '', 
-      cost: '', 
-      category: 'Coffee', 
-      description: '', 
-      emoji: '☕', 
-      code: '', 
-      hsnCode: '', 
-      allergens: '', 
-      dietary: 'veg' 
+    setFormData({
+      name: '',
+      price: '',
+      cost: '',
+      category: 'Coffee',
+      description: '',
+      emoji: '☕',
+      image: '',
+      code: '',
+      hsnCode: '',
+      allergens: '',
+      dietary: 'veg'
     });
     setShowModal(true);
   };
@@ -948,6 +965,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
       category: item.category || 'Coffee',
       description: item.description || '',
       emoji: item.emoji || '☕',
+      image: item.image || '',
       code: item.code || '',
       hsnCode: item.hsnCode || '',
       allergens: item.allergens || '',
@@ -1282,7 +1300,18 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                       <div>
                         {/* Header Details */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '32px' }}>{item.emoji || '🧁'}</span>
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextElementSibling.style.display = 'block';
+                              }}
+                            />
+                          ) : null}
+                          <span style={{ fontSize: '32px', display: item.image ? 'none' : 'block' }}>{item.emoji || '🧁'}</span>
                           <div>
                             <h4 style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>{item.name}</h4>
                             <span style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b' }}>{item.category}</span>
@@ -1399,6 +1428,18 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>📷 Item Image URL</label>
+                <input
+                  type="text"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827', fontSize: '13px' }}
+                />
+                <div style={{ fontSize: '11px', color: darkMode ? '#6b7280' : '#9ca3af', marginTop: '4px' }}>Leave empty to use emoji instead</div>
+              </div>
+
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '70px' }}>
                   <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Emoji</label>

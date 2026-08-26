@@ -734,18 +734,19 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
         minHeight: 0
       }}>
         {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveTab('overview')}
             style={{
-              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+              padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
               background: activeTab === 'overview' ? '#6366f1' : 'transparent',
               color: activeTab === 'overview' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
               border: activeTab === 'overview' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
               borderRadius: '8px',
-              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minHeight: screenSize === 'small' ? '40px' : 'auto'
             }}
           >
             Overview
@@ -753,21 +754,22 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
           <button
             onClick={() => setActiveTab('billing')}
             style={{
-              padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
+              padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
               background: activeTab === 'billing' ? '#6366f1' : 'transparent',
               color: activeTab === 'billing' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
               border: activeTab === 'billing' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
               borderRadius: '8px',
-              fontSize: screenSize === 'small' ? '12px' : '14px',
+              fontSize: screenSize === 'small' ? '13px' : '14px',
               fontWeight: '500',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minHeight: screenSize === 'small' ? '40px' : 'auto'
             }}
           >
             Billing & Orders
           </button>
           <SpeakButton
             onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
-            size="medium"
+            size={screenSize === 'small' ? 'small' : 'medium'}
           />
         </div>
 
@@ -860,21 +862,23 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: '28px',
-              padding: '20px',
+              marginBottom: screenSize === 'small' ? '16px' : '28px',
+              padding: screenSize === 'small' ? '16px' : '20px',
               background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              borderRadius: '16px'
+              borderRadius: '16px',
+              flexDirection: screenSize === 'small' ? 'column' : 'row',
+              gap: screenSize === 'small' ? '12px' : '0'
             }}>
               <div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
                   Current Time
                 </div>
-                <div style={{ fontSize: '32px', fontWeight: '700', color: '#ffffff' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '24px' : '32px', fontWeight: '700', color: '#ffffff' }}>
                   {currentTime.toLocaleTimeString()}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
+              <div style={{ textAlign: screenSize === 'small' ? 'left' : 'right' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
                   System Status
                 </div>
                 <div style={{ 
@@ -884,7 +888,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   padding: '8px 16px',
                   background: 'rgba(255,255,255,0.2)',
                   borderRadius: '20px',
-                  fontSize: '14px',
+                  fontSize: screenSize === 'small' ? '12px' : '14px',
                   fontWeight: '600',
                   color: '#ffffff'
                 }}>
@@ -1046,7 +1050,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
               border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
+              marginBottom: screenSize === 'small' ? '16px' : '28px',
+              overflowX: 'auto'
             }}>
               <div style={{
                 fontSize: screenSize === 'small' ? '14px' : '18px',
@@ -1055,11 +1060,13 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 marginBottom: screenSize === 'small' ? '16px' : '24px',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '8px'
               }}>
                 <span>📊 Hourly Sales</span>
                 <span style={{ 
-                  fontSize: '11px', 
+                  fontSize: screenSize === 'small' ? '10px' : '11px', 
                   color: '#10b981',
                   padding: '4px 12px',
                   background: 'rgba(16, 185, 129, 0.1)',
@@ -1073,8 +1080,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 height: screenSize === 'small' ? '150px' : '200px',
                 display: 'flex',
                 alignItems: 'flex-end',
-                gap: screenSize === 'small' ? '4px' : '8px',
-                padding: '20px 0'
+                gap: screenSize === 'small' ? '2px' : '8px',
+                padding: '20px 0',
+                minWidth: 'max-content'
               }}>
                 {Object.entries(metrics.hourlySales).map(([hour, data], index) => {
                   const maxRevenue = Math.max(...Object.values(metrics.hourlySales).map(d => d.revenue), 1);
@@ -1082,9 +1090,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   const isCurrentHour = parseInt(hour) === currentTime.getHours();
                   
                   return (
-                    <div key={hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: screenSize === 'small' ? '4px' : '8px' }}>
+                    <div key={hour} style={{ flex: screenSize === 'small' ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: screenSize === 'small' ? '4px' : '8px', minWidth: screenSize === 'small' ? '24px' : 'auto' }}>
                       <div style={{ 
-                        width: '100%',
+                        width: screenSize === 'small' ? '20px' : '100%',
                         height: `${Math.max(height, 4)}px`,
                         background: isCurrentHour ? '#6366f1' : (darkMode ? '#3b3b5c' : '#e2e8f0'),
                         borderRadius: '4px',
@@ -1106,7 +1114,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                         )}
                       </div>
                       <div style={{ 
-                        fontSize: screenSize === 'small' ? '9px' : '10px', 
+                        fontSize: screenSize === 'small' ? '8px' : '10px', 
                         color: isCurrentHour ? '#6366f1' : (darkMode ? '#6b6b7e' : '#64748b'),
                         fontWeight: isCurrentHour ? '600' : '400'
                       }}>

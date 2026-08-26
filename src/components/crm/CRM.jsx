@@ -605,23 +605,25 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 5000
+          zIndex: 5000,
+          padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
             background: darkMode ? '#252538' : '#ffffff',
-            borderRadius: '12px',
+            borderRadius: screenSize === 'small' ? '0' : '12px',
             boxShadow: darkMode ? '0 20px 25px -5px rgba(0, 0, 0, 0.5)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '500px',
-            width: '90%',
-            overflow: 'hidden',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+            maxWidth: screenSize === 'small' ? '100vw' : '500px',
+            width: screenSize === 'small' ? '100vw' : '90%',
+            maxHeight: screenSize === 'small' ? '100vh' : '90vh',
+            overflow: 'auto',
+            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
           }}>
             {/* Title Bar */}
             <div style={{
               background: '#111827',
               color: '#ffffff',
-              padding: '20px 24px',
-              fontSize: '16px',
+              padding: screenSize === 'small' ? '16px 20px' : '20px 24px',
+              fontSize: screenSize === 'small' ? '15px' : '16px',
               fontWeight: '600',
               display: 'flex',
               justifyContent: 'space-between',
@@ -634,11 +636,12 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
                   color: '#ffffff',
-                  fontSize: '14px',
+                  fontSize: screenSize === 'small' ? '16px' : '14px',
                   fontWeight: '500',
-                  padding: '4px 12px',
+                  padding: screenSize === 'small' ? '8px 16px' : '4px 12px',
                   cursor: 'pointer',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  minHeight: screenSize === 'small' ? '40px' : 'auto'
                 }}
               >
                 ×
@@ -646,10 +649,10 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
             </div>
             
             {/* Content */}
-            <div style={{ padding: '24px', background: darkMode ? '#252538' : '#ffffff' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ padding: screenSize === 'small' ? '20px' : '24px', background: darkMode ? '#252538' : '#ffffff' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '14px' : '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
                     Name *
                   </label>
                   <input
@@ -658,19 +661,20 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '14px' : '12px 16px',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827'
+                      color: darkMode ? '#ffffff' : '#111827',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
                     Phone
                   </label>
                   <input
@@ -679,19 +683,20 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '14px' : '12px 16px',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827'
+                      color: darkMode ? '#ffffff' : '#111827',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
                     Email
                   </label>
                   <input
@@ -700,19 +705,20 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '14px' : '12px 16px',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827'
+                      color: darkMode ? '#ffffff' : '#111827',
+                      minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
                     Notes
                   </label>
                   <textarea
@@ -721,24 +727,25 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                     rows={3}
                     style={{
                       width: '100%',
-                      padding: '12px 16px',
+                      padding: screenSize === 'small' ? '14px' : '12px 16px',
                       border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                       borderRadius: '6px',
-                      fontSize: '14px',
+                      fontSize: screenSize === 'small' ? '16px' : '14px',
                       resize: 'vertical',
                       outline: 'none',
                       fontFamily: 'inherit',
                       background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827'
+                      color: darkMode ? '#ffffff' : '#111827',
+                      minHeight: screenSize === 'small' ? '80px' : 'auto'
                     }}
                   />
                 </div>
 
                 {selectedCustomer && (
                   <>
-                    <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '16px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                       <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
                           Loyalty Points
                         </label>
                         <input
@@ -747,18 +754,19 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                           onChange={(e) => setFormData({ ...formData, loyaltyPoints: parseInt(e.target.value) || 0 })}
                           style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: screenSize === 'small' ? '14px' : '12px 16px',
                             border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                             borderRadius: '6px',
-                            fontSize: '14px',
+                            fontSize: screenSize === 'small' ? '16px' : '14px',
                             outline: 'none',
                             background: darkMode ? '#1a1a2e' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#111827'
+                            color: darkMode ? '#ffffff' : '#111827',
+                            minHeight: screenSize === 'small' ? '48px' : 'auto'
                           }}
                         />
                       </div>
                       <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '500', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
                           Tier
                         </label>
                         <select
@@ -766,13 +774,14 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                           onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
                           style={{
                             width: '100%',
-                            padding: '12px 16px',
+                            padding: screenSize === 'small' ? '14px' : '12px 16px',
                             border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
                             borderRadius: '6px',
-                            fontSize: '14px',
+                            fontSize: screenSize === 'small' ? '16px' : '14px',
                             outline: 'none',
                             background: darkMode ? '#1a1a2e' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#111827'
+                            color: darkMode ? '#ffffff' : '#111827',
+                            minHeight: screenSize === 'small' ? '48px' : 'auto'
                           }}
                         >
                           <option value="BRONZE">Bronze (0 pts)</option>
@@ -782,27 +791,28 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                         </select>
                       </div>
                     </div>
-                    <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', padding: '8px 12px', background: darkMode ? '#1a1a2e' : '#f9fafb', borderRadius: '6px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', padding: screenSize === 'small' ? '10px 14px' : '8px 12px', background: darkMode ? '#1a1a2e' : '#f9fafb', borderRadius: '6px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
                       Tip: Points are automatically calculated from order amounts. Manual adjustment is for special cases.
                     </div>
                   </>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', marginTop: screenSize === 'small' ? '20px' : '24px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                 <button
                   onClick={() => setShowModal(false)}
                   style={{
                     flex: 1,
-                    padding: '12px',
+                    padding: screenSize === 'small' ? '14px' : '12px',
                     background: darkMode ? '#1a1a2e' : '#f9fafb',
                     color: darkMode ? '#ffffff' : '#111827',
                     border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
                     borderRadius: '6px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '15px' : '14px',
                     fontWeight: '500',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                   onMouseEnter={(e) => e.target.style.background = darkMode ? '#252538' : '#e5e7eb'}
                   onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f9fafb'}
@@ -813,14 +823,15 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                   onClick={handleSaveCustomer}
                   style={{
                     flex: 1,
-                    padding: '12px',
+                    padding: screenSize === 'small' ? '14px' : '12px',
                     background: '#111827',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '6px',
-                    fontSize: '14px',
+                    fontSize: screenSize === 'small' ? '15px' : '14px',
                     fontWeight: '500',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    minHeight: screenSize === 'small' ? '48px' : 'auto'
                   }}
                 >
                   {selectedCustomer ? 'Update Customer' : 'Add Customer'}
