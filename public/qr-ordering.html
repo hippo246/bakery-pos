@@ -2440,10 +2440,11 @@
                         <div style="font-size: 14px;">Try adjusting your search or category filter</div>
                     </div>
                 `;
+                console.log('Set empty state HTML');
                 return;
             }
 
-            container.innerHTML = filtered.map(item => {
+            const html = filtered.map(item => {
                 // Check if item is already in cart
                 const existing = cart.find(c => String(c.id) === String(item.id));
                 const inCartQty = existing ? existing.qty : 0;
@@ -2516,6 +2517,9 @@
                     </div>
                 `;
             }).join('');
+            
+            container.innerHTML = html;
+            console.log('Set menu items HTML, length:', html.length);
         }
         
         function filterItems() {
