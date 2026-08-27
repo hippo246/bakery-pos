@@ -8,6 +8,7 @@ import textToSpeechService from '../services/voice/TextToSpeechService';
 import { getPrinterService } from '../utils/thermalPrinter.js';
 import POSTopbar from './POSTopbar';
 import SpeakButton from './voice/SpeakButton';
+import VoiceOrderRecorder from './voice/VoiceOrderRecorder';
 
 export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables, darkMode = true }) {
   const { currentTerminal } = useTerminal();
@@ -97,6 +98,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [customerPhone, setCustomerPhone] = useState('');
   const [showCustomerLookup, setShowCustomerLookup] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [showAddCustomerForm, setShowAddCustomerForm] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '', address: '' });
   const [qrOrders, setQrOrders] = useState([]); // QR orders from localStorage
   const [showQrOrdersPanel, setShowQrOrdersPanel] = useState(false);
   const [selectedQrOrder, setSelectedQrOrder] = useState(null);
@@ -119,6 +123,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [numpadSearch, setNumpadSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOrderHistory, setShowOrderHistory] = useState(false);
+  const [orderHistorySearch, setOrderHistorySearch] = useState('');
+  const [orderHistoryFilter, setOrderHistoryFilter] = useState('all');
+  const [orderHistorySort, setOrderHistorySort] = useState('date-desc');
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [orderType, setOrderType] = useState('dine-in'); // 'dine-in' or 'takeaway'
   const [cartSearchQuery, setCartSearchQuery] = useState('');
@@ -372,6 +379,50 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     
     return combinedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [orders]);
+
+  // Filter and sort orders for order history
+  const filteredOrders = useMemo(() => {
+    let filtered = [...allOrders];
+    
+    // Apply search filter
+    if (orderHistorySearch) {
+      const searchLower = orderHistorySearch.toLowerCase();
+      filtered = filtered.filter(order => 
+        (order.customerName || '').toLowerCase().includes(searchLower) ||
+        (order.tableName || '').toLowerCase().includes(searchLower) ||
+        (order.id || '').toLowerCase().includes(searchLower) ||
+        (order.invoiceNumber || '').toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (orderHistoryFilter !== 'all') {
+      filtered = filtered.filter(order => {
+        const status = (order.status || 'PENDING').toLowerCase();
+        return status === orderHistoryFilter.toLowerCase();
+      });
+    }
+    
+    // Apply sorting
+    switch (orderHistorySort) {
+      case 'date-desc':
+        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        break;
+      case 'date-asc':
+        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        break;
+      case 'amount-desc':
+        filtered.sort((a, b) => (b.total || 0) - (a.total || 0));
+        break;
+      case 'amount-asc':
+        filtered.sort((a, b) => (a.total || 0) - (b.total || 0));
+        break;
+      default:
+        break;
+    }
+    
+    return filtered;
+  }, [allOrders, orderHistorySearch, orderHistoryFilter, orderHistorySort]);
 
   // Common modifiers - could be made configurable in settings in the future
   const commonModifiers = settings.commonModifiers || [
@@ -2627,7 +2678,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            overflow: 'hidden',
+            overflow: screenSize === 'small' ? 'auto' : 'hidden',
+            minHeight: screenSize === 'small' ? '0' : 'auto',
             minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '280px',
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '40%' : 'none'
           }}>
@@ -3485,14 +3537,70 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     key={action.id}
                     onClick={() => {
                       if (action.id === 'hold') handleHoldOrder();
-                      if (action.id === 'voice') setShowVoiceOrder(true);
-                      if (action.id === 'custom') setShowCustomOrder(true);
-                      if (action.id === 'history') setShowOrderHistory(true);
-                      if (action.id === 'customer') setShowCustomerLookup(true);
-                      if (action.id === 'split') setShowSplitBillModal(true);
+                      if (action.id === 'voice') {
+                        setShowVoiceOrder(!showVoiceOrder);
+                        setShowCustomOrder(false);
+                        setShowOrderHistory(false);
+                        setShowCustomerLookup(false);
+                        setShowSplitBillModal(false);
+                        setShowHeldOrders(false);
+                        setShowTableSelector(false);
+                      }
+                      if (action.id === 'custom') {
+                        setShowCustomOrder(!showCustomOrder);
+                        setShowVoiceOrder(false);
+                        setShowOrderHistory(false);
+                        setShowCustomerLookup(false);
+                        setShowSplitBillModal(false);
+                        setShowHeldOrders(false);
+                        setShowTableSelector(false);
+                      }
+                      if (action.id === 'history') {
+                        setShowOrderHistory(!showOrderHistory);
+                        setShowVoiceOrder(false);
+                        setShowCustomOrder(false);
+                        setShowCustomerLookup(false);
+                        setShowSplitBillModal(false);
+                        setShowHeldOrders(false);
+                        setShowTableSelector(false);
+                      }
+                      if (action.id === 'customer') {
+                        setShowCustomerLookup(!showCustomerLookup);
+                        setShowVoiceOrder(false);
+                        setShowCustomOrder(false);
+                        setShowOrderHistory(false);
+                        setShowSplitBillModal(false);
+                        setShowHeldOrders(false);
+                        setShowTableSelector(false);
+                      }
+                      if (action.id === 'split') {
+                        setShowSplitBillModal(!showSplitBillModal);
+                        setShowVoiceOrder(false);
+                        setShowCustomOrder(false);
+                        setShowOrderHistory(false);
+                        setShowCustomerLookup(false);
+                        setShowHeldOrders(false);
+                        setShowTableSelector(false);
+                      }
                       if (action.id === 'void') handleVoidLastItem();
-                      if (action.id === 'held') setShowHeldOrders(true);
-                      if (action.id === 'table') setShowTableSelector(true);
+                      if (action.id === 'held') {
+                        setShowHeldOrders(!showHeldOrders);
+                        setShowVoiceOrder(false);
+                        setShowCustomOrder(false);
+                        setShowOrderHistory(false);
+                        setShowCustomerLookup(false);
+                        setShowSplitBillModal(false);
+                        setShowTableSelector(false);
+                      }
+                      if (action.id === 'table') {
+                        setShowTableSelector(!showTableSelector);
+                        setShowVoiceOrder(false);
+                        setShowCustomOrder(false);
+                        setShowOrderHistory(false);
+                        setShowCustomerLookup(false);
+                        setShowSplitBillModal(false);
+                        setShowHeldOrders(false);
+                      }
                     }}
                     style={{
                       padding: screenSize === 'small' ? '10px 4px' : '12px 4px',
@@ -3829,107 +3937,307 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           right: 0,
           bottom: 0,
           background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            padding: screenSize === 'small' ? '16px' : '24px',
-            width: screenSize === 'small' ? '95vw' : '400px',
-            maxWidth: screenSize === 'small' ? '95vw' : '90vw'
+            background: darkMode ? '#1f2937' : '#ffffff',
+            borderRadius: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            width: screenSize === 'small' ? '95vw' : '700px',
+            maxWidth: '95vw',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                Customer Lookup
-              </h3>
+            {/* Header */}
+            <div style={{
+              background: darkMode ? '#111827' : '#f9fafb',
+              padding: '20px 24px',
+              borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#111827', marginBottom: '4px' }}>
+                  👤 Customer Lookup
+                </div>
+                <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                  {customers.length} customers in database
+                </div>
+              </div>
               <button
                 onClick={() => {
                   setShowCustomerLookup(false);
-                  setCustomerPhone('');
+                  setCustomerSearchQuery('');
+                  setShowAddCustomerForm(false);
                 }}
                 style={{
-                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#374151' : '#f3f4f6',
                   border: 'none',
-                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  color: darkMode ? '#f3f4f6' : '#6b7280',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  fontSize: screenSize === 'small' ? '24px' : '18px',
-                  fontWeight: '700',
-                  minWidth: screenSize === 'small' ? '48px' : 'auto',
-                  minHeight: screenSize === 'small' ? '48px' : 'auto'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px'
                 }}
               >
                 ×
               </button>
             </div>
-            <input
-              type="text"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-              placeholder="Enter phone number..."
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#f9fafb',
-                color: '#1f2937',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                fontSize: '14px',
-                marginBottom: '16px'
-              }}
-            />
-            {customerPhone && (
-              <div style={{ marginBottom: '16px' }}>
-                {lookupCustomer(customerPhone) ? (
-                  <div style={{
-                    background: '#dbeafe',
-                    padding: '12px',
+
+            {/* Search and Add */}
+            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <input
+                  type="text"
+                  value={customerSearchQuery}
+                  onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                  placeholder="Search by name, phone, or email..."
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    background: darkMode ? '#374151' : '#f9fafb',
+                    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
                     borderRadius: '8px',
-                    border: '1px solid #93c5fd'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e40af' }}>
-                      {lookupCustomer(customerPhone).name}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#1e40af' }}>
-                      {lookupCustomer(customerPhone).phone}
-                    </div>
+                    color: darkMode ? '#f3f4f6' : '#111827',
+                    fontSize: '14px'
+                  }}
+                />
+                <button
+                  onClick={() => setShowAddCustomerForm(!showAddCustomerForm)}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {showAddCustomerForm ? 'Cancel' : '+ Add Customer'}
+                </button>
+              </div>
+
+              {/* Add Customer Form */}
+              {showAddCustomerForm && (
+                <div style={{
+                  marginTop: '16px',
+                  padding: '16px',
+                  background: darkMode ? '#374151' : '#f9fafb',
+                  borderRadius: '8px',
+                  border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`
+                }}>
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    <input
+                      type="text"
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                      placeholder="Customer Name *"
+                      style={{
+                        padding: '10px 14px',
+                        background: darkMode ? '#1f2937' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        borderRadius: '6px',
+                        color: darkMode ? '#f3f4f6' : '#111827',
+                        fontSize: '13px'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                      placeholder="Phone Number *"
+                      style={{
+                        padding: '10px 14px',
+                        background: darkMode ? '#1f2937' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        borderRadius: '6px',
+                        color: darkMode ? '#f3f4f6' : '#111827',
+                        fontSize: '13px'
+                      }}
+                    />
+                    <input
+                      type="email"
+                      value={newCustomer.email}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                      placeholder="Email Address"
+                      style={{
+                        padding: '10px 14px',
+                        background: darkMode ? '#1f2937' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        borderRadius: '6px',
+                        color: darkMode ? '#f3f4f6' : '#111827',
+                        fontSize: '13px'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={newCustomer.address}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                      placeholder="Address"
+                      style={{
+                        padding: '10px 14px',
+                        background: darkMode ? '#1f2937' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        borderRadius: '6px',
+                        color: darkMode ? '#f3f4f6' : '#111827',
+                        fontSize: '13px'
+                      }}
+                    />
                     <button
                       onClick={() => {
-                        setSelectedCustomer(lookupCustomer(customerPhone));
-                        setShowCustomerLookup(false);
-                        setCustomerPhone('');
+                        if (newCustomer.name && newCustomer.phone) {
+                          const newId = `CUST-${Date.now()}`;
+                          const customerToAdd = {
+                            id: newId,
+                            name: newCustomer.name,
+                            phone: newCustomer.phone,
+                            email: newCustomer.email,
+                            address: newCustomer.address,
+                            totalOrders: 0,
+                            totalSpent: 0,
+                            createdAt: new Date().toISOString()
+                          };
+                          setCustomers([...customers, customerToAdd]);
+                          setSelectedCustomer(customerToAdd);
+                          setShowCustomerLookup(false);
+                          setCustomerSearchQuery('');
+                          setShowAddCustomerForm(false);
+                          setNewCustomer({ name: '', phone: '', email: '', address: '' });
+                        }
                       }}
+                      disabled={!newCustomer.name || !newCustomer.phone}
                       style={{
-                        marginTop: '8px',
-                        padding: '8px 16px',
-                        background: '#2563eb',
+                        padding: '10px 20px',
+                        background: '#3b82f6',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '13px',
-                        cursor: 'pointer'
+                        fontWeight: '600',
+                        cursor: (!newCustomer.name || !newCustomer.phone) ? 'not-allowed' : 'pointer',
+                        opacity: (!newCustomer.name || !newCustomer.phone) ? 0.5 : 1
                       }}
                     >
-                      Select Customer
+                      Save Customer
                     </button>
                   </div>
-                ) : (
-                  <div style={{
-                    background: '#fee2e2',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    color: '#dc2626',
-                    fontSize: '13px'
-                  }}>
-                    Customer not found
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
+
+            {/* Customer List */}
+            <div style={{ padding: '16px 24px', overflowY: 'auto', maxHeight: 'calc(90vh - 200px)' }}>
+              {customerSearchQuery && customers.filter(c => 
+                (c.name || '').toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                (c.phone || '').toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                (c.email || '').toLowerCase().includes(customerSearchQuery.toLowerCase())
+              ).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>No customers found</div>
+                  <div style={{ fontSize: '13px' }}>Try a different search term or add a new customer</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {(customerSearchQuery 
+                    ? customers.filter(c => 
+                        (c.name || '').toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                        (c.phone || '').toLowerCase().includes(customerSearchQuery.toLowerCase()) ||
+                        (c.email || '').toLowerCase().includes(customerSearchQuery.toLowerCase())
+                      )
+                    : customers.slice(0, 20)
+                  ).map(customer => (
+                    <div
+                      key={customer.id}
+                      style={{
+                        background: darkMode ? '#374151' : '#f9fafb',
+                        border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`,
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onClick={() => {
+                        setSelectedCustomer(customer);
+                        setShowCustomerLookup(false);
+                        setCustomerSearchQuery('');
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#f3f4f6' : '#111827', marginBottom: '4px' }}>
+                            {customer.name}
+                          </div>
+                          <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                            📞 {customer.phone}
+                          </div>
+                          {customer.email && (
+                            <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                              ✉️ {customer.email}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCustomer(customer);
+                            setShowCustomerLookup(false);
+                            setCustomerSearchQuery('');
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#3b82f6',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Select
+                        </button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Total Orders</div>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                            {customer.totalOrders || 0}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Total Spent</div>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#10b981' : '#059669' }}>
+                            ₹{(customer.totalSpent || 0).toFixed(2)}
+                          </div>
+                        </div>
+                        {customer.address && (
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Address</div>
+                            <div style={{ fontSize: '13px', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                              {customer.address}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -6567,218 +6875,404 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 5000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            maxWidth: '600px',
-            width: '90%',
+            background: darkMode ? '#1f2937' : '#ffffff',
+            borderRadius: '16px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxWidth: '900px',
+            width: '95%',
             maxHeight: '90vh',
             overflow: 'hidden',
-            border: '2px solid #c9a227'
+            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
           }}>
+            {/* Header */}
             <div style={{
-              background: '#1a1a2e',
-              color: '#f5f5f5',
-              padding: screenSize === 'small' ? '16px 20px' : '16px 20px',
-              fontSize: screenSize === 'small' ? '16px' : '16px',
-              fontWeight: '600',
+              background: darkMode ? '#111827' : '#f9fafb',
+              padding: '20px 24px',
+              borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center',
-              fontFamily: 'Georgia, serif'
+              alignItems: 'center'
             }}>
-              <span>Order History</span>
+              <div>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#111827', marginBottom: '4px' }}>
+                  📋 Order History
+                </div>
+                <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                  {allOrders.length} orders total
+                </div>
+              </div>
               <button
                 onClick={() => setShowOrderHistory(false)}
                 style={{
-                  background: 'rgba(201, 162, 39, 0.2)',
-                  border: '1px solid #c9a227',
-                  color: '#c9a227',
-                  fontSize: screenSize === 'small' ? '24px' : '14px',
-                  fontWeight: '700',
-                  padding: screenSize === 'small' ? '12px 16px' : '4px 12px',
+                  background: darkMode ? '#374151' : '#f3f4f6',
+                  border: 'none',
+                  color: darkMode ? '#f3f4f6' : '#6b7280',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
-                  borderRadius: screenSize === 'small' ? '8px' : '4px',
-                  fontFamily: 'Georgia, serif',
-                  minWidth: screenSize === 'small' ? '48px' : 'auto',
-                  minHeight: screenSize === 'small' ? '48px' : 'auto'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => e.target.style.background = darkMode ? '#4b5563' : '#e5e7eb'}
+                onMouseLeave={(e) => e.target.style.background = darkMode ? '#374151' : '#f3f4f6'}
               >
                 ×
               </button>
             </div>
-            <div style={{ padding: '20px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
-              {allOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#8b7355', fontFamily: 'Georgia, serif' }}>
-                  No orders yet
+
+            {/* Filters and Search */}
+            <div style={{
+              padding: '16px 24px',
+              borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap'
+            }}>
+              <input
+                type="text"
+                placeholder="Search orders..."
+                value={orderHistorySearch}
+                onChange={(e) => setOrderHistorySearch(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: '200px',
+                  padding: '10px 14px',
+                  background: darkMode ? '#374151' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  color: darkMode ? '#f3f4f6' : '#111827',
+                  fontSize: '14px'
+                }}
+              />
+              <select
+                value={orderHistoryFilter}
+                onChange={(e) => setOrderHistoryFilter(e.target.value)}
+                style={{
+                  padding: '10px 14px',
+                  background: darkMode ? '#374151' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  color: darkMode ? '#f3f4f6' : '#111827',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="refunded">Refunded</option>
+              </select>
+              <select
+                value={orderHistorySort}
+                onChange={(e) => setOrderHistorySort(e.target.value)}
+                style={{
+                  padding: '10px 14px',
+                  background: darkMode ? '#374151' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  color: darkMode ? '#f3f4f6' : '#111827',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="amount-desc">Highest Amount</option>
+                <option value="amount-asc">Lowest Amount</option>
+              </select>
+            </div>
+
+            {/* Orders List */}
+            <div style={{ padding: '16px 24px', overflowY: 'auto', maxHeight: 'calc(90vh - 180px)' }}>
+              {filteredOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
+                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>No orders found</div>
+                  <div style={{ fontSize: '13px' }}>Try adjusting your search or filters</div>
                 </div>
               ) : (
-                allOrders.slice(0, 20).map(order => (
-                  <div
-                    key={order.id}
-                    style={{
-                      background: '#f5f0e6',
-                      border: order.isQROrder ? '2px solid #8b5cf6' : '1px solid #d4c4a8',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      marginBottom: '12px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>Order #{order.id.split('-')[1] || order.id.slice(-6)}</span>
-                        {order.isQROrder && (
-                          <span style={{
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            fontSize: '10px',
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {filteredOrders.map(order => (
+                    <div
+                      key={order.id}
+                      style={{
+                        background: darkMode ? '#374151' : '#f9fafb',
+                        border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`,
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        borderLeft: order.isQROrder ? '4px solid #8b5cf6' : '4px solid transparent'
+                      }}
+                      onMouseEnter={(e) => e.target.style.borderColor = darkMode ? '#6b7280' : '#d1d5db'}
+                      onMouseLeave={(e) => e.target.style.borderColor = darkMode ? '#4b5563' : '#e5e7eb'}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            background: darkMode ? '#1f2937' : '#e5e7eb',
                             fontWeight: '600',
-                            background: '#8b5cf6',
+                            fontSize: '14px',
+                            color: darkMode ? '#f3f4f6' : '#111827'
+                          }}>
+                            #{order.id.split('-')[1] || order.id.slice(-6)}
+                          </div>
+                          {order.isQROrder && (
+                            <span style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              background: '#8b5cf6',
+                              color: '#ffffff'
+                            }}>
+                              📱 QR
+                            </span>
+                          )}
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            background: order.status === 'completed' ? '#10b981' : 
+                                     order.status === 'CANCELLED' ? '#ef4444' :
+                                     order.status === 'REFUNDED' ? '#f59e0b' :
+                                     '#3b82f6',
                             color: '#ffffff'
                           }}>
-                            QR
+                            {order.status || 'PENDING'}
                           </span>
-                        )}
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          background: order.status === 'completed' ? '#10b981' : order.status === 'CANCELLED' ? '#ef4444' : '#f59e0b',
-                          color: '#ffffff'
-                        }}>
-                          {order.status || 'PENDING'}
-                        </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                          {new Date(order.createdAt).toLocaleString()}
+                        </div>
                       </div>
-                      <span style={{ fontSize: '13px', color: '#8b7355' }}>{new Date(order.createdAt).toLocaleString()}</span>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Customer</div>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                            {order.customerName || 'Walk-in'}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Table</div>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                            {order.tableName || 'Counter'}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Items</div>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                            {order.items?.length || 0}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Total</div>
+                          <div style={{ fontSize: '15px', fontWeight: '700', color: darkMode ? '#10b981' : '#059669' }}>
+                            ₹{order.total?.toFixed(2) || '0.00'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (order.items && Array.isArray(order.items)) {
+                              setCart(order.items.map(item => ({
+                                ...item,
+                                qty: item.qty || item.quantity || 1
+                              })));
+                              setShowOrderHistory(false);
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            minWidth: '100px',
+                            padding: '8px 16px',
+                            background: '#3b82f6',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = '#2563eb'}
+                          onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
+                        >
+                          📋 Reorder
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrderForView(order);
+                          }}
+                          style={{
+                            flex: 1,
+                            minWidth: '100px',
+                            padding: '8px 16px',
+                            background: darkMode ? '#4b5563' : '#e5e7eb',
+                            color: darkMode ? '#f3f4f6' : '#374151',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = darkMode ? '#6b7280' : '#d1d5db'}
+                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#4b5563' : '#e5e7eb'}
+                        >
+                          👁️ View
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (order.items) {
+                              const receiptData = {
+                                items: order.items,
+                                total: order.total,
+                                customerName: order.customerName,
+                                tableName: order.tableName,
+                                invoiceNumber: order.invoiceNumber || order.id,
+                                createdAt: order.createdAt
+                              };
+                              console.log('Printing receipt for order:', order.id);
+                              // TODO: Implement actual print functionality
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            minWidth: '100px',
+                            padding: '8px 16px',
+                            background: darkMode ? '#4b5563' : '#e5e7eb',
+                            color: darkMode ? '#f3f4f6' : '#374151',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = darkMode ? '#6b7280' : '#d1d5db'}
+                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#4b5563' : '#e5e7eb'}
+                        >
+                          🖨️ Print
+                        </button>
+                        {order.status !== 'CANCELLED' && order.status !== 'REFUNDED' && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Refund order #${order.id.slice(-6)}?`)) {
+                                  const updatedOrders = orders.map(o => 
+                                    o.id === order.id 
+                                      ? { ...o, status: 'REFUNDED', refundedAt: new Date().toISOString() }
+                                      : o
+                                  );
+                                  setOrders(updatedOrders);
+                                }
+                              }}
+                              style={{
+                                flex: 1,
+                                minWidth: '100px',
+                                padding: '8px 16px',
+                                background: '#f59e0b',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = '#d97706'}
+                              onMouseLeave={(e) => e.target.style.background = '#f59e0b'}
+                            >
+                              💰 Refund
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Cancel order #${order.id.slice(-6)}?`)) {
+                                  const updatedOrders = orders.map(o => 
+                                    o.id === order.id 
+                                      ? { ...o, status: 'CANCELLED', cancelledAt: new Date().toISOString() }
+                                      : o
+                                  );
+                                  setOrders(updatedOrders);
+                                }
+                              }}
+                              style={{
+                                flex: 1,
+                                minWidth: '100px',
+                                padding: '8px 16px',
+                                background: '#ef4444',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = '#dc2626'}
+                              onMouseLeave={(e) => e.target.style.background = '#ef4444'}
+                            >
+                              ❌ Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '12px' }}>
-                      Total: <span style={{ fontWeight: '500', color: '#1a1a2e', fontFamily: '"Courier New", monospace' }}>₹{order.total?.toFixed(2) || '0.00'}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Load order into cart
-                          if (order.items && Array.isArray(order.items)) {
-                            setCart(order.items.map(item => ({
-                              ...item,
-                              qty: item.qty || item.quantity || 1
-                            })));
-                            setShowOrderHistory(false);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: '80px',
-                          padding: '8px 12px',
-                          background: '#1a1a2e',
-                          color: '#f5f5f5',
-                          border: '1px solid #c9a227',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'Georgia, serif'
-                        }}
-                      >
-                        📋 Open
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Print receipt
-                          if (order.items) {
-                            const receiptData = {
-                              items: order.items,
-                              total: order.total,
-                              customerName: order.customerName,
-                              tableName: order.tableName,
-                              invoiceNumber: order.invoiceNumber || order.id,
-                              createdAt: order.createdAt
-                            };
-                            // Trigger print
-                            console.log('Printing receipt for order:', order.id);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: '80px',
-                          padding: '8px 12px',
-                          background: '#ffffff',
-                          color: '#1a1a2e',
-                          border: '1px solid #d4c4a8',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'Georgia, serif'
-                        }}
-                      >
-                        🖨️ Print
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Refund order
-                          if (confirm(`Refund order #${order.id.slice(-6)}?`)) {
-                            const updatedOrders = orders.map(o => 
-                              o.id === order.id 
-                                ? { ...o, status: 'REFUNDED', refundedAt: new Date().toISOString() }
-                                : o
-                            );
-                            setOrders(updatedOrders);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: '80px',
-                          padding: '8px 12px',
-                          background: '#ffffff',
-                          color: '#ef4444',
-                          border: '1px solid #ef4444',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'Georgia, serif'
-                        }}
-                      >
-                        💰 Refund
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Cancel order
-                          if (confirm(`Cancel order #${order.id.slice(-6)}?`)) {
-                            const updatedOrders = orders.map(o => 
-                              o.id === order.id 
-                                ? { ...o, status: 'CANCELLED', cancelledAt: new Date().toISOString() }
-                                : o
-                            );
-                            setOrders(updatedOrders);
-                          }
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: '80px',
-                          padding: '8px 12px',
-                          background: '#ffffff',
-                          color: '#6b7280',
-                          border: '1px solid #6b7280',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          cursor: 'pointer',
-                          fontFamily: 'Georgia, serif'
-                        }}
-                      >
-                        ❌ Cancel
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: darkMode ? '#111827' : '#f9fafb'
+            }}>
+              <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                Showing {filteredOrders.length} of {allOrders.length} orders
+              </div>
+              <button
+                onClick={() => {
+                  // TODO: Implement export functionality
+                  console.log('Export orders');
+                }}
+                style={{
+                  padding: '8px 16px',
+                  background: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#059669'}
+                onMouseLeave={(e) => e.target.style.background = '#10b981'}
+              >
+                📥 Export
+              </button>
             </div>
           </div>
         </div>

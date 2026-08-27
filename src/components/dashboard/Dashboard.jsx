@@ -730,8 +730,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
         padding: screenSize === 'small' ? '16px' : '28px 32px',
         background: darkMode ? '#1a1a2e' : '#f8fafc',
         flex: 1,
-        overflow: 'auto',
-        minHeight: 0
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        minHeight: 0,
+        maxHeight: '100%'
       }}>
         {/* Tab Navigation */}
         <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px', flexWrap: 'wrap' }}>
@@ -1275,7 +1277,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               borderRadius: '16px',
               padding: screenSize === 'small' ? '16px' : '24px',
               border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
+              marginBottom: screenSize === 'small' ? '16px' : '28px',
+              overflow: 'visible'
             }}>
               <div style={{
                 fontSize: screenSize === 'small' ? '14px' : '18px',
