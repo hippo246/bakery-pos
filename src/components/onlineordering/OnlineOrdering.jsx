@@ -13,6 +13,8 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
     address: '',
     notes: ''
   });
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [orderSuccess, setOrderSuccess] = useState(false);
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
 
   // Screen size detection
@@ -94,13 +96,20 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
       customer: customerInfo,
       status: 'PENDING',
       type: 'online',
+      paymentMethod: paymentMethod, // 'cash' for Pay at Counter, 'online' for prepaid
       createdAt: new Date().toISOString()
     };
+
+    console.log('Saving order to localStorage:', order);
 
     // Save to localStorage for processing
     try {
       const existingOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
-      localStorage.setItem('qr_orders', JSON.stringify([...existingOrders, order]));
+      console.log('Existing orders:', existingOrders);
+      const updatedOrders = [...existingOrders, order];
+      localStorage.setItem('qr_orders', JSON.stringify(updatedOrders));
+      console.log('Order saved successfully to qr_orders');
+      console.log('Current qr_orders in localStorage:', localStorage.getItem('qr_orders'));
     } catch (e) {
       console.error('Failed to save order:', e);
     }
@@ -110,7 +119,7 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
     setCustomerInfo({ name: '', phone: '', email: '', address: '', notes: '' });
     setShowCheckout(false);
     setShowCart(false);
-    alert('Order placed successfully! Thank you for your order.');
+    setOrderSuccess(true);
   };
 
   return (
@@ -169,6 +178,42 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
           </button>
         </div>
       </div>
+
+      {/* Success Message */}
+      {orderSuccess && (
+        <div style={{
+          background: '#10b981',
+          color: '#ffffff',
+          padding: '16px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 2px 8px rgba(16, 185, 129, 0.2)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>✅</span>
+            <div>
+              <div style={{ fontSize: '16px', fontWeight: '600' }}>Order Placed Successfully!</div>
+              <div style={{ fontSize: '13px', opacity: 0.9 }}>Thank you for your order. We'll prepare it shortly.</div>
+            </div>
+          </div>
+          <button
+            onClick={() => setOrderSuccess(false)}
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: '#f9fafb' }}>
@@ -266,6 +311,8 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
           cartTotal={cartTotal}
           customerInfo={customerInfo}
           setCustomerInfo={setCustomerInfo}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
           onClose={() => setShowCheckout(false)}
           onSubmit={handleCheckout}
         />
@@ -523,7 +570,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
   );
 }
 
-function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, onClose, onSubmit }) {
+function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, paymentMethod, setPaymentMethod, onClose, onSubmit }) {
   return (
     <div style={{
       position: 'fixed',
@@ -702,6 +749,48 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, onClose
               }}
               placeholder="Any special requests or notes"
             />
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+              Payment Method *
+            </label>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('cash')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  background: paymentMethod === 'cash' ? '#111827' : '#ffffff',
+                  color: paymentMethod === 'cash' ? '#ffffff' : '#111827',
+                  border: paymentMethod === 'cash' ? 'none' : '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                💰 Pay at Counter
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('online')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  background: paymentMethod === 'online' ? '#111827' : '#ffffff',
+                  color: paymentMethod === 'online' ? '#ffffff' : '#111827',
+                  border: paymentMethod === 'online' ? 'none' : '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                💳 Pay Online
+              </button>
+            </div>
           </div>
 
           <button

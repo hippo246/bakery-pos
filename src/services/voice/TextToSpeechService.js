@@ -15,16 +15,27 @@ class TextToSpeechService {
     this.pitch = 1;
     this.volume = 1;
     this.lang = 'en-IN';
+    this.voicesLoaded = false;
 
     // Load voices when available
     if (this.synth) {
       this.synth.onvoiceschanged = () => {
         this.voices = this.synth.getVoices();
+        this.voicesLoaded = true;
         this._selectDefaultVoice();
+        console.log('Text-to-speech voices loaded:', this.voices.length);
       };
       // Initial load
       this.voices = this.synth.getVoices();
-      this._selectDefaultVoice();
+      if (this.voices.length > 0) {
+        this.voicesLoaded = true;
+        this._selectDefaultVoice();
+        console.log('Text-to-speech voices loaded immediately:', this.voices.length);
+      } else {
+        console.log('Text-to-speech voices not loaded yet, waiting for onvoiceschanged event');
+      }
+    } else {
+      console.error('Speech synthesis not supported in this browser');
     }
   }
 
@@ -57,6 +68,11 @@ class TextToSpeechService {
    * @param {Object} options - Speech options
    */
   speak(text, options = {}) {
+    console.log('TextToSpeechService.speak called with text:', text);
+    console.log('Voices loaded:', this.voicesLoaded, 'Available voices:', this.voices.length);
+    console.log('Selected voice:', this.selectedVoice);
+    console.log('Speech synthesis supported:', !!this.synth);
+
     if (!this.synth) {
       console.warn('Speech synthesis not supported');
       return false;
@@ -74,14 +90,24 @@ class TextToSpeechService {
     utterance.volume = options.volume !== undefined ? options.volume : this.volume;
     utterance.lang = options.lang || this.lang;
 
+    console.log('Utterance configured:', {
+      voice: utterance.voice,
+      rate: utterance.rate,
+      pitch: utterance.pitch,
+      volume: utterance.volume,
+      lang: utterance.lang
+    });
+
     // Event handlers
     utterance.onstart = () => {
+      console.log('Speech started');
       this.isSpeaking = true;
       this.isPaused = false;
       if (options.onStart) options.onStart();
     };
 
     utterance.onend = () => {
+      console.log('Speech ended');
       this.isSpeaking = false;
       this.isPaused = false;
       this.currentUtterance = null;
@@ -110,16 +136,19 @@ class TextToSpeechService {
     };
 
     utterance.onpause = () => {
+      console.log('Speech paused');
       this.isPaused = true;
       if (options.onPause) options.onPause();
     };
 
     utterance.onresume = () => {
+      console.log('Speech resumed');
       this.isPaused = false;
       if (options.onResume) options.onResume();
     };
 
     this.currentUtterance = utterance;
+    console.log('Calling synth.speak()');
     this.synth.speak(utterance);
     return true;
   }

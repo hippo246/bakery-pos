@@ -9,6 +9,7 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
   },
   plugins: [react()],
+  publicDir: 'public',
   server: {
     // Serve index.html for all paths so /guest/<code> works in dev
     historyApiFallback: true,

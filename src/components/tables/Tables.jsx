@@ -1,9 +1,38 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 
 export default function Tables({ onNavigate, orders = [], setOrders, tables: externalTables = [], setTables: setExternalTables, menuItems = [], settings = {}, darkMode = true }) {
   const [screenSize, setScreenSize] = useState('large'); // 'large', 'medium', 'small'
   const [lastCallCount, setLastCallCount] = useState(0);
   const [qrOrders, setQROrders] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [deleteAllInput, setDeleteAllInput] = useState('');
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [formData, setFormData] = useState({ name: '', capacity: 4 });
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [selectedTableForQR, setSelectedTableForQR] = useState(null);
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [selectedTableForOrders, setSelectedTableForOrders] = useState(null);
+  const [ordersDateFilter, setOrdersDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'custom'
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
+  const [showQRDemoModal, setShowQRDemoModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [tableToDelete, setTableToDelete] = useState(null);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [waiterCalls, setWaiterCalls] = useState([]);
+  const [showWaiterCalls, setShowWaiterCalls] = useState(false);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    dateFrom: '',
+    dateTo: '',
+    tableId: 'all'
+  });
+  const dropdownRef = useRef(null);
+  const audioContextRef = useRef(null);
 
   // Poll for QR orders from localStorage
   useEffect(() => {
@@ -44,7 +73,13 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
   useEffect(() => {
     const playChime = () => {
       try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const audioContext = audioContextRef.current;
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         
@@ -87,6 +122,43 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
     return () => clearInterval(interval);
   }, [lastCallCount]);
 
+  // Close the shared chime AudioContext when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
+  // Close open dropdown/modals on outside click or Escape key
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown]);
+
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key !== 'Escape') return;
+      setShowDropdown(false);
+      setShowModal(false);
+      setShowManageModal(false);
+      setShowDeleteAllConfirm(false);
+      setShowQRModal(false);
+      setShowOrdersModal(false);
+      setShowDeleteConfirm(false);
+      setShowWaiterCalls(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
   const handleDismissWaiterCall = (callId) => {
     try {
       const calls = JSON.parse(localStorage.getItem('waiter_calls') || '[]');
@@ -116,33 +188,6 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
   // Use external tables if provided, otherwise use local state
   const tables = (externalTables && Array.isArray(externalTables) && externalTables.length > 0) ? externalTables : localTables;
   const setTables = setExternalTables || setLocalTables;
-  const [showModal, setShowModal] = useState(false);
-  const [showManageModal, setShowManageModal] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
-  const [deleteAllInput, setDeleteAllInput] = useState('');
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [formData, setFormData] = useState({ name: '', capacity: 4 });
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [selectedTableForQR, setSelectedTableForQR] = useState(null);
-  const [showOrdersModal, setShowOrdersModal] = useState(false);
-  const [selectedTableForOrders, setSelectedTableForOrders] = useState(null);
-  const [ordersDateFilter, setOrdersDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'custom'
-  const [customDateFrom, setCustomDateFrom] = useState('');
-  const [customDateTo, setCustomDateTo] = useState('');
-  const [showQRDemoModal, setShowQRDemoModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [tableToDelete, setTableToDelete] = useState(null);
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [waiterCalls, setWaiterCalls] = useState([]);
-  const [showWaiterCalls, setShowWaiterCalls] = useState(false);
-  const [filters, setFilters] = useState({
-    status: 'all',
-    dateFrom: '',
-    dateTo: '',
-    tableId: 'all'
-  });
 
   // Get filtered orders for the selected table
   const getFilteredTableOrders = (tableId) => {
@@ -257,17 +302,23 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
   const handleAddTable = () => {
     setSelectedTable(null);
     setFormData({ name: '', capacity: 4 });
+    setShowAlert(false);
     setShowModal(true);
   };
 
   const handleEditTable = (table) => {
     setSelectedTable(table);
     setFormData({ name: table.name, capacity: table.capacity });
+    setShowAlert(false);
     setShowModal(true);
   };
 
   const handleSaveTable = () => {
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      setAlertMessage('Please enter a table name.');
+      setShowAlert(true);
+      return;
+    }
 
     if (selectedTable) {
       setTables((prevTables) => (prevTables || []).map(t =>
@@ -442,7 +493,7 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
           marginBottom: screenSize === 'small' ? '16px' : '24px',
           flexWrap: 'wrap'
         }}>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }} ref={dropdownRef}>
             <div style={{ display: 'flex', border: 'none', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(17, 24, 39, 0.2)' }}>
               <button
                 onClick={() => { setShowModal(true); setSelectedTable(null); setFormData({ name: '', capacity: 4 }); }}
@@ -1028,6 +1079,16 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '16px' : '12px' }}>
+              {showAlert && alertMessage && (
+                <div style={{
+                  padding: '10px 14px', borderRadius: '8px',
+                  background: darkMode ? '#3a1a1a' : '#fee2e2',
+                  border: '1px solid #ef4444', color: '#ef4444',
+                  fontSize: '13px', fontWeight: '600'
+                }}>
+                  ⚠️ {alertMessage}
+                </div>
+              )}
               <div>
                 <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: darkMode ? '#a0a0b0' : '#2d2d48', marginBottom: screenSize === 'small' ? '8px' : '6px' }}>
                   Table Name / Number
@@ -1036,10 +1097,10 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                   type="text"
                   placeholder="e.g. T9 or Table 9"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => { setFormData(prev => ({ ...prev, name: e.target.value })); setShowAlert(false); }}
                   style={{
                     width: '100%', padding: screenSize === 'small' ? '14px' : '10px 12px',
-                    borderRadius: '8px', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                    borderRadius: '8px', border: `1px solid ${showAlert ? '#ef4444' : (darkMode ? '#2d2d44' : '#d1d5db')}`,
                     background: darkMode ? '#252535' : '#ffffff',
                     color: darkMode ? '#ffffff' : '#111827',
                     fontSize: screenSize === 'small' ? '16px' : '14px', boxSizing: 'border-box',
@@ -1057,7 +1118,7 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                   type="number"
                   min="1"
                   value={formData.capacity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, capacity: parseInt(e.target.value) || 2 }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, capacity: Math.max(1, parseInt(e.target.value) || 1) }))}
                   style={{
                     width: '100%', padding: screenSize === 'small' ? '14px' : '10px 12px',
                     borderRadius: '8px', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
