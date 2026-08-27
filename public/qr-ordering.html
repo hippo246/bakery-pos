@@ -1726,51 +1726,30 @@
         }
         console.log('After localStorage check, menuItems.length:', menuItems.length);
 
-        // If localStorage is empty, try fetching from JSON file (for deployment)
+        // If localStorage is empty, use embedded fallback data
         if (menuItems.length === 0) {
-            console.log('Menu empty, fetching from /menu-data.json');
-            showSkeletonLoading();
-            fetch('/menu-data.json')
-                .then(response => {
-                    console.log('Fetch response status:', response.status);
-                    if (!response.ok) throw new Error('Failed to fetch menu data');
-                    return response.json();
-                })
-                .then(data => {
-                    menuItems = data;
-                    isMenuLoading = false;
-                    console.log('Loaded menu from JSON file:', menuItems.length, 'items');
-                    renderMenuItems();
-                    renderCategories();
-                })
-                .catch(error => {
-                    console.error('Error loading menu from JSON file:', error);
-                    isMenuLoading = false;
-                    // Use fallback sample data
-                    menuItems = [
-                        { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐', veg: true },
-                        { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫', veg: true },
-                        { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖', veg: true },
-                        { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕', veg: true },
-                        { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛', veg: true },
-                        { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕', veg: true },
-                        { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰', veg: true },
-                        { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀', veg: true },
-                        { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮', veg: true },
-                        { id: 10, name: 'Spicy Chicken Sandwich', category: 'Food', price: 115, description: 'Club sandwich with fries and tender chicken', emoji: '🥪', veg: false },
-                        { id: 11, name: 'Spicy Salad', category: 'Food', price: 75, description: 'Fresh garden salad with chili dressing', emoji: '🥗', veg: true },
-                        { id: 12, name: 'Hot Pot Soup', category: 'Food', price: 65, description: 'Spicy soup of the day', emoji: '🍲', veg: true }
-                    ];
-                    console.log('Using fallback sample data:', menuItems.length, 'items');
-                    renderMenuItems();
-                    renderCategories();
-                });
-        } else {
-            isMenuLoading = false;
-            console.log('Menu loaded from localStorage, rendering now');
-            renderMenuItems();
-            renderCategories();
+            console.log('Menu empty, using embedded fallback data');
+            menuItems = [
+                { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐', veg: true, active: true, eightySixed: false },
+                { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫', veg: true, active: true, eightySixed: false },
+                { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖', veg: true, active: true, eightySixed: false },
+                { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕', veg: true, active: true, eightySixed: false },
+                { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛', veg: true, active: true, eightySixed: false },
+                { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕', veg: true, active: true, eightySixed: false },
+                { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰', veg: true, active: true, eightySixed: false },
+                { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀', veg: true, active: true, eightySixed: false },
+                { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮', veg: true, active: true, eightySixed: false },
+                { id: 10, name: 'Spicy Chicken Sandwich', category: 'Food', price: 115, description: 'Club sandwich with fries and tender chicken', emoji: '🥪', veg: false, spicy: 2, active: true, eightySixed: false },
+                { id: 11, name: 'Spicy Salad', category: 'Food', price: 75, description: 'Fresh garden salad with chili dressing', emoji: '🥗', veg: true, spicy: 1, active: true, eightySixed: false },
+                { id: 12, name: 'Hot Pot Soup', category: 'Food', price: 65, description: 'Spicy soup of the day', emoji: '🍲', veg: true, spicy: 3, active: true, eightySixed: false }
+            ];
+            console.log('Using embedded fallback data:', menuItems.length, 'items');
         }
+        
+        isMenuLoading = false;
+        console.log('Menu ready, rendering now');
+        renderMenuItems();
+        renderCategories();
         
         let cart = [];
         let lastActivityTime = Date.now();
@@ -2355,7 +2334,7 @@
 
         // Simple integrity check for price tampering prevention
         function init() {
-            console.log('init() called, isMenuLoading:', isMenuLoading, 'menuItems.length:', menuItems.length);
+            console.log('init() called, menuItems.length:', menuItems.length);
             if (!applySettings()) return; // abort if disabled
             console.log('applySettings() passed');
             cleanupStaleOrders(); // Clean up old pending orders
@@ -2366,21 +2345,10 @@
             // Start session timeout checker
             sessionTimeoutInterval = setInterval(checkSessionTimeout, 10000); // Check every 10 seconds
 
-            // Show skeleton if menu is still loading
-            if (isMenuLoading) {
-                showSkeletonLoading();
-            }
-
             renderCategories();
             loadCart();
-            
-            // Only render menu items if not loading (async fetch will call it when done)
-            if (!isMenuLoading) {
-                console.log('Calling renderMenuItems() from init()');
-                renderMenuItems();
-            } else {
-                console.log('Menu is loading, will render when fetch completes');
-            }
+            console.log('Calling renderMenuItems() from init()');
+            renderMenuItems();
         }
         
         function renderCategories() {
