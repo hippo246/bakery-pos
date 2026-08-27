@@ -3146,12 +3146,20 @@
         }
         
         function showCart() {
-            document.getElementById('cart-modal').classList.add('active');
-            modalHistoryState = 'cart';
-            history.pushState({ modal: 'cart' }, '');
-            // Only show table orders summary if split billing is enabled
-            if (qrSettings.enableSplitBilling !== false) {
-                updateTableOrdersSummary();
+            console.log('showCart() called');
+            try {
+                const cartModal = document.getElementById('cart-modal');
+                console.log('cart-modal element:', cartModal);
+                if (!cartModal) {
+                    console.error('cart-modal element not found');
+                    return;
+                }
+                cartModal.classList.add('active');
+                modalHistoryState = 'cart';
+                history.pushState({ modal: 'cart' }, '');
+                console.log('Cart modal opened');
+            } catch (error) {
+                console.error('Error in showCart():', error);
             }
         }
 
@@ -3771,10 +3779,14 @@
         }
         
         // Initialize on load
+        console.log('Script loaded, browser:', navigator.userAgent);
+        console.log('localStorage available:', typeof localStorage !== 'undefined');
+        
         try {
             init();
         } catch (e) {
             console.error('Error calling init():', e);
+            document.body.innerHTML = `<div style="padding:20px;color:red;">INIT ERROR: ${e.message}</div>`;
         }
         
         try {
