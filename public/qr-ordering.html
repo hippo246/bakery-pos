@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#111827">
-    <title>BakeryPOS - QR Ordering</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>QR Ordering</title>
     <!-- jsPDF for downloading PDF receipts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
@@ -2461,6 +2463,8 @@
                 if (item.spicy) {
                     tagHtml += `<span style="font-size:11px; margin-right:6px;" title="Spicy level: ${item.spicy}">${'🌶️'.repeat(item.spicy)}</span>`;
                 }
+                
+                console.log(`Item ${item.name}: veg=${item.veg}, spicy=${item.spicy}, tagHtml length=${tagHtml.length}`);
 
                 // Popular/Recommended/Chef's Pick tags
                 if (item.popular) {
@@ -2520,6 +2524,17 @@
             
             container.innerHTML = html;
             console.log('Set menu items HTML, length:', html.length);
+            console.log('Container children count after set:', container.children.length);
+            
+            // Force reflow
+            container.style.display = 'none';
+            container.offsetHeight; // Trigger reflow
+            container.style.display = 'grid';
+            
+            setTimeout(() => {
+                console.log('Container children count after timeout:', container.children.length);
+                console.log('Container innerHTML length:', container.innerHTML.length);
+            }, 100);
         }
         
         function filterItems() {
