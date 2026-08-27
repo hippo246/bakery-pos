@@ -579,7 +579,9 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                 tableId: 1,
                 tableName: 'T1'
               }));
-              window.open(`/qr-ordering.html?table=${tableData}`, '_blank');
+              const url = `${window.location.origin}/qr-ordering.html?table=${tableData}`;
+              console.log('Opening QR ordering URL:', url);
+              window.open(url, '_blank');
             }}
             style={{
               padding: screenSize === 'small' ? '10px 20px' : '12px 24px',
@@ -1013,7 +1015,9 @@ export default function Tables({ onNavigate, orders = [], setOrders, tables: ext
                     tableId: selectedTableForQR.id,
                     tableName: selectedTableForQR.name
                   }));
-                  window.open(`/qr-ordering.html?table=${tableData}`, '_blank');
+                  const url = `${window.location.origin}/qr-ordering.html?table=${tableData}`;
+                  console.log('Opening QR ordering URL:', url);
+                  window.open(url, '_blank');
                 }}
                 style={{
                   flex: 1, padding: '12px',

@@ -139,7 +139,10 @@ function SpeakButton({
     >
       {/* Main speak button */}
       <button
-        onClick={isSpeaking ? handleStop : handleSpeak}
+        onClick={(e) => {
+          e.stopPropagation();
+          isSpeaking ? handleStop() : handleSpeak();
+        }}
         disabled={disabled}
         aria-label={isSpeaking ? 'Stop reading aloud' : 'Read aloud'}
         aria-pressed={isSpeaking}
