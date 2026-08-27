@@ -1647,6 +1647,12 @@
         let menuItems = [];
         let isMenuLoading = true;
         let currentTipPercent = 0;
+        let selectedCategory = 'All';
+        let searchDebounceTimer = null;
+        let lastTableId = null;
+        let lastWaiterCallTime = 0;
+        const WAITER_CALL_COOLDOWN = 30000; // 30 seconds
+        const ORDER_TIMEOUT_MS = 3600000; // 1 hour timeout for pending orders
 
         // ── Safe localStorage wrapper with error handling ───────────────────
         const safeStorage = {
@@ -1875,14 +1881,6 @@
         document.addEventListener('scroll', resetActivityTimer);
         document.addEventListener('keypress', resetActivityTimer);
         document.addEventListener('touchstart', resetActivityTimer);
-
-        // Load cart from localStorage
-        let selectedCategory = 'All';
-        let searchDebounceTimer = null;
-        let lastTableId = null;
-        let lastWaiterCallTime = 0;
-        const WAITER_CALL_COOLDOWN = 30000; // 30 seconds
-        const ORDER_TIMEOUT_MS = 3600000; // 1 hour timeout for pending orders
 
         // Get table info from URL
         function getTableInfo() {
