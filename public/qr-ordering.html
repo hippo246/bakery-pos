@@ -1711,6 +1711,7 @@
 
         // Try localStorage with multiple possible keys
         const localStorageKeys = ['brewcrm_local_menuItems', 'bakery_menu', 'cafeos_menu'];
+        console.log('Checking localStorage for menu data...');
         for (const key of localStorageKeys) {
             try {
                 const savedMenu = safeStorage.getItem(key);
@@ -1723,12 +1724,15 @@
                 console.error('Error loading menu from localStorage:', e);
             }
         }
+        console.log('After localStorage check, menuItems.length:', menuItems.length);
 
         // If localStorage is empty, try fetching from JSON file (for deployment)
         if (menuItems.length === 0) {
+            console.log('Menu empty, fetching from /menu-data.json');
             showSkeletonLoading();
             fetch('/menu-data.json')
                 .then(response => {
+                    console.log('Fetch response status:', response.status);
                     if (!response.ok) throw new Error('Failed to fetch menu data');
                     return response.json();
                 })
@@ -1737,34 +1741,35 @@
                     isMenuLoading = false;
                     console.log('Loaded menu from JSON file:', menuItems.length, 'items');
                     renderMenuItems();
+                    renderCategories();
                 })
                 .catch(error => {
                     console.error('Error loading menu from JSON file:', error);
                     isMenuLoading = false;
-                    // Will fall back to sample data below
+                    // Use fallback sample data
+                    menuItems = [
+                        { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐', veg: true },
+                        { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫', veg: true },
+                        { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖', veg: true },
+                        { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕', veg: true },
+                        { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛', veg: true },
+                        { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕', veg: true },
+                        { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰', veg: true },
+                        { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀', veg: true },
+                        { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮', veg: true },
+                        { id: 10, name: 'Spicy Chicken Sandwich', category: 'Food', price: 115, description: 'Club sandwich with fries and tender chicken', emoji: '🥪', veg: false },
+                        { id: 11, name: 'Spicy Salad', category: 'Food', price: 75, description: 'Fresh garden salad with chili dressing', emoji: '🥗', veg: true },
+                        { id: 12, name: 'Hot Pot Soup', category: 'Food', price: 65, description: 'Spicy soup of the day', emoji: '🍲', veg: true }
+                    ];
+                    console.log('Using fallback sample data:', menuItems.length, 'items');
                     renderMenuItems();
+                    renderCategories();
                 });
         } else {
             isMenuLoading = false;
+            console.log('Menu loaded from localStorage, rendering now');
             renderMenuItems();
-        }
-        
-        // Fallback sample data if no menu found
-        if (menuItems.length === 0) {
-            menuItems = [
-                { id: 1, name: 'Croissant', category: 'Bakery', price: 45, description: 'Buttery, flaky pastry', emoji: '🥐', veg: true },
-                { id: 2, name: 'Pain au Chocolat', category: 'Bakery', price: 55, description: 'Chocolate-filled pastry', emoji: '🍫', veg: true },
-                { id: 3, name: 'Baguette', category: 'Bakery', price: 35, description: 'Fresh French bread', emoji: '🥖', veg: true },
-                { id: 4, name: 'Cappuccino', category: 'Coffee', price: 80, description: 'Espresso with steamed milk', emoji: '☕', veg: true },
-                { id: 5, name: 'Latte', category: 'Coffee', price: 90, description: 'Espresso with lots of milk', emoji: '🥛', veg: true },
-                { id: 6, name: 'Espresso', category: 'Coffee', price: 60, description: 'Strong black coffee', emoji: '☕', veg: true },
-                { id: 7, name: 'Chocolate Cake', category: 'Desserts', price: 120, description: 'Rich chocolate layer cake', emoji: '🍰', veg: true },
-                { id: 8, name: 'Cheesecake', category: 'Desserts', price: 110, description: 'Creamy New York style', emoji: '🧀', veg: true },
-                { id: 9, name: 'Tiramisu', category: 'Desserts', price: 130, description: 'Italian coffee dessert', emoji: '🍮', veg: true },
-                { id: 10, name: 'Spicy Chicken Sandwich', category: 'Food', price: 115, description: 'Club sandwich with fries and tender chicken', emoji: '🥪', veg: false, spicy: 2 },
-                { id: 11, name: 'Spicy Salad', category: 'Food', price: 75, description: 'Fresh garden salad with chili dressing', emoji: '🥗', veg: true, spicy: 1 },
-                { id: 12, name: 'Hot Pot Soup', category: 'Food', price: 65, description: 'Spicy soup of the day', emoji: '🍲', veg: true, spicy: 3 }
-            ];
+            renderCategories();
         }
         
         let cart = [];
@@ -2350,7 +2355,9 @@
 
         // Simple integrity check for price tampering prevention
         function init() {
+            console.log('init() called, isMenuLoading:', isMenuLoading, 'menuItems.length:', menuItems.length);
             if (!applySettings()) return; // abort if disabled
+            console.log('applySettings() passed');
             cleanupStaleOrders(); // Clean up old pending orders
 
             // Initialize broadcast channel for real-time updates
@@ -2365,8 +2372,15 @@
             }
 
             renderCategories();
-            renderMenuItems();
             loadCart();
+            
+            // Only render menu items if not loading (async fetch will call it when done)
+            if (!isMenuLoading) {
+                console.log('Calling renderMenuItems() from init()');
+                renderMenuItems();
+            } else {
+                console.log('Menu is loading, will render when fetch completes');
+            }
         }
         
         function renderCategories() {
