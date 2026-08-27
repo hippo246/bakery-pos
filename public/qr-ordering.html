@@ -1328,7 +1328,7 @@
         
         <div class="categories" id="categories"></div>
         
-        <div class="menu-grid" id="menu-grid"></div>
+        <div class="menu-grid" id="menu-grid" style="display: grid !important;"></div>
     </div>
     
     <div class="cart-modal" id="cart-modal">
@@ -1653,6 +1653,42 @@
         let lastWaiterCallTime = 0;
         const WAITER_CALL_COOLDOWN = 30000; // 30 seconds
         const ORDER_TIMEOUT_MS = 3600000; // 1 hour timeout for pending orders
+        let cart = [];
+        let lastActivityTime = Date.now();
+        let sessionTimeoutWarningShown = false;
+        let sessionTimeoutInterval = null;
+        
+        // QR Settings from POS - must be declared before formatCurrency
+        let qrSettings = {
+            enabled: true,
+            restaurantName: '',
+            welcomeMessage: '',
+            storeName: '',
+            showSearch: true,
+            showCategoryFilter: true,
+            allowCallWaiter: true,
+            allowSpecialRequests: true,
+            enablePaymentCash: true,
+            enablePaymentUPI: true,
+            enablePaymentCard: true,
+            enableTipping: true,
+            defaultTipPercent: 0,
+            tipOptions: [10, 15, 20],
+            enableDarkMode: true,
+            primaryColor: '',
+            secondaryColor: '',
+            currencySymbol: '₹',
+            gstRoundingMode: 'standard',
+            enableSequentialInvoices: false,
+            invoicePrefix: 'INV',
+            invoiceStartNumber: 1,
+            lastInvoiceNumber: 0,
+            enableBusinessHours: false,
+            businessHoursStart: '09:00',
+            businessHoursEnd: '22:00',
+            closedMessage: '',
+            sessionTimeout: 30
+        };
 
         // ── Safe localStorage wrapper with error handling ───────────────────
         const safeStorage = {
@@ -1751,11 +1787,6 @@
         renderMenuItems();
         renderCategories();
         
-        let cart = [];
-        let lastActivityTime = Date.now();
-        let sessionTimeoutWarningShown = false;
-        let sessionTimeoutInterval = null;
-
         // BroadcastChannel for real-time updates across tabs
         let statusChannel = null;
 
@@ -1953,22 +1984,7 @@
         
         const tableInfo = getTableInfo();
 
-        // ── QR Settings from POS ────────────────────────────────────────────
-        let qrSettings = {
-            enabled: true,
-            restaurantName: '',
-            welcomeMessage: '',
-            gstRate: 18,
-            splitGst: true,
-            allowSpecialRequests: true,
-            showCategoryFilter: true,
-            showSearch: true,
-            allowCallWaiter: true,
-            showItemDescriptions: true,
-            primaryColor: '#111827',
-            accentColor: '#10b981',
-            currencySymbol: '₹'
-        };
+        // Load QR settings from localStorage to override defaults
         try {
             const saved = safeStorage.getItem('qr_settings');
             if (saved) Object.assign(qrSettings, JSON.parse(saved));
@@ -2201,37 +2217,38 @@
         }
 
         function applySettings() {
-            // Disabled page overlay
-            if (!qrSettings.enabled) {
-                document.body.innerHTML = `
-                  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;flex-direction:column;gap:16px;padding:24px;text-align:center;">
-                    <div style="font-size:64px;">🚫</div>
-                    <h1 style="font-size:24px;font-weight:700;color:#111827;">Online Ordering Unavailable</h1>
-                    <p style="color:#6b7280;max-width:320px;">QR ordering is currently disabled. Please ask a staff member to assist you.</p>
-                  </div>`;
-                return false;
-            }
+            console.log('applySettings() called, qrSettings.enabled:', qrSettings.enabled);
+            // Disabled page overlay - DISABLED FOR DEPLOYMENT
+            // if (!qrSettings.enabled) {
+            //     document.body.innerHTML = `
+            //       <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;flex-direction:column;gap:16px;padding:24px;text-align:center;">
+            //         <div style="font-size:64px;">🚫</div>
+            //         <h1 style="font-size:24px;font-weight:700;color:#111827;">Online Ordering Unavailable</h1>
+            //         <p style="color:#6b7280;max-width:320px;">QR ordering is currently disabled. Please ask a staff member to assist you.</p>
+            //       </div>`;
+            //     return false;
+            // }
 
-            // Business hours check
-            if (qrSettings.enableBusinessHours) {
-                const now = new Date();
-                const currentTime = now.getHours() * 60 + now.getMinutes();
-                const [startHour, startMin] = (qrSettings.businessHoursStart || '09:00').split(':').map(Number);
-                const [endHour, endMin] = (qrSettings.businessHoursEnd || '22:00').split(':').map(Number);
-                const startTime = startHour * 60 + startMin;
-                const endTime = endHour * 60 + endMin;
+            // Business hours check - DISABLED FOR DEPLOYMENT
+            // if (qrSettings.enableBusinessHours) {
+            //     const now = new Date();
+            //     const currentTime = now.getHours() * 60 + now.getMinutes();
+            //     const [startHour, startMin] = (qrSettings.businessHoursStart || '09:00').split(':').map(Number);
+            //     const [endHour, endMin] = (qrSettings.businessHoursEnd || '22:00').split(':').map(Number);
+            //     const startTime = startHour * 60 + startMin;
+            //     const endTime = endHour * 60 + endMin;
 
-                if (currentTime < startTime || currentTime >= endTime) {
-                    document.body.innerHTML = `
-                      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;flex-direction:column;gap:16px;padding:24px;text-align:center;">
-                        <div style="font-size:64px;">🕐</div>
-                        <h1 style="font-size:24px;font-weight:700;color:#111827;">We're Currently Closed</h1>
-                        <p style="color:#6b7280;max-width:320px;">${qrSettings.closedMessage || 'Please visit us during our business hours.'}</p>
-                        <p style="color:#9ca3af;font-size:14px;">Open: ${qrSettings.businessHoursStart} - ${qrSettings.businessHoursEnd}</p>
-                      </div>`;
-                    return false;
-                }
-            }
+            //     if (currentTime < startTime || currentTime >= endTime) {
+            //         document.body.innerHTML = `
+            //           <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f9fafb;flex-direction:column;gap:16px;padding:24px;text-align:center;">
+            //             <div style="font-size:64px;">🕐</div>
+            //             <h1 style="font-size:24px;font-weight:700;color:#111827;">We're Currently Closed</h1>
+            //             <p style="color:#6b7280;max-width:320px;">${qrSettings.closedMessage || 'Please visit us during our business hours.'}</p>
+            //             <p style="color:#9ca3af;font-size:14px;">Open: ${qrSettings.businessHoursStart} - ${qrSettings.businessHoursEnd}</p>
+            //           </div>`;
+            //         return false;
+            //     }
+            // }
 
             // Restaurant name
             const restaurantName = qrSettings.restaurantName || qrSettings.storeName || 'Menu';
@@ -2334,21 +2351,26 @@
 
         // Simple integrity check for price tampering prevention
         function init() {
-            console.log('init() called, menuItems.length:', menuItems.length);
-            if (!applySettings()) return; // abort if disabled
-            console.log('applySettings() passed');
-            cleanupStaleOrders(); // Clean up old pending orders
+            try {
+                console.log('init() called, menuItems.length:', menuItems.length);
+                if (!applySettings()) return; // abort if disabled
+                console.log('applySettings() passed');
+                cleanupStaleOrders(); // Clean up old pending orders
 
-            // Initialize broadcast channel for real-time updates
-            initStatusChannel();
+                // Initialize broadcast channel for real-time updates
+                initStatusChannel();
 
-            // Start session timeout checker
-            sessionTimeoutInterval = setInterval(checkSessionTimeout, 10000); // Check every 10 seconds
+                // Start session timeout checker
+                sessionTimeoutInterval = setInterval(checkSessionTimeout, 10000); // Check every 10 seconds
 
-            renderCategories();
-            loadCart();
-            console.log('Calling renderMenuItems() from init()');
-            renderMenuItems();
+                renderCategories();
+                loadCart();
+                console.log('Calling renderMenuItems() from init()');
+                renderMenuItems();
+            } catch (error) {
+                console.error('Error in init():', error);
+                document.body.innerHTML = `<div style="padding:20px;color:red;">ERROR: ${error.message}</div>`;
+            }
         }
         
         function renderCategories() {
@@ -2383,7 +2405,19 @@
         }
         
         function renderMenuItems() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            console.log('renderMenuItems() called, menuItems.length:', menuItems.length);
+            const container = document.getElementById('menu-grid');
+            console.log('menu-grid container:', container);
+            
+            if (!container) {
+                console.error('menu-grid container not found!');
+                document.body.innerHTML = '<div style="padding:20px;color:red;font-size:20px;">ERROR: menu-grid container not found</div>';
+                return;
+            }
+
+            const searchTerm = document.getElementById('search-input')?.value?.toLowerCase() || '';
+            console.log('searchTerm:', searchTerm);
+            
             const filtered = menuItems.filter(item => {
                 // Skip sold out/eightySixed items
                 if (item.eightySixed || !item.active) return false;
@@ -2396,7 +2430,7 @@
                 return matchesCategory && matchesSearch;
             });
 
-            const container = document.getElementById('menu-grid');
+            console.log('filtered items:', filtered.length);
 
             if (filtered.length === 0) {
                 container.innerHTML = `
@@ -3718,9 +3752,25 @@
         }
         
         // Initialize on load
-        init();
-        pollActiveOrders();
-        setInterval(pollActiveOrders, 3000); // Poll status changes from localStorage every 3 seconds
+        try {
+            init();
+        } catch (e) {
+            console.error('Error calling init():', e);
+        }
+        
+        try {
+            pollActiveOrders();
+        } catch (e) {
+            console.error('Error calling pollActiveOrders():', e);
+        }
+        
+        setInterval(() => {
+            try {
+                pollActiveOrders();
+            } catch (e) {
+                console.error('Error in pollActiveOrders interval:', e);
+            }
+        }, 3000); // Poll status changes from localStorage every 3 seconds
     </script>
 </body>
 </html>
