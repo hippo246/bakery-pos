@@ -2667,7 +2667,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         overflow: 'auto',
         minHeight: 0,
         maxWidth: '100%',
-        flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row'
+        flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row',
+        background: screenSize === 'small' ? '#f3f4f6' : 'transparent'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
@@ -2679,7 +2680,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
             overflow: 'hidden',
-            minHeight: screenSize === 'small' ? '0' : 'auto',
+            minHeight: screenSize === 'small' ? '300px' : 'auto',
             minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '280px',
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '40%' : 'none'
           }}>
@@ -2860,7 +2861,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         {(screenSize !== 'small' || activeView === 'cart') && (
           <div style={{
             width: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '280px' : '340px',
-            minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '240px' : '320px',
+            minWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '240px' : '320px',
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '320px' : '400px',
             display: 'flex',
             flexDirection: 'column',
@@ -2868,7 +2869,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
             overflow: 'hidden',
-            flexShrink: 0
+            flexShrink: 0,
+            minHeight: screenSize === 'small' ? '400px' : 'auto'
           }}>
           {/* Cart Header */}
           <div style={{
@@ -3483,27 +3485,28 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         {(screenSize !== 'small' || activeView === 'keypad') && (
           <div style={{
             width: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '240px' : '280px',
-            minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '260px',
+            minWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '200px' : '260px',
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '280px' : '320px',
             display: 'flex',
             flexDirection: 'column',
             gap: screenSize === 'small' ? '8px' : '12px',
             overflowY: 'auto',
             paddingRight: screenSize === 'small' ? '4px' : '0',
-            flexShrink: 0
+            flexShrink: 0,
+            minHeight: screenSize === 'small' ? '400px' : 'auto'
           }}>
           {/* Quick Actions */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+            background: screenSize === 'small' ? '#ffffff' : 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
             borderRadius: '14px',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: screenSize === 'small' ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.07)',
             padding: screenSize === 'small' ? '10px' : '12px',
-            backdropFilter: 'blur(8px)'
+            backdropFilter: screenSize === 'small' ? 'none' : 'blur(8px)'
           }}>
             <div style={{
               fontSize: '10px',
               fontWeight: '700',
-              color: 'rgba(255,255,255,0.35)',
+              color: screenSize === 'small' ? '#6b7280' : 'rgba(255,255,255,0.35)',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               marginBottom: '10px',
@@ -3691,7 +3694,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
             padding: screenSize === 'small' ? '6px' : '8px',
-            flex: 1
+            flex: 1,
+            minHeight: screenSize === 'small' ? '300px' : 'auto'
           }}>
             {/* Numpad Mode Toggle */}
             <div style={{ display: 'flex', gap: screenSize === 'small' ? '3px' : '4px', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
