@@ -74,7 +74,11 @@ export default function POSTopbar({
         <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap' }}>
           {/* QR Orders Button */}
           <button
-            onClick={() => setShowQrOrdersPanel(true)}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('QR Orders button clicked, qrOrders count:', (qrOrders || []).length);
+              setShowQrOrdersPanel(true);
+            }}
             style={{
               padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
               background: (qrOrders || []).length > 0 ? '#10b981' : (darkMode ? '#333' : '#f3f4f6'),
