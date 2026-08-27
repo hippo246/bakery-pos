@@ -175,7 +175,7 @@ export default function BakeryPOS({
       maxWidth: '100%',
       background: 'var(--cafe-bg)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-      overflow: isMobile ? 'auto' : 'hidden'
+      overflow: 'hidden'
     }}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar {
@@ -195,7 +195,8 @@ export default function BakeryPOS({
         justifyContent: 'space-between',
         borderBottom: '1px solid var(--cafe-border)',
         boxShadow: 'var(--cafe-shadow-sm)',
-        position: 'relative',
+        position: isMobile ? 'sticky' : 'relative',
+        top: isMobile ? 0 : 'auto',
         transition: 'all 0.25s ease',
         zIndex: 1000,
         height: isMobile ? '50px' : isMedium ? '55px' : isTablet ? '58px' : '60px',
@@ -276,7 +277,8 @@ export default function BakeryPOS({
               paddingBottom: '2px',
               flex: 1,
               minWidth: 0,
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              maxWidth: isMobile ? 'calc(100vw - 80px)' : 'auto'
             }}>
               {[
                 { id: 'orders', label: 'Orders' },
@@ -596,7 +598,13 @@ export default function BakeryPOS({
       </header>
 
       {/* Main Content */}
-      <main style={{ flex: 1, overflow: 'auto', padding: '0', minHeight: 0 }}>
+      <main style={{ 
+        flex: 1, 
+        overflow: isMobile ? 'auto' : 'auto', 
+        padding: '0', 
+        minHeight: 0,
+        WebkitOverflowScrolling: 'touch'
+      }}>
         {renderContent()}
       </main>
     </div>

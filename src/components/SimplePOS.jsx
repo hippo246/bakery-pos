@@ -2678,7 +2678,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             background: '#ffffff',
             borderRadius: '12px',
             border: '1px solid #e5e7eb',
-            overflow: screenSize === 'small' ? 'auto' : 'hidden',
+            overflow: 'hidden',
             minHeight: screenSize === 'small' ? '0' : 'auto',
             minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '280px',
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '40%' : 'none'
