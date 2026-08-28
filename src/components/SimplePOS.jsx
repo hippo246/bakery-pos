@@ -2632,8 +2632,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         minHeight: 0,
         maxWidth: '100%',
         flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row',
-        background: screenSize === 'small' ? '#f3f4f6' : 'transparent',
-        paddingBottom: screenSize === 'small' ? '70px' : '0'
+        background: screenSize === 'small' ? '#f3f4f6' : 'transparent'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
@@ -2684,7 +2683,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                zIndex: 5000,
+                zIndex: 4000,
                 maxHeight: '300px',
                 overflowY: 'auto',
                 marginTop: '8px'
@@ -3268,6 +3267,219 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             )}
           </div>
 
+          {/* ── Inline Custom Order Accordion ─────────────────────── */}
+          {showCustomOrder && settings?.enableCustomOrders !== false && (
+            <div style={{
+              borderTop: '2px dashed #34d399',
+              background: screenSize === 'small' ? '#f0fdf4' : '#0f2520',
+              padding: '10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              flexShrink: 0,
+            }}>
+              {/* Header row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{
+                  fontSize: '11px', fontWeight: '700',
+                  color: '#34d399', letterSpacing: '0.08em', textTransform: 'uppercase',
+                }}>
+                  ✚ Custom Item
+                </span>
+                <button
+                  onClick={() => {
+                    setShowCustomOrder(false);
+                    setCustomOrderName('');
+                    setCustomOrderPrice('');
+                    setCustomOrderQuantity('1');
+                    setCustomOrderNotes('');
+                    setCustomOrderCategory('');
+                    setSelectedBaseItem(null);
+                  }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '14px', color: '#6b7280', padding: '2px 4px',
+                    lineHeight: 1,
+                  }}
+                >✕</button>
+              </div>
+
+              {/* Quick-add presets from settings */}
+              {(() => {
+                const rawPresets = settings?.customOrderPresets;
+                const presets = Array.isArray(rawPresets) && rawPresets.length > 0
+                  ? rawPresets
+                  : [
+                      { name: 'Extra Sauce',      price: 10,  icon: '🥫' },
+                      { name: 'Extra Cheese',     price: 15,  icon: '🧀' },
+                      { name: 'Takeaway Box',     price: 15,  icon: '📦' },
+                      { name: 'Birthday Candles', price: 20,  icon: '🕯️' },
+                      { name: 'Special Message',  price: 25,  icon: '🖋️' },
+                      { name: 'Ice Cream Scoop',  price: 40,  icon: '🍨' },
+                    ];
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {presets.map(p => {
+                      const active = customOrderName === p.name;
+                      return (
+                        <button
+                          key={p.name}
+                          onClick={() => {
+                            if (active) {
+                              setCustomOrderName('');
+                              setCustomOrderPrice('');
+                            } else {
+                              setCustomOrderName(p.name);
+                              setCustomOrderPrice(String(p.price));
+                              if (!customOrderCategory) setCustomOrderCategory(settings?.customOrderDefaultCategory || 'Extras');
+                            }
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            background: active
+                              ? 'rgba(52,211,153,0.25)'
+                              : (screenSize === 'small' ? '#f3f4f6' : 'rgba(255,255,255,0.05)'),
+                            color: active ? '#34d399' : (screenSize === 'small' ? '#374151' : '#9ca3af'),
+                            border: `1px solid ${active ? '#34d399' : (screenSize === 'small' ? '#e5e7eb' : 'rgba(255,255,255,0.08)')}`,
+                            borderRadius: '6px', fontSize: '11px', fontWeight: '600',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                            transition: 'all 0.12s',
+                          }}
+                        >
+                          <span>{p.icon}</span>
+                          <span>{p.name}</span>
+                          <span style={{ opacity: 0.6 }}>₹{p.price}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {/* Name + Price + Qty in one row */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="text"
+                  value={customOrderName}
+                  onChange={e => setCustomOrderName(e.target.value)}
+                  placeholder="Item name *"
+                  style={{
+                    flex: 2, padding: '8px 10px',
+                    background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
+                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '8px', fontSize: '12px', outline: 'none',
+                  }}
+                />
+                <input
+                  type="number"
+                  value={customOrderPrice}
+                  onChange={e => setCustomOrderPrice(e.target.value)}
+                  placeholder="₹ Price *"
+                  style={{
+                    flex: 1, padding: '8px 6px',
+                    background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
+                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '8px', fontSize: '12px', outline: 'none',
+                  }}
+                />
+                <input
+                  type="number"
+                  value={customOrderQuantity}
+                  onChange={e => setCustomOrderQuantity(e.target.value)}
+                  placeholder="Qty"
+                  min="1"
+                  style={{
+                    width: '48px', padding: '8px 6px', textAlign: 'center',
+                    background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
+                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '8px', fontSize: '12px', outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Category (if enabled in settings) */}
+              {settings?.customOrderShowCategory !== false && (
+                <select
+                  value={customOrderCategory}
+                  onChange={e => setCustomOrderCategory(e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 10px',
+                    background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
+                    color: screenSize === 'small' ? '#374151' : '#9ca3af',
+                    border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '8px', fontSize: '12px', outline: 'none', cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Category (optional)</option>
+                  {['Food', 'Beverages', 'Extras', 'Services', 'Custom',
+                    ...(settings?.customOrderExtraCategories || [])
+                  ].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              )}
+
+              {/* Notes (if enabled in settings) */}
+              {settings?.customOrderShowNotes !== false && (
+                <input
+                  type="text"
+                  value={customOrderNotes}
+                  onChange={e => setCustomOrderNotes(e.target.value)}
+                  placeholder="Notes (optional)"
+                  style={{
+                    width: '100%', padding: '8px 10px',
+                    background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
+                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
+                    borderRadius: '8px', fontSize: '12px', outline: 'none',
+                  }}
+                />
+              )}
+
+              {/* Add button */}
+              <button
+                disabled={!customOrderName || !customOrderPrice}
+                onClick={() => {
+                  if (!customOrderName || !customOrderPrice) return;
+                  const customItem = {
+                    id: `custom-${Date.now()}`,
+                    name: customOrderName,
+                    price: parseFloat(customOrderPrice) || 0,
+                    quantity: parseInt(customOrderQuantity) || 1,
+                    notes: customOrderNotes,
+                    category: customOrderCategory || settings?.customOrderDefaultCategory || 'Custom',
+                    isCustom: true,
+                    baseItemId: null,
+                    baseItemName: null,
+                  };
+                  setCart(prev => [...prev, customItem]);
+                  // keep accordion open, just reset fields for rapid entry
+                  setCustomOrderName('');
+                  setCustomOrderPrice('');
+                  setCustomOrderQuantity('1');
+                  setCustomOrderNotes('');
+                  setCustomOrderCategory('');
+                }}
+                style={{
+                  width: '100%', padding: '9px',
+                  background: (customOrderName && customOrderPrice)
+                    ? 'linear-gradient(135deg, #34d399 0%, #10b981 100%)'
+                    : (screenSize === 'small' ? '#e5e7eb' : 'rgba(255,255,255,0.06)'),
+                  color: (customOrderName && customOrderPrice)
+                    ? '#ffffff'
+                    : (screenSize === 'small' ? '#9ca3af' : '#4b5563'),
+                  border: 'none', borderRadius: '8px',
+                  fontSize: '12px', fontWeight: '700', cursor: (customOrderName && customOrderPrice) ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.15s',
+                  boxShadow: (customOrderName && customOrderPrice) ? '0 2px 8px rgba(52,211,153,0.3)' : 'none',
+                }}
+              >
+                + Add to Cart
+              </button>
+            </div>
+          )}
+
           {/* Cart Footer */}
           <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
             {/* Order Summary */}
@@ -3737,7 +3949,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   maxHeight: '150px',
                   overflowY: 'auto',
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  zIndex: 10
+                  zIndex: 50
                 }}>
                   {numpadSearchResults.map(item => (
                     <div
@@ -3911,7 +4123,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: darkMode ? '#1f2937' : '#ffffff',
@@ -4224,7 +4436,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -4334,407 +4546,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         </div>
       )}
 
-      {/* Custom Order Modal */}
-      {showCustomOrder && (() => {
-        // Define add-on state inside a wrapper function scope or use existing states.
-        // Let's create presets with emojis
-        const addOnPresets = [
-          { name: 'Extra Sauce', price: 10, icon: '🥫' },
-          { name: 'Extra Cheese', price: 15, icon: '🧀' },
-          { name: 'Takeaway Box', price: 15, icon: '📦' },
-          { name: 'Birthday Candles', price: 20, icon: '🕯️' },
-          { name: 'Special Message', price: 25, icon: '🖋️' },
-          { name: 'Ice Cream Scoop', price: 40, icon: '🍨' }
-        ];
-
-        return (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(8, 8, 16, 0.85)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: screenSize === 'small' ? 'flex-end' : 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
-          }}>
-            <div style={{
-              background: 'linear-gradient(135deg, #181829 0%, #0f0f18 100%)',
-              borderRadius: screenSize === 'small' ? '20px 20px 0 0' : '20px',
-              padding: screenSize === 'small' ? '20px 16px 28px' : '28px',
-              width: screenSize === 'small' ? '100vw' : '520px',
-              maxWidth: screenSize === 'small' ? '100vw' : '90vw',
-              maxHeight: screenSize === 'small' ? '92vh' : '90vh',
-              overflowY: 'auto',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px'
-            }} className="no-scrollbar">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '14px' }}>
-                <div>
-                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
-                    ✨ Add Custom Order
-                  </h3>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8b8b9e' }}>
-                    Create or customize an off-menu item
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowCustomOrder(false);
-                    setCustomOrderName('');
-                    setCustomOrderPrice('');
-                    setCustomOrderQuantity('1');
-                    setCustomOrderNotes('');
-                    setCustomOrderCategory('');
-                    setSelectedBaseItem(null);
-                  }}
-                  style={{
-                    padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    color: '#e0e0e0',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: screenSize === 'small' ? '24px' : '18px',
-                    fontWeight: '700',
-                    minWidth: screenSize === 'small' ? '48px' : 'auto',
-                    minHeight: screenSize === 'small' ? '48px' : 'auto',
-                    outline: 'none',
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
-                >
-                  ×
-                </button>
-              </div>
-
-              {/* Base Item Selection */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Base Menu Item (Optional)
-                </label>
-                <select
-                  value={selectedBaseItem?.id || ''}
-                  onChange={(e) => {
-                    const item = menuItems.find(m => m.id === e.target.value);
-                    setSelectedBaseItem(item || null);
-                    if (item) {
-                      setCustomOrderName(item.name);
-                      setCustomOrderPrice(item.price.toString());
-                      setCustomOrderCategory(item.category);
-                    }
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option style={{ background: '#181829', color: '#8b8b9e' }} value="">Select a menu item to customize...</option>
-                  {menuItems.filter(item => item.active !== false).map(item => (
-                    <option style={{ background: '#181829', color: '#ffffff' }} key={item.id} value={item.id}>
-                      {item.name} - ₹{item.price.toFixed(2)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quick Presets */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Quick Add-ons
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-                  {addOnPresets.map(preset => {
-                    const isSelected = customOrderName.includes(preset.name);
-                    return (
-                      <button
-                        key={preset.name}
-                        onClick={() => {
-                          if (isSelected) {
-                            // Remove
-                            setCustomOrderName(prev => prev.replace(` + ${preset.name}`, '').replace(preset.name, '').trim());
-                            setCustomOrderPrice(prev => {
-                              const p = Math.max(0, (parseFloat(prev) || 0) - preset.price);
-                              return p > 0 ? p.toString() : '';
-                            });
-                          } else {
-                            // Add
-                            setCustomOrderName(prev => prev ? `${prev} + ${preset.name}` : preset.name);
-                            setCustomOrderPrice(prev => ((parseFloat(prev) || 0) + preset.price).toString());
-                            if (!customOrderCategory) setCustomOrderCategory('Extras');
-                          }
-                        }}
-                        style={{
-                          padding: '10px 6px',
-                          background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.02)',
-                          color: isSelected ? '#818cf8' : '#ffffff',
-                          border: isSelected ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.05)',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s ease',
-                          outline: 'none'
-                        }}
-                      >
-                        <span>{preset.icon}</span>
-                        <div style={{ textAlign: 'left', fontSize: '11px', display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>{preset.name}</span>
-                          <span style={{ opacity: 0.6 }}>+₹{preset.price}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Order Name */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Item Name
-                </label>
-                <input
-                  type="text"
-                  value={customOrderName}
-                  onChange={(e) => setCustomOrderName(e.target.value)}
-                  placeholder="Enter item name or preset..."
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0,0,0,0.2)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Price, Quantity, Category Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Price (₹)
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#8b8b9e', fontSize: '13px' }}>₹</span>
-                    <input
-                      type="number"
-                      value={customOrderPrice}
-                      onChange={(e) => setCustomOrderPrice(e.target.value)}
-                      placeholder="0.00"
-                      style={{
-                        width: '100%',
-                        padding: '12px 12px 12px 24px',
-                        background: 'rgba(0,0,0,0.2)',
-                        color: '#ffffff',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '10px',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    value={customOrderQuantity}
-                    onChange={(e) => setCustomOrderQuantity(e.target.value)}
-                    min="1"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'rgba(0,0,0,0.2)',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      textAlign: 'center'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Category
-                  </label>
-                  <select
-                    value={customOrderCategory}
-                    onChange={(e) => setCustomOrderCategory(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      color: '#ffffff',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option style={{ background: '#181829' }} value="Food">🥐 Food</option>
-                    <option style={{ background: '#181829' }} value="Beverages">☕ Beverages</option>
-                    <option style={{ background: '#181829' }} value="Extras">🥫 Extras</option>
-                    <option style={{ background: '#181829' }} value="Services">🕯️ Services</option>
-                    <option style={{ background: '#181829' }} value="Custom">✨ Custom</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Instructions & Modifications
-                </label>
-                <textarea
-                  value={customOrderNotes}
-                  onChange={(e) => setCustomOrderNotes(e.target.value)}
-                  placeholder="e.g. eggless, extra hot, birthday message details..."
-                  rows="2"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(0,0,0,0.2)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    resize: 'none',
-                    fontFamily: 'inherit',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              {/* Preview Summary */}
-              {customOrderName && customOrderPrice && (
-                <div style={{
-                  background: 'rgba(99, 102, 241, 0.06)',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(99, 102, 241, 0.15)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#ffffff' }}>
-                      {customOrderName}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#8b8b9e', marginTop: '2px' }}>
-                      ₹{parseFloat(customOrderPrice).toFixed(2)} × {customOrderQuantity}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: '#818cf8' }}>
-                    ₹{(parseFloat(customOrderPrice) * parseInt(customOrderQuantity || 1)).toFixed(2)}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
-                <button
-                  onClick={() => {
-                    setShowCustomOrder(false);
-                    setCustomOrderName('');
-                    setCustomOrderPrice('');
-                    setCustomOrderQuantity('1');
-                    setCustomOrderNotes('');
-                    setCustomOrderCategory('');
-                    setSelectedBaseItem(null);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '14px',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    color: '#ffffff',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                    outline: 'none'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (!customOrderName || !customOrderPrice) {
-                      setAlertMessage('Please enter an item name and price.');
-                      setShowAlert(true);
-                      return;
-                    }
-                    const customItem = {
-                      id: `custom-${Date.now()}`,
-                      name: customOrderName,
-                      price: parseFloat(customOrderPrice),
-                      quantity: parseInt(customOrderQuantity) || 1,
-                      category: customOrderCategory || 'Custom',
-                      notes: customOrderNotes,
-                      isCustom: true,
-                      baseItemId: selectedBaseItem?.id || null,
-                      baseItemName: selectedBaseItem?.name || null
-                    };
-                    setCart([...cart, customItem]);
-                    setShowCustomOrder(false);
-                    setCustomOrderName('');
-                    setCustomOrderPrice('');
-                    setCustomOrderQuantity('1');
-                    setCustomOrderNotes('');
-                    setCustomOrderCategory('');
-                    setSelectedBaseItem(null);
-                  }}
-                  style={{
-                    flex: 1.3,
-                    padding: '14px',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
-                    transition: 'all 0.2s',
-                    outline: 'none'
-                  }}
-                >
-                  Add to Cart
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Held Orders Modal */}
       {showHeldOrders && (
@@ -4748,7 +4559,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -4877,7 +4688,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 99999,
+          zIndex: 3000,
           fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
         }}>
           <div style={{
@@ -5009,7 +4820,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -5133,7 +4944,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -5321,7 +5132,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             display: 'flex',
             alignItems: screenSize === 'small' ? 'flex-end' : 'center',
             justifyContent: 'center',
-            zIndex: 99999,
+            zIndex: 3000,
             fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
           }}>
             <div style={{
@@ -5862,10 +5673,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                               flex: 1
                             }}
                           >
-                            <option value="CASH">💵 Cash</option>
-                            <option value="CARD">💳 Card</option>
-                            <option value="UPI">📱 UPI</option>
-                            <option value="WALLET">👛 Wallet</option>
+                            <option key="cash" value="CASH">💵 Cash</option>
+                            <option key="card" value="CARD">💳 Card</option>
+                            <option key="upi" value="UPI">📱 UPI</option>
+                            <option key="wallet" value="WALLET">👛 Wallet</option>
                           </select>
                           <input
                             type="number"
@@ -6351,7 +6162,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 999999,
+          zIndex: 3000,
           fontFamily: '"Outfit", "Sora", -apple-system, sans-serif'
         }}>
           <div style={{
@@ -6456,7 +6267,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -7371,7 +7182,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#252538',
@@ -7438,7 +7249,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -7677,7 +7488,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#252538',
@@ -7726,7 +7537,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -7777,7 +7588,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000
+          zIndex: 3000
         }}>
           <div style={{
             background: '#ffffff',
@@ -7878,7 +7689,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000,
+          zIndex: 3000,
           padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
@@ -8014,7 +7825,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 2000,
+          zIndex: 3000,
           padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{

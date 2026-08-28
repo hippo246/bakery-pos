@@ -47,7 +47,9 @@ export default function POSTopbar({
       padding: screenSize === 'small' ? '12px 16px' : '8px 16px',
       borderBottom: `1px solid ${darkMode ? '#444' : '#d1d5db'}`,
       boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-      minHeight: screenSize === 'small' ? '60px' : 'auto'
+      minHeight: screenSize === 'small' ? '60px' : 'auto',
+      position: 'relative',
+      zIndex: 100
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap', gap: screenSize === 'small' ? '12px' : '0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px' }}>
