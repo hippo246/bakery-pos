@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import useScreenSize from '../../hooks/useScreenSize';
+import { SkeletonCard, InlineLoader } from '../common/LoadingSkeleton';
 
 function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
   const [search, setSearch] = useState('');
@@ -10,6 +11,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const screenSize = useScreenSize();
   const [formData, setFormData] = useState({
     name: '',
@@ -867,6 +869,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [sortBy, setSortBy] = useState('name');
+  const [isLoading, setIsLoading] = useState(true);
   const screenSize = useScreenSize();
   const [customCategory, setCustomCategory] = useState('');
   const [showCustomCategory, setShowCustomCategory] = useState(false);
@@ -885,6 +888,12 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
     allergens: '',
     dietary: 'veg' // 'veg', 'non-veg', 'vegan', 'gf'
   });
+
+  // Simulate initial loading
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sync menu items to localStorage for QR ordering
   useEffect(() => {
@@ -1097,7 +1106,9 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
 
       {/* Content */}
       <div style={{ padding: '24px', overflow: 'auto', flex: 1 }}>
-        {activeTab === 'menu' ? (
+        {isLoading ? (
+          <SkeletonCard count={6} />
+        ) : activeTab === 'menu' ? (
           <>
             {/* Top Bar Filters & Search */}
             <div style={{

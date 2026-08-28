@@ -86,7 +86,7 @@ export default function Tables({
       catch { /* ignore */ }
     };
     load();
-    const id = setInterval(load, 3000);
+    const id = setInterval(load, 30000); // Increased from 3s to 30s to reduce CPU usage
     return () => clearInterval(id);
   }, []);
 
@@ -98,7 +98,7 @@ export default function Tables({
       catch { /* ignore */ }
     };
     load();
-    const id = setInterval(load, 10000);
+    const id = setInterval(load, 30000); // Increased from 10s to 30s to reduce CPU usage
     return () => clearInterval(id);
   }, []);
 
@@ -134,7 +134,7 @@ export default function Tables({
       } catch { /* ignore */ }
     };
     check();
-    const id = setInterval(check, 5000);
+    const id = setInterval(check, 30000); // Increased from 5s to 30s to reduce CPU usage
     return () => clearInterval(id);
   }, [lastCallCount, playChime]);
 

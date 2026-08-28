@@ -166,6 +166,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     mobileShowLabels:   settings.mobileShowLabels    ?? true,
     mobileNavStyle:     settings.mobileNavStyle      ?? 'pill',
     mobileIconSize:     settings.mobileIconSize      ?? 'md',
+    tabletLayoutMode:   settings.tabletLayoutMode    ?? 'sidebar',
     tabletSidebarMode:  settings.tabletSidebarMode   ?? 'compact',
     // Receipt additional fields
     storeLogo: settings.storeLogo || '',
@@ -1229,69 +1230,122 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   </div>
 
                   {/* ────────────────────────────────────────────── */}
-                  {/* TABLET — SIDEBAR                              */}
+                  {/* TABLET — LAYOUT & SIDEBAR                      */}
                   {/* ────────────────────────────────────────────── */}
                   <div style={card}>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#1f2937', marginBottom: '16px' }}>
-                      🖥️ Tablet Sidebar
+                      🖥️ Tablet Layout
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
                       <div>
-                        <label style={label}>Sidebar Mode</label>
+                        <label style={label}>Layout Mode</label>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {[
                             {
-                              value: 'compact',
-                              title: 'Compact (icon-only)',
-                              desc: 'Always visible, icons only — saves space without hiding navigation.',
-                              emoji: '☰',
+                              value: 'sidebar',
+                              title: 'Sidebar',
+                              desc: 'Vertical navigation on the left side — classic tablet layout.',
+                              emoji: '📱',
                             },
                             {
-                              value: 'full',
-                              title: 'Full (expandable)',
-                              desc: 'Starts collapsed to icons, tap the toggle to expand with labels.',
-                              emoji: '⬅️',
-                            },
-                            {
-                              value: 'hidden',
-                              title: 'Hidden (top bar)',
-                              desc: 'No sidebar — uses the scrollable header tab bar instead.',
+                              value: 'topbar',
+                              title: 'Top Bar',
+                              desc: 'Horizontal navigation at the top — more screen space for content.',
                               emoji: '🔝',
                             },
                           ].map(opt => (
                             <button
                               key={opt.value}
-                              onClick={() => handleInputChange('tabletSidebarMode', opt.value)}
+                              onClick={() => handleInputChange('tabletLayoutMode', opt.value)}
                               style={{
                                 padding: '14px 16px',
-                                background: formData.tabletSidebarMode === opt.value
-                                  ? (dm ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)')
+                                background: formData.tabletLayoutMode === opt.value
+                                  ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
                                   : (dm ? '#1a1a2e' : '#ffffff'),
-                                border: `1.5px solid ${formData.tabletSidebarMode === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
+                                border: `1.5px solid ${formData.tabletLayoutMode === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
                                 borderRadius: '12px',
                                 cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', gap: '12px',
-                                textAlign: 'left', width: '100%',
                                 transition: 'all 0.15s',
+                                textAlign: 'left',
                               }}
                             >
-                              <span style={{ fontSize: '22px', flexShrink: 0 }}>{opt.emoji}</span>
+                              <span style={{ fontSize: '20px' }}>{opt.emoji}</span>
                               <div>
-                                <div style={{ fontSize: '14px', fontWeight: '600', color: formData.tabletSidebarMode === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#1f2937') }}>
+                                <div style={{ fontSize: '14px', fontWeight: '600', color: formData.tabletLayoutMode === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#374151') }}>
                                   {opt.title}
                                 </div>
-                                <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af', marginTop: '2px', lineHeight: 1.4 }}>
+                                <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af' }}>
                                   {opt.desc}
                                 </div>
                               </div>
-                              {formData.tabletSidebarMode === opt.value && (
-                                <span style={{ marginLeft: 'auto', fontSize: '16px', color: '#6366f1', flexShrink: 0 }}>✓</span>
-                              )}
                             </button>
                           ))}
                         </div>
                       </div>
+
+                      {/* Sidebar mode - only shown when sidebar layout is selected */}
+                      {formData.tabletLayoutMode === 'sidebar' && (
+                        <>
+                          <div style={{ height: '1px', background: dm ? '#2d2d44' : '#e5e7eb', margin: '8px 0' }} />
+                          <div>
+                            <label style={label}>Sidebar Mode</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {[
+                                {
+                                  value: 'compact',
+                                  title: 'Compact (icon-only)',
+                                  desc: 'Always visible, icons only — saves space without hiding navigation.',
+                                  emoji: '☰',
+                                },
+                                {
+                                  value: 'full',
+                                  title: 'Full (expandable)',
+                                  desc: 'Starts collapsed to icons, tap the toggle to expand with labels.',
+                                  emoji: '⬅️',
+                                },
+                                {
+                                  value: 'hidden',
+                                  title: 'Hidden (top bar)',
+                                  desc: 'No sidebar — uses the scrollable header tab bar instead.',
+                                  emoji: '🔝',
+                                },
+                              ].map(opt => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => handleInputChange('tabletSidebarMode', opt.value)}
+                                  style={{
+                                    padding: '14px 16px',
+                                    background: formData.tabletSidebarMode === opt.value
+                                      ? (dm ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)')
+                                      : (dm ? '#1a1a2e' : '#ffffff'),
+                                    border: `1.5px solid ${formData.tabletSidebarMode === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '12px',
+                                    textAlign: 'left', width: '100%',
+                                    transition: 'all 0.15s',
+                                  }}
+                                >
+                                  <span style={{ fontSize: '22px', flexShrink: 0 }}>{opt.emoji}</span>
+                                  <div>
+                                    <div style={{ fontSize: '14px', fontWeight: '600', color: formData.tabletSidebarMode === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#1f2937') }}>
+                                      {opt.title}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af', marginTop: '2px', lineHeight: 1.4 }}>
+                                      {opt.desc}
+                                    </div>
+                                  </div>
+                                  {formData.tabletSidebarMode === opt.value && (
+                                    <span style={{ marginLeft: 'auto', fontSize: '16px', color: '#6366f1', flexShrink: 0 }}>✓</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
 
                     </div>
                   </div>

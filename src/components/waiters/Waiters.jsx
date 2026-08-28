@@ -26,7 +26,7 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
     };
 
     loadQROrders();
-    const interval = setInterval(loadQROrders, 3000); // Check every 3 seconds
+    const interval = setInterval(loadQROrders, 30000); // Increased from 3s to 30s to reduce CPU usage
 
     return () => clearInterval(interval);
   }, []);
@@ -91,7 +91,7 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
     };
 
     checkWaiterCalls();
-    const interval = setInterval(checkWaiterCalls, 5000); // Check every 5 seconds
+    const interval = setInterval(checkWaiterCalls, 30000); // Increased from 5s to 30s to reduce CPU usage
 
     return () => clearInterval(interval);
   }, [lastCallCount]);

@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import SpeakButton from '../voice/SpeakButton';
-import textToSpeechService from '../../services/voice/TextToSpeechService';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useAppContext } from "../../context/AppContext.jsx";
+import LiveClock from "../common/LiveClock.jsx";
+import SpeakButton from "../voice/SpeakButton.jsx";
+import textToSpeechService from "../../services/voice/TextToSpeechService.js";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate, settings = {}, darkMode = true }) {
@@ -16,12 +18,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
-  // Live auxiliary data from localStorage
+  // Live auxiliary data from localStorage (debounced to reduce performance impact)
   const [wasteRecords, setWasteRecords] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [qrOrdersLocal, setQrOrdersLocal] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-
+  
   useEffect(() => {
     const load = () => {
       try { const w = JSON.parse(localStorage.getItem('bakerypos_waste') || '[]'); setWasteRecords(Array.isArray(w) ? w : []); } catch {}
@@ -30,7 +32,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       setLastRefresh(new Date());
     };
     load();
-    const interval = setInterval(load, 10000); // refresh every 10s for better real-time updates
+    const interval = setInterval(load, 30000); // Increased from 10s to 30s to reduce performance impact
     return () => clearInterval(interval);
   }, []);
 
@@ -47,9 +49,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     };
   }, []);
 
-  // Real-time clock update
+  // Real-time clock update (reduced from 1s to 5s to reduce CPU usage)
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 5000);
     return () => clearInterval(timer);
   }, []);
 
@@ -769,43 +771,46 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
         maxHeight: '100%'
       }}>
         {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            style={{
-              padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
-              background: activeTab === 'overview' ? '#6366f1' : 'transparent',
-              color: activeTab === 'overview' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
-              border: activeTab === 'overview' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-              borderRadius: '8px',
-              fontSize: screenSize === 'small' ? '13px' : '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              minHeight: screenSize === 'small' ? '40px' : 'auto'
-            }}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('billing')}
-            style={{
-              padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
-              background: activeTab === 'billing' ? '#6366f1' : 'transparent',
-              color: activeTab === 'billing' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
-              border: activeTab === 'billing' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-              borderRadius: '8px',
-              fontSize: screenSize === 'small' ? '13px' : '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              minHeight: screenSize === 'small' ? '40px' : 'auto'
-            }}
-          >
-            Billing & Orders
-          </button>
-          <SpeakButton
-            onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
-            size={screenSize === 'small' ? 'small' : 'medium'}
-          />
+        <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: screenSize === 'small' ? '16px' : '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setActiveTab('overview')}
+              style={{
+                padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
+                background: activeTab === 'overview' ? '#6366f1' : 'transparent',
+                color: activeTab === 'overview' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
+                border: activeTab === 'overview' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
+                borderRadius: '8px',
+                fontSize: screenSize === 'small' ? '13px' : '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                minHeight: screenSize === 'small' ? '40px' : 'auto'
+              }}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              style={{
+                padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
+                background: activeTab === 'billing' ? '#6366f1' : 'transparent',
+                color: activeTab === 'billing' ? '#ffffff' : darkMode ? '#e0e0e0' : '#8b8b9e',
+                border: activeTab === 'billing' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
+                borderRadius: '8px',
+                fontSize: screenSize === 'small' ? '13px' : '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                minHeight: screenSize === 'small' ? '40px' : 'auto'
+              }}
+            >
+              Billing & Orders
+            </button>
+            <SpeakButton
+              onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
+              size={screenSize === 'small' ? 'small' : 'medium'}
+            />
+          </div>
+          <LiveClock />
         </div>
 
         {/* Tab Content */}
@@ -1485,347 +1490,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               </div>
             </div>
           </>
-        ) : (
-          <>
-            {/* Billing & Orders Tab */}
-            <div style={{ marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
-              {/* Filters */}
-              <div style={{
-                display: 'flex',
-                gap: screenSize === 'small' ? '8px' : '12px',
-                marginBottom: screenSize === 'small' ? '16px' : '20px',
-                flexWrap: 'wrap'
-              }}>
-                <input
-                  type="text"
-                  placeholder="Search orders..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    flex: 1,
-                    minWidth: screenSize === 'small' ? '100%' : '200px',
-                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: darkMode ? '#252538' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: screenSize === 'small' ? '13px' : '14px'
-                  }}
-                />
-                <input
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                  style={{
-                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: darkMode ? '#252538' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    cursor: 'pointer',
-                    flex: screenSize === 'small' ? '1' : 'auto'
-                  }}
-                />
-                <input
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                  style={{
-                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: darkMode ? '#252538' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    cursor: 'pointer',
-                    flex: screenSize === 'small' ? '1' : 'auto'
-                  }}
-                />
-                <select
-                  value={orderFilter}
-                  onChange={(e) => setOrderFilter(e.target.value)}
-                  style={{
-                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: darkMode ? '#252538' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-                    borderRadius: '8px',
-                    color: darkMode ? '#ffffff' : '#111827',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    cursor: 'pointer',
-                    flex: screenSize === 'small' ? '1' : 'auto'
-                  }}
-                >
-                  <option value="all" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>All Orders</option>
-                  <option value="pending" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Pending</option>
-                  <option value="preparing" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Preparing</option>
-                  <option value="completed" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Completed</option>
-                  <option value="cancelled" style={{ background: darkMode ? '#252538' : '#ffffff', color: darkMode ? '#ffffff' : '#111827' }}>Cancelled</option>
-                </select>
-                <button
-                  onClick={handleExportOrders}
-                  style={{
-                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    flex: screenSize === 'small' ? '1' : 'auto'
-                  }}
-                >
-                  📥 CSV
-                </button>
-                <button
-                  onClick={handleExportPDF}
-                  style={{
-                    padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                    background: '#ef4444',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    flex: screenSize === 'small' ? '1' : 'auto'
-                  }}
-                >
-                  📄 PDF
-                </button>
-                {(dateRange.start || dateRange.end) && (
-                  <button
-                    onClick={() => setDateRange({ start: '', end: '' })}
-                    style={{
-                      padding: screenSize === 'small' ? '10px 12px' : '12px 16px',
-                      background: '#ef4444',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: screenSize === 'small' ? '13px' : '14px',
-                      fontWeight: '500',
-                      cursor: 'pointer',
-                      flex: screenSize === 'small' ? '1' : 'auto'
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              {/* Order Stats */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-                gap: screenSize === 'small' ? '12px' : '16px',
-                marginBottom: screenSize === 'small' ? '16px' : '24px'
-              }}>
-                <div style={{
-                  background: darkMode ? '#252538' : '#ffffff',
-                  padding: screenSize === 'small' ? '12px' : '16px',
-                  borderRadius: '12px',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
-                }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Orders</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>
-                    {filteredOrders.length}
-                  </div>
-                </div>
-                <div style={{
-                  background: darkMode ? '#252538' : '#ffffff',
-                  padding: screenSize === 'small' ? '12px' : '16px',
-                  borderRadius: '12px',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
-                }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Revenue</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#10b981' }}>
-                    ₹{filteredOrders.reduce((sum, o) => {
-                      const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
-                      const subtotal = o.subtotal || calculatedSubtotal;
-                      const tax = o.tax || 0;
-                      const discount = o.discount || 0;
-                      const total = o.total || (subtotal + tax - discount);
-                      return sum + total;
-                    }, 0).toLocaleString()}
-                  </div>
-                </div>
-                <div style={{
-                  background: darkMode ? '#252538' : '#ffffff',
-                  padding: screenSize === 'small' ? '12px' : '16px',
-                  borderRadius: '12px',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
-                }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Avg Order</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#6366f1' }}>
-                    ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
-                      const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
-                      const subtotal = o.subtotal || calculatedSubtotal;
-                      const tax = o.tax || 0;
-                      const discount = o.discount || 0;
-                      const total = o.total || (subtotal + tax - discount);
-                      return sum + total;
-                    }, 0) / filteredOrders.length).toFixed(0) : 0}
-                  </div>
-                </div>
-                <div style={{
-                  background: darkMode ? '#252538' : '#ffffff',
-                  padding: screenSize === 'small' ? '12px' : '16px',
-                  borderRadius: '12px',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
-                }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Pending</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: '#f59e0b' }}>
-                    {filteredOrders.filter(o => o.status === 'PENDING').length}
-                  </div>
-                </div>
-              </div>
-
-              {/* Orders List */}
-              <div style={{
-                background: darkMode ? '#252538' : '#ffffff',
-                borderRadius: '16px',
-                padding: screenSize === 'small' ? '16px' : '24px',
-                border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`
-              }}>
-                <div style={{
-                  fontSize: screenSize === 'small' ? '14px' : '18px',
-                  fontWeight: '600',
-                  color: darkMode ? '#ffffff' : '#111827',
-                  marginBottom: screenSize === 'small' ? '16px' : '24px'
-                }}>
-                  📋 Orders ({filteredOrders.length})
-                </div>
-                
-                {filteredOrders.length === 0 ? (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: darkMode ? '#6b6b7e' : '#64748b' }}>
-                    <div style={{ fontSize: '14px' }}>No orders found</div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
-                      {filteredOrders.map(order => (
-                        <div key={order.id} style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: screenSize === 'small' ? '12px' : '16px',
-                          background: darkMode ? '#1a1a2e' : '#f8f9fa',
-                          borderRadius: '12px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-                          flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
-                          gap: screenSize === 'small' ? '8px' : '0',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => handleViewOrder(order)}
-                        >
-                          <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
-                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '4px' }}>
-                              Order #{order.id}
-                            </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>
-                              {new Date(order.createdAt).toLocaleString()}
-                            </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#6b6b7e' : '#64748b' }}>
-                              {order.items?.map(i => i.name).join(', ') || 'No items'}
-                            </div>
-                          </div>
-                          <div style={{ 
-                            textAlign: 'right', 
-                            minWidth: screenSize === 'small' ? '80px' : 'auto',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '4px',
-                            alignItems: screenSize === 'small' ? 'flex-start' : 'flex-end'
-                          }}>
-                            <div style={{
-                              padding: screenSize === 'small' ? '3px 10px' : '4px 12px',
-                              borderRadius: '20px',
-                              fontSize: screenSize === 'small' ? '11px' : '12px',
-                              fontWeight: '600',
-                              background: order.status === 'COMPLETED' ? '#d1fae5' : 
-                                         order.status === 'PREPARING' ? '#fef3c7' : 
-                                         order.status === 'PENDING' ? '#fee2e2' : '#e5e7eb',
-                              color: order.status === 'COMPLETED' ? '#065f46' : 
-                                     order.status === 'PREPARING' ? '#92400e' : 
-                                     order.status === 'PENDING' ? '#991b1b' : '#6b7280'
-                            }}>
-                              {order.status}
-                            </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>
-                              ₹{((order.total || 0) > 0 ? order.total : order.items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0).toFixed(2)}
-                            </div>
-                            <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
-                              {order.paymentMethod || 'CASH'}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {/* Report Summary */}
-                    <div style={{
-                      background: darkMode ? '#252538' : '#ffffff',
-                      borderRadius: '16px',
-                      padding: screenSize === 'small' ? '16px' : '24px',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#e2e8f0'}`,
-                      marginTop: screenSize === 'small' ? '16px' : '24px'
-                    }}>
-                      <div style={{
-                        fontSize: screenSize === 'small' ? '14px' : '18px',
-                        fontWeight: '600',
-                        color: darkMode ? '#ffffff' : '#111827',
-                        marginBottom: screenSize === 'small' ? '16px' : '24px'
-                      }}>
-                        📊 Report Summary
-                      </div>
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(3, 1fr)',
-                        gap: '12px'
-                      }}>
-                        <div style={{ background: darkMode ? '#1a1a2e' : '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Revenue</div>
-                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
-                            ₹{filteredOrders.reduce((sum, o) => {
-                              const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
-                              const subtotal = o.subtotal || calculatedSubtotal;
-                              const tax = o.tax || 0;
-                              const discount = o.discount || 0;
-                              const total = o.total || (subtotal + tax - discount);
-                              return sum + total;
-                            }, 0).toLocaleString()}
-                          </div>
-                        </div>
-                        <div style={{ background: darkMode ? '#1a1a2e' : '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Avg Order Value</div>
-                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#6366f1' }}>
-                            ₹{filteredOrders.length > 0 ? (filteredOrders.reduce((sum, o) => {
-                              const calculatedSubtotal = o.items?.reduce((itemSum, item) => itemSum + (item.price * item.quantity), 0) || 0;
-                              const subtotal = o.subtotal || calculatedSubtotal;
-                              const tax = o.tax || 0;
-                              const discount = o.discount || 0;
-                              const total = o.total || (subtotal + tax - discount);
-                              return sum + total;
-                            }, 0) / filteredOrders.length).toFixed(0) : 0}
-                          </div>
-                        </div>
-                        <div style={{ background: darkMode ? '#1a1a2e' : '#f8f9fa', padding: '12px', borderRadius: '8px' }}>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Date Range</div>
-                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
-                            {dateRange.start && dateRange.end ? 
-                              `${new Date(dateRange.start).toLocaleDateString()} - ${new Date(dateRange.end).toLocaleDateString()}` : 
-                              'All time'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        )}
+        ) : activeTab === 'billing' ? (
+          <Billing darkMode={darkMode} />
+        ) : null}
       </div>
 
       {/* Order Detail Modal */}

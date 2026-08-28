@@ -209,39 +209,73 @@ export default function BrewCRM() {
     return () => window.removeEventListener("brewcrm:storage-error", handler);
   }, []);
 
-  useEffect(() => { 
-    if (isLocalMode) {
+  // Debounced localStorage saves to prevent performance issues
+  useEffect(() => {
+    if (!isLocalMode) return;
+    
+    const timeoutId = setTimeout(() => {
       saveLocalCollection("orders", orders);
-    }
-    // Sync order statuses to localStorage for QR clients to poll
-    try {
-      const qrStatuses = {};
-      orders.forEach(order => {
-        if (order && order.id) {
-          qrStatuses[order.id] = {
-            id: order.id,
-            status: order.status,
-            items: order.items,
-            total: order.total,
-            tableName: order.tableName,
-            token: order.token,
-            createdAt: order.createdAt
-          };
-        }
-      });
-      localStorage.setItem('qr_order_statuses', JSON.stringify(qrStatuses));
-    } catch (e) {
-      console.error('Error syncing order statuses for QR:', e);
-    }
-  }, [orders]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("customers", customers); }, [customers]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("menuItems", menuItems); }, [menuItems]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("staff", staff); }, [staff]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("inventory", inventory); }, [inventory]);
-  useEffect(() => { if (isLocalMode) saveLocalCollection("tables", tables); }, [tables]);
-  useEffect(() => { localStorage.setItem("brewcrm_settings", JSON.stringify(settings)); }, [settings]);
+      // Sync order statuses to localStorage for QR clients to poll
+      try {
+        const qrStatuses = {};
+        orders.forEach(order => {
+          if (order && order.id) {
+            qrStatuses[order.id] = {
+              id: order.id,
+              status: order.status,
+              items: order.items,
+              total: order.total,
+              tableName: order.tableName,
+              token: order.token,
+              createdAt: order.createdAt
+            };
+          }
+        });
+        localStorage.setItem('qr_order_statuses', JSON.stringify(qrStatuses));
+      } catch (e) {
+        console.error('Error syncing order statuses for QR:', e);
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [orders, isLocalMode]);
 
-  // Poll for QR orders every 5 seconds
+  useEffect(() => { 
+    if (!isLocalMode) return;
+    const timeoutId = setTimeout(() => saveLocalCollection("customers", customers), 500);
+    return () => clearTimeout(timeoutId);
+  }, [customers, isLocalMode]);
+  
+  useEffect(() => { 
+    if (!isLocalMode) return;
+    const timeoutId = setTimeout(() => saveLocalCollection("menuItems", menuItems), 500);
+    return () => clearTimeout(timeoutId);
+  }, [menuItems, isLocalMode]);
+  
+  useEffect(() => { 
+    if (!isLocalMode) return;
+    const timeoutId = setTimeout(() => saveLocalCollection("staff", staff), 500);
+    return () => clearTimeout(timeoutId);
+  }, [staff, isLocalMode]);
+  
+  useEffect(() => { 
+    if (!isLocalMode) return;
+    const timeoutId = setTimeout(() => saveLocalCollection("inventory", inventory), 500);
+    return () => clearTimeout(timeoutId);
+  }, [inventory, isLocalMode]);
+  
+  useEffect(() => { 
+    if (!isLocalMode) return;
+    const timeoutId = setTimeout(() => saveLocalCollection("tables", tables), 500);
+    return () => clearTimeout(timeoutId);
+  }, [tables, isLocalMode]);
+  
+  useEffect(() => { 
+    const timeoutId = setTimeout(() => localStorage.setItem("brewcrm_settings", JSON.stringify(settings)), 500);
+    return () => clearTimeout(timeoutId);
+  }, [settings]);
+
+  // Poll for QR orders every 30 seconds (increased from 5s to reduce CPU usage)
   useEffect(() => {
     const interval = setInterval(() => {
       try {
@@ -262,7 +296,7 @@ export default function BrewCRM() {
       } catch (e) {
         console.error('Failed to poll QR orders:', e);
       }
-    }, 5000);
+    }, 30000); // Increased from 5000ms to 30000ms
 
     return () => clearInterval(interval);
   }, []);

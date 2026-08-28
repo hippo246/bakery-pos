@@ -4,7 +4,8 @@
 import { SelfHealingPreparation } from './SelfHealingPreparation.js';
 import { SelfHealingAction } from './OperationsTypes.js';
 import { getEncryptionEngine } from '../security/EncryptionEngine.js';
-import { getBackupEngine } from '../backup/BackupEngine.js';
+// BackupEngine not implemented yet - using localStorage fallback
+// import { getBackupEngine } from '../backup/BackupEngine.js';
 
 export class SelfHealingEngine extends SelfHealingPreparation {
   constructor(config = {}) {
@@ -25,7 +26,7 @@ export class SelfHealingEngine extends SelfHealingPreparation {
     this.healthCheckTimer = null;
     this.errorClassifier = new ErrorClassifier();
     this.encryptionEngine = getEncryptionEngine();
-    this.backupEngine = getBackupEngine();
+    this.backupEngine = null; // BackupEngine not implemented yet - using localStorage fallback
     
     this.initializeCircuitBreakers();
     this.startHealthMonitoring();
@@ -566,35 +567,14 @@ export class SelfHealingEngine extends SelfHealingPreparation {
    */
   async createEmergencyBackup() {
     console.log('[SelfHealing] Creating emergency backup');
-    
+
     try {
-      // Create backup using BackupEngine
-      const backupEngine = this.backupEngine;
-      
-      // Initialize backup
-      const initResult = await backupEngine.initialize();
-      if (!initResult.success) {
-        throw new Error(initResult.error);
-      }
-      
-      // Set backup modules
-      backupEngine.modules = ['orders', 'inventory', 'customers', 'tables'];
-      backupEngine.type = 'emergency';
-      backupEngine.name = `Emergency Backup ${new Date().toISOString()}`;
-      backupEngine.description = 'Auto-created during critical health recovery';
-      
-      // Start backup
-      const backupResult = await backupEngine.start();
-      
-      if (backupResult.success) {
-        console.log('[SelfHealing] Emergency backup created successfully:', backupResult.backupId);
-        return backupResult;
-      } else {
-        throw new Error(backupResult.error);
-      }
+      // BackupEngine not implemented yet - use localStorage fallback directly
+      console.log('[SelfHealing] BackupEngine not available, using localStorage fallback');
+      return this.createLocalStorageBackup();
     } catch (error) {
       console.error('[SelfHealing] Emergency backup failed:', error);
-      
+
       // Fallback to localStorage backup
       return this.createLocalStorageBackup();
     }

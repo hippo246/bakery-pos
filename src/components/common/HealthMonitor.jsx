@@ -37,10 +37,10 @@ export default function HealthMonitor({ visible = false, onClose }) {
       updateHealthData();
     }
 
-    // Set up auto-refresh
+    // Set up auto-refresh (increased from 5s to 30s to reduce CPU usage)
     let interval;
     if (autoRefresh) {
-      interval = setInterval(updateHealthData, 5000);
+      interval = setInterval(updateHealthData, 30000);
     }
 
     return () => {

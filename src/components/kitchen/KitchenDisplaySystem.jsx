@@ -1037,7 +1037,7 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
 
     console.log('Subscribed to KOT events');
 
-    // Auto refresh interval - always enable as fallback
+    // Auto refresh interval - always enable as fallback (increased from 3s to 30s to reduce CPU usage)
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing KOTs (fallback)');
       loadKOTs(false); // Pass false to skip beeping on auto-refresh
@@ -1045,7 +1045,7 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
       if (performanceSettings.bottleneckDetection) detectBottlenecks();
       if (performanceSettings.prepTimeTracking) calculatePerformanceMetrics();
       if (orderManagementSettings.previewTickets) loadPreviewTickets();
-    }, 3000); // Refresh every 3 seconds as fallback
+    }, 30000); // Refresh every 30 seconds as fallback
 
     // Automated firing by prep time
     let firingInterval;
@@ -2535,7 +2535,7 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
     };
 
     calculateTimeLeft();
-    const interval = setInterval(calculateTimeLeft, 1000);
+    const interval = setInterval(calculateTimeLeft, 5000); // Increased from 1s to 5s to reduce CPU usage
 
     return () => clearInterval(interval);
   }, [kot.estimatedReadyAt]);

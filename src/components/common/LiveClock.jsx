@@ -51,7 +51,7 @@ function LiveClock() {
         lastSecondRef.current = nextSecond;
         setNow(next);
       }
-    }, 1000);
+    }, 5000); // Increased from 1s to 5s to reduce CPU usage
     return () => clearInterval(id);
   }, []);
 

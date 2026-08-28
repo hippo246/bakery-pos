@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BakeryPOS Stress Test</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 20px;
+      margin: 0;
+    }
+    #console {
+      background: #0f0f1a;
+      border: 1px solid #3d3d5c;
+      border-radius: 8px;
+      padding: 20px;
+      max-height: 80vh;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+    }
+    button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #4f46e5;
+    }
+    button:disabled {
+      background: #3d3d5c;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 16px;
+      background: #2d2d44;
+      border-radius: 8px;
+      border: 1px solid #3d3d5c;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 BakeryPOS Extreme Stress Test</h1>
+  <p>This test will push the storage system to its limits with 100k+ entries, 20+ concurrent devices, and rapid write operations.</p>
+  
+  <button id="runTest" onclick="runStressTest()">Run Stress Test</button>
+  <button id="cleanup" onclick="cleanupTestData()">Cleanup Test Data</button>
+  
+  <div id="status">
+    <strong>Status:</strong> Ready to run
+  </div>
+  
+  <div id="console"></div>
+
+  <script type="module">
+    // Override console.log to display in our custom console
+    const customConsole = document.getElementById('console');
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    function addLog(message, color = '#e0e0e0') {
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.style.color = color;
+      entry.innerHTML = message;
+      customConsole.appendChild(entry);
+      customConsole.scrollTop = customConsole.scrollHeight;
+    }
+
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLog(args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' '));
+    };
+
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLog(args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' '), '#ef4444');
+    };
+
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLog(args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' '), '#f59e0b');
+    };
+
+    // Import and run stress test
+    let stressTest = null;
+
+    window.runStressTest = async function() {
+      const runButton = document.getElementById('runTest');
+      const status = document.getElementById('status');
+      
+      runButton.disabled = true;
+      status.innerHTML = '<strong>Status:</strong> Running stress test...';
+      
+      try {
+        const { StorageStressTest } = await import('/src/tests/StressTest.js');
+        stressTest = new StorageStressTest();
+        await stressTest.runAllTests();
+        
+        status.innerHTML = '<strong>Status:</strong> ✅ Stress test completed';
+      } catch (error) {
+        console.error('Stress test failed:', error);
+        status.innerHTML = `<strong>Status:</strong> ❌ Error: ${error.message}`;
+      } finally {
+        runButton.disabled = false;
+      }
+    };
+
+    window.cleanupTestData = async function() {
+      const cleanupButton = document.getElementById('cleanup');
+      const status = document.getElementById('status');
+      
+      cleanupButton.disabled = true;
+      status.innerHTML = '<strong>Status:</strong> Cleaning up test data...';
+      
+      try {
+        if (stressTest) {
+          await stressTest.cleanup();
+        } else {
+          const { StorageStressTest } = await import('/src/tests/StressTest.js');
+          stressTest = new StorageStressTest();
+          await stressTest.cleanup();
+        }
+        
+        status.innerHTML = '<strong>Status:</strong> ✅ Cleanup completed';
+      } catch (error) {
+        console.error('Cleanup failed:', error);
+        status.innerHTML = `<strong>Status:</strong> ❌ Cleanup error: ${error.message}`;
+      } finally {
+        cleanupButton.disabled = false;
+      }
+    };
+
+    // Initial message
+    addLog('Stress test loaded. Click "Run Stress Test" to begin.', '#10b981');
+  </script>
+</body>
+</html>

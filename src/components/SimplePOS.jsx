@@ -199,8 +199,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
     loadQrOrders();
 
-    // Set up interval to refresh QR orders
-    const interval = setInterval(loadQrOrders, 3000); // Refresh every 3 seconds
+    // Set up interval to refresh QR orders (increased from 3s to 30s to reduce CPU usage)
+    const interval = setInterval(loadQrOrders, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -312,7 +312,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     initAggregatorService();
   }, [settings, aggregatorService]);
 
-  // Order timer effect
+  // Order timer effect (increased from 1s to 5s to reduce CPU usage)
   useEffect(() => {
     let interval;
     if (cart.length > 0 && !orderStartTime) {
@@ -327,7 +327,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       interval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - orderStartTime) / 1000);
         setOrderTimer(elapsed);
-      }, 1000);
+      }, 5000);
     }
 
     return () => clearInterval(interval);
@@ -490,16 +490,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setSelectedCategory('All');
   }, []);
 
-  // Auto-save cart to localStorage for recovery
+  // Auto-save cart to localStorage for recovery (debounced)
   useEffect(() => {
     if (posMode === 'advanced' && cart.length > 0 && typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('pos_cart_backup', JSON.stringify(cart));
-        localStorage.setItem('pos_cart_backup_timestamp', Date.now().toString());
-        localStorage.setItem('pos_cart_backup_reason', 'Active session');
-      } catch (error) {
-        console.error('Failed to save cart backup:', error);
-      }
+      const timeoutId = setTimeout(() => {
+        try {
+          localStorage.setItem('pos_cart_backup', JSON.stringify(cart));
+          localStorage.setItem('pos_cart_backup_timestamp', Date.now().toString());
+          localStorage.setItem('pos_cart_backup_reason', 'Active session');
+        } catch (error) {
+          console.error('Failed to save cart backup:', error);
+        }
+      }, 500); // 500ms debounce
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [cart, posMode]);
 

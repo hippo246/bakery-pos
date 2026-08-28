@@ -4,6 +4,7 @@ import OnlineOrderingPortal from "./components/onlineordering/OnlineOrderingPort
 import { TerminalProvider } from "./terminal/TerminalContext.jsx";
 import { THEME_CSS } from "./styles/theme";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import { getStorageAdapter } from "./storage/StorageAdapter.js";
 
 // Add smooth transitions for theme switching
 if (typeof document !== "undefined" && !document.getElementById("brew-theme-transitions")) {
@@ -23,6 +24,46 @@ if (typeof document !== "undefined" && !document.getElementById("brew-theme-tran
 export default function App() {
   const [isOnlineOrdering, setIsOnlineOrdering] = useState(false);
   const [menuItems, setMenuItems] = useState([]);
+  const [storageInitialized, setStorageInitialized] = useState(false);
+
+  // Initialize high-capacity storage system with failover
+  useEffect(() => {
+    const initializeStorage = async () => {
+      try {
+        const storageAdapter = getStorageAdapter({
+          useIndexedDB: true,
+          enableSync: true,
+          enableFailover: true
+        });
+        
+        await storageAdapter.initialize();
+        
+        // Subscribe to failover events
+        storageAdapter.subscribe('storageSwitched', (data) => {
+          console.log('[App] Storage switched:', data);
+          // Could show a notification to user here
+        });
+        
+        storageAdapter.subscribe('healthCheck', (health) => {
+          if (!health.healthy) {
+            console.warn('[App] Storage health check failed:', health.error);
+          }
+        });
+        
+        // Log storage statistics
+        const stats = await storageAdapter.getStats();
+        console.log('[App] Storage initialized with failover:', stats);
+        
+        setStorageInitialized(true);
+      } catch (error) {
+        console.error('[App] Storage initialization failed:', error);
+        // Continue with LocalStorage fallback
+        setStorageInitialized(true);
+      }
+    };
+
+    initializeStorage();
+  }, []);
 
   // Check if we're in online ordering mode based on URL
   useEffect(() => {
@@ -275,7 +316,19 @@ export default function App() {
   return (
     <ErrorBoundary>
       <TerminalProvider>
-        {isOnlineOrdering ? (
+        {!storageInitialized ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            background: '#1a1a2e',
+            color: '#e0e0e0',
+            fontSize: '18px'
+          }}>
+            Initializing storage system...
+          </div>
+        ) : isOnlineOrdering ? (
           <OnlineOrderingPortal />
         ) : (
           <BrewCRM />

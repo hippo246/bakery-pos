@@ -50,14 +50,16 @@ export default function BakeryPOS({
   /* ── Responsive state ────────────────────────────────────────────── */
   const [isMobile,  setIsMobile]  = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768  : false);
   const [isMedium,  setIsMedium]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768  && window.innerWidth < 1024 : false);
-  const [isTablet,  setIsTablet]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 && window.innerWidth < 1366 : false);
+  const [isTablet,  setIsTablet]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1280 : false);
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1280 : false);
 
   useEffect(() => {
     const handle = () => {
       const w = window.innerWidth;
       setIsMobile(w < 768);
       setIsMedium(w >= 768  && w < 1024);
-      setIsTablet(w >= 1024 && w < 1366);
+      setIsTablet(w >= 768 && w < 1280);
+      setIsDesktop(w >= 1280);
     };
     handle();
     window.addEventListener('resize', handle);
@@ -108,6 +110,7 @@ export default function BakeryPOS({
   const mobileShowLabels    = settings?.mobileShowLabels    ?? true;
   const mobileNavStyle      = settings?.mobileNavStyle      ?? 'pill';   // 'pill' | 'underline' | 'icon-only'
   const mobileIconSize      = settings?.mobileIconSize      ?? 'md';     // 'sm' | 'md' | 'lg'
+  const tabletLayoutMode    = settings?.tabletLayoutMode    ?? 'sidebar'; // 'sidebar' | 'topbar'
   const tabletSidebarMode   = settings?.tabletSidebarMode   ?? 'compact'; // 'compact' | 'full' | 'hidden'
   const storeName           = settings?.storeName           || 'BakeryPOS';
 
@@ -158,7 +161,8 @@ export default function BakeryPOS({
   /* ── Content padding-left for desktop sidebar / tablet sidebar ──── */
   const getContentPaddingLeft = () => {
     if (isMobile) return '0';
-    if (isMedium || isTablet) {
+    if (isTablet) {
+      if (tabletLayoutMode === 'topbar') return '0';
       if (tabletSidebarMode === 'hidden') return '0';
       if (tabletSidebarMode === 'full')    return tabletSidebarOpen ? '240px' : '64px';
       return '64px'; // compact always-visible icon sidebar
@@ -170,7 +174,7 @@ export default function BakeryPOS({
   /* ── Tablet sidebar dimensions                                    ── */
   const TABLET_SIDEBAR_FULL_W  = 220;
   const TABLET_SIDEBAR_ICON_W  = 64;
-  const showTabletSidebar      = (isMedium || isTablet) && tabletSidebarMode !== 'hidden';
+  const showTabletSidebar      = isTablet && tabletLayoutMode === 'sidebar' && tabletSidebarMode !== 'hidden';
   const tabletSidebarW         = tabletSidebarMode === 'full'
     ? (tabletSidebarOpen ? TABLET_SIDEBAR_FULL_W : TABLET_SIDEBAR_ICON_W)
     : TABLET_SIDEBAR_ICON_W;
@@ -211,10 +215,9 @@ export default function BakeryPOS({
       `}</style>
 
       {/* ══════════════════════════════════════════════════════════════
-          DESKTOP HEADER (≥1024 and not tablet-sidebar mode, or pure desktop)
-          Only shown when NOT mobile and NOT in tablet-sidebar territory
+          DESKTOP HEADER (≥1280px)
           ══════════════════════════════════════════════════════════════ */}
-      {!isMobile && !showTabletSidebar && (
+      {isDesktop && (
         <header style={{
           background: 'var(--cafe-bg-elevated)',
           padding: '16px 24px',
@@ -245,7 +248,7 @@ export default function BakeryPOS({
             </span>
           </div>
 
-          {/* Tab scroll bar */}
+          {/* Navigation Tabs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'center', maxWidth: '900px', minWidth: 0 }}>
             <button onClick={() => scrollTabs('left')} style={scrollBtnStyle}>‹</button>
             <div ref={tabsRef} className="no-scrollbar" style={{
@@ -320,14 +323,51 @@ export default function BakeryPOS({
       )}
 
       {/* Desktop dropdowns */}
-      {menuDropdownOpen && !isMobile && !showTabletSidebar && (
+      {menuDropdownOpen && isDesktop && (
         <DesktopDropdown ref={null} coords={dropdownCoords} items={[
           { id: 'menu',    label: 'Menu Items' },
           { id: 'recipes', label: 'Recipes' },
           { id: 'waste',   label: 'Waste' },
         ]} activeTab={activeTab} onNavigate={(id) => { handleNavigate(id); setMenuDropdownOpen(false); }} />
       )}
-      {customersDropdownOpen && !isMobile && !showTabletSidebar && (
+      {customersDropdownOpen && isDesktop && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'crm',          label: 'Customers' },
+          { id: 'reservations', label: 'Reservations' },
+        ]} activeTab={activeTab} onNavigate={(id) => { handleNavigate(id); setCustomersDropdownOpen(false); }} />
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          TABLET TOPBAR (768-1279px with topbar mode)
+          ══════════════════════════════════════════════════════════════ */}
+      {isTablet && tabletLayoutMode === 'topbar' && (
+        <TabletTopbar
+          activeTab={activeTab}
+          onNavigate={handleNavigate}
+          darkMode={dm}
+          storeName={storeName}
+          onToggleTheme={() => setDarkMode(p => !p)}
+          tabsRef={tabsRef}
+          scrollTabs={scrollTabs}
+          scrollBtnStyle={scrollBtnStyle}
+          menuDropdownOpen={menuDropdownOpen}
+          setMenuDropdownOpen={setMenuDropdownOpen}
+          customersDropdownOpen={customersDropdownOpen}
+          setCustomersDropdownOpen={setCustomersDropdownOpen}
+          dropdownCoords={dropdownCoords}
+          setDropdownCoords={setDropdownCoords}
+        />
+      )}
+
+      {/* Tablet dropdowns for topbar mode */}
+      {menuDropdownOpen && isTablet && tabletLayoutMode === 'topbar' && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'menu',    label: 'Menu Items' },
+          { id: 'recipes', label: 'Recipes' },
+          { id: 'waste',   label: 'Waste' },
+        ]} activeTab={activeTab} onNavigate={(id) => { handleNavigate(id); setMenuDropdownOpen(false); }} />
+      )}
+      {customersDropdownOpen && isTablet && tabletLayoutMode === 'topbar' && (
         <DesktopDropdown ref={null} coords={dropdownCoords} items={[
           { id: 'crm',          label: 'Customers' },
           { id: 'reservations', label: 'Reservations' },
@@ -449,10 +489,10 @@ function DesktopDropdown({ coords, items, activeTab, onNavigate }) {
         position: 'fixed',
         top: `${coords.top}px`,
         left: `${coords.left}px`,
-        background: 'var(--cafe-bg-elevated)',
-        border: '1px solid var(--cafe-border)',
+        background: '#1e1e2e',
+        border: '1px solid #3d3d5c',
         borderRadius: '10px',
-        boxShadow: 'var(--cafe-shadow-lg)',
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
         zIndex: 999999,
         minWidth: '150px',
         padding: '4px',
@@ -467,14 +507,14 @@ function DesktopDropdown({ coords, items, activeTab, onNavigate }) {
           style={{
             width: '100%', textAlign: 'left',
             padding: '10px 16px',
-            background: activeTab === item.id ? 'var(--cafe-accent-dim)' : 'transparent',
-            color: activeTab === item.id ? 'var(--cafe-accent)' : 'var(--cafe-text-primary)',
+            background: activeTab === item.id ? '#6366f1' : '#2d2d44',
+            color: activeTab === item.id ? '#ffffff' : '#e0e0e0',
             border: 'none', borderRadius: '6px',
             fontSize: '13px', fontWeight: activeTab === item.id ? '600' : '400',
             cursor: 'pointer', transition: 'all 0.15s ease',
           }}
-          onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'var(--cafe-bg-hover)'; }}
-          onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = 'transparent'; }}
+          onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = '#3d3d5c'; }}
+          onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = '#2d2d44'; }}
         >
           {item.label}
         </button>
@@ -962,3 +1002,110 @@ function TabletSidebar({
     </div>
   );
 }
+
+/* ── Tablet Topbar ────────────────────────────────────────────────────── */
+function TabletTopbar({
+  activeTab, onNavigate, darkMode: dm, storeName, onToggleTheme,
+  tabsRef, scrollTabs, scrollBtnStyle,
+  menuDropdownOpen, setMenuDropdownOpen,
+  customersDropdownOpen, setCustomersDropdownOpen,
+  dropdownCoords, setDropdownCoords,
+}) {
+  return (
+    <header style={{
+      background: 'var(--cafe-bg-elevated)',
+      padding: '12px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottom: '1px solid var(--cafe-border)',
+      boxShadow: 'var(--cafe-shadow-sm)',
+      height: '56px',
+      flexShrink: 0,
+      zIndex: 1000,
+    }}>
+      {/* Logo */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <div style={{
+          width: '30px', height: '30px', borderRadius: '8px',
+          background: 'linear-gradient(135deg, var(--cafe-accent) 0%, var(--cafe-accent-light) 100%)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '15px', boxShadow: 'var(--cafe-shadow-glow)',
+        }}>🥐</div>
+        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--cafe-text-primary)', letterSpacing: '-0.03em' }}>
+          {storeName}
+        </span>
+      </div>
+
+      {/* Tab scroll bar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, justifyContent: 'center', maxWidth: '700px', minWidth: 0, margin: '0 12px' }}>
+        <button onClick={() => scrollTabs('left')} style={scrollBtnStyle}>‹</button>
+        <div ref={tabsRef} className="no-scrollbar" style={{
+          display: 'flex', gap: '4px', overflowX: 'auto', overflowY: 'hidden',
+          scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch',
+          paddingBottom: '2px', flex: 1, minWidth: 0, whiteSpace: 'nowrap',
+        }}>
+          {[
+            { id: 'orders', label: 'Orders' },
+            { id: 'dashboard', label: 'Dashboard' },
+            { id: 'reports', label: 'Reports' },
+            { id: 'crm', label: 'Customers', hasDropdown: true },
+            { id: 'staff', label: 'Staff' },
+            { id: 'menu', label: 'Menu', hasDropdown: true },
+            { id: 'tokens', label: 'Tokens' },
+            { id: 'tables', label: 'Tables' },
+            { id: 'waiters', label: 'Waiters' },
+            { id: 'kitchen', label: 'Kitchen' },
+            { id: 'settings', label: 'Settings' },
+          ].map(item => (
+            <button
+              key={item.id}
+              data-dropdown-trigger
+              onClick={(e) => {
+                e.stopPropagation();
+                if (item.hasDropdown) {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setDropdownCoords({ top: rect.bottom + 4, left: rect.left });
+                  if (item.id === 'menu')      { setMenuDropdownOpen(p => !p); setCustomersDropdownOpen(false); }
+                  if (item.id === 'crm')       { setCustomersDropdownOpen(p => !p); setMenuDropdownOpen(false); }
+                } else {
+                  onNavigate(item.id);
+                }
+              }}
+              style={{
+                padding: '6px 12px',
+                background: activeTab === item.id ? 'var(--cafe-accent)' : 'transparent',
+                color: activeTab === item.id ? '#ffffff' : 'var(--cafe-text-secondary)',
+                border: 'none', borderRadius: '8px',
+                fontSize: '12px', fontWeight: activeTab === item.id ? '600' : '500',
+                cursor: 'pointer', transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+                whiteSpace: 'nowrap',
+                boxShadow: activeTab === item.id ? 'var(--cafe-shadow-glow)' : 'none',
+                display: 'flex', alignItems: 'center', gap: '4px',
+              }}
+            >
+              {item.label}
+              {item.hasDropdown && <span style={{ fontSize: '10px' }}>▼</span>}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => scrollTabs('right')} style={scrollBtnStyle}>›</button>
+      </div>
+
+      {/* Right controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        <button
+          onClick={onToggleTheme}
+          style={{
+            background: 'var(--cafe-bg-hover)', border: '1px solid var(--cafe-border)',
+            borderRadius: '8px', padding: '6px 8px', cursor: 'pointer',
+            fontSize: '14px', color: 'var(--cafe-text-primary)', transition: 'all 0.2s',
+          }}
+        >
+          {dm ? '🌙' : '☀️'}
+        </button>
+      </div>
+    </header>
+  );
+}
+
