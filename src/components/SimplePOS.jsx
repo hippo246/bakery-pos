@@ -970,8 +970,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     return null;
   };
 
-  const processPayment = (e) => {
-    e.preventDefault();
+  const processPayment = () => {
     if (!cart || cart.length === 0) return;
 
     // Validate split payments if selected
@@ -2397,17 +2396,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
       // F1 - Help/Shortcuts
       if (e.key === 'F1') {
-        e.preventDefault();
+        e?.preventDefault();
         setShowShortcuts(true);
       }
       // F2 - Checkout
       else if (e.key === 'F2') {
-        e.preventDefault();
+        e?.preventDefault();
         if (cart.length > 0) setShowPaymentModal(true);
       }
       // F3 - Hold Order
       else if (e.key === 'F3') {
-        e.preventDefault();
+        e?.preventDefault();
         if (cart.length > 0) {
           const heldOrder = {
             id: Date.now(),
@@ -2425,24 +2424,24 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // F4 - Void Last Item
       else if (e.key === 'F4') {
-        e.preventDefault();
+        e?.preventDefault();
         if (cart.length > 0) {
           setCart(cart.slice(0, -1));
         }
       }
       // F5 - Discount Toggle
       else if (e.key === 'F5') {
-        e.preventDefault();
+        e?.preventDefault();
         setDiscount(discount === 0 ? 10 : 0);
       }
       // F6 - Tax Toggle
       else if (e.key === 'F6') {
-        e.preventDefault();
+        e?.preventDefault();
         setGstEnabled(!gstEnabled);
       }
       // F7 - Print Receipt
       else if (e.key === 'F7') {
-        e.preventDefault();
+        e?.preventDefault();
         if (lastOrder) {
           const subtotal = lastOrder.subtotal || lastOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
           const discountAmt = lastOrder.discountAmount || (subtotal * (lastOrder.discount || 0)) / 100;
@@ -2518,18 +2517,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // F8 - Order History
       else if (e.key === 'F8') {
-        e.preventDefault();
+        e?.preventDefault();
         setShowOrderHistory(true);
       }
       // F9 - Quick Code Focus
       else if (e.key === 'F9') {
-        e.preventDefault();
+        e?.preventDefault();
         const quickCodeInput = document.querySelector('input[placeholder*="Quick code"]');
         if (quickCodeInput) quickCodeInput.focus();
       }
       // F10 - Clear Cart
       else if (e.key === 'F10') {
-        e.preventDefault();
+        e?.preventDefault();
         if (confirm('Clear entire cart?')) {
           setCart([]);
           setDiscount(0);
@@ -2537,7 +2536,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // F11 - Fullscreen
       else if (e.key === 'F11') {
-        e.preventDefault();
+        e?.preventDefault();
         if (!document.fullscreenElement) {
           document.documentElement.requestFullscreen();
         } else {
@@ -2546,7 +2545,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // F12 - Settings (placeholder)
       else if (e.key === 'F12') {
-        e.preventDefault();
+        e?.preventDefault();
         alert('Settings panel would open here');
       }
       // Number keys 0-9 for quick add shortcuts
@@ -2566,13 +2565,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // Ctrl/Cmd + B - Focus search/quick code
       else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault();
+        e?.preventDefault();
         const quickCodeInput = document.querySelector('input[placeholder*="Quick code"]');
         if (quickCodeInput) quickCodeInput.focus();
       }
       // Ctrl/Cmd + K - Clear cart
       else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
+        e?.preventDefault();
         if (confirm('Clear entire cart?')) {
           setCart([]);
           setDiscount(0);
@@ -2580,7 +2579,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
       // Ctrl/Cmd + Enter - Checkout
       else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
+        e?.preventDefault();
         if (cart.length > 0) setShowPaymentModal(true);
       }
     };
@@ -2622,41 +2621,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         setShowSearchResults={setShowSearchResults}
       />
 
-      {/* Mobile Tab Navigation */}
-      {screenSize === 'small' && (
-        <div style={{
-          display: 'flex',
-          background: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '4px',
-          gap: '4px'
-        }}>
-          {[
-            { id: 'menu', label: '🍕 Menu' },
-            { id: 'cart', label: `🛒 Cart (${cartCount})` },
-            { id: 'keypad', label: '🔢 Keypad & Actions' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveView(tab.id)}
-              style={{
-                flex: 1,
-                padding: '8px 4px',
-                background: activeView === tab.id ? '#2563eb' : 'transparent',
-                color: activeView === tab.id ? '#ffffff' : '#374151',
-                border: activeView === tab.id ? 'none' : '1px solid #e5e7eb',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* Main Content - Three Column Layout */}
       <div style={{
@@ -2668,7 +2632,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         minHeight: 0,
         maxWidth: '100%',
         flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row',
-        background: screenSize === 'small' ? '#f3f4f6' : 'transparent'
+        background: screenSize === 'small' ? '#f3f4f6' : 'transparent',
+        paddingBottom: screenSize === 'small' ? '70px' : '0'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
@@ -3930,6 +3895,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
         </div>
       )}
+
       </div>
 
       {/* Customer Lookup Modal */}

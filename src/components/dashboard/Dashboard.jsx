@@ -20,16 +20,31 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
   const [wasteRecords, setWasteRecords] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [qrOrdersLocal, setQrOrdersLocal] = useState([]);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
   useEffect(() => {
     const load = () => {
       try { const w = JSON.parse(localStorage.getItem('bakerypos_waste') || '[]'); setWasteRecords(Array.isArray(w) ? w : []); } catch {}
       try { const r = JSON.parse(localStorage.getItem('bakerypos_reservations') || '[]'); setReservations(Array.isArray(r) ? r : []); } catch {}
       try { const q = JSON.parse(localStorage.getItem('qr_orders') || '[]'); setQrOrdersLocal(Array.isArray(q) ? q : []); } catch {}
+      setLastRefresh(new Date());
     };
     load();
-    const interval = setInterval(load, 30000); // refresh every 30s
+    const interval = setInterval(load, 10000); // refresh every 10s for better real-time updates
     return () => clearInterval(interval);
+  }, []);
+
+  // Listen for custom events for instant updates
+  useEffect(() => {
+    const handleOrderUpdate = () => {
+      setLastRefresh(new Date());
+    };
+    window.addEventListener('order-updated', handleOrderUpdate);
+    window.addEventListener('order-created', handleOrderUpdate);
+    return () => {
+      window.removeEventListener('order-updated', handleOrderUpdate);
+      window.removeEventListener('order-created', handleOrderUpdate);
+    };
   }, []);
 
   // Real-time clock update
@@ -63,6 +78,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     const completedOrders = todayOrders.filter(o => o.status === 'COMPLETED');
     const activeOrders = orders.filter(o => o.status === 'PREPARING' || o.status === 'PENDING');
     const pendingOrders = orders.filter(o => o.status === 'PENDING');
+    const cancelledOrders = todayOrders.filter(o => o.status === 'CANCELLED');
     
     // Apply chart filters if selected
     let filteredForCharts = completedOrders;
@@ -153,6 +169,17 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       paymentMethods[method] = (paymentMethods[method] || 0) + total;
     });
     
+    // Calculate additional metrics
+    const orderCompletionRate = todayOrders.length > 0 ? (completedOrders.length / todayOrders.length * 100).toFixed(1) : 0;
+    const cancellationRate = todayOrders.length > 0 ? (cancelledOrders.length / todayOrders.length * 100).toFixed(1) : 0;
+    const avgPreparationTime = completedOrders.length > 0
+      ? completedOrders.reduce((sum, o) => {
+          const created = new Date(o.createdAt);
+          const completed = o.completedAt ? new Date(o.completedAt) : new Date();
+          return sum + (completed - created) / 60000; // minutes
+        }, 0) / completedOrders.length
+      : 0;
+
     return {
       totalSales,
       totalOrders,
@@ -165,6 +192,11 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       hourlySales,
       activeOrders: activeOrders.length,
       pendingOrders: pendingOrders.length,
+      cancelledOrders: cancelledOrders.length,
+      totalTodayOrders: todayOrders.length,
+      orderCompletionRate,
+      cancellationRate,
+      avgPreparationTime,
       paymentMethods,
       // Auxiliary live data
       totalWasteCost: wasteRecords.reduce((sum, w) => sum + (parseFloat(w.cost) || 0), 0),
@@ -172,9 +204,10 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       upcomingReservations: reservations.filter(r => new Date(r.date) >= new Date()).length,
       totalReservations: reservations.length,
       qrOrdersCount: qrOrdersLocal.length,
-      qrOrdersRevenue: qrOrdersLocal.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0)
+      qrOrdersRevenue: qrOrdersLocal.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0),
+      lastRefresh
     };
-  }, [orders, menuItems, inventory, currentTime, selectedCategory, selectedPaymentMethod, wasteRecords, reservations, qrOrdersLocal]);
+  }, [orders, menuItems, inventory, currentTime, selectedCategory, selectedPaymentMethod, wasteRecords, reservations, qrOrdersLocal, lastRefresh]);
 
   const recentOrders = orders
     .filter(o => o.status !== 'CANCELLED')
@@ -796,7 +829,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               <StatCard
                 label="Orders"
                 value={metrics.totalOrders}
-                change="+8.2%"
+                change={`Total: ${metrics.totalTodayOrders}`}
                 trend="up"
                 color="#10b981"
                 screenSize={screenSize}
@@ -815,6 +848,38 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 change="Live"
                 trend="neutral"
                 color="#ef4444"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Cancelled"
+                value={metrics.cancelledOrders}
+                change={`${metrics.cancellationRate}%`}
+                trend="down"
+                color="#dc2626"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Completion Rate"
+                value={`${metrics.orderCompletionRate}%`}
+                change="Today"
+                trend="up"
+                color="#10b981"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Avg Prep Time"
+                value={`${Math.round(metrics.avgPreparationTime)}m`}
+                change="Per order"
+                trend="neutral"
+                color="#8b5cf6"
+                screenSize={screenSize}
+              />
+              <StatCard
+                label="Avg Order Value"
+                value={`₹${Math.round(metrics.avgOrderValue)}`}
+                change="Today"
+                trend="up"
+                color="#06b6d4"
                 screenSize={screenSize}
               />
               <StatCard
@@ -883,9 +948,9 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                 <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '4px' }}>
                   System Status
                 </div>
-                <div style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
                   gap: '8px',
                   padding: '8px 16px',
                   background: 'rgba(255,255,255,0.2)',
@@ -894,16 +959,93 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   fontWeight: '600',
                   color: '#ffffff'
                 }}>
-                  <span style={{ 
-                    width: '8px', 
-                    height: '8px', 
-                    background: '#10b981', 
+                  <span style={{
+                    width: '8px',
+                    height: '8px',
+                    background: '#10b981',
                     borderRadius: '50%',
                     animation: 'pulse 2s infinite'
                   }}></span>
                   Live
                 </div>
+                <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                  Last updated: {lastRefresh.toLocaleTimeString()}
+                </div>
               </div>
+            </div>
+
+            {/* Chart Filters */}
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              marginBottom: screenSize === 'small' ? '16px' : '28px',
+              flexWrap: 'wrap'
+            }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '500', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '4px', display: 'block' }}>
+                  Filter by Category
+                </label>
+                <select
+                  value={selectedCategory || ''}
+                  onChange={(e) => setSelectedCategory(e.target.value || null)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: darkMode ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    color: darkMode ? '#f3f4f6' : '#111827',
+                    fontSize: '13px'
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  {[...new Set(menuItems.map(m => m.category))].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '500', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '4px', display: 'block' }}>
+                  Filter by Payment Method
+                </label>
+                <select
+                  value={selectedPaymentMethod || ''}
+                  onChange={(e) => setSelectedPaymentMethod(e.target.value || null)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: darkMode ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    color: darkMode ? '#f3f4f6' : '#111827',
+                    fontSize: '13px'
+                  }}
+                >
+                  <option value="">All Payment Methods</option>
+                  <option value="CASH">Cash</option>
+                  <option value="CARD">Card</option>
+                  <option value="UPI">UPI</option>
+                  <option value="UPI_QR">UPI QR</option>
+                  <option value="SPLIT">Split</option>
+                </select>
+              </div>
+              <button
+                onClick={() => { setSelectedCategory(null); setSelectedPaymentMethod(null); }}
+                style={{
+                  padding: '8px 16px',
+                  background: darkMode ? '#374151' : '#f3f4f6',
+                  color: darkMode ? '#f3f4f6' : '#374151',
+                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  height: 'fit-content',
+                  marginTop: 'auto'
+                }}
+              >
+                Clear Filters
+              </button>
             </div>
 
             {/* Charts Row */}

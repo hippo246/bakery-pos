@@ -1119,8 +1119,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
           </select>
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
+            onClick={() => {
               exportToPDF();
             }}
             style={{
@@ -1138,8 +1137,7 @@ export default function SimpleReports({ orders = [], menuItems = [], staff = [],
           </button>
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
+            onClick={() => {
               exportToExcel();
             }}
             style={{

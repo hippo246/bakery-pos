@@ -1553,7 +1553,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
   const [staffId, setStaffId] = useState('');
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!selectedItemId || !quantity || !reason) {
       alert('Please fill all required fields');
       return;
@@ -2292,7 +2292,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
   const [gstin, setGstin] = useState(vendor?.gstin || '');
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!name.trim() || !phone.trim()) {
       alert('Name and Phone are required');
       return;
@@ -2476,7 +2476,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!vendorId || items.length === 0 || items.some(i => !i.itemName)) {
       alert('Please select a vendor and add at least one item');
       return;

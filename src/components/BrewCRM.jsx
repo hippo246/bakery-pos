@@ -189,9 +189,12 @@ export default function BrewCRM() {
   const [settings, setSettings] = useState(() => {
     try {
       const saved = localStorage.getItem("brewcrm_settings");
-      return saved ? JSON.parse(saved) : {};
+      const defaultSettings = {
+        mobileNavPosition: 'bottom' // 'top' or 'bottom'
+      };
+      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
     } catch {
-      return {};
+      return { mobileNavPosition: 'bottom' };
     }
   });
 

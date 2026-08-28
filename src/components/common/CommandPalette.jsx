@@ -199,25 +199,25 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }) {
   const handleKeyDown = useCallback((e) => {
     switch (e.key) {
       case "ArrowDown":
-        e.preventDefault();
+        e?.preventDefault();
         setSelectedIndex(prev => (prev + 1) % results.length);
         break;
       case "ArrowUp":
-        e.preventDefault();
+        e?.preventDefault();
         setSelectedIndex(prev => (prev - 1 + results.length) % results.length);
         break;
       case "Enter":
-        e.preventDefault();
+        e?.preventDefault();
         if (results[selectedIndex]) {
           handleSelect(results[selectedIndex]);
         }
         break;
       case "Escape":
-        e.preventDefault();
+        e?.preventDefault();
         onClose();
         break;
       case "Tab":
-        e.preventDefault();
+        e?.preventDefault();
         if (e.shiftKey) {
           setSelectedIndex(prev => (prev - 1 + results.length) % results.length);
         } else {

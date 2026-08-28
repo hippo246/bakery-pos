@@ -17,23 +17,7 @@ import Reservations from './reservations/Reservations';
 import OnlineOrdering from './onlineordering/OnlineOrdering';
 import TokenManagement from './tokens/TokenManagement';
 
-export default function BakeryPOS({
-  orders = [],
-  setOrders,
-  customers = [],
-  setCustomers,
-  staff = [],
-  setStaff,
-  menuItems = [],
-  setMenuItems,
-  inventory = [],
-  setInventory,
-  settings = {},
-  setSettings,
-  tables = [],
-  setTables,
-  onNavigate
-}) {
+export default function BakeryPOS({ orders, setOrders, customers, setCustomers, staff, setStaff, menuItems, setMenuItems, inventory, setInventory, settings, setSettings, tables, setTables }) {
   const [activeTab, setActiveTab] = useState(() => {
     const savedTab = localStorage.getItem('bakerypos_active_tab');
     return savedTab || 'orders';
@@ -108,8 +92,8 @@ export default function BakeryPOS({
   };
 
   const toggleMenuDropdown = (e, dropdownType) => {
-    e.stopPropagation();
-    e.preventDefault();
+    e?.stopPropagation();
+    e?.preventDefault();
     if (dropdownType === 'menu') {
       setMenuDropdownOpen(prev => !prev);
       setCustomersDropdownOpen(false);
@@ -598,15 +582,69 @@ export default function BakeryPOS({
       </header>
 
       {/* Main Content */}
-      <main style={{ 
-        flex: 1, 
-        overflow: isMobile ? 'auto' : 'auto', 
-        padding: '0', 
+      <main style={{
+        flex: 1,
+        overflow: 'auto',
+        padding: '0',
         minHeight: 0,
-        WebkitOverflowScrolling: 'touch'
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: isMobile && settings?.mobileNavPosition === 'bottom' ? '70px' : '0',
+        paddingTop: isMobile && settings?.mobileNavPosition === 'top' ? '60px' : '0'
       }}>
         {renderContent()}
       </main>
+
+      {/* Mobile Navigation Bar */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          [settings?.mobileNavPosition === 'top' ? 'top' : 'bottom']: 0,
+          left: 0,
+          right: 0,
+          background: 'var(--cafe-bg-elevated)',
+          borderTop: settings?.mobileNavPosition === 'bottom' ? '1px solid var(--cafe-border)' : 'none',
+          borderBottom: settings?.mobileNavPosition === 'top' ? '1px solid var(--cafe-border)' : 'none',
+          padding: '8px 12px',
+          paddingBottom: settings?.mobileNavPosition === 'bottom' ? '12px' : '8px',
+          paddingTop: settings?.mobileNavPosition === 'top' ? '12px' : '8px',
+          display: 'flex',
+          gap: '8px',
+          zIndex: 1000,
+          boxShadow: settings?.mobileNavPosition === 'bottom' ? '0 -2px 10px rgba(0,0,0,0.1)' : '0 2px 10px rgba(0,0,0,0.1)'
+        }}>
+          {[
+            { id: 'orders', label: '📋 Orders', icon: '📋' },
+            { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
+            { id: 'reports', label: '📈 Reports', icon: '📈' },
+            { id: 'crm', label: '👤 CRM', icon: '👤' },
+            { id: 'settings', label: '⚙️ Settings', icon: '⚙️' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => handleNavigate(tab.id)}
+              style={{
+                flex: 1,
+                padding: '8px 4px',
+                background: activeTab === tab.id ? 'var(--cafe-accent)' : 'var(--cafe-bg-hover)',
+                color: activeTab === tab.id ? '#ffffff' : 'var(--cafe-text-primary)',
+                border: activeTab === tab.id ? 'none' : '1px solid var(--cafe-border)',
+                borderRadius: '6px',
+                fontSize: '10px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '2px'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>{tab.icon}</span>
+              <span style={{ fontSize: '9px' }}>{tab.label.split(' ')[1]}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1087,10 +1087,10 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
 
     // Bump bar keyboard shortcuts
     const handleKeyDown = (e) => {
-      if (!advancedSettings.bumpBarSupport) return;
+      if (!e || !advancedSettings.bumpBarSupport) return;
 
       // Only trigger if not in an input field
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
 
       const allKOTs = kotManager.getAllKOTs();
       
@@ -1558,31 +1558,35 @@ Printed: ${new Date().toLocaleString()}
 
         {/* Controls - Simplified */}
         <div style={{
-          padding: screenSize === 'small' ? '12px 16px' : screenSize === 'medium' ? '12px 16px' : '16px 20px',
+          padding: screenSize === 'small' ? '16px' : screenSize === 'medium' ? '16px 20px' : '20px 24px',
           background: '#000000',
           borderBottom: '1px solid #00ff00',
           display: 'flex',
-          gap: screenSize === 'small' ? '8px' : screenSize === 'medium' ? '10px' : '20px',
+          gap: screenSize === 'small' ? '12px' : screenSize === 'medium' ? '16px' : '24px',
           alignItems: screenSize === 'small' ? 'flex-start' : 'center',
           flexWrap: 'wrap',
           justifyContent: screenSize === 'small' ? 'flex-start' : 'flex-start',
           flexDirection: screenSize === 'small' ? 'column' : 'row'
         }}>
           {/* Station Filter */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>STATION:</span>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '10px' : '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>STATION:</span>
             <button
               onClick={() => setSelectedStation('all')}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStation === 'all' ? '#00ff00' : '#000000',
                 color: selectedStation === 'all' ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               ALL
@@ -1590,15 +1594,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedStation(KitchenStation.HOT)}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStation === KitchenStation.HOT ? '#00ff00' : '#000000',
                 color: selectedStation === KitchenStation.HOT ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               HOT
@@ -1606,15 +1614,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedStation(KitchenStation.COLD)}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStation === KitchenStation.COLD ? '#00ff00' : '#000000',
                 color: selectedStation === KitchenStation.COLD ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               COLD
@@ -1622,20 +1634,24 @@ Printed: ${new Date().toLocaleString()}
           </div>
 
           {/* Status Filter */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>STATUS:</span>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '10px' : '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>STATUS:</span>
             <button
               onClick={() => setSelectedStatusFilter('all')}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStatusFilter === 'all' ? '#00ff00' : '#000000',
                 color: selectedStatusFilter === 'all' ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               ALL
@@ -1643,15 +1659,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedStatusFilter(KOTStatus.PENDING)}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStatusFilter === KOTStatus.PENDING ? '#ffff00' : '#000000',
                 color: selectedStatusFilter === KOTStatus.PENDING ? '#000000' : '#ffff00',
                 border: '1px solid #ffff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               PENDING
@@ -1659,15 +1679,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedStatusFilter(KOTStatus.PREPARING)}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStatusFilter === KOTStatus.PREPARING ? '#00ff00' : '#000000',
                 color: selectedStatusFilter === KOTStatus.PREPARING ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               PREPARING
@@ -1675,15 +1699,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedStatusFilter(KOTStatus.READY)}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedStatusFilter === KOTStatus.READY ? '#00ff00' : '#000000',
                 color: selectedStatusFilter === KOTStatus.READY ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               READY
@@ -1691,20 +1719,24 @@ Printed: ${new Date().toLocaleString()}
           </div>
  
           {/* Order Type Filter */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>ORDER TYPE:</span>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '10px' : '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>ORDER TYPE:</span>
             <button
               onClick={() => setSelectedOrderTypeFilter('all')}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: selectedOrderTypeFilter === 'all' ? '#00ff00' : '#000000',
                 color: selectedOrderTypeFilter === 'all' ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               ALL
@@ -1712,15 +1744,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedOrderTypeFilter('qr')}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '80px' : '90px',
                 background: selectedOrderTypeFilter === 'qr' ? '#00ff00' : '#000000',
                 color: selectedOrderTypeFilter === 'qr' ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               QR ORDER
@@ -1728,15 +1764,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedOrderTypeFilter('dine-in')}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '80px' : '90px',
                 background: selectedOrderTypeFilter === 'dine-in' ? '#00ff00' : '#000000',
                 color: selectedOrderTypeFilter === 'dine-in' ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               DINE IN
@@ -1744,15 +1784,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setSelectedOrderTypeFilter('takeaway')}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '80px' : '90px',
                 background: selectedOrderTypeFilter === 'takeaway' ? '#00ff00' : '#000000',
                 color: selectedOrderTypeFilter === 'takeaway' ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               TAKEAWAY
@@ -1761,23 +1805,27 @@ Printed: ${new Date().toLocaleString()}
 
 
           {/* Speech Toggle */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>SPEECH:</span>
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '10px' : '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#00ff00', fontFamily: '"Courier New", monospace', fontWeight: 'bold' }}>SPEECH:</span>
             <button
               onClick={() => {
                 const updated = { ...settings, notifications: { ...notificationSettings, speechAnnouncements: !notificationSettings.speechAnnouncements } };
                 onSettingsChange?.(updated);
               }}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '60px' : '70px',
                 background: notificationSettings.speechAnnouncements ? '#00ff00' : '#000000',
                 color: notificationSettings.speechAnnouncements ? '#000000' : '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               {notificationSettings.speechAnnouncements ? 'ON' : 'OFF'}
@@ -1789,22 +1837,26 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => { setShowPrinterSelect(!showPrinterSelect); setShowQuickSettings(false); }}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '120px' : '140px',
                 background: '#000000',
                 color: '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 fontFamily: '"Courier New", monospace',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               🖨 [ PRINTER ]
-              <span style={{ fontSize: '9px', padding: '1px 5px', background: printers.find(p => p.id === selectedPrinter)?.status === 'online' ? '#00ff00' : '#ff0000', color: '#000000', fontWeight: 'bold' }}>
+              <span style={{ fontSize: '9px', padding: '2px 6px', background: printers.find(p => p.id === selectedPrinter)?.status === 'online' ? '#00ff00' : '#ff0000', color: '#000000', fontWeight: 'bold' }}>
                 {printers.find(p => p.id === selectedPrinter)?.status?.toUpperCase() || 'N/A'}
               </span>
             </button>
@@ -1823,7 +1875,7 @@ Printed: ${new Date().toLocaleString()}
                 zIndex: 1001,
                 fontFamily: '"Courier New", monospace'
               }}>
-                <div style={{ padding: '8px 12px', borderBottom: '1px solid #00ff00', fontSize: '11px', fontWeight: 'bold', color: '#00ff00' }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #00ff00', fontSize: '12px', fontWeight: 'bold', color: '#00ff00' }}>
                   &gt; SELECT PRINTER
                 </div>
                 {printers.map(printer => (
@@ -1831,7 +1883,8 @@ Printed: ${new Date().toLocaleString()}
                     key={printer.id}
                     onClick={() => { setSelectedPrinter(printer.id); setShowPrinterSelect(false); }}
                     style={{
-                      padding: '10px 12px',
+                      padding: '14px 16px',
+                      minHeight: '48px',
                       cursor: printer.status === 'online' ? 'pointer' : 'not-allowed',
                       background: selectedPrinter === printer.id ? '#00ff00' : '#000000',
                       color: selectedPrinter === printer.id ? '#000000' : printer.status === 'online' ? '#00ff00' : '#444444',
@@ -1839,16 +1892,18 @@ Printed: ${new Date().toLocaleString()}
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      fontSize: '11px',
-                      transition: 'background 0.15s'
+                      fontSize: '12px',
+                      transition: 'background 0.15s',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                     onMouseEnter={e => { if (selectedPrinter !== printer.id && printer.status === 'online') e.currentTarget.style.background = '#111111'; }}
                     onMouseLeave={e => { if (selectedPrinter !== printer.id) e.currentTarget.style.background = '#000000'; }}
                   >
                     <span style={{ fontWeight: 'bold' }}>{printer.name}</span>
                     <span style={{
-                      fontSize: '9px',
-                      padding: '2px 6px',
+                      fontSize: '10px',
+                      padding: '4px 8px',
                       background: printer.status === 'online' ? (selectedPrinter === printer.id ? '#000000' : '#00ff00') : '#ff0000',
                       color: printer.status === 'online' ? (selectedPrinter === printer.id ? '#00ff00' : '#000000') : '#ffffff',
                       fontWeight: 'bold'
@@ -1857,7 +1912,7 @@ Printed: ${new Date().toLocaleString()}
                     </span>
                   </div>
                 ))}
-                <div style={{ padding: '8px 12px', fontSize: '10px', color: '#444444', borderTop: '1px solid #333' }}>
+                <div style={{ padding: '12px 16px', fontSize: '11px', color: '#444444', borderTop: '1px solid #333' }}>
                   {printers.filter(p => p.status === 'online').length}/{printers.length} printers online
                 </div>
               </div>
@@ -1869,15 +1924,19 @@ Printed: ${new Date().toLocaleString()}
             <button
               onClick={() => setShowQuickSettings(!showQuickSettings)}
               style={{
-                padding: '6px 12px',
+                padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
+                minHeight: '44px',
+                minWidth: screenSize === 'small' ? '100px' : '120px',
                 background: '#000000',
                 color: '#00ff00',
                 border: '1px solid #00ff00',
-                borderRadius: '0px',
-                fontSize: '11px',
+                borderRadius: '4px',
+                fontSize: screenSize === 'small' ? '11px' : '12px',
                 fontWeight: 'bold',
                 cursor: 'pointer',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
               [ SETTINGS ]

@@ -144,6 +144,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     enableTokenSystem: settings.enableTokenSystem !== false,
     tokenPrefix: settings.tokenPrefix || 'T',
     autoAssignTables: settings.autoAssignTables || false,
+    // Mobile UI settings
+    mobileNavPosition: settings.mobileNavPosition || 'bottom',
     // Receipt additional fields
     storeLogo: settings.storeLogo || '',
     cashierName: settings.cashierName || '',
@@ -952,26 +954,52 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   <div style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: t.text }}>
                     🎨 Appearance
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
-                      Theme
-                    </label>
-                    <select
-                      value={formData.theme}
-                      onChange={(e) => handleInputChange('theme', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: `1px solid ${t.border}`,
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        background: t.bgInput,
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
-                    </select>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Theme
+                      </label>
+                      <select
+                        value={formData.theme}
+                        onChange={(e) => handleInputChange('theme', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: t.bgInput,
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: t.textSub, marginBottom: '6px' }}>
+                        Mobile Navigation Position
+                      </label>
+                      <select
+                        value={formData.mobileNavPosition}
+                        onChange={(e) => handleInputChange('mobileNavPosition', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: `1px solid ${t.border}`,
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          background: t.bgInput,
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="bottom">Bottom</option>
+                        <option value="top">Top</option>
+                      </select>
+                      <div style={{ fontSize: '12px', color: t.textSub, marginTop: '4px' }}>
+                        Choose where the navigation bar appears on mobile devices
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
