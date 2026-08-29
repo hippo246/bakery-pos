@@ -164,7 +164,7 @@ export default function OrderHistory({
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   marginBottom: '8px'
                 }}>
                   <div style={{
@@ -174,13 +174,19 @@ export default function OrderHistory({
                   }}>
                     {order.invoiceNumber || order.id}
                   </div>
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    color: darkMode ? '#10b981' : '#059669'
-                  }}>
-                    ₹{order.total?.toFixed(2) || '0.00'}
-                  </div>
+                  {order.token && (
+                    <div style={{
+                      fontSize: '20px',
+                      fontWeight: '800',
+                      color: darkMode ? '#8b5cf6' : '#7c3aed',
+                      background: darkMode ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)',
+                      padding: '4px 12px',
+                      borderRadius: '8px',
+                      lineHeight: 1
+                    }}>
+                      {order.token}
+                    </div>
+                  )}
                 </div>
                 <div style={{
                   fontSize: '12px',
@@ -189,11 +195,39 @@ export default function OrderHistory({
                 }}>
                   {order.customerName || 'Walk-in'}
                 </div>
+                {(order.tableNumber || order.tableName) && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: darkMode ? '#6b7280' : '#9ca3af',
+                    marginBottom: '4px'
+                  }}>
+                    Table: {order.tableNumber || order.tableName}
+                    {order.mergedWith && order.mergedWith.length > 0 && (
+                      <span style={{ color: darkMode ? '#8b5cf6' : '#7c3aed', fontWeight: '600' }}>
+                        {' '} (Merged: {order.mergedWith.join(', ')})
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div style={{
-                  fontSize: '11px',
-                  color: darkMode ? '#6b7280' : '#9ca3af'
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '8px'
                 }}>
-                  {new Date(order.createdAt).toLocaleString()}
+                  <div style={{
+                    fontSize: '11px',
+                    color: darkMode ? '#6b7280' : '#9ca3af'
+                  }}>
+                    {new Date(order.createdAt).toLocaleString()}
+                  </div>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: darkMode ? '#10b981' : '#059669'
+                  }}>
+                    ₹{order.total?.toFixed(2) || '0.00'}
+                  </div>
                 </div>
               </div>
             ))

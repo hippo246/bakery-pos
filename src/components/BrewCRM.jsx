@@ -141,7 +141,10 @@ export default function BrewCRM() {
   const [menuItems, setMenuItems] = useState(() => {
     const starterMenu = MENU_ITEMS.map(m => ({ ...m, active: true, eightySixed: false }));
     const raw = isLocalMode ? loadLocalCollection("menuItems", starterMenu) : starterMenu;
-    return Array.isArray(raw) ? raw : starterMenu;
+    const result = Array.isArray(raw) ? raw : starterMenu;
+    console.log('[BrewCRM] Initial menuItems loaded:', result.length, 'items');
+    console.log('[BrewCRM] Sample menu item:', result[0]);
+    return result;
   });
   const [staff, setStaff] = useState(() => isLocalMode
     ? normalizeArray(loadLocalCollection("staff", []), normalizeStaff, "staff")
@@ -274,6 +277,33 @@ export default function BrewCRM() {
     const timeoutId = setTimeout(() => localStorage.setItem("brewcrm_settings", JSON.stringify(settings)), 500);
     return () => clearTimeout(timeoutId);
   }, [settings]);
+
+  // Sync menu items to localStorage for QR ordering
+  useEffect(() => {
+    try {
+      if (menuItems && menuItems.length > 0) {
+        // Transform to match QR ordering expected format
+        const transformedMenu = menuItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category || item.cat || 'Other',
+          price: item.price,
+          description: item.description || item.desc || '',
+          emoji: item.emoji || '',
+          veg: item.veg !== false,
+          spicy: item.spicy || 0,
+          active: item.active !== false,
+          eightySixed: item.eightySixed || false
+        }));
+        
+        localStorage.setItem('bakery_menu', JSON.stringify(transformedMenu));
+        localStorage.setItem('cafeos_menu', JSON.stringify(transformedMenu));
+        localStorage.setItem('brewcrm_local_menuItems', JSON.stringify(transformedMenu));
+      }
+    } catch (e) {
+      console.error('[BrewCRM] Error syncing menu to localStorage:', e);
+    }
+  }, [menuItems]);
 
   // Poll for QR orders every 30 seconds (increased from 5s to reduce CPU usage)
   useEffect(() => {

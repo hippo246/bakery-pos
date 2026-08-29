@@ -145,7 +145,7 @@ export default function BakeryPOS({
       case 'waste':        return <WasteManagement inventory={inventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('waste')} />;
       case 'reservations': return <Reservations tables={tables} customers={customers} onNavigate={handleNavigate} darkMode={getTabDarkMode('reservations')} />;
       case 'tokens':       return <TokenManagement orders={orders} setOrders={setOrders} onNavigate={handleNavigate} darkMode={getTabDarkMode('tokens')} />;
-      case 'tables':       return <Tables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} settings={settings} darkMode={getTabDarkMode('tables')} />;
+      case 'tables':       return <Tables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} settings={settings} staff={staff} darkMode={getTabDarkMode('tables')} />;
       case 'waiters':      return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} darkMode={getTabDarkMode('waiters')} />;
       case 'kitchen':      return <Kitchen onNavigate={handleNavigate} orders={orders} setOrders={setOrders} menuItems={menuItems} />;
       case 'settings':     return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} darkMode={getTabDarkMode('settings')} />;

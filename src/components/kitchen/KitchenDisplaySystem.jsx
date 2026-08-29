@@ -2365,17 +2365,17 @@ Printed: ${new Date().toLocaleString()}
           display: displaySettings.ticketLayout === 'list' ? 'flex' : 'grid',
           flexDirection: displaySettings.ticketLayout === 'list' ? 'column' : undefined,
           gridTemplateColumns: displaySettings.ticketLayout === 'compact' 
-            ? screenSize === 'small' ? 'repeat(auto-fill, minmax(160px, 1fr))' 
-            : screenSize === 'medium' ? 'repeat(auto-fill, minmax(200px, 1fr))' 
-            : 'repeat(auto-fill, minmax(240px, 1fr))'
-            : screenSize === 'small' ? '1fr' 
+            ? screenSize === 'small' ? 'repeat(auto-fill, minmax(180px, 1fr))' 
             : screenSize === 'medium' ? 'repeat(auto-fill, minmax(220px, 1fr))' 
-            : 'repeat(auto-fill, minmax(260px, 1fr))',
+            : 'repeat(auto-fill, minmax(280px, 1fr))'
+            : screenSize === 'small' ? '1fr' 
+            : screenSize === 'medium' ? 'repeat(auto-fill, minmax(250px, 1fr))' 
+            : 'repeat(auto-fill, minmax(320px, 1fr))',
           gap: displaySettings.ticketLayout === 'compact' 
-            ? '4px' 
-            : screenSize === 'small' ? '6px' 
-            : screenSize === 'medium' ? '8px' 
-            : '12px'
+            ? '8px' 
+            : screenSize === 'small' ? '8px' 
+            : screenSize === 'medium' ? '12px' 
+            : '16px'
         }}>
           {kots.length === 0 ? (
             <div style={{
@@ -2599,13 +2599,13 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
       )}
       {/* Card Header */}
       <div style={{
-        padding: screenSize === 'small' ? '12px' : '16px',
+        padding: screenSize === 'small' ? '16px' : '20px',
         background: '#ffffff',
         borderBottom: '2px dashed #000000',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         position: 'relative',
-        minHeight: screenSize === 'small' ? '60px' : '70px'
+        minHeight: screenSize === 'small' ? '70px' : '80px'
       }}
       onClick={() => setExpanded(!expanded)}
       >
@@ -2714,23 +2714,23 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
 
       {/* Card Body */}
       {expanded && (
-        <div style={{ padding: screenSize === 'small' ? '16px' : '24px', background: '#ffffff' }}>
+        <div style={{ padding: screenSize === 'small' ? '20px' : '28px', background: '#ffffff' }}>
           {/* Items List */}
-          <div style={{ marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
+          <div style={{ marginBottom: screenSize === 'small' ? '20px' : '24px' }}>
             <div style={{
-              fontSize: screenSize === 'small' ? '11px' : '12px',
+              fontSize: screenSize === 'small' ? '12px' : '13px',
               fontWeight: 'bold',
               color: '#000000',
-              marginBottom: screenSize === 'small' ? '10px' : '12px',
+              marginBottom: screenSize === 'small' ? '12px' : '16px',
               fontFamily: '"Courier New", monospace',
               borderBottom: '1px solid #000000',
-              paddingBottom: '8px'
+              paddingBottom: '10px'
             }}>
               ORDER ITEMS ({kot.items?.length || 0})
             </div>
             {kot.items?.map((item, index) => (
               <div key={item.kotItemId || index} style={{
-                padding: '8px 0',
+                padding: '12px 0',
                 borderBottom: '1px dashed #000000',
                 display: 'flex',
                 justifyContent: 'space-between',

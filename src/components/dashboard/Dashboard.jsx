@@ -4,6 +4,7 @@ import LiveClock from "../common/LiveClock.jsx";
 import SpeakButton from "../voice/SpeakButton.jsx";
 import textToSpeechService from "../../services/voice/TextToSpeechService.js";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import Billing from "../billing/WhatsAppBilling.jsx";
 
 export default function SimpleDashboard({ orders = [], setOrders, menuItems = [], inventory = [], onNavigate, settings = {}, darkMode = true }) {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
@@ -1027,11 +1028,11 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   }}
                 >
                   <option value="">All Payment Methods</option>
-                  <option value="CASH">Cash</option>
-                  <option value="CARD">Card</option>
-                  <option value="UPI">UPI</option>
-                  <option value="UPI_QR">UPI QR</option>
-                  <option value="SPLIT">Split</option>
+                  <option key="cash" value="CASH">Cash</option>
+                  <option key="card" value="CARD">Card</option>
+                  <option key="upi" value="UPI">UPI</option>
+                  <option key="upi_qr" value="UPI_QR">UPI QR</option>
+                  <option key="split" value="SPLIT">Split</option>
                 </select>
               </div>
               <button
@@ -1145,7 +1146,7 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
                   💳 Payment Methods
                 </div>
                 <ResponsiveContainer width="100%" height={screenSize === 'small' ? 150 : 200}>
-                  <BarChart data={Object.entries(metrics.paymentMethods).map(([method, amount]) => ({ method, amount }))}>
+                  <BarChart data={Object.entries(metrics.paymentMethods).map(([method, amount], index) => ({ method, amount, key: index }))}>
                     <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#2d2d44' : '#e5e7eb'} />
                     <XAxis dataKey="method" stroke={darkMode ? '#8b8b9e' : '#8b8b9e'} fontSize={screenSize === 'small' ? 10 : 12} />
                     <YAxis stroke={darkMode ? '#8b8b9e' : '#8b8b9e'} fontSize={screenSize === 'small' ? 10 : 12} />

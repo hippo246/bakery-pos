@@ -1,5 +1,68 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
+/* ─── Error Boundary ─────────────────────────────────────────────────── */
+class TablesErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Tables component error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          background: '#1a1a2e',
+          color: '#ffffff',
+          padding: '20px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+          <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>
+            Tables View Error
+          </div>
+          <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '24px', maxWidth: '400px' }}>
+            Something went wrong loading the tables view. This may be due to invalid data.
+          </div>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{
+              padding: '12px 24px',
+              background: '#6366f1',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Try Again
+          </button>
+          {this.state.error && (
+            <div style={{ marginTop: '20px', fontSize: '11px', color: '#6b7280', fontFamily: 'monospace' }}>
+              {this.state.error.toString()}
+            </div>
+          )}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 /* ─── helpers ──────────────────────────────────────────────────────── */
 function formatElapsed(ms) {
   if (!ms || ms < 0) return null;
@@ -11,10 +74,12 @@ function formatElapsed(ms) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
-function elapsedColor(ms) {
+function elapsedColor(ms, settings) {
   const mins = ms / 60000;
-  if (mins < 30) return '#22c55e';
-  if (mins < 60) return '#f59e0b';
+  const warningThreshold = settings?.tables?.elapsedThresholdWarning || 30;
+  const criticalThreshold = settings?.tables?.elapsedThresholdCritical || 60;
+  if (mins < warningThreshold) return '#22c55e';
+  if (mins < criticalThreshold) return '#f59e0b';
   return '#ef4444';
 }
 
@@ -29,7 +94,7 @@ function saveOccupiedSince(map) {
 }
 
 /* ─── component ─────────────────────────────────────────────────────── */
-export default function Tables({
+function Tables({
   onNavigate,
   orders = [],
   setOrders,
@@ -38,9 +103,18 @@ export default function Tables({
   menuItems = [],
   settings = {},
   darkMode = true,
+  staff = [],
 }) {
+  const colorBlindMode = settings.colorBlindMode !== false;
   /* ── screen size ─────────────────────────────────────────────────── */
   const [screenSize, setScreenSize] = useState('large');
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  /* ── filters ─────────────────────────────────────────────────────── */
+  const [dateFilter, setDateFilter] = useState('today'); // 'today', 'yesterday', 'week', 'month', 'custom'
+  const [customDateRange, setCustomDateRange] = useState({ start: '', end: '' });
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [modalDateFilter, setModalDateFilter] = useState('today'); // Separate filter for modal
+  const [modalCustomDateRange, setModalCustomDateRange] = useState({ start: '', end: '' });
   useEffect(() => {
     const handle = () => {
       const w = window.innerWidth;
@@ -50,6 +124,14 @@ export default function Tables({
     window.addEventListener('resize', handle);
     return () => window.removeEventListener('resize', handle);
   }, []);
+
+  // Simulate initial loading state
+  useEffect(() => {
+    if (externalTables.length > 0) {
+      const timer = setTimeout(() => setIsInitialLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [externalTables.length]);
   const sm = screenSize === 'small';
   const dm = darkMode;
 
@@ -70,6 +152,20 @@ export default function Tables({
 
   /* ── occupiedSince map: { [tableId]: isoString } ─────────────────── */
   const [occupiedSince, setOccupiedSince] = useState(loadOccupiedSince);
+
+  /* ── session tracking: { [sessionId]: { tableId, tableName, startTime, endTime, staff, orders, revenue } } ─────────────────── */
+  const TABLE_SESSIONS_KEY = 'tables_sessions_history';
+  
+  const loadSessions = () => {
+    try { return JSON.parse(localStorage.getItem(TABLE_SESSIONS_KEY) || '{}'); }
+    catch { return {}; }
+  };
+  
+  const saveSessions = (sessions) => {
+    localStorage.setItem(TABLE_SESSIONS_KEY, JSON.stringify(sessions));
+  };
+  
+  const [sessions, setSessions] = useState(loadSessions);
 
   /* ── tick every 30s to re-render timers ─────────────────────────── */
   const [tick, setTick] = useState(0);
@@ -176,6 +272,21 @@ export default function Tables({
   const [mergeSource,      setMergeSource]      = useState(null);
   const [mergeTarget,      setMergeTarget]      = useState(null);
 
+  /* ── staff assignment modal ─────────────────────────────────────────── */
+  const [showStaffModal,   setShowStaffModal]   = useState(false);
+  const [staffTable,       setStaffTable]       = useState(null);
+
+  /* ── analytics modal ─────────────────────────────────────────────────── */
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+
+  /* ── toast/snackbar system ─────────────────────────────────────────────── */
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   /* ── close dropdown on outside click ────────────────────────────── */
   useEffect(() => {
     if (!showDropdown) return;
@@ -191,6 +302,7 @@ export default function Tables({
       setShowDropdown(false); setShowModal(false); setShowManageModal(false);
       setShowDeleteAllConfirm(false); setShowQRModal(false); setShowLiveModal(false);
       setShowDeleteConfirm(false); setShowWaiterCalls(false); setShowMergeModal(false);
+      setShowStaffModal(false); setShowAnalyticsModal(false);
     };
     document.addEventListener('keydown', h);
     return () => document.removeEventListener('keydown', h);
@@ -218,23 +330,73 @@ export default function Tables({
     const newOccupied = { ...occupiedSince };
     let changed = false;
 
+    // Build a map of which tables are merged with which (bidirectional)
+    const mergeMap = {};
+    (tables || []).forEach(t => {
+      if (t.mergedWith && t.mergedWith.length > 0) {
+        // This table is merged with others
+        mergeMap[t.id] = t.mergedWith;
+        // Also add reverse mapping for the other tables
+        t.mergedWith.forEach(mergedId => {
+          const mergedTable = tables.find(mt => mt.id === mergedId || mt.name === mergedId);
+          if (mergedTable) {
+            if (!mergeMap[mergedTable.id]) {
+              mergeMap[mergedTable.id] = [];
+            }
+            if (!mergeMap[mergedTable.id].includes(t.name)) {
+              mergeMap[mergedTable.id].push(t.name);
+            }
+          }
+        });
+      }
+    });
+
     const result = (tables || []).map(t => {
       const activeOrders = tableOrders[t.id] || [];
       const isOccupied = activeOrders.some(
         o => o.status === 'IN_PROGRESS' || o.status === 'PENDING'
       );
-      if (isOccupied && !newOccupied[t.id]) {
+      
+      // Check if this table is part of any merge (either as source or target)
+      const mergedWith = mergeMap[t.id] || [];
+      const isMerged = mergedWith.length > 0;
+      
+      // For merged tables, combine orders from all merged tables
+      let allActiveOrders = [...activeOrders];
+      if (isMerged) {
+        mergedWith.forEach(mergedName => {
+          const mergedTable = tables.find(mt => mt.name === mergedName);
+          if (mergedTable && mergedTable.id !== t.id) {
+            const mergedOrders = tableOrders[mergedTable.id] || [];
+            allActiveOrders = [...allActiveOrders, ...mergedOrders];
+          }
+        });
+      }
+      
+      // Use combined orders for occupancy check
+      const finalIsOccupied = allActiveOrders.some(
+        o => o.status === 'IN_PROGRESS' || o.status === 'PENDING'
+      );
+      
+      if (finalIsOccupied && !newOccupied[t.id]) {
         newOccupied[t.id] = new Date().toISOString();
         changed = true;
       }
-      if (!isOccupied && newOccupied[t.id]) {
+      if (!finalIsOccupied && newOccupied[t.id]) {
         delete newOccupied[t.id];
         changed = true;
       }
-      const sinceMs = isOccupied && newOccupied[t.id]
+      const sinceMs = finalIsOccupied && newOccupied[t.id]
         ? now - new Date(newOccupied[t.id]).getTime()
         : null;
-      return { ...t, status: isOccupied ? 'occupied' : 'available', activeOrders, sinceMs };
+      
+      return { 
+        ...t, 
+        status: finalIsOccupied ? 'occupied' : 'available', 
+        activeOrders: allActiveOrders, 
+        sinceMs,
+        mergedWith: isMerged ? mergedWith : undefined
+      };
     });
 
     if (changed) {
@@ -245,11 +407,13 @@ export default function Tables({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tables, tableOrders, tick]);
 
-  /* ── upcoming reservations per table (next 2 hours) ─────────────── */
+  /* ── upcoming reservations per table (configurable window) ─────────── */
   const upcomingReservations = useMemo(() => {
     const map = {};
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
+    const windowMinutes = settings?.tables?.upcomingReservationWindow || 120;
+    const windowMs = windowMinutes * 60000;
     const nowMins  = now.getHours() * 60 + now.getMinutes();
     reservations.forEach(r => {
       if (r.status === 'cancelled') return;
@@ -257,7 +421,7 @@ export default function Tables({
       const [rh, rm] = (r.time || '00:00').split(':').map(Number);
       const rMins = rh * 60 + rm;
       const diffMins = rMins - nowMins;
-      if (diffMins >= 0 && diffMins <= 120) {
+      if (diffMins >= 0 && diffMins <= windowMinutes) {
         const tid = r.tableId;
         if (!map[tid] || diffMins < map[tid].diffMins)
           map[tid] = { ...r, diffMins };
@@ -281,21 +445,286 @@ export default function Tables({
     if (!formData.name.trim()) { setFormAlert('Please enter a table name.'); return; }
     if (selectedTable) {
       setTables(p => p.map(t => t.id === selectedTable.id ? { ...t, ...formData } : t));
+      showToast('Table updated successfully');
     } else {
       setTables(p => [...(p || []), { id: Date.now(), ...formData, status: 'available' }]);
+      showToast('Table added successfully');
     }
     setShowModal(false);
   };
   const confirmDeleteTable = () => {
     setTables(p => p.filter(t => t.id !== tableToDelete));
     setShowDeleteConfirm(false); setTableToDelete(null);
+    showToast('Table deleted successfully');
   };
 
-  /* ── QR helper ───────────────────────────────────────────────────── */
+  const handleUnmergeAll = () => {
+    if (!confirm('Are you sure you want to unmerge all tables? This will separate all merged tables back to individual tables.')) return;
+    
+    setTables(p => p.map(t => ({
+      ...t,
+      mergedWith: undefined
+    })));
+    showToast('All tables unmerged successfully');
+  };
+
+  const handleAssignStaff = (staffName) => {
+    if (!staffTable) return;
+    setTables(p => p.map(t => 
+      t.id === staffTable.id 
+        ? { ...t, assignedStaff: staffName }
+        : t
+    ));
+    setShowStaffModal(false);
+    setStaffTable(null);
+    showToast(staffName ? `Staff assigned to ${staffTable.name}` : `Staff removed from ${staffTable.name}`);
+  };
+
+  /* ── analytics calculations ─────────────────────────────────────────── */
+  const calculateAnalytics = () => {
+    const now = new Date();
+    const occupiedTables = tablesWithStatus.filter(t => t.status === 'occupied');
+    
+    // Session-based analytics
+    const sessionList = Object.values(sessions).filter(s => s.endTime);
+    const activeSessions = Object.values(sessions).filter(s => !s.endTime);
+    
+    // Calculate session durations
+    const sessionDurations = sessionList.map(s => {
+      const start = new Date(s.startTime);
+      const end = new Date(s.endTime);
+      return end - start;
+    });
+    
+    const avgSessionDuration = sessionDurations.length > 0 
+      ? sessionDurations.reduce((a, b) => a + b, 0) / sessionDurations.length 
+      : 0;
+    
+    // Revenue analytics
+    const totalRevenue = sessionList.reduce((sum, s) => sum + (s.revenue || 0), 0);
+    const avgRevenuePerSession = sessionList.length > 0 ? totalRevenue / sessionList.length : 0;
+    
+    // Staff performance
+    const staffStats = {};
+    sessionList.forEach(s => {
+      if (s.staff) {
+        if (!staffStats[s.staff]) {
+          staffStats[s.staff] = { sessions: 0, revenue: 0, duration: 0 };
+        }
+        staffStats[s.staff].sessions++;
+        staffStats[s.staff].revenue += s.revenue || 0;
+        const start = new Date(s.startTime);
+        const end = new Date(s.endTime);
+        staffStats[s.staff].duration += (end - start);
+      }
+    });
+    
+    // Table performance
+    const tableStats = {};
+    sessionList.forEach(s => {
+      if (!tableStats[s.tableName]) {
+        tableStats[s.tableName] = { sessions: 0, revenue: 0, avgDuration: 0 };
+      }
+      tableStats[s.tableName].sessions++;
+      tableStats[s.tableName].revenue += s.revenue || 0;
+    });
+    
+    // Calculate average duration per table
+    Object.keys(tableStats).forEach(tableName => {
+      const tableSessions = sessionList.filter(s => s.tableName === tableName);
+      const durations = tableSessions.map(s => {
+        const start = new Date(s.startTime);
+        const end = new Date(s.endTime);
+        return end - start;
+      });
+      tableStats[tableName].avgDuration = durations.length > 0 
+        ? durations.reduce((a, b) => a + b, 0) / durations.length 
+        : 0;
+    });
+    
+    // Busiest hours (from session start times)
+    const hourCounts = {};
+    [...sessionList, ...activeSessions].forEach(s => {
+      const hour = new Date(s.startTime).getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    
+    const busiestHours = Object.entries(hourCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([hour, count]) => ({
+        hour: parseInt(hour),
+        count,
+        label: `${hour}:00 - ${hour + 1}:00`
+      }));
+    
+    // Today's sessions
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todaySessions = sessionList.filter(s => new Date(s.startTime) >= todayStart);
+    const todayRevenue = todaySessions.reduce((sum, s) => sum + (s.revenue || 0), 0);
+    
+    return {
+      // Session metrics
+      totalSessions: sessionList.length,
+      activeSessions: activeSessions.length,
+      avgSessionDuration,
+      totalRevenue,
+      avgRevenuePerSession,
+      todaySessions: todaySessions.length,
+      todayRevenue,
+      
+      // Performance metrics
+      staffStats,
+      tableStats,
+      busiestHours,
+      
+      // Current state
+      currentlyOccupied: occupiedTables.length,
+      totalTables: tablesWithStatus.length,
+      
+      // Raw session data for detailed view
+      sessionList: sessionList.sort((a, b) => new Date(b.startTime) - new Date(a.startTime)).slice(0, 50),
+      activeSessions: activeSessions
+    };
+  };
+
+  /* ── session tracking hooks ─────────────────────────────────────────── */
+  const startSession = useCallback((table) => {
+    const sessionId = `${table.id}_${Date.now()}`;
+    const session = {
+      id: sessionId,
+      tableId: table.id,
+      tableName: table.name,
+      startTime: new Date().toISOString(),
+      endTime: null,
+      staff: table.assignedStaff || null,
+      orders: [],
+      revenue: 0
+    };
+    setSessions(prev => {
+      const updated = { ...prev, [sessionId]: session };
+      saveSessions(updated);
+      return updated;
+    });
+  }, []);
+
+  const endSession = useCallback((tableId) => {
+    setSessions(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(sessionId => {
+        if (updated[sessionId].tableId === tableId && !updated[sessionId].endTime) {
+          updated[sessionId].endTime = new Date().toISOString();
+        }
+      });
+      saveSessions(updated);
+      return updated;
+    });
+  }, []);
+
+  const updateSessionRevenue = useCallback((tableId, revenue) => {
+    setSessions(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(sessionId => {
+        if (updated[sessionId].tableId === tableId && !updated[sessionId].endTime) {
+          updated[sessionId].revenue = revenue;
+        }
+      });
+      saveSessions(updated);
+      return updated;
+    });
+  }, []);
+
+  // Track session starts/ends based on table status changes
+  useEffect(() => {
+    tablesWithStatus.forEach(table => {
+      const wasOccupied = Object.keys(occupiedSince).includes(String(table.id));
+      const isOccupied = table.status === 'occupied';
+      
+      if (isOccupied && !wasOccupied) {
+        startSession(table);
+      } else if (!isOccupied && wasOccupied) {
+        endSession(table.id);
+      }
+    });
+  }, [tablesWithStatus, occupiedSince, startSession, endSession]);
+
+  // Update session revenue from active orders
+  useEffect(() => {
+    tablesWithStatus.forEach(table => {
+      if (table.status === 'occupied') {
+        const liveOrders = table.activeOrders || [];
+        const revenue = liveOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+        updateSessionRevenue(table.id, revenue);
+      }
+    });
+  }, [tablesWithStatus, updateSessionRevenue]);
   const generateQRCode = (table) => {
     const data = encodeURIComponent(JSON.stringify({ tableId: table.id, tableName: table.name }));
     const base = window.location.origin + window.location.pathname;
     return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(base + '?table=' + data)}`;
+  };
+
+  /* ── filter helpers ─────────────────────────────────────────────────── */
+  const getDateRange = (filter = dateFilter, custom = customDateRange) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (filter) {
+      case 'today':
+        return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) };
+      case 'yesterday':
+        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+        return { start: yesterday, end: today };
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        return { start: weekStart, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) };
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: monthStart, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) };
+      case 'custom':
+        return { 
+          start: custom.start ? new Date(custom.start) : today,
+          end: custom.end ? new Date(new Date(custom.end).getTime() + 24 * 60 * 60 * 1000) : new Date(today.getTime() + 24 * 60 * 60 * 1000)
+        };
+      default:
+        return { start: today, end: new Date(today.getTime() + 24 * 60 * 60 * 1000) };
+    }
+  };
+
+  const filteredOrders = useMemo(() => {
+    const { start, end } = getDateRange(dateFilter, customDateRange);
+    
+    return orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      const matchesDate = orderDate >= start && orderDate < end;
+      const matchesSearch = orderSearchQuery === '' || 
+        order.id?.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+        order.token?.toLowerCase().includes(orderSearchQuery.toLowerCase());
+      return matchesDate && matchesSearch;
+    });
+  }, [orders, dateFilter, customDateRange, orderSearchQuery]);
+
+  const filteredTablesWithStatus = useMemo(() => {
+    return tablesWithStatus.map(table => {
+      const tableOrders = filteredOrders.filter(o => o.tableId === table.id);
+      return {
+        ...table,
+        activeOrders: tableOrders,
+        sinceMs: tableOrders.length > 0 ? table.sinceMs : null
+      };
+    });
+  }, [tablesWithStatus, filteredOrders]);
+
+  const getModalFilteredOrders = (tableId) => {
+    const { start, end } = getDateRange(modalDateFilter, modalCustomDateRange);
+    return orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      const matchesDate = orderDate >= start && orderDate < end;
+      const matchesTable = order.tableId === tableId;
+      return matchesDate && matchesTable;
+    });
   };
 
   /* ── theme shortcuts ─────────────────────────────────────────────── */
@@ -304,7 +733,7 @@ export default function Tables({
   const bgDeep  = dm ? '#14142a' : '#f1f5f9';
   const border  = dm ? '#2d2d44' : '#e5e7eb';
   const text    = dm ? '#ffffff' : '#111827';
-  const muted   = dm ? '#8b8b9e' : '#6b7280';
+  const muted   = dm ? '#8b8b9e' : '#4b5563'; // Darkened for WCAG AA compliance in light mode
   const accent  = '#6366f1';
 
   /* ── reusable sub-components ─────────────────────────────────────── */
@@ -351,6 +780,18 @@ export default function Tables({
         @keyframes fadeSlide { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         .table-card:hover { transform: translateY(-3px) !important; }
         .table-card { transition: transform 0.2s ease, box-shadow 0.2s ease !important; }
+        
+        @media (prefers-reduced-motion: reduce) {
+          @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:1} }
+          @keyframes fadeSlide { from{opacity:1;transform:translateY(0)} to{opacity:1;transform:translateY(0)} }
+          .table-card:hover { transform: none !important; }
+          .table-card { transition: none !important; }
+          *, *::before, *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
+        }
       `}</style>
 
       {/* ── Top bar ────────────────────────────────────────────────── */}
@@ -367,6 +808,46 @@ export default function Tables({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Date filter */}
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            style={{ padding: '8px 12px', background: dm ? '#252538' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '8px', fontSize: sm ? '11px' : '13px', fontWeight: '600', cursor: 'pointer' }}
+          >
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+
+          {/* Custom date inputs */}
+          {dateFilter === 'custom' && (
+            <>
+              <input
+                type="date"
+                value={customDateRange.start}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                style={{ padding: '8px 12px', background: dm ? '#252538' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '8px', fontSize: sm ? '11px' : '13px' }}
+              />
+              <input
+                type="date"
+                value={customDateRange.end}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                style={{ padding: '8px 12px', background: dm ? '#252538' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '8px', fontSize: sm ? '11px' : '13px' }}
+              />
+            </>
+          )}
+
+          {/* Order search */}
+          <input
+            type="text"
+            placeholder="Search order #..."
+            value={orderSearchQuery}
+            onChange={(e) => setOrderSearchQuery(e.target.value)}
+            style={{ padding: '8px 12px', background: dm ? '#252538' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '8px', fontSize: sm ? '11px' : '13px', width: sm ? '120px' : '150px' }}
+          />
+
           {/* Waiter call bell */}
           {waiterCalls.length > 0 && (
             <button onClick={() => setShowWaiterCalls(true)} style={{ padding: '8px 14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontSize: sm ? '11px' : '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', animation: 'pulse 2s infinite' }}>
@@ -382,8 +863,18 @@ export default function Tables({
             ⇆ Merge
           </button>
 
+          {/* Unmerge tables - only show if there are merged tables */}
+          {tablesWithStatus.some(t => t.mergedWith?.length > 0) && (
+            <button
+              onClick={() => handleUnmergeAll()}
+              style={{ padding: '8px 14px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '8px', fontSize: sm ? '11px' : '13px', fontWeight: '600', cursor: 'pointer' }}
+            >
+              🔗 Unmerge All
+            </button>
+          )}
+
           {/* Add table split-button */}
-          <div style={{ position: 'relative', display: 'flex', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 4px rgba(17,24,39,0.2)' }} ref={dropdownRef}>
+          <div style={{ position: 'relative', display: 'flex', borderRadius: '8px', overflow: 'visible', boxShadow: '0 2px 4px rgba(17,24,39,0.2)' }} ref={dropdownRef}>
             <button
               onClick={() => { setSelectedTable(null); setFormData({ name: '', capacity: 4 }); setFormAlert(''); setShowModal(true); }}
               style={{ padding: sm ? '8px 12px' : '8px 16px', background: '#111827', color: '#fff', border: 'none', fontSize: sm ? '11px' : '13px', fontWeight: '700', cursor: 'pointer' }}
@@ -399,7 +890,9 @@ export default function Tables({
                 {[
                   { label: '➕ Add New Table', action: () => { setSelectedTable(null); setFormData({ name: '', capacity: 4 }); setFormAlert(''); setShowModal(true); setShowDropdown(false); } },
                   { label: '⚙️ Manage Tables',  action: () => { setShowManageModal(true); setShowDropdown(false); } },
-                  { label: '🗑️ Delete All',      action: () => { setDeleteAllInput(''); setShowDeleteAllConfirm(true); setShowDropdown(false); }, danger: true },
+                  { label: '� Analytics',       action: () => { setShowAnalyticsModal(true); setShowDropdown(false); } },
+                  { label: '🖨️ Print QR Codes', action: () => { setShowQRModal(true); setShowDropdown(false); } },
+                  { label: '�🗑️ Delete All',      action: () => { setDeleteAllInput(''); setShowDeleteAllConfirm(true); setShowDropdown(false); }, danger: true },
                 ].map(item => (
                   <div key={item.label} onClick={item.action} style={{ padding: '10px 14px', fontSize: '13px', color: item.danger ? '#ef4444' : text, cursor: 'pointer', borderTop: item.danger ? `1px solid ${border}` : 'none' }}
                     onMouseEnter={e => e.currentTarget.style.background = item.danger ? (dm ? '#3a1a1a' : '#fee2e2') : (dm ? '#2d2d48' : '#f3f4f6')}
@@ -424,23 +917,82 @@ export default function Tables({
         </div>
 
         {/* Tables grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: sm
-            ? 'repeat(2, 1fr)'
-            : screenSize === 'medium'
-              ? 'repeat(3, 1fr)'
-              : 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: sm ? '10px' : '16px',
-        }}>
-          {tablesWithStatus.map(table => {
+        {isInitialLoading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${sm ? '140px' : '180px'}, 1fr))`, gap: sm ? '12px' : '18px' }}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} style={{
+                background: bgElev,
+                borderRadius: '14px',
+                padding: sm ? '14px' : '18px',
+                border: `1px solid ${border}`,
+                minHeight: sm ? '120px' : '140px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px'
+              }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: dm ? '#2d2d44' : '#e5e7eb', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: '60%', height: '12px', borderRadius: '6px', background: dm ? '#2d2d44' : '#e5e7eb' }} />
+                <div style={{ width: '40%', height: '10px', borderRadius: '5px', background: dm ? '#2d2d44' : '#e5e7eb' }} />
+              </div>
+            ))}
+          </div>
+        ) : tablesWithStatus.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            background: bgElev,
+            borderRadius: '16px',
+            border: `1px solid ${border}`,
+            minHeight: '300px'
+          }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🪑</div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: text, marginBottom: '8px' }}>
+              No Tables Yet
+            </div>
+            <div style={{ fontSize: '14px', color: muted, marginBottom: '24px', textAlign: 'center', maxWidth: '300px' }}>
+              Get started by adding your first table. You can manage seating capacity and track table status.
+            </div>
+            <button
+              onClick={() => { setSelectedTable(null); setFormData({ name: '', capacity: 4 }); setFormAlert(''); setShowModal(true); }}
+              style={{
+                padding: '12px 24px',
+                background: accent,
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+              }}
+            >
+              ➕ Add Your First Table
+            </button>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: sm
+              ? 'repeat(2, 1fr)'
+              : screenSize === 'medium'
+                ? 'repeat(3, 1fr)'
+                : 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: sm ? '10px' : '16px',
+          }}>
+          {filteredTablesWithStatus.map(table => {
             const occupied  = table.status === 'occupied';
             const elapsed   = formatElapsed(table.sinceMs);
-            const elColor   = table.sinceMs ? elapsedColor(table.sinceMs) : null;
+            const elColor   = table.sinceMs ? elapsedColor(table.sinceMs, settings) : null;
             const upcoming  = upcomingReservations[table.id];
             const merged    = table.mergedWith?.length > 0;
             const liveOrders = table.activeOrders || [];
             const liveTotal  = liveOrders.reduce((s, o) => s + (o.total || 0), 0);
+            const hasQROrders = liveOrders.some(o => o.source === 'qr');
 
             return (
               <div
@@ -451,43 +1003,200 @@ export default function Tables({
                   background: bgElev,
                   borderRadius: '14px',
                   padding: sm ? '14px' : '18px',
-                  border: occupied
-                    ? `2px solid ${elColor || '#f59e0b'}`
-                    : upcoming
-                      ? `2px solid #8b5cf6`
-                      : `1px solid ${border}`,
+                  border: merged
+                    ? `3px solid #8b5cf6`
+                    : occupied
+                      ? `2px solid ${elColor || '#f59e0b'}`
+                      : upcoming
+                        ? `2px solid #8b5cf6`
+                        : `1px solid ${border}`,
                   cursor: 'pointer',
                   position: 'relative',
-                  boxShadow: dm ? '0 4px 6px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.07)',
+                  boxShadow: merged
+                    ? '0 4px 12px rgba(139, 92, 246, 0.3)'
+                    : dm ? '0 4px 6px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.07)',
                   animation: 'fadeSlide 0.25s ease',
                 }}
               >
-                {/* Status dot */}
-                <div style={{ position: 'absolute', top: '12px', right: '12px', width: '10px', height: '10px', borderRadius: '50%', background: occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e', boxShadow: `0 0 0 3px ${occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e'}22` }} />
+                {/* Merged indicator badge */}
+                {merged && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#8b5cf6',
+                    color: '#fff',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)',
+                    zIndex: 10
+                  }}>
+                    🔗 Merged
+                  </div>
+                )}
+
+                {/* Status indicator with shape/icon for color-blind mode */}
+                <div style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {colorBlindMode ? (
+                    // Shape-based indicators for color-blind mode
+                    <div style={{ 
+                      width: '12px', 
+                      height: '12px', 
+                      background: merged ? '#8b5cf6' : occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e',
+                      borderRadius: merged ? '50%' : occupied ? '0' : upcoming ? '3px' : '50%',
+                      transform: occupied ? 'rotate(45deg)' : 'none',
+                      boxShadow: `0 0 0 3px ${merged ? '#8b5cf6' : occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e'}22`
+                    }} />
+                  ) : (
+                    // Color-only mode
+                    <div style={{ 
+                      width: '10px', 
+                      height: '10px', 
+                      borderRadius: '50%', 
+                      background: merged ? '#8b5cf6' : occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e', 
+                      boxShadow: `0 0 0 3px ${merged ? '#8b5cf6' : occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e'}22` 
+                    }} />
+                  )}
+                </div>
+
+                {/* QR order indicator */}
+                {hasQROrders && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '10px', 
+                    left: '10px', 
+                    background: '#10b981', 
+                    color: '#fff', 
+                    padding: '2px 6px', 
+                    borderRadius: '6px', 
+                    fontSize: '10px', 
+                    fontWeight: '700',
+                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
+                  }}>
+                    📱
+                  </div>
+                )}
 
                 {/* QR button — top-left */}
                 <button
-                  onClick={e => { e.stopPropagation(); setSelectedTableForQR(table); setShowQRModal(true); }}
-                  style={{ position: 'absolute', top: '10px', left: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', opacity: 0.45, padding: '2px' }}
-                  title="QR Code"
+                  onClick={e => { 
+                    e.stopPropagation(); 
+                    const data = encodeURIComponent(JSON.stringify({ tableId: table.id, tableName: table.name }));
+                    const qrUrl = settings?.qrOrderingUrl || (typeof window !== 'undefined' ? window.location.origin + '/qr-ordering.html' : '/qr-ordering.html');
+                    window.open(qrUrl + '?table=' + data, '_blank');
+                  }}
+                  style={{ position: 'absolute', top: hasQROrders ? '32px' : '10px', left: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', opacity: 0.45, padding: '2px' }}
+                  title="Open QR Ordering"
                 >📱</button>
 
+                {/* Assign staff button — top-right next to status dot */}
+                <button
+                  onClick={e => { e.stopPropagation(); setStaffTable(table); setShowStaffModal(true); }}
+                  style={{ position: 'absolute', top: '10px', right: '30px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', opacity: table.assignedStaff ? 1 : 0.45, padding: '2px' }}
+                  title="Assign Staff"
+                >👤</button>
+
                 {/* Table name */}
-                <div style={{ fontSize: sm ? '22px' : '26px', fontWeight: '800', color: text, marginTop: '14px', marginBottom: '2px', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: sm ? '24px' : '28px', fontWeight: '800', color: text, marginTop: '14px', marginBottom: '4px', letterSpacing: '-0.02em' }}>
                   {table.name}
-                  {merged && <span style={{ fontSize: '11px', marginLeft: '6px', color: '#8b5cf6', fontWeight: '600' }}>MERGED</span>}
                 </div>
 
-                {/* Capacity */}
-                <div style={{ fontSize: '11px', color: muted, marginBottom: '8px' }}>
-                  {table.capacity} seats
+                {/* Capacity with icon */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: muted, marginBottom: '8px', fontWeight: '500' }}>
+                  <span>👥</span>
+                  <span>{table.capacity} seats</span>
+                  {merged && (
+                    <span style={{ color: '#8b5cf6', fontWeight: '600' }}>· {table.capacity + (table.mergedWith?.length || 0) * 4} total</span>
+                  )}
                 </div>
 
-                {/* Status pill */}
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '20px', background: occupied ? (elColor ? `${elColor}18` : 'rgba(245,158,11,0.1)') : upcoming ? 'rgba(139,92,246,0.1)' : 'rgba(34,197,94,0.1)', marginBottom: '10px' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e' }} />
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    {occupied ? 'Occupied' : upcoming ? 'Reserved' : 'Available'}
+                {/* Merged group indicator - shows full merge relationship */}
+                {merged && (
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#8b5cf6', 
+                    fontWeight: '700',
+                    background: 'rgba(139, 92, 246, 0.12)',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    border: '1px solid rgba(139, 92, 246, 0.3)'
+                  }}>
+                    <span>🔗</span>
+                    <span><strong>{table.name}</strong> + {table.mergedWith?.join(', ')}</span>
+                  </div>
+                )}
+
+                {/* Assignment info - for both merged and regular tables */}
+                {(merged || table.currentToken || liveOrders.length > 0 || table.assignedStaff) && (
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#6b7280', 
+                    fontWeight: '600',
+                    background: 'rgba(107, 114, 128, 0.08)',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    marginBottom: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '3px',
+                    border: '1px solid rgba(107, 114, 128, 0.2)'
+                  }}>
+                    {table.assignedStaff && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>👤</span>
+                        <span>Staff: <strong>{table.assignedStaff}</strong></span>
+                      </div>
+                    )}
+                    {table.currentToken && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🎫</span>
+                        <span>Token: <strong>{table.currentToken}</strong></span>
+                      </div>
+                    )}
+                    {liveOrders.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>📋</span>
+                        <span>{liveOrders.length} order{liveOrders.length > 1 ? 's' : ''} active</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Status pill - larger and clearer */}
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  padding: '6px 12px', 
+                  borderRadius: '20px', 
+                  background: merged 
+                    ? 'rgba(139, 92, 246, 0.15)' 
+                    : occupied 
+                      ? (elColor ? `${elColor}20` : 'rgba(245,158,11,0.15)') 
+                      : upcoming 
+                        ? 'rgba(139,92,246,0.15)' 
+                        : 'rgba(34,197,94,0.15)', 
+                  marginBottom: '12px',
+                  border: merged 
+                    ? '1px solid rgba(139, 92, 246, 0.4)' 
+                    : occupied 
+                      ? `1px solid ${elColor || '#f59e0b'}40` 
+                      : upcoming 
+                        ? '1px solid rgba(139,92,246,0.4)' 
+                        : '1px solid rgba(34,197,94,0.4)'
+                }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: merged ? '#8b5cf6' : occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e', animation: occupied ? 'pulse 2s infinite' : 'none' }} />
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: merged ? '#8b5cf6' : occupied ? (elColor || '#f59e0b') : upcoming ? '#8b5cf6' : '#22c55e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {merged ? 'MERGED GROUP' : occupied ? 'OCCUPIED' : upcoming ? 'RESERVED' : 'AVAILABLE'}
                   </span>
                 </div>
 
@@ -535,6 +1244,7 @@ export default function Tables({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* ══════════════════════════════════════════════════════════
@@ -542,10 +1252,11 @@ export default function Tables({
           ══════════════════════════════════════════════════════════ */}
       {showLiveModal && liveModalTable && (() => {
         const t = liveModalTable;
-        const liveOrds = t.activeOrders || [];
+        const modalFilteredOrders = getModalFilteredOrders(t.id);
+        const liveOrds = modalFilteredOrders || [];
         const occupied = t.status === 'occupied';
         const elapsed  = formatElapsed(t.sinceMs);
-        const elColor  = t.sinceMs ? elapsedColor(t.sinceMs) : null;
+        const elColor  = t.sinceMs ? elapsedColor(t.sinceMs, settings) : null;
         const upcoming = upcomingReservations[t.id];
         const grandTotal = liveOrds.reduce((s, o) => s + (o.total || 0), 0);
 
@@ -561,18 +1272,52 @@ export default function Tables({
               onClick={e => e.stopPropagation()}>
 
               {/* Modal header */}
-              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${border}`, background: dm ? '#252538' : '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-                <div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: text }}>
-                    🪑 {t.name}
-                    {elapsed && <span style={{ marginLeft: '10px', fontSize: '14px', fontWeight: '700', color: elColor }}>⏱ {elapsed}</span>}
+              <div style={{ padding: '18px 20px', borderBottom: `1px solid ${border}`, background: dm ? '#252538' : '#f8fafc', display: 'flex', flexDirection: 'column', gap: '12px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '20px', fontWeight: '800', color: text }}>
+                      🪑 {t.name}
+                      {elapsed && <span style={{ marginLeft: '10px', fontSize: '14px', fontWeight: '700', color: elColor }}>⏱ {elapsed}</span>}
+                    </div>
+                    <div style={{ fontSize: '13px', color: muted, marginTop: '3px' }}>
+                      {occupied ? `${liveOrds.length} active order${liveOrds.length !== 1 ? 's' : ''}` : 'Table available'}
+                      {occupied && ` · ₹${grandTotal.toFixed(2)} running total`}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '13px', color: muted, marginTop: '3px' }}>
-                    {occupied ? `${liveOrds.length} active order${liveOrds.length !== 1 ? 's' : ''}` : 'Table available'}
-                    {occupied && ` · ₹${grandTotal.toFixed(2)} running total`}
-                  </div>
+                  <button onClick={() => setShowLiveModal(false)} style={{ width: '34px', height: '34px', background: dm ? '#2d2d48' : '#e5e7eb', border: 'none', borderRadius: '8px', fontSize: '18px', cursor: 'pointer', color: text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
                 </div>
-                <button onClick={() => setShowLiveModal(false)} style={{ width: '34px', height: '34px', background: dm ? '#2d2d48' : '#e5e7eb', border: 'none', borderRadius: '8px', fontSize: '18px', cursor: 'pointer', color: text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+
+                {/* Modal date filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <select
+                    value={modalDateFilter}
+                    onChange={(e) => setModalDateFilter(e.target.value)}
+                    style={{ padding: '6px 10px', background: dm ? '#1a1a2e' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">This Week</option>
+                    <option value="month">This Month</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+
+                  {modalDateFilter === 'custom' && (
+                    <>
+                      <input
+                        type="date"
+                        value={modalCustomDateRange.start}
+                        onChange={(e) => setModalCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                        style={{ padding: '6px 10px', background: dm ? '#1a1a2e' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '6px', fontSize: '12px' }}
+                      />
+                      <input
+                        type="date"
+                        value={modalCustomDateRange.end}
+                        onChange={(e) => setModalCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                        style={{ padding: '6px 10px', background: dm ? '#1a1a2e' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '6px', fontSize: '12px' }}
+                      />
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Scrollable body */}
@@ -662,7 +1407,23 @@ export default function Tables({
               {/* Footer quick actions */}
               <div style={{ padding: '14px 20px', borderTop: `1px solid ${border}`, background: dm ? '#252538' : '#f8fafc', display: 'flex', gap: '8px', flexShrink: 0 }}>
                 <button
-                  onClick={() => { setShowLiveModal(false); onNavigate?.('orders'); }}
+                  onClick={() => {
+                    // Create new order for this table
+                    const newOrder = {
+                      id: `ORD-${Date.now().toString().slice(-6)}`,
+                      tableId: t.id,
+                      tableName: t.name,
+                      items: [],
+                      total: 0,
+                      status: 'pending',
+                      createdAt: new Date().toISOString(),
+                      paymentStatus: 'unpaid',
+                      source: 'staff' // Mark as staff-entered order
+                    };
+                    setOrders(prev => [newOrder, ...prev]);
+                    setShowLiveModal(false);
+                    onNavigate?.('orders');
+                  }}
                   style={{ flex: 1, padding: '11px', background: accent, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
                 >
                   + New Order
@@ -712,7 +1473,7 @@ export default function Tables({
       {showMergeModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}
           onClick={e => { if (e.target === e.currentTarget) setShowMergeModal(false); }}>
-          <div style={{ background: dm ? '#1e1e2e' : '#fff', borderRadius: '20px', width: '100%', maxWidth: '440px', padding: '24px', border: `1px solid ${border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+          <div style={{ background: dm ? '#1e1e2e' : '#fff', borderRadius: '20px', width: '100%', maxWidth: '500px', padding: '24px', border: `1px solid ${border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '16px' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: text }}>⇆ Merge Tables</div>
@@ -723,17 +1484,90 @@ export default function Tables({
             </div>
             <div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>SELECT TABLES (pick 2)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                {tables.map(t => {
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                {filteredTablesWithStatus.map(t => {
                   const sel = mergeSource?.id === t.id || mergeTarget?.id === t.id;
+                  const isMerged = t.mergedWith?.length > 0;
+                  const isOccupied = t.status === 'occupied';
+                  const isPrimary = mergeSource?.id === t.id;
                   return (
-                    <button key={t.id} onClick={() => {
-                      if (mergeSource?.id === t.id) { setMergeSource(null); return; }
-                      if (mergeTarget?.id === t.id) { setMergeTarget(null); return; }
-                      if (!mergeSource) setMergeSource(t);
-                      else if (!mergeTarget) setMergeTarget(t);
-                    }} style={{ padding: '10px 6px', background: sel ? 'rgba(99,102,241,0.15)' : (dm ? '#252538' : '#f3f4f6'), color: sel ? accent : text, border: `1.5px solid ${sel ? accent : border}`, borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
-                      {t.name}
+                    <button 
+                      key={t.id} 
+                      onClick={() => {
+                        if (mergeSource?.id === t.id) { setMergeSource(null); return; }
+                        if (mergeTarget?.id === t.id) { setMergeTarget(null); return; }
+                        if (!mergeSource) setMergeSource(t);
+                        else if (!mergeTarget) setMergeTarget(t);
+                      }} 
+                      style={{ 
+                        padding: '12px 8px', 
+                        background: sel 
+                          ? 'rgba(99,102,241,0.15)' 
+                          : isMerged 
+                            ? 'rgba(139,92,246,0.1)' 
+                            : isOccupied 
+                              ? 'rgba(245,158,11,0.1)' 
+                              : (dm ? '#252538' : '#f3f4f6'), 
+                        color: sel 
+                          ? accent 
+                          : isMerged 
+                            ? '#8b5cf6' 
+                            : isOccupied 
+                              ? '#f59e0b' 
+                              : text, 
+                        border: sel 
+                          ? `2px solid ${accent}` 
+                          : isMerged 
+                            ? '2px solid #8b5cf6' 
+                            : isOccupied 
+                              ? '2px solid #f59e0b' 
+                              : `1.5px solid ${border}`, 
+                        borderRadius: '10px', 
+                        fontWeight: '700', 
+                        cursor: 'pointer', 
+                        fontSize: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                        position: 'relative',
+                        boxShadow: sel ? '0 4px 12px rgba(99,102,241,0.3)' : 'none'
+                      }}
+                    >
+                      {isPrimary && (
+                        <span style={{ 
+                          position: 'absolute', 
+                          top: '-6px', 
+                          right: '-6px', 
+                          background: accent, 
+                          color: '#fff', 
+                          fontSize: '9px', 
+                          fontWeight: '700', 
+                          padding: '2px 6px', 
+                          borderRadius: '6px' 
+                        }}>
+                          PRIMARY
+                        </span>
+                      )}
+                      <span style={{ fontSize: '16px' }}>{t.name}</span>
+                      <span style={{ fontSize: '10px', fontWeight: '500', opacity: 0.8 }}>
+                        👥 {t.capacity}
+                      </span>
+                      {isMerged && (
+                        <span style={{ fontSize: '9px', fontWeight: '600' }}>
+                          🔗 {t.mergedWith?.length} merged
+                        </span>
+                      )}
+                      {isOccupied && (
+                        <span style={{ fontSize: '9px', fontWeight: '600' }}>
+                          ⏱ {formatElapsed(t.sinceMs)}
+                        </span>
+                      )}
+                      {t.currentToken && (
+                        <span style={{ fontSize: '9px', fontWeight: '600' }}>
+                          🎫 {t.currentToken}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -741,7 +1575,41 @@ export default function Tables({
             </div>
             {mergeSource && mergeTarget && (
               <div style={{ padding: '12px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', fontSize: '13px', color: text }}>
-                Merge <strong>{mergeSource.name}</strong> + <strong>{mergeTarget.name}</strong> → orders shown under <strong>{mergeSource.name}</strong>
+                <div style={{ fontWeight: '700', marginBottom: '4px' }}>Merge Preview:</div>
+                <div><strong>{mergeSource.name}</strong> + <strong>{mergeTarget.name}</strong></div>
+                <div style={{ fontSize: '11px', color: muted, marginTop: '4px' }}>
+                  Total capacity: {mergeSource.capacity + mergeTarget.capacity} seats
+                  {mergeSource.currentToken && ` · Token: ${mergeSource.currentToken}`}
+                </div>
+                {/* Conflict warning */}
+                {mergeSource.currentToken && mergeTarget.currentToken && mergeSource.currentToken !== mergeTarget.currentToken && (
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '8px 12px', 
+                    background: 'rgba(239, 68, 68, 0.15)', 
+                    border: '1px solid rgba(239, 68, 68, 0.3)', 
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    color: '#ef4444',
+                    fontWeight: '600'
+                  }}>
+                    ⚠️ Warning: These tables have different active tokens ({mergeSource.currentToken} vs {mergeTarget.currentToken}). Merging may cause billing conflicts.
+                  </div>
+                )}
+                {(mergeSource.currentToken || mergeTarget.currentToken) && !(mergeSource.currentToken && mergeTarget.currentToken) && (
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '8px 12px', 
+                    background: 'rgba(245, 158, 11, 0.15)', 
+                    border: '1px solid rgba(245, 158, 11, 0.3)', 
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    color: '#f59e0b',
+                    fontWeight: '600'
+                  }}>
+                    ⚠️ One table has an active token ({mergeSource.currentToken || mergeTarget.currentToken}). The other will inherit this token.
+                  </div>
+                )}
               </div>
             )}
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -749,18 +1617,359 @@ export default function Tables({
               <button
                 disabled={!mergeSource || !mergeTarget}
                 onClick={() => {
+                  // Check for conflicting tokens
+                  if (mergeSource.currentToken && mergeTarget.currentToken && mergeSource.currentToken !== mergeTarget.currentToken) {
+                    if (!confirm(`⚠️ WARNING: These tables have different active tokens:\n\n${mergeSource.name}: Token ${mergeSource.currentToken}\n${mergeTarget.name}: Token ${mergeTarget.currentToken}\n\nMerging them may cause billing conflicts. Are you sure you want to proceed?`)) {
+                      return;
+                    }
+                  }
+                  
                   setTables(prev => prev.map(t => {
-                    if (t.id === mergeSource.id) return { ...t, mergedWith: [...(t.mergedWith || []), mergeTarget.id] };
-                    if (t.id === mergeTarget.id) return { ...t, mergedInto: mergeSource.id };
+                    if (t.id === mergeSource.id) return { ...t, mergedWith: [...(t.mergedWith || []), mergeTarget.name] };
+                    if (t.id === mergeTarget.id) return { ...t, mergedWith: [mergeSource.name] };
                     return t;
                   }));
                   setShowMergeModal(false);
+                  showToast('Tables merged successfully');
                 }}
                 style={{ flex: 1, padding: '11px', background: (mergeSource && mergeTarget) ? accent : (dm ? '#252538' : '#e5e7eb'), color: (mergeSource && mergeTarget) ? '#fff' : muted, border: 'none', borderRadius: '10px', fontWeight: '700', cursor: (mergeSource && mergeTarget) ? 'pointer' : 'not-allowed', fontSize: '13px' }}
               >
                 Merge Tables
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          STAFF ASSIGNMENT MODAL
+          ══════════════════════════════════════════════════════════ */}
+      {showStaffModal && staffTable && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowStaffModal(false); }}>
+          <div style={{ background: dm ? '#1e1e2e' : '#fff', borderRadius: '20px', width: '100%', maxWidth: '400px', padding: '24px', border: `1px solid ${border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: text }}>👤 Assign Staff</div>
+              <button onClick={() => setShowStaffModal(false)} style={{ width: '30px', height: '30px', background: dm ? '#2a2a3a' : '#e5e7eb', border: 'none', borderRadius: '7px', cursor: 'pointer', color: text, fontSize: '16px' }}>×</button>
+            </div>
+            <div style={{ fontSize: '13px', color: muted, lineHeight: 1.5 }}>
+              Assign a staff member to <strong>{staffTable.name}</strong>
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>SELECT STAFF</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  onClick={() => handleAssignStaff('')}
+                  style={{ 
+                    padding: '12px', 
+                    background: staffTable.assignedStaff === '' ? 'rgba(239, 68, 68, 0.15)' : (dm ? '#252538' : '#f3f4f6'), 
+                    color: staffTable.assignedStaff === '' ? '#ef4444' : text, 
+                    border: staffTable.assignedStaff === '' ? '2px solid #ef4444' : `1px solid ${border}`, 
+                    borderRadius: '10px', 
+                    fontWeight: '600', 
+                    cursor: 'pointer', 
+                    fontSize: '14px',
+                    textAlign: 'left'
+                  }}
+                >
+                  ❌ Remove Staff Assignment
+                </button>
+                {staff.length > 0 ? staff.map(s => (
+                  <button
+                    key={s.id || s.name}
+                    onClick={() => handleAssignStaff(s.name)}
+                    style={{ 
+                      padding: '12px', 
+                      background: staffTable.assignedStaff === s.name ? 'rgba(99,102,241,0.15)' : (dm ? '#252538' : '#f3f4f6'), 
+                      color: staffTable.assignedStaff === s.name ? accent : text, 
+                      border: staffTable.assignedStaff === s.name ? '2px solid #6366f1' : `1px solid ${border}`, 
+                      borderRadius: '10px', 
+                      fontWeight: '600', 
+                      cursor: 'pointer', 
+                      fontSize: '14px',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <span>👤</span>
+                    <span>{s.name}</span>
+                  </button>
+                )) : (
+                  <div style={{ padding: '16px', textAlign: 'center', color: muted, fontSize: '13px' }}>
+                    No staff members available
+                  </div>
+                )}
+              </div>
+            </div>
+            <button onClick={() => setShowStaffModal(false)} style={{ padding: '11px', background: dm ? '#2a2a3a' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          ANALYTICS MODAL
+          ══════════════════════════════════════════════════════════ */}
+      {showAnalyticsModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAnalyticsModal(false); }}>
+          <div style={{ background: dm ? '#1e1e2e' : '#fff', borderRadius: '20px', width: '100%', maxWidth: '700px', maxHeight: '85vh', padding: '24px', border: `1px solid ${border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: text }}>📊 Advanced Table Analytics</div>
+              <button onClick={() => setShowAnalyticsModal(false)} style={{ width: '30px', height: '30px', background: dm ? '#2a2a3a' : '#e5e7eb', border: 'none', borderRadius: '7px', cursor: 'pointer', color: text, fontSize: '16px' }}>×</button>
+            </div>
+            
+            {(() => {
+              const analytics = calculateAnalytics();
+              const formatTime = (ms) => {
+                if (!ms || ms < 0) return 'N/A';
+                const totalMins = Math.floor(ms / 60000);
+                if (totalMins < 60) return `${totalMins}m`;
+                const h = Math.floor(totalMins / 60);
+                const m = totalMins % 60;
+                return m === 0 ? `${h}h` : `${h}h ${m}m`;
+              };
+              const formatCurrency = (amount) => `₹${Math.round(amount).toLocaleString()}`;
+              
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* Key Metrics Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                    <div style={{ background: dm ? '#252538' : '#f8fafc', padding: '16px', borderRadius: '12px', border: `1px solid ${border}` }}>
+                      <div style={{ fontSize: '10px', color: muted, marginBottom: '4px', fontWeight: '600' }}>TOTAL SESSIONS</div>
+                      <div style={{ fontSize: '24px', fontWeight: '800', color: accent }}>{analytics.totalSessions}</div>
+                      <div style={{ fontSize: '10px', color: muted, marginTop: '2px' }}>{analytics.activeSessions} active now</div>
+                    </div>
+                    <div style={{ background: dm ? '#252538' : '#f8fafc', padding: '16px', borderRadius: '12px', border: `1px solid ${border}` }}>
+                      <div style={{ fontSize: '10px', color: muted, marginBottom: '4px', fontWeight: '600' }}>AVG SESSION TIME</div>
+                      <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>{formatTime(analytics.avgSessionDuration)}</div>
+                      <div style={{ fontSize: '10px', color: muted, marginTop: '2px' }}>Per table</div>
+                    </div>
+                    <div style={{ background: dm ? '#252538' : '#f8fafc', padding: '16px', borderRadius: '12px', border: `1px solid ${border}` }}>
+                      <div style={{ fontSize: '10px', color: muted, marginBottom: '4px', fontWeight: '600' }}>TOTAL REVENUE</div>
+                      <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>{formatCurrency(analytics.totalRevenue)}</div>
+                      <div style={{ fontSize: '10px', color: muted, marginTop: '2px' }}>{formatCurrency(analytics.avgRevenuePerSession)}/session</div>
+                    </div>
+                  </div>
+
+                  {/* Today's Performance */}
+                  <div style={{ background: dm ? '#252538' : '#f8fafc', padding: '16px', borderRadius: '12px', border: `1px solid ${border}` }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '12px' }}>TODAY'S PERFORMANCE</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '11px', color: muted, marginBottom: '4px' }}>Sessions Today</div>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: text }}>{analytics.todaySessions}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '11px', color: muted, marginBottom: '4px' }}>Revenue Today</div>
+                        <div style={{ fontSize: '20px', fontWeight: '700', color: '#10b981' }}>{formatCurrency(analytics.todayRevenue)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Staff Performance */}
+                  {Object.keys(analytics.staffStats).length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>STAFF PERFORMANCE</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {Object.entries(analytics.staffStats)
+                          .sort((a, b) => b[1].revenue - a[1].revenue)
+                          .map(([staffName, stats]) => (
+                          <div key={staffName} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: dm ? '#252538' : '#f8fafc', borderRadius: '8px', border: `1px solid ${border}` }}>
+                            <div>
+                              <div style={{ fontSize: '14px', fontWeight: '600', color: text }}>👤 {staffName}</div>
+                              <div style={{ fontSize: '11px', color: muted }}>{stats.sessions} sessions · {formatTime(stats.duration / stats.sessions)} avg</div>
+                            </div>
+                            <div style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>{formatCurrency(stats.revenue)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Table Performance */}
+                  {Object.keys(analytics.tableStats).length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>TABLE PERFORMANCE</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                        {Object.entries(analytics.tableStats)
+                          .sort((a, b) => b[1].revenue - a[1].revenue)
+                          .map(([tableName, stats]) => (
+                          <div key={tableName} style={{ padding: '12px', background: dm ? '#252538' : '#f8fafc', borderRadius: '8px', border: `1px solid ${border}` }}>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: text }}>🪑 {tableName}</div>
+                            <div style={{ fontSize: '11px', color: muted, marginTop: '4px' }}>{stats.sessions} sessions · {formatTime(stats.avgDuration)}</div>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#10b981', marginTop: '4px' }}>{formatCurrency(stats.revenue)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Busiest Hours */}
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>BUSIEST HOURS</div>
+                    {analytics.busiestHours.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {analytics.busiestHours.map((hour, idx) => (
+                          <div key={hour.hour} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: dm ? '#252538' : '#f8fafc', borderRadius: '8px', border: `1px solid ${border}` }}>
+                            <span style={{ fontSize: '13px', color: text, fontWeight: '500' }}>{hour.label}</span>
+                            <span style={{ fontSize: '12px', color: muted, fontWeight: '600' }}>{hour.count} sessions</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '16px', textAlign: 'center', color: muted, fontSize: '13px' }}>
+                        No data available yet
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Sessions */}
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>RECENT SESSIONS (Last 50)</div>
+                    {analytics.sessionList.length > 0 ? (
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {analytics.sessionList.slice(0, 10).map(session => (
+                      <div key={session.id} style={{ padding: '10px 12px', background: dm ? '#252538' : '#f8fafc', borderRadius: '6px', border: `1px solid ${border}`, fontSize: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: '600', color: text }}>🪑 {session.tableName}</span>
+                          <span style={{ color: muted }}>{new Date(session.startTime).toLocaleDateString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                          <span style={{ color: muted }}>
+                            {session.staff && `👤 ${session.staff} · `}
+                            {formatTime(new Date(session.endTime) - new Date(session.startTime))}
+                          </span>
+                          <span style={{ fontWeight: '600', color: '#10b981' }}>{formatCurrency(session.revenue)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {analytics.sessionList.length > 10 && (
+                      <div style={{ textAlign: 'center', fontSize: '11px', color: muted, padding: '8px' }}>
+                        +{analytics.sessionList.length - 10} more sessions
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ padding: '16px', textAlign: 'center', color: muted, fontSize: '13px' }}>
+                    No completed sessions yet
+                  </div>
+                )}
+                  </div>
+
+                  {/* Active Sessions */}
+                  {analytics.activeSessions.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: muted, marginBottom: '8px' }}>ACTIVE SESSIONS</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {analytics.activeSessions.map(session => (
+                          <div key={session.id} style={{ padding: '10px 12px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '6px', border: '1px solid rgba(245, 158, 11, 0.3)', fontSize: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontWeight: '600', color: text }}>🪑 {session.tableName}</span>
+                              <span style={{ color: '#f59e0b', fontSize: '10px', fontWeight: '600' }}>LIVE</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                              <span style={{ color: muted }}>
+                                {session.staff && `👤 ${session.staff} · `}
+                                Started {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <span style={{ fontWeight: '600', color: '#10b981' }}>{formatCurrency(session.revenue)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button 
+                onClick={() => {
+                  if (confirm('Clear all session history? This cannot be undone.')) {
+                    setSessions({});
+                    saveSessions({});
+                    showToast('Session history cleared');
+                  }
+                }}
+                style={{ flex: 1, padding: '11px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}
+              >
+                🗑️ Clear History
+              </button>
+              <button onClick={() => setShowAnalyticsModal(false)} style={{ flex: 1, padding: '11px', background: dm ? '#2a2a3a' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          BULK QR PRINT MODAL
+          ══════════════════════════════════════════════════════════ */}
+      {showQRModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowQRModal(false); }}>
+          <div style={{ background: dm ? '#1e1e2e' : '#fff', borderRadius: '20px', width: '100%', maxWidth: '600px', padding: '24px', border: `1px solid ${border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: text }}>🖨️ Print Table QR Codes</div>
+              <button onClick={() => setShowQRModal(false)} style={{ width: '30px', height: '30px', background: dm ? '#2a2a3a' : '#e5e7eb', border: 'none', borderRadius: '7px', cursor: 'pointer', color: text, fontSize: '16px' }}>×</button>
+            </div>
+            
+            <div style={{ fontSize: '13px', color: muted, lineHeight: 1.5 }}>
+              Print QR codes for table tents. Each QR code will allow customers to scan and order from their table.
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', maxHeight: '300px', overflowY: 'auto', padding: '8px' }}>
+              {tables.map(table => (
+                <div key={table.id} style={{ background: dm ? '#252538' : '#f8fafc', padding: '12px', borderRadius: '10px', border: `1px solid ${border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: text }}>{table.name}</div>
+                  <img 
+                    src={generateQRCode(table)} 
+                    alt={`QR for ${table.name}`}
+                    style={{ width: '100px', height: '100px', border: `1px solid ${border}`, borderRadius: '8px' }}
+                  />
+                  <div style={{ fontSize: '11px', color: muted }}>{table.capacity} seats</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => {
+                  window.print();
+                  showToast('QR codes sent to printer');
+                }}
+                style={{ flex: 1, padding: '12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}
+              >
+                🖨️ Print All
+              </button>
+              <button 
+                onClick={() => {
+                  const qrData = tables.map(t => ({
+                    table: t.name,
+                    qr: generateQRCode(t),
+                    capacity: t.capacity
+                  }));
+                  const blob = new Blob([JSON.stringify(qrData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'table-qr-codes.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  showToast('QR codes exported successfully');
+                }}
+                style={{ flex: 1, padding: '12px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}
+              >
+                📥 Export JSON
+              </button>
+            </div>
+            
+            <button onClick={() => setShowQRModal(false)} style={{ padding: '11px', background: dm ? '#2a2a3a' : '#f3f4f6', color: dm ? '#e0e0e0' : '#374151', border: `1px solid ${border}`, borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Cancel</button>
           </div>
         </div>
       )}
@@ -902,6 +2111,44 @@ export default function Tables({
         </div>
       )}
 
+      {/* ══════════════════════════════════════════════════════════
+          TOAST/SNACKBAR
+          ══════════════════════════════════════════════════════════ */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#3b82f6',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: '10px',
+          fontSize: '14px',
+          fontWeight: '600',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          zIndex: 3000,
+          animation: 'fadeSlide 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          {toast.type === 'success' && '✓'}
+          {toast.type === 'error' && '✕'}
+          {toast.type === 'info' && 'ℹ'}
+          {toast.message}
+        </div>
+      )}
+
     </div>
+  );
+}
+
+/* ─── Export with Error Boundary ─────────────────────────────────────── */
+export default function TablesWithErrorBoundary(props) {
+  return (
+    <TablesErrorBoundary>
+      <Tables {...props} />
+    </TablesErrorBoundary>
   );
 }

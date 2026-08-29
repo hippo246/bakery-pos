@@ -22,15 +22,6 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
     cost: ''
   });
 
-  // Sync menu items to localStorage for QR ordering
-  useEffect(() => {
-    try {
-      localStorage.setItem('bakery_menu', JSON.stringify(inventory));
-    } catch (error) {
-      console.error('Error saving menu to localStorage:', error);
-    }
-  }, [inventory]);
-
   const categories = ['ALL', ...new Set(inventory.map(item => item.category))];
 
   const filteredItems = useMemo(() => {
@@ -898,7 +889,27 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
   // Sync menu items to localStorage for QR ordering
   useEffect(() => {
     try {
-      localStorage.setItem('bakery_menu', JSON.stringify(menuItems));
+      // Only sync if we have actual menu items with proper structure
+      if (menuItems && menuItems.length > 0) {
+        // Transform data to match QR ordering expected format
+        const transformedMenu = menuItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category || item.cat || 'Other', // Handle both field names
+          price: item.price,
+          description: item.description || item.desc || '',
+          emoji: item.emoji || '',
+          veg: item.veg !== false,
+          spicy: item.spicy || 0,
+          active: item.active !== false,
+          eightySixed: item.eightySixed || false
+        }));
+        
+        // Sync to multiple keys for compatibility
+        localStorage.setItem('bakery_menu', JSON.stringify(transformedMenu));
+        localStorage.setItem('cafeos_menu', JSON.stringify(transformedMenu));
+        localStorage.setItem('brewcrm_local_menuItems', JSON.stringify(transformedMenu));
+      }
     } catch (error) {
       console.error('Error saving menu to localStorage:', error);
     }

@@ -1,6 +1,677 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useReducer } from 'react';
 import { KitchenStation } from '../../domain/kotTypes.js';
 import useScreenSize from '../../hooks/useScreenSize';
+
+/* ─── Table Management Panel Component ─────────────────────────────── */
+function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Reducer for modal and form state
+  const tableManagementReducer = (state, action) => {
+    switch (action.type) {
+      case 'OPEN_ADD_MODAL':
+        return {
+          ...state,
+          showModal: true,
+          mode: 'add',
+          editingTable: null,
+          formData: { 
+            name: '', 
+            capacity: 4,
+            location: '',
+            shape: 'rectangular',
+            tableType: 'indoor',
+            minPartySize: 1,
+            maxPartySize: 20,
+            notes: '',
+            qrEnabled: true
+          },
+          formAlert: ''
+        };
+      case 'OPEN_EDIT_MODAL':
+        return {
+          ...state,
+          showModal: true,
+          mode: 'edit',
+          editingTable: action.payload.table,
+          formData: { 
+            name: action.payload.table.name, 
+            capacity: action.payload.table.capacity,
+            location: action.payload.table.location || '',
+            shape: action.payload.table.shape || 'rectangular',
+            tableType: action.payload.table.tableType || 'indoor',
+            minPartySize: action.payload.table.minPartySize || 1,
+            maxPartySize: action.payload.table.maxPartySize || 20,
+            notes: action.payload.table.notes || '',
+            qrEnabled: action.payload.table.qrEnabled !== false
+          },
+          formAlert: ''
+        };
+      case 'CLOSE_MODAL':
+        return {
+          ...state,
+          showModal: false,
+          mode: 'add',
+          editingTable: null,
+          formData: { 
+            name: '', 
+            capacity: 4,
+            location: '',
+            shape: 'rectangular',
+            tableType: 'indoor',
+            minPartySize: 1,
+            maxPartySize: 20,
+            notes: '',
+            qrEnabled: true
+          },
+          formAlert: ''
+        };
+      case 'UPDATE_FORM_DATA':
+        return {
+          ...state,
+          formData: { ...state.formData, ...action.payload }
+        };
+      case 'SET_FORM_ALERT':
+        return {
+          ...state,
+          formAlert: action.payload
+        };
+      default:
+        return state;
+    }
+  };
+
+  const [state, dispatch] = useReducer(tableManagementReducer, {
+    showModal: false,
+    mode: 'add',
+    editingTable: null,
+    formData: { 
+      name: '', 
+      capacity: 4,
+      location: '',
+      shape: 'rectangular',
+      tableType: 'indoor',
+      minPartySize: 1,
+      maxPartySize: 20,
+      notes: '',
+      qrEnabled: true
+    },
+    formAlert: ''
+  });
+
+  const t = {
+    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
+    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
+    bgCard:   darkMode ? '#252538' : '#ffffff',
+    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
+    border:   darkMode ? '#2d2d44' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#1f2937',
+    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
+    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    accent:   '#6366f1',
+  };
+
+  const handleSaveTable = async () => {
+    if (isSubmitting) return;
+    
+    if (!state.formData.name.trim()) {
+      dispatch({ type: 'SET_FORM_ALERT', payload: 'Table name is required' });
+      return;
+    }
+    if (state.formData.capacity < 1 || state.formData.capacity > 20) {
+      dispatch({ type: 'SET_FORM_ALERT', payload: 'Capacity must be between 1 and 20' });
+      return;
+    }
+    if (state.formData.minPartySize < 1 || state.formData.minPartySize > state.formData.capacity) {
+      dispatch({ type: 'SET_FORM_ALERT', payload: 'Minimum party size must be between 1 and capacity' });
+      return;
+    }
+    if (state.formData.maxPartySize < state.formData.capacity || state.formData.maxPartySize > 50) {
+      dispatch({ type: 'SET_FORM_ALERT', payload: 'Maximum party size must be at least capacity and max 50' });
+      return;
+    }
+
+    // Check if table is occupied and capacity is being reduced below seated guest count
+    if (state.mode === 'edit' && state.editingTable?.status === 'occupied') {
+      const activeOrders = state.editingTable.activeOrders || [];
+      const totalGuests = activeOrders.reduce((sum, order) => sum + (order.guestCount || 1), 0);
+      if (state.formData.capacity < totalGuests) {
+        dispatch({ type: 'SET_FORM_ALERT', payload: `Cannot reduce capacity below seated guests (${totalGuests} guests currently seated)` });
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+
+    // Small delay to prevent double-click
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    try {
+      if (state.mode === 'edit') {
+        setTables(prev => prev.map(t => 
+          t.id === state.editingTable.id 
+            ? { 
+                ...t, 
+                name: state.formData.name.trim(), 
+                capacity: state.formData.capacity,
+                location: state.formData.location,
+                shape: state.formData.shape,
+                tableType: state.formData.tableType,
+                minPartySize: state.formData.minPartySize,
+                maxPartySize: state.formData.maxPartySize,
+                notes: state.formData.notes,
+                qrEnabled: state.formData.qrEnabled
+              }
+            : t
+        ));
+      } else {
+        // Use timestamp + random for unique ID to prevent duplicates
+        const newId = Date.now() + Math.floor(Math.random() * 1000);
+        setTables(prev => [...prev, {
+          id: newId,
+          name: state.formData.name.trim(),
+          capacity: state.formData.capacity,
+          status: 'available',
+          location: state.formData.location,
+          shape: state.formData.shape,
+          tableType: state.formData.tableType,
+          minPartySize: state.formData.minPartySize,
+          maxPartySize: state.formData.maxPartySize,
+          notes: state.formData.notes,
+          qrEnabled: state.formData.qrEnabled
+        }]);
+      }
+
+      dispatch({ type: 'CLOSE_MODAL' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteTable = (tableId) => {
+    if (confirm('Are you sure you want to delete this table? This will also remove all related data including reservations and session history.')) {
+      // Clean up related data before deleting
+      const tableIdStr = String(tableId);
+      
+      // Clean up occupiedSince entries
+      try {
+        const occupiedSince = JSON.parse(localStorage.getItem('tables_occupied_since') || '{}');
+        delete occupiedSince[tableIdStr];
+        localStorage.setItem('tables_occupied_since', JSON.stringify(occupiedSince));
+      } catch (e) { console.error('Error cleaning up occupiedSince:', e); }
+      
+      // Clean up reservations for this table
+      try {
+        const reservations = JSON.parse(localStorage.getItem('cafeos_reservations') || '[]');
+        const updatedReservations = reservations.filter(r => String(r.tableId) !== tableIdStr);
+        localStorage.setItem('cafeos_reservations', JSON.stringify(updatedReservations));
+      } catch (e) { console.error('Error cleaning up reservations:', e); }
+      
+      // Clean up waiter calls for this table
+      try {
+        const waiterCalls = JSON.parse(localStorage.getItem('cafeos_waiter_calls') || '[]');
+        const updatedCalls = waiterCalls.filter(c => c.tableId !== tableIdStr);
+        localStorage.setItem('cafeos_waiter_calls', JSON.stringify(updatedCalls));
+      } catch (e) { console.error('Error cleaning up waiter calls:', e); }
+      
+      // Clean up session history for this table
+      try {
+        const sessions = JSON.parse(localStorage.getItem('tables_sessions_history') || '{}');
+        Object.keys(sessions).forEach(sessionId => {
+          if (sessions[sessionId].tableId === tableId) {
+            delete sessions[sessionId];
+          }
+        });
+        localStorage.setItem('tables_sessions_history', JSON.stringify(sessions));
+      } catch (e) { console.error('Error cleaning up session history:', e); }
+      
+      // Delete the table
+      setTables(prev => prev.filter(t => t.id !== tableId));
+    }
+  };
+
+  const handleEditTable = (table) => {
+    dispatch({ type: 'OPEN_EDIT_MODAL', payload: { table } });
+  };
+
+  const getShapeIcon = (shape) => {
+    const icons = { rectangular: '▭', round: '⭕', square: '⬜', oval: '⬭' };
+    return icons[shape] || '▭';
+  };
+
+  const getTypeIcon = (type) => {
+    const icons = { indoor: '🏠', outdoor: '🌳', private: '🔒', bar: '🍸', vip: '⭐' };
+    return icons[type] || '🏠';
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Add Table Button */}
+      <button
+        onClick={() => dispatch({ type: 'OPEN_ADD_MODAL' })}
+        style={{
+          padding: '12px 16px',
+          background: t.accent,
+          color: '#ffffff',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '600',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          justifyContent: 'center'
+        }}
+      >
+        ➕ Add New Table
+      </button>
+
+      {/* Tables List */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+        {tables.map(table => (
+          <div key={table.id} style={{
+            padding: '14px',
+            background: t.bgCard,
+            borderRadius: '8px',
+            border: `1px solid ${t.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '16px', fontWeight: '700', color: t.text }}>{table.name}</span>
+              <span style={{ fontSize: '11px', color: t.textMute }}>👥 {table.capacity}</span>
+            </div>
+            
+            {/* Table Details */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', background: t.bgInput, color: t.textMute }}>
+                {getShapeIcon(table.shape || 'rectangular')} {(table.shape || 'rectangular').charAt(0).toUpperCase()}
+              </span>
+              <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', background: t.bgInput, color: t.textMute }}>
+                {getTypeIcon(table.tableType || 'indoor')} {(table.tableType || 'indoor').charAt(0).toUpperCase()}
+              </span>
+              {table.location && (
+                <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', background: t.bgInput, color: t.textMute }}>
+                  📍 {table.location}
+                </span>
+              )}
+              {table.qrEnabled !== false && (
+                <span style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', background: 'rgba(99,102,241,0.15)', color: '#6366f1' }}>
+                  📱 QR
+                </span>
+              )}
+            </div>
+
+            {/* Party Size */}
+            {(table.minPartySize || table.maxPartySize) && (
+              <div style={{ fontSize: '10px', color: t.textMute }}>
+                Party: {table.minPartySize || 1}-{table.maxPartySize || table.capacity}
+              </div>
+            )}
+
+            {/* Status */}
+            <div style={{ 
+              fontSize: '10px', 
+              fontWeight: '600', 
+              padding: '4px 8px', 
+              borderRadius: '4px',
+              background: table.status === 'occupied' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+              color: table.status === 'occupied' ? '#f59e0b' : '#22c55e',
+              width: 'fit-content'
+            }}>
+              {table.status.toUpperCase()}
+            </div>
+
+            {/* Notes Preview */}
+            {table.notes && (
+              <div style={{ fontSize: '10px', color: t.textMute, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {table.notes}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button
+                onClick={() => handleEditTable(table)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: t.bgInput,
+                  color: t.text,
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDeleteTable(table.id)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {tables.length === 0 && (
+        <div style={{
+          padding: '32px',
+          textAlign: 'center',
+          color: t.textMute,
+          fontSize: '14px'
+        }}>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🪑</div>
+          No tables configured. Add your first table to get started.
+        </div>
+      )}
+
+      {/* Add/Edit Modal */}
+      {state.showModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 3000,
+          padding: '16px'
+        }}
+        onClick={(e) => { if (e.target === e.currentTarget) dispatch({ type: 'CLOSE_MODAL' }); }}
+        >
+          <div style={{
+            background: t.bgEle,
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '480px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '24px',
+            border: `1px solid ${t.border}`,
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: t.text }}>
+                {state.mode === 'edit' ? '✏️ Edit Table' : '➕ Add Table'}
+              </div>
+              <button
+                onClick={() => dispatch({ type: 'CLOSE_MODAL' })}
+                style={{ width: '32px', height: '32px', background: t.bgInput, border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer', color: t.text }}
+              >
+                ×
+              </button>
+            </div>
+
+            {state.formAlert && (
+              <div style={{ padding: '10px 12px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', color: '#ef4444', fontSize: '13px', fontWeight: '600' }}>
+                ⚠️ {state.formAlert}
+              </div>
+            )}
+
+            {/* Basic Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                  Table Name *
+                </label>
+                <input
+                  type="text"
+                  value={state.formData.name}
+                  onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { name: e.target.value } })}
+                  placeholder="e.g. T9"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    background: t.bgInput,
+                    color: t.text,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                  Capacity *
+                </label>
+                <input
+                  type="number"
+                  value={state.formData.capacity}
+                  onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { capacity: parseInt(e.target.value) || 1 } })}
+                  min="1"
+                  max="20"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    background: t.bgInput,
+                    color: t.text,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                Location / Area
+              </label>
+              <input
+                type="text"
+                value={state.formData.location}
+                onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { location: e.target.value } })}
+                placeholder="e.g. Main Hall, Patio"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  background: t.bgInput,
+                  color: t.text,
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            {/* Shape & Type */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                  Shape
+                </label>
+                <select
+                  value={state.formData.shape}
+                  onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { shape: e.target.value } })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    background: t.bgInput,
+                    color: t.text,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="rectangular">Rectangular</option>
+                  <option value="round">Round</option>
+                  <option value="square">Square</option>
+                  <option value="oval">Oval</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                  Type
+                </label>
+                <select
+                  value={state.formData.tableType}
+                  onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { tableType: e.target.value } })}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    background: t.bgInput,
+                    color: t.text,
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="indoor">Indoor</option>
+                  <option value="outdoor">Outdoor</option>
+                  <option value="private">Private Room</option>
+                  <option value="bar">Bar Area</option>
+                  <option value="vip">VIP</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Party Size */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                  Min Party Size
+                </label>
+                <input
+                  type="number"
+                  value={state.formData.minPartySize}
+                  onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { minPartySize: parseInt(e.target.value) || 1 } })}
+                  min="1"
+                  max={state.formData.capacity}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    background: t.bgInput,
+                    color: t.text,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                  Max Party Size
+                </label>
+                <input
+                  type="number"
+                  value={state.formData.maxPartySize}
+                  onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { maxPartySize: parseInt(e.target.value) || 20 } })}
+                  min={state.formData.capacity}
+                  max="50"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: `1px solid ${t.border}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    background: t.bgInput,
+                    color: t.text,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+                Notes
+              </label>
+              <textarea
+                value={state.formData.notes}
+                onChange={(e) => dispatch({ type: 'UPDATE_FORM_DATA', payload: { notes: e.target.value } })}
+                placeholder="Special instructions, proximity to kitchen, etc."
+                rows="2"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  background: t.bgInput,
+                  color: t.text,
+                  outline: 'none',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            {/* QR Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: t.bgInput, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: t.text }}>Enable QR Code</div>
+                <div style={{ fontSize: '12px', color: t.textMute }}>Allow QR ordering for this table</div>
+              </div>
+              <div
+                onClick={() => dispatch({ type: 'UPDATE_FORM_DATA', payload: { qrEnabled: !state.formData.qrEnabled } })}
+                style={{
+                  width: '48px', height: '26px', borderRadius: '13px', flexShrink: 0,
+                  background: state.formData.qrEnabled ? '#6366f1' : (darkMode ? '#374151' : '#d1d5db'),
+                  position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
+                }}
+              >
+                <div style={{
+                  position: 'absolute', top: '3px',
+                  left: state.formData.qrEnabled ? '25px' : '3px',
+                  width: '20px', height: '20px', borderRadius: '50%',
+                  background: '#ffffff', transition: 'left 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+                }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => dispatch({ type: 'CLOSE_MODAL' })}
+                style={{ flex: 1, padding: '12px', background: t.bgInput, color: t.textSub, border: `1px solid ${t.border}`, borderRadius: '10px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTable}
+                disabled={isSubmitting}
+                style={{ flex: 1, padding: '12px', background: isSubmitting ? '#9ca3af' : t.accent, color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: isSubmitting ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: isSubmitting ? 0.7 : 1 }}
+              >
+                {isSubmitting ? 'Saving...' : (state.mode === 'edit' ? 'Update' : 'Add')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables, darkMode = true }) {
   const [activeSection, setActiveSection] = useState('general');
@@ -83,6 +754,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     qrPrinterPort: settings.qrPrinterPort || '9100',
     qrPrinterPaperWidth: settings.qrPrinterPaperWidth || 80, // 58mm or 80mm
     theme: settings.theme || 'light',
+    colorBlindMode: settings.colorBlindMode !== false,
     orderTimeout: settings.orderTimeout || '30',
     lowStockAlert: settings.lowStockAlert !== false,
     dailyReportTime: settings.dailyReportTime || '23:00',
@@ -203,7 +875,25 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     waste: settings.waste || { enabled: true, requireReason: true, trackCost: true },
     reservations: settings.reservations || { enabled: true, autoConfirm: false, maxAdvanceDays: 30 },
     tokens: settings.tokens || { enabled: false, prefix: 'T', autoReset: true },
-    tables: settings.tables || { enabled: true, showCapacity: true, allowMerge: true },
+    tables: settings.tables || { 
+      enabled: true, 
+      showCapacity: true, 
+      allowMerge: true,
+      autoClearOnPayment: false,
+      requireStaffAssignment: false,
+      defaultCapacity: 4,
+      tableTimeout: 0,
+      showOccupiedTime: true,
+      enableQRGeneration: true,
+      allowUnassignedSeating: true,
+      showTableAnalytics: true,
+      sessionTracking: true,
+      maxMergeTables: 4,
+      tableNumbering: 'T',
+      elapsedThresholdWarning: 30,
+      elapsedThresholdCritical: 60,
+      upcomingReservationWindow: 120
+    },
     waiters: settings.waiters || { enabled: true, showAssignedOrders: true, allowCallWaiter: true },
     kitchen: settings.kitchen || { enabled: true, showTimers: true, autoPrintKOT: true },
     onlineOrdering: settings.onlineOrdering || { enabled: false, autoAccept: false, preparationTime: 30 },
@@ -926,6 +1616,37 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         <option value="en">English</option>
                         <option value="hi">Hindi</option>
                       </select>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, marginTop: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151' }}>Color-Blind Mode</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '2px' }}>Use patterns and icons instead of just colors for status</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('colorBlindMode', !formData.colorBlindMode)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.colorBlindMode ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.colorBlindMode ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -3575,9 +4296,25 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 ]},
                 'tables': { icon: '🪑', label: 'Tables', settings: [
                   { key: 'enabled', label: 'Enable Tables Tab', desc: 'Show/hide the Tables tab' },
-                  { key: 'showCapacity', label: 'Show Capacity', desc: 'Display table capacity' },
-                  { key: 'allowMerge', label: 'Allow Merge', desc: 'Allow merging tables' }
-                ]},
+                  { key: 'showCapacity', label: 'Show Capacity', desc: 'Display table capacity on cards' },
+                  { key: 'allowMerge', label: 'Allow Merge', desc: 'Allow merging multiple tables' },
+                  { key: 'autoClearOnPayment', label: 'Auto-Clear on Payment', desc: 'Automatically clear table when payment completed', type: 'toggle' },
+                  { key: 'requireStaffAssignment', label: 'Require Staff Assignment', desc: 'Require staff assignment before seating', type: 'toggle' },
+                  { key: 'defaultCapacity', label: 'Default Capacity', desc: 'Default seats for new tables', type: 'number' },
+                  { key: 'tableTimeout', label: 'Table Timeout (min)', desc: 'Auto-clear after inactivity (0 = disabled)', type: 'number' },
+                  { key: 'showOccupiedTime', label: 'Show Occupied Time', desc: 'Display how long table has been occupied', type: 'toggle' },
+                  { key: 'enableQRGeneration', label: 'Enable QR Codes', desc: 'Allow QR code generation for tables', type: 'toggle' },
+                  { key: 'allowUnassignedSeating', label: 'Allow Unassigned Seating', desc: 'Allow seating without staff assignment', type: 'toggle' },
+                  { key: 'showTableAnalytics', label: 'Show Analytics', desc: 'Display table performance analytics', type: 'toggle' },
+                  { key: 'sessionTracking', label: 'Session Tracking', desc: 'Track table sessions for analytics', type: 'toggle' },
+                  { key: 'maxMergeTables', label: 'Max Merge Tables', desc: 'Maximum tables that can be merged', type: 'number' },
+                  { key: 'tableNumbering', label: 'Table Numbering', desc: 'Auto-numbering scheme (T1, T2, etc)', type: 'text' },
+                  { key: 'elapsedThresholdWarning', label: 'Warning Threshold (min)', desc: 'Elapsed time before warning color (yellow)', type: 'number' },
+                  { key: 'elapsedThresholdCritical', label: 'Critical Threshold (min)', desc: 'Elapsed time before critical color (red)', type: 'number' },
+                  { key: 'upcomingReservationWindow', label: 'Reservation Window (min)', desc: 'Show reservations within this window', type: 'number' }
+                ],
+                hasManagement: true,
+                managementLabel: 'Manage Tables' },
                 'waiters': { icon: '🛎️', label: 'Waiters', settings: [
                   { key: 'enabled', label: 'Enable Waiters Tab', desc: 'Show/hide the Waiters tab' },
                   { key: 'showAssignedOrders', label: 'Show Assigned Orders', desc: 'Display orders assigned to waiters' },
@@ -3665,6 +4402,21 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       ))}
                     </div>
                   </div>
+
+                  {/* Table Management Section */}
+                  {config.hasManagement && tabId === 'tables' && (
+                    <div style={{
+                      padding: '16px',
+                      background: t.bgEle,
+                      borderRadius: '8px',
+                      border: `1px solid ${t.border}`
+                    }}>
+                      <div style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                        🪑 {config.managementLabel}
+                      </div>
+                      <TableManagementPanel tables={tables} setTables={setTables} darkMode={darkMode} />
+                    </div>
+                  )}
                 </div>
               );
             })()}

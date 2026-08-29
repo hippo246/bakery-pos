@@ -120,6 +120,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [printReceiptEnabled, setPrintReceiptEnabled] = useState(true);
   const [splitMode, setSplitMode] = useState('equal'); // 'equal', 'custom', 'percentage'
   const [showTableSelector, setShowTableSelector] = useState(false);
+  const [showMergeMode, setShowMergeMode] = useState(false);
+  const [selectedTablesForMerge, setSelectedTablesForMerge] = useState([]);
   const [numpadSearch, setNumpadSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOrderHistory, setShowOrderHistory] = useState(false);
@@ -1613,6 +1615,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       customerPhone: selectedCustomer?.phone || null,
       tableId: selectedTable?.id || null,
       tableNumber: selectedTable?.name || null,
+      mergedWith: selectedTable?.mergedWith || null,
       orderType: orderType || 'dine-in',
       staffId: selectedEmployee?.id || null,
       staffName: selectedEmployee?.name || 'Unknown',
@@ -1752,8 +1755,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
     // Update table status to occupied with token
     if (selectedTable) {
+      // Handle merged tables - update all tables in the merge group
+      const mergedWith = selectedTable.mergedWith || [];
+      const allTableIdsToUpdate = [selectedTable.id, ...mergedWith.map(name => {
+        const mergedTable = tables.find(t => t.name === name);
+        return mergedTable?.id;
+      }).filter(Boolean)];
+
       setTables(tables.map(t => 
-        t.id === selectedTable.id 
+        allTableIdsToUpdate.includes(t.id)
           ? { ...t, status: 'occupied', currentToken: newOrder.token, currentOrderId: newOrder.id }
           : t
       ));
@@ -1830,9 +1840,27 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   };
 
   const freeTable = (tableId) => {
+    // Find the table to get its merge information
+    const tableToFree = tables.find(t => t.id === tableId);
+    if (!tableToFree) {
+      setTables(tables.map(t => 
+        t.id === tableId 
+          ? { ...t, status: 'available' }
+          : t
+      ));
+      return;
+    }
+
+    // Handle merged tables - free all tables in the merge group
+    const mergedWith = tableToFree.mergedWith || [];
+    const allTableIdsToFree = [tableId, ...mergedWith.map(name => {
+      const mergedTable = tables.find(t => t.name === name);
+      return mergedTable?.id;
+    }).filter(Boolean)];
+
     setTables(tables.map(t => 
-      t.id === tableId 
-        ? { ...t, status: 'available' }
+      allTableIdsToFree.includes(t.id)
+        ? { ...t, status: 'available', currentToken: null, currentOrderId: null }
         : t
     ));
   };
@@ -2015,6 +2043,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       customerName: selectedCustomer?.name || 'Walk-in',
       tableId: selectedTable?.id || null,
       tableName: selectedTable?.name || null,
+      mergedWith: selectedTable?.mergedWith || null,
       orderType: orderType || 'dine-in',
       staffId: selectedEmployee?.id || null,
       staffName: selectedEmployee?.name || 'Unknown',
@@ -2080,8 +2109,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
     // Update table status to occupied with token
     if (selectedTable) {
+      // Handle merged tables - update all tables in the merge group
+      const mergedWith = selectedTable.mergedWith || [];
+      const allTableIdsToUpdate = [selectedTable.id, ...mergedWith.map(name => {
+        const mergedTable = tables.find(t => t.name === name);
+        return mergedTable?.id;
+      }).filter(Boolean)];
+
       setTables(tables.map(t => 
-        t.id === selectedTable.id 
+        allTableIdsToUpdate.includes(t.id)
           ? { ...t, status: 'occupied', currentToken: newOrder.token }
           : t
       ));
@@ -2144,18 +2180,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     // Order Info
     receiptHTML += `
       <div style="margin-bottom: 12px; border-bottom: 1px dashed #000; padding-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <div style="margin-bottom: 4px;">
           <span>Order #: ${lastOrder.id}</span>
-          <span>Token: ${lastOrder.token || 'N/A'}</span>
         </div>
         <div style="font-size: 10px; margin-bottom: 2px;">${new Date(lastOrder.createdAt).toLocaleString()}</div>
     `;
     if (lastOrder.tableNumber) {
-      receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Table: ${lastOrder.tableNumber}</div>`;
+      receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Table: ${lastOrder.tableNumber}`;
+      if (lastOrder.mergedWith && lastOrder.mergedWith.length > 0) {
+        receiptHTML += ` (Merged: ${lastOrder.mergedWith.join(', ')})`;
+      }
+      receiptHTML += `</div>`;
     }
     receiptHTML += `<div style="font-size: 10px; margin-bottom: 2px;">Customer: ${lastOrder.customerName || 'Walk-in'}</div>`;
     receiptHTML += `<div style="font-size: 10px;">Staff: ${lastOrder.staffName || 'N/A'}</div>`;
     receiptHTML += `</div>`;
+
+    // Huge Token Display
+    receiptHTML += `
+      <div style="text-align: center; margin-bottom: 16px; padding: 16px; border: 3px solid #000; border-radius: 8px; background: #f9fafb;">
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #666;">YOUR TOKEN</div>
+        <div style="font-size: 48px; font-weight: 800; color: #000; line-height: 1;">${lastOrder.token || 'N/A'}</div>
+      </div>
+    `;
 
     // Items
     receiptHTML += `<div style="margin-bottom: 12px; border-bottom: 1px dashed #000; padding-bottom: 8px;">`;
@@ -4472,39 +4519,126 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
-              {tables && tables.length > 0 ? tables.map(table => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              {tables && tables.length > 0 ? tables.map(table => {
+                const mergedWith = table.mergedWith || [];
+                const isMerged = mergedWith.length > 0;
+                const isSelectedForMerge = selectedTablesForMerge.find(t => t.id === table.id);
+                const isPrimaryInMerge = selectedTablesForMerge.length > 0 && selectedTablesForMerge[0]?.id === table.id;
+                return (
                 <button
                   key={table.id}
                   onClick={() => {
-                    setSelectedTable(table);
-                    setShowTableSelector(false);
+                    if (showMergeMode) {
+                      if (isSelectedForMerge) {
+                        setSelectedTablesForMerge(selectedTablesForMerge.filter(t => t.id !== table.id));
+                      } else {
+                        setSelectedTablesForMerge([...selectedTablesForMerge, table]);
+                      }
+                    } else {
+                      setSelectedTable(table);
+                      setShowTableSelector(false);
+                    }
                   }}
                   style={{
-                    padding: '20px',
-                    background: selectedTable?.id === table.id ? '#2563eb' : table.status === 'occupied' ? '#fee2e2' : '#f3f4f6',
-                    color: selectedTable?.id === table.id ? '#ffffff' : table.status === 'occupied' ? '#dc2626' : '#374151',
-                    border: selectedTable?.id === table.id ? '2px solid #2563eb' : table.status === 'occupied' ? '1px solid #fecaca' : '1px solid #e5e7eb',
-                    borderRadius: '8px',
+                    padding: '16px 12px',
+                    background: showMergeMode 
+                      ? isSelectedForMerge 
+                        ? '#8b5cf6' 
+                        : '#f3f4f6'
+                      : selectedTable?.id === table.id 
+                        ? '#2563eb' 
+                        : table.status === 'occupied' 
+                          ? '#fee2e2' 
+                          : '#f3f4f6',
+                    color: showMergeMode 
+                      ? isSelectedForMerge 
+                        ? '#ffffff' 
+                        : '#374151'
+                      : selectedTable?.id === table.id 
+                        ? '#ffffff' 
+                        : table.status === 'occupied' 
+                          ? '#dc2626' 
+                          : '#374151',
+                    border: isMerged 
+                      ? '3px solid #8b5cf6'
+                      : showMergeMode && isSelectedForMerge
+                        ? '3px solid #8b5cf6'
+                        : selectedTable?.id === table.id 
+                          ? '2px solid #2563eb' 
+                          : table.status === 'occupied' 
+                            ? '2px solid #f59e0b' 
+                            : '1px solid #e5e7eb',
+                    borderRadius: '12px',
                     fontSize: '14px',
-                    fontWeight: '500',
+                    fontWeight: '600',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '6px',
+                    position: 'relative',
+                    boxShadow: isMerged || (showMergeMode && isSelectedForMerge) ? '0 4px 12px rgba(139, 92, 246, 0.3)' : 'none'
                   }}
                 >
-                  <span style={{ fontSize: '20px' }}>🪑</span>
-                  <span>{table.name}</span>
-                  <span style={{ fontSize: '10px', textTransform: 'capitalize' }}>{table.status || 'available'}</span>
-                  {table.currentToken && (
-                    <span style={{ fontSize: '11px', fontWeight: '700', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px' }}>
-                      {table.currentToken}
+                  {isPrimaryInMerge && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      background: '#8b5cf6',
+                      color: '#fff',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '9px',
+                      fontWeight: '700',
+                      textTransform: 'uppercase'
+                    }}>
+                      PRIMARY
                     </span>
                   )}
+                  {isMerged && !showMergeMode && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#8b5cf6',
+                      color: '#fff',
+                      padding: '2px 8px',
+                      borderRadius: '8px',
+                      fontSize: '9px',
+                      fontWeight: '700',
+                      textTransform: 'uppercase'
+                    }}>
+                      🔗
+                    </span>
+                  )}
+                  <span style={{ fontSize: '20px' }}>🪑</span>
+                  <span style={{ fontSize: '16px', fontWeight: '700' }}>{table.name}</span>
+                  <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500' }}>
+                    👥 {table.capacity} seats
+                  </span>
+                  {isMerged && !showMergeMode && (
+                    <span style={{ fontSize: '10px', color: '#8b5cf6', fontWeight: '600' }}>
+                      + {mergedWith.join(', ')}
+                    </span>
+                  )}
+                  {table.status === 'occupied' && (
+                    <span style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '600' }}>
+                      ⏱ Occupied
+                    </span>
+                  )}
+                  {table.currentToken && (
+                    <span style={{ fontSize: '10px', fontWeight: '700', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px' }}>
+                      🎫 {table.currentToken}
+                    </span>
+                  )}
+                  <span style={{ fontSize: '10px', textTransform: 'capitalize', color: '#6b7280' }}>
+                    {table.status || 'available'}
+                  </span>
                 </button>
-              )) : (
+              );}) : (
                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', color: '#6b7280' }}>
                   No tables available
                 </div>
@@ -4512,26 +4646,106 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
+              {tables.some(t => t.mergedWith?.length > 0) && (
+                <button
+                  onClick={() => {
+                    if (!confirm('Are you sure you want to unmerge all tables? This will separate all merged tables back to individual tables.')) return;
+                    setTables(tables.map(t => ({
+                      ...t,
+                      mergedWith: undefined
+                    })));
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  🔗 Unmerge All
+                </button>
+              )}
               <button
                 onClick={() => {
-                  setSelectedTable(null);
-                  setShowTableSelector(false);
+                  setShowMergeMode(!showMergeMode);
+                  setSelectedTablesForMerge([]);
                 }}
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: showMergeMode ? '#8b5cf6' : '#f3f4f6',
+                  color: showMergeMode ? '#ffffff' : '#374151',
+                  border: showMergeMode ? '2px solid #8b5cf6' : '1px solid #e5e7eb',
                   borderRadius: '8px',
                   fontSize: '14px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  fontWeight: '600'
                 }}
               >
-                Clear Table
+                {showMergeMode ? 'Cancel Merge' : '🔗 Merge Tables'}
               </button>
+              {showMergeMode && selectedTablesForMerge.length >= 2 && (
+                <button
+                  onClick={() => {
+                    // Check for conflicting tokens
+                    const tablesWithTokens = selectedTablesUnique.filter(t => t.currentToken);
+                    const uniqueTokens = [...new Set(tablesWithTokens.map(t => t.currentToken))];
+                    
+                    if (uniqueTokens.length > 1) {
+                      const tokenDetails = tablesWithTokens.map(t => `${t.name}: Token ${t.currentToken}`).join('\n');
+                      if (!confirm(`⚠️ WARNING: These tables have different active tokens:\n\n${tokenDetails}\n\nMerging them may cause billing conflicts. Are you sure you want to proceed?`)) {
+                        return;
+                      }
+                    }
+                    
+                    // Merge the selected tables
+                    const primaryTable = selectedTablesForMerge[0];
+                    const otherTables = selectedTablesForMerge.slice(1);
+                    const otherTableNames = otherTables.map(t => t.name);
+                    
+                    setTables(tables.map(t => {
+                      if (t.id === primaryTable.id) {
+                        return { ...t, mergedWith: otherTableNames };
+                      }
+                      const otherTable = otherTables.find(ot => ot.id === t.id);
+                      if (otherTable) {
+                        return { ...t, mergedWith: [primaryTable.name] };
+                      }
+                      return t;
+                    }));
+                    
+                    setShowMergeMode(false);
+                    setSelectedTablesForMerge([]);
+                    setSelectedTable(primaryTable);
+                    setShowTableSelector(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#22c55e',
+                    color: '#ffffff',
+                    border: '2px solid #22c55e',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  Confirm Merge ({selectedTablesForMerge.length})
+                </button>
+              )}
               <button
-                onClick={() => setShowTableSelector(false)}
+                onClick={() => {
+                  setSelectedTable(null);
+                  setShowTableSelector(false);
+                  setShowMergeMode(false);
+                  setSelectedTablesForMerge([]);
+                }}
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -7331,12 +7545,33 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     <div style={{ marginBottom: '12px', borderBottom: '1px dashed #000', paddingBottom: '8px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <span>Order #: {lastOrder.id}</span>
-                        <span>Token: {lastOrder.token || 'N/A'}</span>
                       </div>
                       <div style={{ fontSize: '10px', marginBottom: '2px' }}>{new Date(lastOrder.createdAt).toLocaleString()}</div>
-                      {lastOrder.tableNumber && <div style={{ fontSize: '10px', marginBottom: '2px' }}>Table: {lastOrder.tableNumber}</div>}
+                      {lastOrder.tableNumber && (
+                        <div style={{ fontSize: '10px', marginBottom: '2px' }}>
+                          Table: {lastOrder.tableNumber}
+                          {lastOrder.mergedWith && lastOrder.mergedWith.length > 0 && (
+                            <span> (Merged: {lastOrder.mergedWith.join(', ')})</span>
+                          )}
+                        </div>
+                      )}
                       <div style={{ fontSize: '10px', marginBottom: '2px' }}>Customer: {lastOrder.customerName || 'Walk-in'}</div>
                       <div style={{ fontSize: '10px' }}>Staff: {lastOrder.staffName || 'N/A'}</div>
+                    </div>
+
+                    {/* Huge Token Display */}
+                    <div style={{ 
+                      textAlign: 'center', 
+                      marginBottom: '16px', 
+                      padding: '16px', 
+                      border: '3px solid #000', 
+                      borderRadius: '8px',
+                      background: '#f9fafb'
+                    }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', color: '#666' }}>YOUR TOKEN</div>
+                      <div style={{ fontSize: '48px', fontWeight: '800', color: '#000', lineHeight: 1 }}>
+                        {lastOrder.token || 'N/A'}
+                      </div>
                     </div>
 
                     <div style={{ marginBottom: '12px', borderBottom: '1px dashed #000', paddingBottom: '8px' }}>
