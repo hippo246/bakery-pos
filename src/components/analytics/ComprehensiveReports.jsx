@@ -530,7 +530,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
         }}>
           <div>
             <div style={{
-              color: '#111827',
+              color: '#0a0a0a',
               fontSize: '20px',
               fontWeight: '600'
             }}>
@@ -545,7 +545,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
             style={{
               padding: '10px 20px',
               background: '#f9fafb',
-              color: '#111827',
+              color: '#0a0a0a',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               fontSize: '13px',
@@ -582,7 +582,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
                 width: '100%',
                 padding: '12px 16px',
                 background: selectedCategory === key ? '#f3f4f6' : '#ffffff',
-                color: selectedCategory === key ? '#111827' : '#6b7280',
+                color: selectedCategory === key ? '#0a0a0a' : '#6b7280',
                 border: selectedCategory === key ? '1px solid #d1d5db' : '1px solid transparent',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -624,8 +624,8 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
                   onClick={() => setSelectedReport(report.id)}
                   style={{
                     padding: '10px 16px',
-                    background: selectedReport === report.id ? '#111827' : '#ffffff',
-                    color: selectedReport === report.id ? '#ffffff' : '#111827',
+                    background: selectedReport === report.id ? '#0a0a0a' : '#ffffff',
+                    color: selectedReport === report.id ? '#ffffff' : '#0a0a0a',
                     border: selectedReport === report.id ? 'none' : '1px solid #d1d5db',
                     borderRadius: '6px',
                     fontSize: '13px',
@@ -659,8 +659,8 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
                 onClick={() => setDateRange(range)}
                 style={{
                   padding: '10px 20px',
-                  background: dateRange === range ? '#111827' : '#ffffff',
-                  color: dateRange === range ? '#ffffff' : '#111827',
+                  background: dateRange === range ? '#0a0a0a' : '#ffffff',
+                  color: dateRange === range ? '#ffffff' : '#0a0a0a',
                   border: dateRange === range ? 'none' : '1px solid #d1d5db',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -688,7 +688,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
               onClick={exportToPDF}
               style={{
                 padding: '12px 24px',
-                background: '#111827',
+                background: '#0a0a0a',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '6px',
@@ -707,7 +707,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
               style={{
                 padding: '12px 24px',
                 background: '#ffffff',
-                color: '#111827',
+                color: '#0a0a0a',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -729,7 +729,7 @@ export default function ComprehensiveReports({ orders = [], menuItems = [], staf
             border: '1px solid #e5e7eb',
             padding: '24px'
           }}>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827', marginBottom: '20px' }}>
+            <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a', marginBottom: '20px' }}>
               {currentReports.find(r => r.id === selectedReport)?.label.replace(/_/g, ' ')}
             </div>
             <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '24px' }}>
@@ -776,7 +776,7 @@ function SummaryCard({ label, value, icon }) {
         <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: '500' }}>
           {label}
         </div>
-        <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+        <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
           {value}
         </div>
       </div>
@@ -987,7 +987,7 @@ function DailySalesReport({ data }) {
 
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Sales by Day
       </div>
       {Object.entries(salesByDay).map(([day, stats]) => (
@@ -1001,10 +1001,10 @@ function DailySalesReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{day}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{day}</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{stats.orders} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.revenue.toLocaleString()}
           </div>
         </div>
@@ -1016,7 +1016,7 @@ function DailySalesReport({ data }) {
 function SalesByItemReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Top Selling Items
       </div>
       {data.topItems?.map((item, index) => (
@@ -1030,12 +1030,12 @@ function SalesByItemReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>
               #{index + 1}. {item.name}
             </div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>Qty: {item.quantity}</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{item.revenue.toLocaleString()}
           </div>
         </div>
@@ -1047,7 +1047,7 @@ function SalesByItemReport({ data }) {
 function SalesByCategoryReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Sales by Category
       </div>
       {Object.entries(data.categorySales || {}).map(([category, stats]) => (
@@ -1061,10 +1061,10 @@ function SalesByCategoryReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{category}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{category}</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>Qty: {stats.quantity}</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.revenue.toLocaleString()}
           </div>
         </div>
@@ -1077,7 +1077,7 @@ function SalesByPaymentReport({ data }) {
   const totalSales = data.totalSales;
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Payment Method Breakdown
       </div>
       {Object.entries(data.paymentMethods || {}).map(([method, amount]) => {
@@ -1085,11 +1085,11 @@ function SalesByPaymentReport({ data }) {
         return (
           <div key={method} style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{method}</span>
+              <span style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{method}</span>
               <span style={{ fontSize: '14px', color: '#6b7280' }}>{percentage}%</span>
             </div>
             <div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${percentage}%`, background: '#111827' }} />
+              <div style={{ height: '100%', width: `${percentage}%`, background: '#0a0a0a' }} />
             </div>
             <div style={{ marginTop: '8px', fontSize: '13px', color: '#6b7280' }}>
               ₹{amount.toLocaleString()}
@@ -1104,7 +1104,7 @@ function SalesByPaymentReport({ data }) {
 function HourlySalesReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Sales by Hour
       </div>
       {Object.entries(data.hourlySales || {}).sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([hour, stats]) => (
@@ -1118,12 +1118,12 @@ function HourlySalesReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>
               {parseInt(hour)}:00 - {parseInt(hour)}:59
             </div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{stats.count} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.revenue.toLocaleString()}
           </div>
         </div>
@@ -1135,7 +1135,7 @@ function HourlySalesReport({ data }) {
 function StaffPerformanceReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Staff Performance
       </div>
       {Object.values(data.staffPerformance || {}).map(staff => (
@@ -1149,10 +1149,10 @@ function StaffPerformanceReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{staff.name}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{staff.name}</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{staff.orders} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{staff.revenue.toLocaleString()}
           </div>
         </div>
@@ -1164,7 +1164,7 @@ function StaffPerformanceReport({ data }) {
 function TopCustomersReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Top Customers
       </div>
       {data.topCustomers?.map((customer, index) => (
@@ -1178,12 +1178,12 @@ function TopCustomersReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>
               #{index + 1}. {customer.name}
             </div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{customer.orders} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{customer.totalSpent.toLocaleString()}
           </div>
         </div>
@@ -1195,13 +1195,13 @@ function TopCustomersReport({ data }) {
 function ProfitLossReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Profit & Loss Statement
       </div>
       <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
           <span style={{ fontSize: '14px', color: '#6b7280' }}>Total Revenue</span>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>₹{data.financialAnalysis?.totalRevenue?.toLocaleString()}</span>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a' }}>₹{data.financialAnalysis?.totalRevenue?.toLocaleString()}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
           <span style={{ fontSize: '14px', color: '#6b7280' }}>Total Cost (COGS)</span>
@@ -1221,7 +1221,7 @@ function ProfitLossReport({ data }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0' }}>
           <span style={{ fontSize: '14px', color: '#6b7280' }}>Profit Margin</span>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{data.financialAnalysis?.profitMargin}%</span>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a' }}>{data.financialAnalysis?.profitMargin}%</span>
         </div>
       </div>
     </div>
@@ -1231,7 +1231,7 @@ function ProfitLossReport({ data }) {
 function StockLevelsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Inventory Overview
       </div>
       <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -1239,7 +1239,7 @@ function StockLevelsReport({ data }) {
         <SummaryCard label="Low Stock" value={data.inventoryAnalysis?.lowStockItems} icon="⚠️" />
         <SummaryCard label="Total Value" value={`₹${data.inventoryAnalysis?.totalValue?.toLocaleString()}`} icon="💰" />
       </div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Stock by Category
       </div>
       {Object.entries(data.inventoryAnalysis?.categories || {}).map(([category, stats]) => (
@@ -1253,10 +1253,10 @@ function StockLevelsReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{category}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{category}</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{stats.count} items</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.value.toLocaleString()}
           </div>
         </div>
@@ -1347,7 +1347,7 @@ function PeakHoursReport({ data }) {
   
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Peak Hours (Top 5)
       </div>
       {sortedHours.map(([hour, stats]) => (
@@ -1361,10 +1361,10 @@ function PeakHoursReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{parseInt(hour)}:00</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{parseInt(hour)}:00</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{stats.count} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.revenue.toLocaleString()}
           </div>
         </div>
@@ -1380,7 +1380,7 @@ function SlowPeriodsReport({ data }) {
   
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Slow Periods (Lowest 5)
       </div>
       {sortedHours.map(([hour, stats]) => (
@@ -1394,10 +1394,10 @@ function SlowPeriodsReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{parseInt(hour)}:00</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{parseInt(hour)}:00</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{stats.count} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.revenue.toLocaleString()}
           </div>
         </div>
@@ -1409,7 +1409,7 @@ function SlowPeriodsReport({ data }) {
 function SalesComparisonReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Sales Comparison
       </div>
       <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '20px' }}>
@@ -1434,7 +1434,7 @@ function AverageOrderValueReport({ data }) {
 
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Average Order Value Trends
       </div>
       {Object.entries(aovByDay).map(([day, stats]) => (
@@ -1447,8 +1447,8 @@ function AverageOrderValueReport({ data }) {
           display: 'flex',
           justifyContent: 'space-between'
         }}>
-          <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{day}</div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{day}</div>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{Math.round(stats.total / stats.count).toLocaleString()}
           </div>
         </div>
@@ -1465,7 +1465,7 @@ function LowStockReport({ data }) {
 function OverstockReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Overstock Items
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1478,7 +1478,7 @@ function OverstockReport({ data }) {
 function WastageReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Wastage Report
       </div>
       
@@ -1490,7 +1490,7 @@ function WastageReport({ data }) {
       </div>
       
       {/* Waste by Reason */}
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Waste by Reason
       </div>
       {Object.entries(data.wasteAnalysis?.wasteByReason || {}).map(([reason, cost]) => {
@@ -1498,7 +1498,7 @@ function WastageReport({ data }) {
         return (
           <div key={reason} style={{ marginBottom: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827', textTransform: 'capitalize' }}>{reason}</span>
+              <span style={{ fontSize: '14px', fontWeight: '500', color: '#0a0a0a', textTransform: 'capitalize' }}>{reason}</span>
               <span style={{ fontSize: '13px', color: '#6b7280' }}>{percentage}% (₹{cost.toFixed(2)})</span>
             </div>
             <div style={{ height: '8px', background: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
@@ -1509,7 +1509,7 @@ function WastageReport({ data }) {
       })}
       
       {/* Waste by Category */}
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px', marginTop: '24px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px', marginTop: '24px' }}>
         Waste by Category
       </div>
       {Object.entries(data.wasteAnalysis?.wasteByCategory || {}).map(([category, cost]) => (
@@ -1522,13 +1522,13 @@ function WastageReport({ data }) {
           display: 'flex',
           justifyContent: 'space-between'
         }}>
-          <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{category}</div>
+          <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{category}</div>
           <div style={{ fontSize: '18px', fontWeight: '600', color: '#dc2626' }}>₹{cost.toFixed(2)}</div>
         </div>
       ))}
       
       {/* Top Wasted Items */}
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px', marginTop: '24px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px', marginTop: '24px' }}>
         Top Wasted Items
       </div>
       {Object.entries(data.wasteAnalysis?.wasteByItem || {})
@@ -1545,7 +1545,7 @@ function WastageReport({ data }) {
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>#{index + 1}. {item}</div>
+              <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>#{index + 1}. {item}</div>
             </div>
             <div style={{ fontSize: '18px', fontWeight: '600', color: '#dc2626' }}>₹{cost.toFixed(2)}</div>
           </div>
@@ -1557,7 +1557,7 @@ function WastageReport({ data }) {
 function ExpiryReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Expiry Report
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1574,7 +1574,7 @@ function InventoryValuationReport({ data }) {
 function StockMovementReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Stock Movement
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1591,7 +1591,7 @@ function CategoryStockReport({ data }) {
 function SupplierStockReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Stock by Supplier
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1609,7 +1609,7 @@ function SlowMovingReport({ data }) {
   const slowItems = data.topItems?.slice(-10).reverse() || [];
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Slow Moving Items
       </div>
       {slowItems.map((item, index) => (
@@ -1623,10 +1623,10 @@ function SlowMovingReport({ data }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{item.name}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{item.name}</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>Qty: {item.quantity}</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{item.revenue.toLocaleString()}
           </div>
         </div>
@@ -1638,7 +1638,7 @@ function SlowMovingReport({ data }) {
 function StockTurnoverReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Stock Turnover Rate
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1652,7 +1652,7 @@ function StockTurnoverReport({ data }) {
 function StaffAttendanceReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Staff Attendance
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1665,7 +1665,7 @@ function StaffAttendanceReport({ data }) {
 function TipsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Tips Report
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1693,7 +1693,7 @@ function StaffRankingsReport({ data }) {
   
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Staff Rankings
       </div>
       {rankedStaff.map((staff, index) => (
@@ -1710,11 +1710,11 @@ function StaffRankingsReport({ data }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontSize: '20px' }}>{index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}</span>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{staff.name}</div>
+              <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{staff.name}</div>
               <div style={{ fontSize: '13px', color: '#6b7280' }}>{staff.orders} orders</div>
             </div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{staff.revenue.toLocaleString()}
           </div>
         </div>
@@ -1726,7 +1726,7 @@ function StaffRankingsReport({ data }) {
 function ShiftPerformanceReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Shift Performance
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1743,7 +1743,7 @@ function StaffProductivityReport({ data }) {
 function StaffCommissionReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Staff Commission
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1765,7 +1765,7 @@ function CustomerFrequencyReport({ data }) {
 function CustomerLoyaltyReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Customer Loyalty
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1778,7 +1778,7 @@ function CustomerLoyaltyReport({ data }) {
 function CustomerDemographicsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Customer Demographics
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1791,7 +1791,7 @@ function CustomerDemographicsReport({ data }) {
 function CustomerRetentionReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Customer Retention
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1804,7 +1804,7 @@ function CustomerRetentionReport({ data }) {
 function NewCustomersReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         New Customers
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1817,7 +1817,7 @@ function NewCustomersReport({ data }) {
 function ChurnedCustomersReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Churned Customers
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1834,7 +1834,7 @@ function CustomerLTVReport({ data }) {
 function CustomerSegmentationReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Customer Segments
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1848,7 +1848,7 @@ function CustomerSegmentationReport({ data }) {
 function CashFlowReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Cash Flow
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1861,13 +1861,13 @@ function CashFlowReport({ data }) {
 function TaxSummaryReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Tax Summary
       </div>
       <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #e5e7eb' }}>
           <span style={{ fontSize: '14px', color: '#6b7280' }}>Total Tax Collected</span>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>₹{data.totalGST?.toLocaleString()}</span>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a' }}>₹{data.totalGST?.toLocaleString()}</span>
         </div>
       </div>
     </div>
@@ -1881,7 +1881,7 @@ function GSTReport({ data }) {
 function ExpenseReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Expense Report
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1898,7 +1898,7 @@ function MarginAnalysisReport({ data }) {
 function ROIAnalysisReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         ROI Analysis
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1932,7 +1932,7 @@ function YearlyFinancialReport({ data }) {
 function KOTPerformanceReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         KOT Performance
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1945,7 +1945,7 @@ function KOTPerformanceReport({ data }) {
 function PreparationTimeReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Preparation Time
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1958,7 +1958,7 @@ function PreparationTimeReport({ data }) {
 function StationEfficiencyReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Station Efficiency
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1971,7 +1971,7 @@ function StationEfficiencyReport({ data }) {
 function KitchenErrorsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Kitchen Errors
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -1988,7 +1988,7 @@ function KitchenRushHoursReport({ data }) {
 function KitchenThroughputReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Kitchen Throughput
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2001,7 +2001,7 @@ function KitchenThroughputReport({ data }) {
 function OrderAccuracyReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Order Accuracy
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2019,7 +2019,7 @@ function KitchenStaffReport({ data }) {
 function OverallPerformanceReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Overall Performance
       </div>
       <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -2063,7 +2063,7 @@ function WeeklyPerformanceReport({ data }) {
 function SeasonalTrendsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Seasonal Trends
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2076,7 +2076,7 @@ function SeasonalTrendsReport({ data }) {
 function GrowthTrendsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Growth Trends
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2089,7 +2089,7 @@ function GrowthTrendsReport({ data }) {
 function SalesForecastReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Sales Forecast
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2102,7 +2102,7 @@ function SalesForecastReport({ data }) {
 function InventoryForecastReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Inventory Forecast
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2115,7 +2115,7 @@ function InventoryForecastReport({ data }) {
 function CustomerTrendsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Customer Trends
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2128,7 +2128,7 @@ function CustomerTrendsReport({ data }) {
 function StaffTrendsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Staff Trends
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2141,7 +2141,7 @@ function StaffTrendsReport({ data }) {
 function FinancialTrendsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Financial Trends
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2154,7 +2154,7 @@ function FinancialTrendsReport({ data }) {
 function YOYComparisonReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Year-over-Year Comparison
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2167,7 +2167,7 @@ function YOYComparisonReport({ data }) {
 function MOMComparisonReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Month-over-Month Comparison
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2180,7 +2180,7 @@ function MOMComparisonReport({ data }) {
 function TrendAnalysisReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Trend Analysis
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2194,7 +2194,7 @@ function TrendAnalysisReport({ data }) {
 function CustomBuilderReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Custom Report Builder
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2207,7 +2207,7 @@ function CustomBuilderReport({ data }) {
 function SavedReportsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Saved Reports
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2220,7 +2220,7 @@ function SavedReportsReport({ data }) {
 function ScheduledReportsReport({ data }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         Scheduled Reports
       </div>
       <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -2242,7 +2242,7 @@ function getWeekNumber(date) {
 function GenericReport({ title, data, labelKey }) {
   return (
     <div>
-      <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '16px' }}>
+      <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '16px' }}>
         {title}
       </div>
       {Object.entries(data).map(([key, stats]) => (
@@ -2256,10 +2256,10 @@ function GenericReport({ title, data, labelKey }) {
           justifyContent: 'space-between'
         }}>
           <div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>{key}</div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a' }}>{key}</div>
             <div style={{ fontSize: '13px', color: '#6b7280' }}>{stats.orders} orders</div>
           </div>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{stats.revenue.toLocaleString()}
           </div>
         </div>

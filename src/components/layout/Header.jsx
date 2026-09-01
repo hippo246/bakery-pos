@@ -30,8 +30,8 @@ export default function Header({
 
   return (
     <div style={{
-      background: darkMode ? '#1f2937' : '#ffffff',
-      borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+      background: darkMode ? '#0a0a0a' : '#ffffff',
+      borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
       padding: screenSize === 'small' ? '12px 16px' : '16px 24px',
       display: 'flex',
       justifyContent: 'space-between',
@@ -47,7 +47,7 @@ export default function Header({
         <h1 style={{
           fontSize: screenSize === 'small' ? '18px' : '20px',
           fontWeight: '700',
-          color: darkMode ? '#ffffff' : '#1f2937',
+          color: darkMode ? '#ffffff' : '#0a0a0a',
           margin: 0
         }}>
           {getTabTitle(activeTab)}
@@ -59,8 +59,8 @@ export default function Header({
           style={{
             padding: '8px 12px',
             background: darkMode ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
-            color: darkMode ? '#ffffff' : '#1f2937',
-            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+            color: darkMode ? '#ffffff' : '#0a0a0a',
+            border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
             borderRadius: '8px',
             fontSize: '14px',
             cursor: 'pointer',

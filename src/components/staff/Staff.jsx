@@ -299,14 +299,14 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
-    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
-    bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
-    border:   darkMode ? '#2d2d44' : '#d1d5db',
-    text:     darkMode ? '#ffffff' : '#1f2937',
-    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
-    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    bg:       darkMode ? '#000000' : '#f5f7fa',
+    bgEle:    darkMode ? '#0a0a0a' : '#ffffff',
+    bgCard:   darkMode ? '#111111' : '#ffffff',
+    bgInput:  darkMode ? '#000000' : '#f8fafc',
+    border:   darkMode ? '#222222' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#0a0a0a',
+    textSub:  darkMode ? '#e0e0e0' : '#222222',
+    textMute: darkMode ? '#888888' : '#6b7280',
     accent:   '#6366f1',
     accentHover: '#4f46e5',
   };
@@ -1124,7 +1124,7 @@ export default function SimpleStaff({ staff = [], setStaff, orders = [], onNavig
                   {Object.entries(viewingStaff.permissions || {}).map(([perm, enabled]) => (
                     <div key={perm} style={{ 
                       fontSize: '12px', 
-                      color: enabled ? '#10b981' : '#8b8b9e',
+                      color: enabled ? '#10b981' : '#888888',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px'
@@ -1230,7 +1230,7 @@ function StaffCard({ staff, onEdit, onView, onDelete, onStatusToggle }) {
     }}
     >
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '16px', fontWeight: '500', color: '#111827', marginBottom: '6px' }}>
+        <div style={{ fontSize: '16px', fontWeight: '500', color: '#0a0a0a', marginBottom: '6px' }}>
           {staff.name}
         </div>
         <div style={{ fontSize: '13px', color: t.textMute, marginBottom: '4px' }}>
@@ -1270,7 +1270,7 @@ function StaffCard({ staff, onEdit, onView, onDelete, onStatusToggle }) {
           style={{
             padding: '8px 16px',
             background: '#ffffff',
-            color: '#111827',
+            color: '#0a0a0a',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
             fontSize: '13px',
@@ -1285,7 +1285,7 @@ function StaffCard({ staff, onEdit, onView, onDelete, onStatusToggle }) {
           style={{
             padding: '8px 16px',
             background: '#ffffff',
-            color: '#111827',
+            color: '#0a0a0a',
             border: '1px solid #d1d5db',
             borderRadius: '6px',
             fontSize: '13px',

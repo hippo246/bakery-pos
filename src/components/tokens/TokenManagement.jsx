@@ -167,12 +167,12 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: darkMode ? '#1a1a2e' : '#f8fafc',
+      background: darkMode ? '#000000' : '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       overflow: 'hidden'
     }}>
       {/* Content */}
-      <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: darkMode ? '#14142a' : '#f1f5f9' }}>
+      <div style={{ flex: 1, padding: screenSize === 'small' ? '16px' : '24px', overflow: 'auto', background: darkMode ? '#000000' : '#f1f5f9' }}>
         {/* Header */}
         <div style={{
           marginBottom: screenSize === 'small' ? '20px' : '28px',
@@ -186,7 +186,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             <h1 style={{
               fontSize: screenSize === 'small' ? '24px' : '32px',
               fontWeight: '700',
-              color: darkMode ? '#ffffff' : '#111827',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               margin: 0,
               marginBottom: '4px'
             }}>
@@ -194,7 +194,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             </h1>
             <p style={{
               fontSize: screenSize === 'small' ? '13px' : '14px',
-              color: darkMode ? '#8b8b9e' : '#8b8b9e',
+              color: darkMode ? '#888888' : '#888888',
               margin: 0
             }}>
               Manage and track customer tokens
@@ -210,10 +210,10 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
           marginBottom: screenSize === 'small' ? '20px' : '28px'
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             padding: screenSize === 'small' ? '16px' : '24px',
             borderRadius: '16px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
             position: 'relative',
             overflow: 'hidden'
@@ -228,7 +228,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               borderRadius: '50%',
               opacity: 0.1
             }}></div>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#888888', marginBottom: '8px', fontWeight: '500' }}>
               ⏳ Pending
             </div>
             <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#f59e0b' }}>
@@ -236,10 +236,10 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             </div>
           </div>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             padding: screenSize === 'small' ? '16px' : '24px',
             borderRadius: '16px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
             position: 'relative',
             overflow: 'hidden'
@@ -254,7 +254,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               borderRadius: '50%',
               opacity: 0.1
             }}></div>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#888888', marginBottom: '8px', fontWeight: '500' }}>
               👨‍🍳 Preparing
             </div>
             <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#3b82f6' }}>
@@ -262,10 +262,10 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             </div>
           </div>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             padding: screenSize === 'small' ? '16px' : '24px',
             borderRadius: '16px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
             position: 'relative',
             overflow: 'hidden'
@@ -280,7 +280,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               borderRadius: '50%',
               opacity: 0.1
             }}></div>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#888888', marginBottom: '8px', fontWeight: '500' }}>
               ✅ Ready
             </div>
             <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#10b981' }}>
@@ -288,10 +288,10 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             </div>
           </div>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             padding: screenSize === 'small' ? '16px' : '24px',
             borderRadius: '16px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
             position: 'relative',
             overflow: 'hidden'
@@ -306,7 +306,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               borderRadius: '50%',
               opacity: 0.1
             }}></div>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#888888', marginBottom: '8px', fontWeight: '500' }}>
               📊 Completed Today
             </div>
             <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#8b5cf6' }}>
@@ -326,16 +326,16 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               gridColumn: '1 / -1',
               padding: '60px 40px',
               textAlign: 'center',
-              background: darkMode ? '#252538' : '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '16px',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
               boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
             }}>
               <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎫</div>
-              <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '8px' }}>
+              <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                 No active tokens
               </div>
-              <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
+              <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#888888' }}>
                 Tokens will appear here when orders are placed
               </div>
             </div>
@@ -344,9 +344,9 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               <div
                 key={token.id}
                 style={{
-                  background: darkMode ? '#252538' : '#ffffff',
+                  background: darkMode ? '#111111' : '#ffffff',
                   borderRadius: '16px',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
                   padding: screenSize === 'small' ? '20px' : '24px',
                   transition: 'all 0.3s ease',
@@ -419,7 +419,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   <div style={{
                     fontSize: screenSize === 'small' ? '14px' : '16px',
                     fontWeight: '600',
-                    color: darkMode ? '#ffffff' : '#111827',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     marginBottom: '4px'
                   }}>
                     {token.customerName || 'Walk-in'}
@@ -427,7 +427,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   {token.tableNumber && (
                     <div style={{
                       fontSize: screenSize === 'small' ? '12px' : '13px',
-                      color: darkMode ? '#8b8b9e' : '#8b8b9e',
+                      color: darkMode ? '#888888' : '#888888',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px'
@@ -440,13 +440,13 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                 {/* Order Summary */}
                 <div style={{
                   padding: screenSize === 'small' ? '12px' : '16px',
-                  background: darkMode ? '#1a1a2e' : '#f9fafb',
+                  background: darkMode ? '#000000' : '#f9fafb',
                   borderRadius: '12px',
                   marginBottom: screenSize === 'small' ? '12px' : '16px'
                 }}>
                   <div style={{
                     fontSize: screenSize === 'small' ? '12px' : '13px',
-                    color: darkMode ? '#8b8b9e' : '#8b8b9e',
+                    color: darkMode ? '#888888' : '#888888',
                     marginBottom: '4px'
                   }}>
                     {token.items?.length || 0} items
@@ -454,7 +454,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   <div style={{
                     fontSize: screenSize === 'small' ? '18px' : '20px',
                     fontWeight: '700',
-                    color: darkMode ? '#ffffff' : '#111827'
+                    color: darkMode ? '#ffffff' : '#0a0a0a'
                   }}>
                     ₹{token.total?.toFixed(2) || '0.00'}
                   </div>
@@ -463,7 +463,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                 {/* Time */}
                 <div style={{
                   fontSize: screenSize === 'small' ? '11px' : '12px',
-                  color: darkMode ? '#8b8b9e' : '#8b8b9e',
+                  color: darkMode ? '#888888' : '#888888',
                   marginBottom: screenSize === 'small' ? '12px' : '16px',
                   display: 'flex',
                   alignItems: 'center',
@@ -555,7 +555,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
           zIndex: 1000
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '20px',
             maxWidth: '550px',
             width: '90%',
@@ -570,13 +570,13 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               alignItems: 'center',
               marginBottom: '24px',
               paddingBottom: '16px',
-              borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+              borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
             }}>
               <div>
                 <h2 style={{
                   fontSize: '24px',
                   fontWeight: '700',
-                  color: darkMode ? '#ffffff' : '#111827',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
                   margin: 0,
                   marginBottom: '4px'
                 }}>
@@ -584,7 +584,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                 </h2>
                 <p style={{
                   fontSize: '14px',
-                  color: darkMode ? '#8b8b9e' : '#8b8b9e',
+                  color: darkMode ? '#888888' : '#888888',
                   margin: 0
                 }}>
                   {selectedToken.status}
@@ -596,7 +596,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: darkMode ? '#1a1a2e' : '#f3f4f6',
+                  background: darkMode ? '#000000' : '#f3f4f6',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '20px',
@@ -605,8 +605,8 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   justifyContent: 'center',
                   transition: 'all 0.2s ease'
                 }}
-                onMouseEnter={(e) => e.target.style.background = darkMode ? '#2d2d48' : '#e5e7eb'}
-                onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f3f4f6'}
+                onMouseEnter={(e) => e.target.style.background = darkMode ? '#000000' : '#e5e7eb'}
+                onMouseLeave={(e) => e.target.style.background = darkMode ? '#000000' : '#f3f4f6'}
               >
                 ✕
               </button>
@@ -616,11 +616,11 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             <div style={{
               textAlign: 'center',
               padding: '24px',
-              background: darkMode ? '#1a1a2e' : '#f3f4f6',
+              background: darkMode ? '#000000' : '#f3f4f6',
               borderRadius: '16px',
               marginBottom: '24px'
             }}>
-              <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+              <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#888888', marginBottom: '8px', fontWeight: '500' }}>
                 Token Number
               </div>
               <div style={{ fontSize: '42px', fontWeight: '700', color: '#3b82f6' }}>
@@ -646,14 +646,14 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
 
             {/* Customer Info */}
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '6px', fontWeight: '500' }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#888888', marginBottom: '6px', fontWeight: '500' }}>
                 👤 Customer
               </div>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                 {selectedToken.customerName || 'Walk-in'}
               </div>
               {selectedToken.customerPhone && (
-                <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
+                <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#888888' }}>
                   📞 {selectedToken.customerPhone}
                 </div>
               )}
@@ -662,10 +662,10 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             {/* Table */}
             {selectedToken.tableNumber && (
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '6px', fontWeight: '500' }}>
+                <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#888888', marginBottom: '6px', fontWeight: '500' }}>
                   🪑 Table
                 </div>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
+                <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                   {selectedToken.tableNumber}
                 </div>
               </div>
@@ -673,7 +673,7 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
 
             {/* Order Items */}
             <div style={{ marginBottom: '20px' }}>
-              <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '12px', fontWeight: '500' }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#888888', marginBottom: '12px', fontWeight: '500' }}>
                 📦 Order Items
               </div>
               {selectedToken.items && selectedToken.items.map((item, index) => (
@@ -681,15 +681,15 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   key={index}
                   style={{
                     padding: '16px',
-                    background: darkMode ? '#1a1a2e' : '#f9fafb',
+                    background: darkMode ? '#000000' : '#f9fafb',
                     borderRadius: '12px',
                     marginBottom: '12px',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', fontSize: '15px' }}>
+                      <div style={{ fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', fontSize: '15px' }}>
                         {item.name}
                         {item.isCustom && (
                           <span style={{ 
@@ -706,16 +706,16 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                         )}
                       </div>
                       {item.notes && (
-                        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginTop: '4px' }}>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#888888', marginTop: '4px' }}>
                           📝 {item.notes}
                         </div>
                       )}
                     </div>
                     <div style={{ textAlign: 'right', marginLeft: '16px' }}>
-                      <div style={{ fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
+                      <div style={{ fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                         {item.qty || item.quantity || 1} × ₹{item.price?.toFixed(2) || '0.00'}
                       </div>
-                      <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e' }}>
+                      <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#888888' }}>
                         ₹{((item.price || 0) * (item.qty || item.quantity || 1)).toFixed(2)}
                       </div>
                     </div>
@@ -727,14 +727,14 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
             {/* Total */}
             <div style={{
               padding: '20px',
-              background: darkMode ? '#1a1a2e' : '#f3f4f6',
+              background: darkMode ? '#000000' : '#f3f4f6',
               borderRadius: '12px',
               marginBottom: '24px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                 Total
               </div>
               <div style={{ fontSize: '24px', fontWeight: '700', color: '#3b82f6' }}>
@@ -775,8 +775,8 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                 style={{
                   flex: 1,
                   padding: '14px 24px',
-                  background: darkMode ? '#2d2d44' : '#e5e7eb',
-                  color: darkMode ? '#ffffff' : '#111827',
+                  background: darkMode ? '#222222' : '#e5e7eb',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
                   border: 'none',
                   borderRadius: '10px',
                   fontSize: '14px',
@@ -785,10 +785,10 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = darkMode ? '#2d2d44' : '#d1d5db';
+                  e.target.style.background = darkMode ? '#222222' : '#d1d5db';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = darkMode ? '#2d2d44' : '#e5e7eb';
+                  e.target.style.background = darkMode ? '#222222' : '#e5e7eb';
                 }}
               >
                 Close

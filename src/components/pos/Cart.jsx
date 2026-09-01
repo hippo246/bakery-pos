@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function Cart({ 
-  cart, 
+  cart = [], 
   screenSize = 'large', 
   darkMode = true,
   onRemoveItem,
@@ -36,7 +36,7 @@ export default function Cart({
         <div style={{
           fontSize: screenSize === 'small' ? '16px' : '18px',
           fontWeight: '700',
-          color: darkMode ? '#ffffff' : '#1f2937'
+          color: darkMode ? '#ffffff' : '#0a0a0a'
         }}>
           🛒 Cart ({cart.length})
         </div>
@@ -45,7 +45,7 @@ export default function Cart({
           fontWeight: '600',
           color: darkMode ? '#10b981' : '#059669'
         }}>
-          ₹{cartSubtotal.toFixed(2)}
+          ₹{cartSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
       </div>
 
@@ -65,6 +65,15 @@ export default function Cart({
             <div
               key={`${item.id}-${index}`}
               onClick={() => isEditing && onSelectItem(index)}
+              role={isEditing ? 'checkbox' : undefined}
+              aria-checked={isEditing ? selectedItems.includes(index) : undefined}
+              tabIndex={isEditing ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (isEditing && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  onSelectItem(index);
+                }
+              }}
               style={{
                 background: selectedItems.includes(index) 
                   ? 'rgba(99,102,241,0.1)' 
@@ -77,15 +86,37 @@ export default function Cart({
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: '10px',
                 cursor: isEditing ? 'pointer' : 'default',
                 transition: 'all 0.2s'
               }}
             >
+              {isEditing && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    flexShrink: 0,
+                    borderRadius: '5px',
+                    border: `1.5px solid ${selectedItems.includes(index) ? '#6366f1' : (darkMode ? 'rgba(255,255,255,0.2)' : '#d1d5db')}`,
+                    background: selectedItems.includes(index) ? '#6366f1' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    fontWeight: '700'
+                  }}
+                >
+                  {selectedItems.includes(index) && '✓'}
+                </div>
+              )}
               <div style={{ flex: 1 }}>
                 <div style={{
                   fontSize: screenSize === 'small' ? '14px' : '15px',
                   fontWeight: '600',
-                  color: darkMode ? '#ffffff' : '#1f2937',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
                   marginBottom: '4px'
                 }}>
                   {item.name}
@@ -93,7 +124,7 @@ export default function Cart({
                 {item.variant && (
                   <div style={{
                     fontSize: '12px',
-                    color: darkMode ? '#8b8b9e' : '#6b7280',
+                    color: darkMode ? '#888888' : '#6b7280',
                     marginBottom: '4px'
                   }}>
                     {item.variant}
@@ -119,9 +150,9 @@ export default function Cart({
                 <div style={{
                   fontSize: screenSize === 'small' ? '14px' : '15px',
                   fontWeight: '700',
-                  color: darkMode ? '#ffffff' : '#1f2937'
+                  color: darkMode ? '#ffffff' : '#0a0a0a'
                 }}>
-                  ₹{(item.price * item.quantity).toFixed(2)}
+                  ₹{(item.price * item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div style={{
                   display: 'flex',
@@ -133,16 +164,19 @@ export default function Cart({
                       e.stopPropagation();
                       onUpdateQuantity(index, -1);
                     }}
+                    disabled={item.quantity <= 1}
+                    aria-label={`Decrease quantity of ${item.name}`}
                     style={{
                       width: '28px',
                       height: '28px',
                       borderRadius: '6px',
                       background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
                       border: 'none',
-                      color: darkMode ? '#ffffff' : '#1f2937',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
                       fontSize: '16px',
                       fontWeight: '700',
-                      cursor: 'pointer',
+                      cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: item.quantity <= 1 ? 0.4 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
@@ -153,7 +187,7 @@ export default function Cart({
                   <span style={{
                     fontSize: '14px',
                     fontWeight: '600',
-                    color: darkMode ? '#ffffff' : '#1f2937',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     minWidth: '24px',
                     textAlign: 'center'
                   }}>
@@ -164,13 +198,14 @@ export default function Cart({
                       e.stopPropagation();
                       onUpdateQuantity(index, 1);
                     }}
+                    aria-label={`Increase quantity of ${item.name}`}
                     style={{
                       width: '28px',
                       height: '28px',
                       borderRadius: '6px',
                       background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
                       border: 'none',
-                      color: darkMode ? '#ffffff' : '#1f2937',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
                       fontSize: '16px',
                       fontWeight: '700',
                       cursor: 'pointer',
@@ -181,6 +216,56 @@ export default function Cart({
                   >
                     +
                   </button>
+                  {onEditItem && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditItem(index);
+                      }}
+                      aria-label={`Edit ${item.name}`}
+                      title="Edit item"
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        background: darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
+                        border: 'none',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ✏️
+                    </button>
+                  )}
+                  {onRemoveItem && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveItem(index);
+                      }}
+                      aria-label={`Remove ${item.name} from cart`}
+                      title="Remove item"
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        background: darkMode ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)',
+                        border: 'none',
+                        color: darkMode ? '#f87171' : '#ef4444',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

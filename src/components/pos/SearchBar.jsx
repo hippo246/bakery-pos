@@ -26,7 +26,7 @@ export default function SearchBar({
             border: `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e7eb'}`,
             borderRadius: '12px',
             fontSize: '14px',
-            color: darkMode ? '#ffffff' : '#1f2937',
+            color: darkMode ? '#ffffff' : '#0a0a0a',
             outline: 'none'
           }}
         />
@@ -44,7 +44,7 @@ export default function SearchBar({
         onClick={onQuickCodeSubmit}
         style={{
           padding: '12px 16px',
-          background: darkMode ? '#6366f1' : '#6366f1',
+          background: darkMode ? '#4f46e5' : '#6366f1',
           color: '#ffffff',
           border: 'none',
           borderRadius: '12px',

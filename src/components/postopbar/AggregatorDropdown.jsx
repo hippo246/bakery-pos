@@ -42,8 +42,8 @@ export default function AggregatorDropdown({
         top: '100%',
         right: 0,
         marginTop: '8px',
-        background: darkMode ? '#2a2a2a' : '#ffffff',
-        border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+        background: darkMode ? '#0a0a0a' : '#ffffff',
+        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         borderRadius: '8px',
         boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
         zIndex: 4000,
@@ -55,11 +55,11 @@ export default function AggregatorDropdown({
     >
       <div style={{
         padding: '12px 16px',
-        borderBottom: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
-        background: darkMode ? '#333' : '#f9fafb',
+        borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+        background: darkMode ? '#222222' : '#f9fafb',
         fontSize: '13px',
         fontWeight: '700',
-        color: darkMode ? '#fff' : '#1e293b',
+        color: darkMode ? '#fff' : '#0a0a0a',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center'
@@ -82,7 +82,7 @@ export default function AggregatorDropdown({
       </div>
 
       {pendingOrders.length === 0 ? (
-        <div style={{ padding: '24px', textAlign: 'center', color: darkMode ? '#999' : '#9ca3af' }}>
+        <div style={{ padding: '24px', textAlign: 'center', color: darkMode ? '#666666' : '#9ca3af' }}>
           <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
           <div style={{ fontSize: '13px' }}>No pending orders</div>
         </div>
@@ -92,7 +92,7 @@ export default function AggregatorDropdown({
             key={order.id}
             style={{
               padding: '12px 16px',
-              borderBottom: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+              borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
@@ -102,14 +102,14 @@ export default function AggregatorDropdown({
               <div style={{
                 fontSize: '13px',
                 fontWeight: '600',
-                color: darkMode ? '#fff' : '#1e293b',
+                color: darkMode ? '#fff' : '#0a0a0a',
                 marginBottom: '4px'
               }}>
                 {order.platform} - {order.orderId}
               </div>
               <div style={{
                 fontSize: '11px',
-                color: darkMode ? '#999' : '#6b7280'
+                color: darkMode ? '#666666' : '#6b7280'
               }}>
                 {order.customer} • ₹{order.total}
               </div>

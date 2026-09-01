@@ -515,14 +515,14 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
-    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
-    bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
-    border:   darkMode ? '#2d2d44' : '#d1d5db',
-    text:     darkMode ? '#ffffff' : '#1f2937',
-    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
-    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    bg:       darkMode ? '#000000' : '#f5f7fa',
+    bgEle:    darkMode ? '#0a0a0a' : '#ffffff',
+    bgCard:   darkMode ? '#111111' : '#ffffff',
+    bgInput:  darkMode ? '#000000' : '#f8fafc',
+    border:   darkMode ? '#222222' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#0a0a0a',
+    textSub:  darkMode ? '#e0e0e0' : '#222222',
+    textMute: darkMode ? '#888888' : '#6b7280',
     accent:   '#6366f1',
   };
 
@@ -537,8 +537,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
     }}>
       {/* Header */}
       <div style={{
-        background: darkMode ? '#1f1f35' : '#ffffff',
-        borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+        background: darkMode ? '#0a0a0a' : '#ffffff',
+        borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         padding: screenSize === 'small' ? '16px 20px' : '20px 32px'
       }}>
         <div style={{
@@ -589,7 +589,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             <button
               onClick={() => onNavigate && onNavigate('dashboard')}
               style={{
-                background: '#2d2d48',
+                background: '#000000',
                 border: 'none',
                 color: '#ffffff',
                 fontSize: screenSize === 'small' ? '12px' : '13px',
@@ -610,8 +610,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
       <div style={{ padding: screenSize === 'small' ? '16px 20px' : '24px 32px', overflow: 'auto', flex: 1 }}>
         {/* Controls */}
         <div style={{
-          background: darkMode ? '#1f1f35' : '#ffffff',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          background: darkMode ? '#0a0a0a' : '#ffffff',
+          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
           borderRadius: '12px',
           padding: screenSize === 'small' ? '12px 16px' : '16px 20px',
           marginBottom: screenSize === 'small' ? '16px' : '20px',
@@ -630,11 +630,11 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               flex: screenSize === 'small' ? '1' : '1',
               minWidth: screenSize === 'small' ? '100%' : '180px',
               padding: screenSize === 'small' ? '12px' : '8px 12px',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#cbd5e1'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#cbd5e1'}`,
               borderRadius: '8px',
               fontSize: screenSize === 'small' ? '16px' : '13px',
-              background: darkMode ? '#252538' : '#ffffff',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              background: darkMode ? '#111111' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               outline: 'none',
               minHeight: screenSize === 'small' ? '44px' : 'auto'
             }}
@@ -644,11 +644,11 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
               padding: screenSize === 'small' ? '12px' : '8px 12px',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#cbd5e1'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#cbd5e1'}`,
               borderRadius: '8px',
               fontSize: screenSize === 'small' ? '16px' : '13px',
-              background: darkMode ? '#252538' : '#ffffff',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              background: darkMode ? '#111111' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               cursor: 'pointer',
               outline: 'none',
               minHeight: screenSize === 'small' ? '44px' : 'auto',
@@ -676,37 +676,37 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           gap: screenSize === 'small' ? '10px' : '12px',
           marginBottom: screenSize === 'small' ? '16px' : '20px'
         }}>
-          <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Total Items</div>
+          <div style={{ background: darkMode ? '#111111' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Total Items</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: '#6366f1' }}>{inventory.length}</div>
           </div>
-          <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Low Stock</div>
+          <div style={{ background: darkMode ? '#111111' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Low Stock</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: lowStockCount > 0 ? '#f59e0b' : '#10b981' }}>{lowStockCount}</div>
           </div>
-          <div style={{ background: darkMode ? '#252538' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-            <div style={{ fontSize: '11px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Expiring Soon</div>
+          <div style={{ background: darkMode ? '#111111' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#64748b', marginBottom: '4px', textTransform: 'uppercase' }}>Expiring Soon</div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: expiringSoonCount > 0 ? '#f59e0b' : '#10b981' }}>{expiringSoonCount}</div>
           </div>
           <div style={{
-            background: darkMode ? '#1a1a2e' : '#f8f9fa',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            background: darkMode ? '#000000' : '#f8f9fa',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             padding: '8px'
           }}>
-            <div style={{ fontSize: '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '2px' }}>TOTAL VALUE</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827' }}>₹{totalValue.toLocaleString()}</div>
+            <div style={{ fontSize: '10px', color: darkMode ? '#888888' : '#64748b', marginBottom: '2px' }}>TOTAL VALUE</div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a' }}>₹{totalValue.toLocaleString()}</div>
           </div>
         </div>
 
         {/* Inventory Table */}
         <div style={{
-          background: darkMode ? '#1a1a2e' : '#ffffff',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          background: darkMode ? '#000000' : '#ffffff',
+          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
           padding: screenSize === 'small' ? '6px' : '8px',
           overflow: 'auto'
         }}>
           {filteredItems.length === 0 ? (
-            <div style={{ padding: screenSize === 'small' ? '16px' : '20px', textAlign: 'center', color: darkMode ? '#8b8b9e' : '#64748b', fontSize: screenSize === 'small' ? '13px' : '14px' }}>
+            <div style={{ padding: screenSize === 'small' ? '16px' : '20px', textAlign: 'center', color: darkMode ? '#888888' : '#64748b', fontSize: screenSize === 'small' ? '13px' : '14px' }}>
               {search || categoryFilter !== 'ALL' ? 'No items found' : 'No inventory items yet. Add your first item!'}
             </div>
           ) : (
@@ -718,8 +718,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 <div
                   key={item.id}
                   style={{
-                    background: darkMode ? '#1a1a2e' : '#f8f9fa',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                    background: darkMode ? '#000000' : '#f8f9fa',
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     padding: screenSize === 'small' ? '10px' : '8px',
                     marginBottom: screenSize === 'small' ? '8px' : '4px',
                     display: 'flex',
@@ -730,16 +730,16 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   }}
                 >
                   <div style={{ flex: 1, minWidth: screenSize === 'small' ? '0' : 'auto' }}>
-                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '12px', fontWeight: 'bold', marginBottom: screenSize === 'small' ? '4px' : '2px', color: darkMode ? '#ffffff' : '#111827' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '12px', fontWeight: 'bold', marginBottom: screenSize === 'small' ? '4px' : '2px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                       {item.name}
                     </div>
-                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: screenSize === 'small' ? '4px' : '2px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: darkMode ? '#888888' : '#64748b', marginBottom: screenSize === 'small' ? '4px' : '2px' }}>
                       {item.category}
                     </div>
                     <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: isLowStock ? '#ff8c00' : '#10b981', fontWeight: 'bold' }}>
                       Qty: {item.quantity} {item.unit} • Min: {item.minStock} {item.unit}
                     </div>
-                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '10px', color: darkMode ? '#888888' : '#64748b' }}>
                       Value: ₹{itemValue.toFixed(2)}
                     </div>
                   </div>
@@ -748,9 +748,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleAdjustStock(item, -1)}
                       style={{
                         padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
-                        background: darkMode ? '#252538' : '#e5e7eb',
+                        background: darkMode ? '#111111' : '#e5e7eb',
                         border: 'none',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
@@ -764,9 +764,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleAdjustStock(item, 1)}
                       style={{
                         padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
-                        background: darkMode ? '#252538' : '#e5e7eb',
+                        background: darkMode ? '#111111' : '#e5e7eb',
                         border: 'none',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
@@ -780,9 +780,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleEditItem(item)}
                       style={{
                         padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
-                        background: darkMode ? '#252538' : '#e5e7eb',
+                        background: darkMode ? '#111111' : '#e5e7eb',
                         border: 'none',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
@@ -796,9 +796,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       onClick={() => handleDeleteItem(item.id)}
                       style={{
                         padding: screenSize === 'small' ? '8px 12px' : '4px 8px',
-                        background: darkMode ? '#252538' : '#e5e7eb',
+                        background: darkMode ? '#111111' : '#e5e7eb',
                         border: 'none',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         fontSize: screenSize === 'small' ? '14px' : '10px',
                         fontWeight: 'bold',
                         cursor: 'pointer',
@@ -832,8 +832,8 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
-            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            background: darkMode ? '#111111' : '#ffffff',
+            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             padding: screenSize === 'small' ? '0' : '4px',
             maxWidth: screenSize === 'small' ? '100vw' : '450px',
             width: screenSize === 'small' ? '100vw' : '90%',
@@ -856,7 +856,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowModal(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: screenSize === 'small' ? '20px' : '10px',
@@ -872,10 +872,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
             </div>
             
             {/* Content */}
-            <div style={{ padding: screenSize === 'small' ? '20px' : '12px', background: darkMode ? '#252538' : '#ffffff' }}>
+            <div style={{ padding: screenSize === 'small' ? '20px' : '12px', background: darkMode ? '#111111' : '#ffffff' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '14px' : '8px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                     Name *
                   </label>
                   <input
@@ -885,17 +885,17 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                     style={{
                       width: '100%',
                       padding: screenSize === 'small' ? '14px' : '4px',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       fontSize: screenSize === 'small' ? '16px' : '12px',
-                      background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
                       minHeight: screenSize === 'small' ? '48px' : 'auto'
                     }}
                   />
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                     Category *
                   </label>
                   {showCustomCategory ? (
@@ -909,10 +909,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                         style={{
                           flex: 1,
                           padding: screenSize === 'small' ? '14px' : '4px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           fontSize: screenSize === 'small' ? '16px' : '12px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#111827',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           minHeight: screenSize === 'small' ? '48px' : 'auto'
                         }}
                       />
@@ -934,7 +934,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                           setShowCustomCategory(false);
                           setCustomCategory('');
                         }}
-                        style={{ padding: '4px 8px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
+                        style={{ padding: '4px 8px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}
                       >
                         ✕
                       </button>
@@ -952,10 +952,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         fontSize: '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827'
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a'
                       }}
                     >
                       {categories.filter(c => c !== 'ALL').map(cat => (
@@ -968,7 +968,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 
                 <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Quantity *
                     </label>
                     <input
@@ -979,17 +979,17 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: screenSize === 'small' ? '14px' : '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         fontSize: screenSize === 'small' ? '16px' : '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Unit *
                     </label>
                     {showCustomUnit ? (
@@ -1003,10 +1003,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                           style={{
                             flex: 1,
                             padding: screenSize === 'small' ? '14px' : '4px',
-                            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                             fontSize: screenSize === 'small' ? '16px' : '12px',
-                            background: darkMode ? '#1a1a2e' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#111827',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
                             minHeight: screenSize === 'small' ? '48px' : 'auto'
                           }}
                         />
@@ -1028,7 +1028,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                             setShowCustomUnit(false);
                             setCustomUnit('');
                           }}
-                          style={{ padding: screenSize === 'small' ? '10px 16px' : '4px 8px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '4px', fontSize: screenSize === 'small' ? '14px' : '12px', cursor: 'pointer', minHeight: screenSize === 'small' ? '48px' : 'auto' }}
+                          style={{ padding: screenSize === 'small' ? '10px 16px' : '4px 8px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '4px', fontSize: screenSize === 'small' ? '14px' : '12px', cursor: 'pointer', minHeight: screenSize === 'small' ? '48px' : 'auto' }}
                         >
                           ✕
                         </button>
@@ -1046,10 +1046,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px' : '4px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           fontSize: screenSize === 'small' ? '16px' : '12px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#111827',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           minHeight: screenSize === 'small' ? '48px' : 'auto'
                         }}
                       >
@@ -1070,7 +1070,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                 
                 <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Min Stock
                     </label>
                     <input
@@ -1081,17 +1081,17 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: screenSize === 'small' ? '14px' : '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         fontSize: screenSize === 'small' ? '16px' : '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Cost per Unit (₹)
                     </label>
                     <input
@@ -1103,10 +1103,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: screenSize === 'small' ? '14px' : '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         fontSize: screenSize === 'small' ? '16px' : '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
@@ -1115,7 +1115,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
 
                 <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '8px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Expiry Date
                     </label>
                     <input
@@ -1125,17 +1125,17 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: screenSize === 'small' ? '14px' : '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         fontSize: screenSize === 'small' ? '16px' : '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
                   </div>
 
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#111827', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
+                    <label style={{ display: 'block', fontSize: screenSize === 'small' ? '12px' : '11px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: screenSize === 'small' ? '6px' : '4px' }}>
                       Batch Number
                     </label>
                     <input
@@ -1146,10 +1146,10 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                       style={{
                         width: '100%',
                         padding: screenSize === 'small' ? '14px' : '4px',
-                        border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         fontSize: screenSize === 'small' ? '16px' : '12px',
-                        background: darkMode ? '#1a1a2e' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#111827',
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         minHeight: screenSize === 'small' ? '48px' : 'auto'
                       }}
                     />
@@ -1163,9 +1163,9 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
                   style={{
                     flex: 1,
                     padding: screenSize === 'small' ? '14px' : '6px',
-                    background: darkMode ? '#252538' : '#e5e7eb',
+                    background: darkMode ? '#111111' : '#e5e7eb',
                     border: 'none',
-                    color: darkMode ? '#ffffff' : '#111827',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     fontSize: screenSize === 'small' ? '15px' : '12px',
                     fontWeight: '600',
                     cursor: 'pointer',
@@ -1213,7 +1213,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '600px',
@@ -1235,7 +1235,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowExpiryAlerts(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -1249,7 +1249,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#ef4444' }}>
                   Expired Items ({getExpiredItems().length})
@@ -1337,7 +1337,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '600px',
@@ -1359,7 +1359,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowFefoSuggestions(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -1373,12 +1373,12 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
-              <div style={{ fontSize: '11px', color: '#8b8b9e', marginBottom: '12px' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
+              <div style={{ fontSize: '11px', color: '#888888', marginBottom: '12px' }}>
                 Use items with earliest expiry dates first to minimize waste
               </div>
               {getFefoSuggestions().length === 0 ? (
-                <div style={{ fontSize: '11px', color: '#8b8b9e' }}>No items with expiry dates</div>
+                <div style={{ fontSize: '11px', color: '#888888' }}>No items with expiry dates</div>
               ) : (
                 getFefoSuggestions().map((item, index) => {
                   const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
@@ -1437,7 +1437,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '500px',
@@ -1457,7 +1457,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowWasteModal(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -1471,7 +1471,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <WasteLogForm
                 inventory={inventory}
                 onLogWaste={(itemId, quantity, reason, staffId) => {
@@ -1500,7 +1500,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '800px',
@@ -1522,7 +1522,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               <button
                 onClick={() => setShowWasteReport(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -1536,7 +1536,7 @@ export default function SimpleInventory({ inventory = [], setInventory, onNaviga
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <WasteReport analytics={getWasteAnalytics()} records={wasteRecords} />
             </div>
           </div>
@@ -1575,9 +1575,9 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px',
-              background: '#1a1a2e'
+              background: '#000000'
             }}
           >
             <option value="">Select item</option>
@@ -1601,7 +1601,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
           />
@@ -1618,9 +1618,9 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px',
-              background: '#1a1a2e'
+              background: '#000000'
             }}
           >
             <option value="">Select reason</option>
@@ -1646,7 +1646,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
           />
@@ -1660,7 +1660,7 @@ function WasteLogForm({ inventory, onLogWaste, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             color: '#ffffff',
             fontSize: '11px',
@@ -1697,21 +1697,21 @@ function WasteReport({ analytics, records }) {
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Summary</div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Waste Cost</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Total Waste Cost</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#800000' }}>₹{analytics.totalWasteCost.toFixed(2)}</div>
           </div>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Records</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Total Records</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{analytics.totalWasteRecords}</div>
           </div>
         </div>
@@ -1720,7 +1720,7 @@ function WasteReport({ analytics, records }) {
       {Object.keys(analytics.wasteByReason).length > 0 && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Waste by Reason</div>
-          <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+          <div style={{ background: '#000000', border: '1px solid #222222' }}>
             {Object.entries(analytics.wasteByReason).map(([reason, cost]) => (
               <div key={reason} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
                 <span>{reason}</span>
@@ -1734,7 +1734,7 @@ function WasteReport({ analytics, records }) {
       {Object.keys(analytics.wasteByItem).length > 0 && (
         <div style={{ marginBottom: '16px' }}>
           <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Waste by Item</div>
-          <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+          <div style={{ background: '#000000', border: '1px solid #222222' }}>
             {Object.entries(analytics.wasteByItem)
               .sort(([, a], [, b]) => b - a)
               .slice(0, 5)
@@ -1751,7 +1751,7 @@ function WasteReport({ analytics, records }) {
       {records.length > 0 && (
         <div>
           <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Recent Waste Records</div>
-          <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+          <div style={{ background: '#000000', border: '1px solid #222222' }}>
             {records.slice(-10).reverse().map(record => (
               <div key={record.id} style={{
                 borderBottom: '1px solid #c0c0c0',
@@ -1759,11 +1759,11 @@ function WasteReport({ analytics, records }) {
                 fontSize: '11px'
               }}>
                 <div style={{ fontWeight: 'bold' }}>{record.itemName}</div>
-                <div style={{ color: '#8b8b9e' }}>
+                <div style={{ color: '#888888' }}>
                   Qty: {record.quantity} {record.unit} • Cost: ₹{record.totalCost.toFixed(2)}
                 </div>
                 <div style={{ color: '#800000' }}>Reason: {record.reason}</div>
-                <div style={{ fontSize: '10px', color: '#8b8b9e' }}>
+                <div style={{ fontSize: '10px', color: '#888888' }}>
                   {new Date(record.timestamp).toLocaleString()}
                 </div>
               </div>
@@ -1787,7 +1787,7 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '800px',
@@ -1809,7 +1809,7 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowVendorList(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -1823,7 +1823,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <button
                 onClick={handleAddVendor}
                 style={{
@@ -1841,11 +1841,11 @@ function WasteReport({ analytics, records }) {
               </button>
 
               {vendors.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#8b8b9e' }}>
+                <div style={{ textAlign: 'center', padding: '20px', color: '#888888' }}>
                   No vendors added yet
                 </div>
               ) : (
-                <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+                <div style={{ background: '#000000', border: '1px solid #222222' }}>
                   {vendors.map(vendor => (
                     <div key={vendor.id} style={{
                       borderBottom: '1px solid #c0c0c0',
@@ -1856,10 +1856,10 @@ function WasteReport({ analytics, records }) {
                     }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{vendor.name}</div>
-                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                        <div style={{ fontSize: '11px', color: '#888888' }}>
                           Phone: {vendor.phone} • Email: {vendor.email || 'N/A'}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                        <div style={{ fontSize: '11px', color: '#888888' }}>
                           Payment Terms: {vendor.paymentTerms || 'N/A'}
                         </div>
                         <div style={{ fontSize: '11px' }}>
@@ -1883,7 +1883,7 @@ function WasteReport({ analytics, records }) {
                           onClick={() => handleEditVendor(vendor)}
                           style={{
                             padding: '4px 8px',
-                            background: '#252538',
+                            background: '#111111',
                             border: 'none',
                             color: '#ffffff',
                             fontSize: '10px',
@@ -1932,7 +1932,7 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '500px',
@@ -1952,7 +1952,7 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowVendorModal(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -1966,7 +1966,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <VendorForm
                 vendor={editingVendor}
                 onSave={handleSaveVendor}
@@ -1995,7 +1995,7 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '900px',
@@ -2017,7 +2017,7 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowPOList(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -2031,7 +2031,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <button
                 onClick={handleAddPO}
                 style={{
@@ -2049,11 +2049,11 @@ function WasteReport({ analytics, records }) {
               </button>
 
               {purchaseOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#8b8b9e' }}>
+                <div style={{ textAlign: 'center', padding: '20px', color: '#888888' }}>
                   No purchase orders yet
                 </div>
               ) : (
-                <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+                <div style={{ background: '#000000', border: '1px solid #222222' }}>
                   {purchaseOrders.map(po => {
                     const vendor = vendors.find(v => v.id === po.vendorId);
                     return (
@@ -2066,10 +2066,10 @@ function WasteReport({ analytics, records }) {
                       }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: '12px', fontWeight: 'bold' }}>PO #{po.id.slice(-6)}</div>
-                          <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                          <div style={{ fontSize: '11px', color: '#888888' }}>
                             Vendor: {vendor?.name || 'Unknown'} • Total: ₹{po.totalCost?.toFixed(2) || '0.00'}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                          <div style={{ fontSize: '11px', color: '#888888' }}>
                             Items: {po.items?.length || 0} • Expected: {po.expectedDate ? new Date(po.expectedDate).toLocaleDateString() : 'N/A'}
                           </div>
                           <div style={{ fontSize: '11px' }}>
@@ -2120,7 +2120,7 @@ function WasteReport({ analytics, records }) {
                             onClick={() => handleEditPO(po)}
                             style={{
                               padding: '4px 8px',
-                              background: '#252538',
+                              background: '#111111',
                               border: 'none',
                               color: '#ffffff',
                               fontSize: '10px',
@@ -2170,7 +2170,7 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '700px',
@@ -2192,7 +2192,7 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowPOModal(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -2206,7 +2206,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <PurchaseOrderForm
                 po={editingPO}
                 vendors={vendors}
@@ -2237,7 +2237,7 @@ function WasteReport({ analytics, records }) {
           zIndex: 1000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             padding: '4px',
             maxWidth: '900px',
@@ -2259,7 +2259,7 @@ function WasteReport({ analytics, records }) {
               <button
                 onClick={() => setShowAnalytics(false)}
                 style={{
-                  background: '#252538',
+                  background: '#111111',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '10px',
@@ -2273,7 +2273,7 @@ function WasteReport({ analytics, records }) {
               </button>
             </div>
             
-            <div style={{ padding: '12px', background: '#252538' }}>
+            <div style={{ padding: '12px', background: '#111111' }}>
               <InventoryAnalytics analytics={getInventoryAnalytics()} />
             </div>
           </div>
@@ -2315,7 +2315,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="e.g., ABC Supplies"
@@ -2334,7 +2334,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="e.g., 9876543210"
@@ -2352,7 +2352,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="e.g., vendor@example.com"
@@ -2370,7 +2370,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="Vendor address"
@@ -2388,7 +2388,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="e.g., Net 30, COD"
@@ -2406,7 +2406,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="GSTIN number"
@@ -2421,7 +2421,7 @@ function VendorForm({ vendor, onSave, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             color: '#ffffff',
             fontSize: '11px',
@@ -2504,9 +2504,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px',
-              background: '#1a1a2e'
+              background: '#000000'
             }}
           >
             <option value="">Select vendor</option>
@@ -2546,7 +2546,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             }}>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <div style={{ flex: 2 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#888888', marginBottom: '2px' }}>
                     Item Name
                   </label>
                   <select
@@ -2555,9 +2555,9 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '1px solid #2d2d44',
+                      border: '1px solid #222222',
                       fontSize: '11px',
-                      background: '#1a1a2e'
+                      background: '#000000'
                     }}
                   >
                     <option value="">Select item</option>
@@ -2567,7 +2567,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#888888', marginBottom: '2px' }}>
                     Quantity
                   </label>
                   <input
@@ -2579,13 +2579,13 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '1px solid #2d2d44',
+                      border: '1px solid #222222',
                       fontSize: '11px'
                     }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#888888', marginBottom: '2px' }}>
                     Unit
                   </label>
                   <input
@@ -2595,13 +2595,13 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '1px solid #2d2d44',
+                      border: '1px solid #222222',
                       fontSize: '11px'
                     }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#888888', marginBottom: '2px' }}>
                     Cost
                   </label>
                   <input
@@ -2613,7 +2613,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
                     style={{
                       width: '100%',
                       padding: '4px',
-                      border: '1px solid #2d2d44',
+                      border: '1px solid #222222',
                       fontSize: '11px'
                     }}
                   />
@@ -2649,7 +2649,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
           />
@@ -2666,7 +2666,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
             style={{
               width: '100%',
               padding: '4px',
-              border: '1px solid #2d2d44',
+              border: '1px solid #222222',
               fontSize: '12px'
             }}
             placeholder="Additional notes"
@@ -2676,7 +2676,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
         <div style={{
           background: '#f0f0f0',
           padding: '8px',
-          border: '1px solid #2d2d44',
+          border: '1px solid #222222',
           fontSize: '12px',
           fontWeight: 'bold'
         }}>
@@ -2691,7 +2691,7 @@ function PurchaseOrderForm({ po, vendors, inventory, onSave, onCancel }) {
           style={{
             flex: 1,
             padding: '6px',
-            background: '#252538',
+            background: '#111111',
             border: 'none',
             color: '#ffffff',
             fontSize: '11px',
@@ -2728,43 +2728,43 @@ function InventoryAnalytics({ analytics }) {
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Overview</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Items</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Total Items</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{analytics.totalItems}</div>
           </div>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Total Value</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Total Value</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#0066cc' }}>₹{analytics.totalValue.toFixed(2)}</div>
           </div>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Low Stock</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Low Stock</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#f59e0b' }}>{analytics.lowStockCount}</div>
           </div>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Expired</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Expired</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#ef4444' }}>{analytics.expiredCount}</div>
           </div>
         </div>
@@ -2772,9 +2772,9 @@ function InventoryAnalytics({ analytics }) {
 
       <div style={{ marginBottom: '16px' }}>
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Category Breakdown</div>
-        <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+        <div style={{ background: '#000000', border: '1px solid #222222' }}>
           {Object.entries(analytics.categoryBreakdown).length === 0 ? (
-            <div style={{ fontSize: '11px', color: '#8b8b9e' }}>No data</div>
+            <div style={{ fontSize: '11px', color: '#888888' }}>No data</div>
           ) : (
             Object.entries(analytics.categoryBreakdown).map(([category, value]) => (
               <div key={category} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '11px' }}>
@@ -2790,33 +2790,33 @@ function InventoryAnalytics({ analytics }) {
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Financial Summary</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Waste Cost</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Waste Cost</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#800000' }}>₹{analytics.wasteCost.toFixed(2)}</div>
           </div>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>Waste %</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>Waste %</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#800000' }}>{analytics.wastePercentage.toFixed(1)}%</div>
           </div>
           <div style={{
-            background: '#1a1a2e',
-            border: '1px solid #2d2d44',
+            background: '#000000',
+            border: '1px solid #222222',
             padding: '8px',
             flex: 1,
             minWidth: '120px'
           }}>
-            <div style={{ fontSize: '10px', color: '#8b8b9e', marginBottom: '2px' }}>PO Total</div>
+            <div style={{ fontSize: '10px', color: '#888888', marginBottom: '2px' }}>PO Total</div>
             <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#cc6600' }}>₹{analytics.poTotal.toFixed(2)}</div>
           </div>
         </div>
@@ -2824,7 +2824,7 @@ function InventoryAnalytics({ analytics }) {
 
       <div>
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Alerts</div>
-        <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44' }}>
+        <div style={{ background: '#000000', border: '1px solid #222222' }}>
           {analytics.expiringCount > 0 && (
             <div style={{ marginBottom: '4px', fontSize: '11px', color: '#f59e0b' }}>
               ⚠️ {analytics.expiringCount} items expiring soon

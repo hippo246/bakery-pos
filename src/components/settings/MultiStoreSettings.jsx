@@ -188,7 +188,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
     }}>
       {/* Header */}
       <div>
-        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' }}>
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0a0a0a', margin: '0 0 8px 0' }}>
           🏪 Multi-Store Management
         </h2>
         <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
@@ -209,7 +209,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
           border: '1px solid #e5e7eb'
         }}>
           <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Total Stores</div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b' }}>{stats.totalStores}</div>
+          <div style={{ fontSize: '24px', fontWeight: '700', color: '#0a0a0a' }}>{stats.totalStores}</div>
         </div>
         <div style={{
           background: '#ffffff',
@@ -324,7 +324,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
           borderBottom: '1px solid #e5e7eb',
           fontSize: '16px',
           fontWeight: '700',
-          color: '#1e293b'
+          color: '#0a0a0a'
         }}>
           Store Locations
         </div>
@@ -349,7 +349,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
               >
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#0a0a0a' }}>
                       {store.name}
                     </span>
                     {store.isActive ? (
@@ -470,12 +470,12 @@ export default function MultiStoreSettings({ settings, setSettings }) {
             width: '500px',
             maxWidth: '90vw'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a', marginBottom: '20px' }}>
               {editingStore ? 'Edit Store' : 'Add New Store'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Store Name *
                 </label>
                 <input
@@ -493,7 +493,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Address
                 </label>
                 <input
@@ -511,7 +511,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Phone
                 </label>
                 <input
@@ -529,7 +529,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Email
                 </label>
                 <input
@@ -547,7 +547,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   GSTIN
                 </label>
                 <input
@@ -565,7 +565,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   FSSAI License
                 </label>
                 <input
@@ -589,7 +589,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                   onChange={(e) => setStoreForm({ ...storeForm, isActive: e.target.checked })}
                   style={{ width: '18px', height: '18px' }}
                 />
-                <label style={{ fontSize: '14px', color: '#1e293b' }}>Active Store</label>
+                <label style={{ fontSize: '14px', color: '#0a0a0a' }}>Active Store</label>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
@@ -598,7 +598,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 style={{
                   padding: '12px 24px',
                   background: '#f3f4f6',
-                  color: '#374151',
+                  color: '#111111',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -649,12 +649,12 @@ export default function MultiStoreSettings({ settings, setSettings }) {
             width: '500px',
             maxWidth: '90vw'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a', marginBottom: '20px' }}>
               🔄 Transfer Stock Between Stores
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   From Store
                 </label>
                 <select
@@ -675,7 +675,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   To Store
                 </label>
                 <select
@@ -696,7 +696,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Item ID
                 </label>
                 <input
@@ -714,7 +714,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Quantity
                 </label>
                 <input
@@ -738,7 +738,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 style={{
                   padding: '12px 24px',
                   background: '#f3f4f6',
-                  color: '#374151',
+                  color: '#111111',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -789,12 +789,12 @@ export default function MultiStoreSettings({ settings, setSettings }) {
             width: '500px',
             maxWidth: '90vw'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a', marginBottom: '20px' }}>
               💰 Set Location-Specific Pricing
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Store
                 </label>
                 <select
@@ -818,7 +818,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Item ID
                 </label>
                 <input
@@ -836,7 +836,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Price
                 </label>
                 <input
@@ -860,7 +860,7 @@ export default function MultiStoreSettings({ settings, setSettings }) {
                 style={{
                   padding: '12px 24px',
                   background: '#f3f4f6',
-                  color: '#374151',
+                  color: '#111111',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',

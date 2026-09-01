@@ -262,7 +262,7 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
       case 'PENDING': return '#f59e0b';
       case 'IN_PROGRESS': return '#3b82f6';
       case 'CANCELLED': return '#ef4444';
-      default: return '#8b8b9e';
+      default: return '#888888';
     }
   };
 
@@ -274,20 +274,20 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
       'IN_PROGRESS': { bg: '#3b82f6', text: '🔄' },
       'CANCELLED': { bg: '#ef4444', text: '❌' }
     };
-    const config = colors[status?.toUpperCase()] || { bg: '#8b8b9e', text: '📋' };
+    const config = colors[status?.toUpperCase()] || { bg: '#888888', text: '📋' };
     return config;
   };
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
-    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
-    bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
-    border:   darkMode ? '#2d2d44' : '#d1d5db',
-    text:     darkMode ? '#ffffff' : '#1f2937',
-    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
-    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    bg:       darkMode ? '#000000' : '#f5f7fa',
+    bgEle:    darkMode ? '#0a0a0a' : '#ffffff',
+    bgCard:   darkMode ? '#111111' : '#ffffff',
+    bgInput:  darkMode ? '#000000' : '#f8fafc',
+    border:   darkMode ? '#222222' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#0a0a0a',
+    textSub:  darkMode ? '#e0e0e0' : '#222222',
+    textMute: darkMode ? '#888888' : '#6b7280',
     accent:   '#6366f1',
   };
 

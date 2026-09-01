@@ -24,7 +24,7 @@ export default function AggregatorPanel({
       padding: screenSize === 'small' ? '0' : '16px'
     }}>
       <div style={{
-        background: darkMode ? '#1f2937' : '#ffffff',
+        background: darkMode ? '#0a0a0a' : '#ffffff',
         borderRadius: screenSize === 'small' ? '0' : '12px',
         padding: screenSize === 'small' ? '16px' : '24px',
         width: '800px',
@@ -33,15 +33,15 @@ export default function AggregatorPanel({
         overflow: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937', margin: 0 }}>
+          <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
             📦 All Aggregator Orders
           </h3>
           <button
             onClick={onClose}
             style={{
               padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-              background: darkMode ? '#374151' : '#f3f4f6',
-              color: darkMode ? '#ffffff' : '#374151',
+              background: darkMode ? '#111111' : '#f3f4f6',
+              color: darkMode ? '#ffffff' : '#111111',
               border: 'none',
               borderRadius: screenSize === 'small' ? '8px' : '6px',
               cursor: 'pointer',
@@ -59,14 +59,14 @@ export default function AggregatorPanel({
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
             <thead>
               <tr style={{ background: darkMode ? 'rgba(255,255,255,0.05)' : '#f8fafc', borderBottom: `2px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}` }}>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Platform</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Customer</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Items</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Total</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Commission</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#8b8b9e' : '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Platform</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Customer</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Items</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Total</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Commission</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Status</th>
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -84,11 +84,11 @@ export default function AggregatorPanel({
                       {order.platform}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#e0e0e0' : '#1e293b', fontWeight: '600' }}>{order.orderId}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b' }}>{order.customer}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', maxWidth: '200px' }}>{order.items}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#e0e0e0' : '#1e293b', fontWeight: '600' }}>₹{order.total}</td>
-                  <td style={{ padding: '12px 16px', fontSize: '14px', color: '#ef4444', fontWeight: '600' }}>-₹{order.commission}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#e0e0e0' : '#0a0a0a', fontWeight: '600' }}>{order.orderId}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{order.customer}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b', maxWidth: '200px' }}>{order.items}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#e0e0e0' : '#0a0a0a', fontWeight: '600' }}>₹{order.total}</td>
+                  <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#dc2626' : '#ef4444', fontWeight: '600' }}>-₹{order.commission}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <select
                       value={order.status}
@@ -98,9 +98,9 @@ export default function AggregatorPanel({
                         borderRadius: '6px',
                         fontSize: '12px',
                         fontWeight: '600',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`,
-                        background: darkMode ? '#1f2937' : '#ffffff',
-                        color: darkMode ? '#ffffff' : '#1f2937',
+                        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                        background: darkMode ? '#0a0a0a' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
                         cursor: 'pointer'
                       }}
                     >
@@ -119,7 +119,7 @@ export default function AggregatorPanel({
                         onClick={() => onAcceptOrder(order.id)}
                         style={{
                           padding: '6px 12px',
-                          background: '#10b981',
+                          background: darkMode ? '#059669' : '#10b981',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '4px',
@@ -134,7 +134,7 @@ export default function AggregatorPanel({
                         onClick={() => onRejectOrder(order.id)}
                         style={{
                           padding: '6px 12px',
-                          background: '#ef4444',
+                          background: darkMode ? '#dc2626' : '#ef4444',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '4px',

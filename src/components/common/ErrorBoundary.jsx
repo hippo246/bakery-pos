@@ -120,17 +120,17 @@ export default class ErrorBoundary extends Component {
               onClick={this.handleClearCache}
               style={{
                 padding: '16px 32px',
-                background: '#333',
+                background: '#222222',
                 color: '#FFFFFF',
-                border: '1px solid #444',
+                border: '1px solid #222222',
                 borderRadius: 8,
                 cursor: 'pointer',
                 fontSize: 16,
                 fontWeight: 600,
                 transition: 'background 0.2s ease'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#444'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#333'}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#222222'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#222222'}
             >
               Clear Browser Cache
             </button>
@@ -138,7 +138,7 @@ export default class ErrorBoundary extends Component {
           
           {import.meta.env.DEV && (
             <details style={{ marginTop: 32, textAlign: 'left', maxWidth: 600, width: '100%' }}>
-              <summary style={{ cursor: 'pointer', fontSize: 14, color: '#888', marginBottom: 16 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 14, color: '#666666', marginBottom: 16 }}>
                 Error Details (Dev Only)
               </summary>
               <pre style={{ 
@@ -149,7 +149,7 @@ export default class ErrorBoundary extends Component {
                 overflow: 'auto',
                 maxHeight: 400,
                 color: '#AAA',
-                border: '1px solid #444'
+                border: '1px solid #222222'
               }}>
                 {this.state.error?.stack}
                 {this.state.errorInfo?.componentStack}

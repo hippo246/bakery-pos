@@ -73,7 +73,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
         borderRadius: '8px',
         border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`,
         fontSize: '13px',
-        color: darkMode ? '#e0e0e0' : '#374151'
+        color: darkMode ? '#e0e0e0' : '#111111'
       }}>
         Loading storage status...
       </div>
@@ -104,7 +104,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
           <span style={{
             fontSize: '15px',
             fontWeight: 600,
-            color: darkMode ? '#e0e0e0' : '#111827'
+            color: darkMode ? '#e0e0e0' : '#0a0a0a'
           }}>
             Storage Health
           </span>
@@ -113,10 +113,10 @@ export default function StorageHealthMonitor({ darkMode = false }) {
           onClick={() => setShowDetails(!showDetails)}
           style={{
             padding: '6px 12px',
-            background: darkMode ? '#2d2d44' : '#f3f4f6',
+            background: darkMode ? '#222222' : '#f3f4f6',
             border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`,
             borderRadius: '6px',
-            color: darkMode ? '#e0e0e0' : '#374151',
+            color: darkMode ? '#e0e0e0' : '#111111',
             fontSize: '12px',
             cursor: 'pointer',
             transition: 'all 0.2s'
@@ -125,7 +125,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
             e.currentTarget.style.background = darkMode ? '#3d3d5c' : '#e5e7eb';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = darkMode ? '#2d2d44' : '#f3f4f6';
+            e.currentTarget.style.background = darkMode ? '#222222' : '#f3f4f6';
           }}
         >
           {showDetails ? '▼' : '▶'} Details
@@ -142,13 +142,13 @@ export default function StorageHealthMonitor({ darkMode = false }) {
         {/* Current Storage */}
         <div style={{
           padding: '12px',
-          background: darkMode ? '#2d2d44' : '#f9fafb',
+          background: darkMode ? '#222222' : '#f9fafb',
           borderRadius: '8px',
           border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`
         }}>
           <div style={{
             fontSize: '11px',
-            color: darkMode ? '#8b8b9e' : '#6b7280',
+            color: darkMode ? '#888888' : '#6b7280',
             marginBottom: '4px'
           }}>
             Current Storage
@@ -165,13 +165,13 @@ export default function StorageHealthMonitor({ darkMode = false }) {
         {/* Health Status */}
         <div style={{
           padding: '12px',
-          background: darkMode ? '#2d2d44' : '#f9fafb',
+          background: darkMode ? '#222222' : '#f9fafb',
           borderRadius: '8px',
           border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`
         }}>
           <div style={{
             fontSize: '11px',
-            color: darkMode ? '#8b8b9e' : '#6b7280',
+            color: darkMode ? '#888888' : '#6b7280',
             marginBottom: '4px'
           }}>
             Health Status
@@ -190,13 +190,13 @@ export default function StorageHealthMonitor({ darkMode = false }) {
         {/* Failure Count */}
         <div style={{
           padding: '12px',
-          background: darkMode ? '#2d2d44' : '#f9fafb',
+          background: darkMode ? '#222222' : '#f9fafb',
           borderRadius: '8px',
           border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`
         }}>
           <div style={{
             fontSize: '11px',
-            color: darkMode ? '#8b8b9e' : '#6b7280',
+            color: darkMode ? '#888888' : '#6b7280',
             marginBottom: '4px'
           }}>
             Failures
@@ -213,13 +213,13 @@ export default function StorageHealthMonitor({ darkMode = false }) {
         {/* Mode */}
         <div style={{
           padding: '12px',
-          background: darkMode ? '#2d2d44' : '#f9fafb',
+          background: darkMode ? '#222222' : '#f9fafb',
           borderRadius: '8px',
           border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`
         }}>
           <div style={{
             fontSize: '11px',
-            color: darkMode ? '#8b8b9e' : '#6b7280',
+            color: darkMode ? '#888888' : '#6b7280',
             marginBottom: '4px'
           }}>
             Mode
@@ -227,7 +227,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
           <div style={{
             fontSize: '14px',
             fontWeight: 600,
-            color: darkMode ? '#e0e0e0' : '#111827'
+            color: darkMode ? '#e0e0e0' : '#0a0a0a'
           }}>
             {stats.mode}
           </div>
@@ -271,10 +271,10 @@ export default function StorageHealthMonitor({ darkMode = false }) {
           disabled={loading}
           style={{
             padding: '8px 16px',
-            background: darkMode ? '#2d2d44' : '#f3f4f6',
+            background: darkMode ? '#222222' : '#f3f4f6',
             border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`,
             borderRadius: '6px',
-            color: darkMode ? '#e0e0e0' : '#374151',
+            color: darkMode ? '#e0e0e0' : '#111111',
             fontSize: '13px',
             fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer',
@@ -285,7 +285,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
             if (!loading) e.currentTarget.style.background = darkMode ? '#3d3d5c' : '#e5e7eb';
           }}
           onMouseLeave={(e) => {
-            if (!loading) e.currentTarget.style.background = darkMode ? '#2d2d44' : '#f3f4f6';
+            if (!loading) e.currentTarget.style.background = darkMode ? '#222222' : '#f3f4f6';
           }}
         >
           🔄 Refresh
@@ -296,13 +296,13 @@ export default function StorageHealthMonitor({ darkMode = false }) {
           alignItems: 'center',
           gap: '8px',
           padding: '8px 16px',
-          background: darkMode ? '#2d2d44' : '#f3f4f6',
+          background: darkMode ? '#222222' : '#f3f4f6',
           borderRadius: '6px',
           border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`
         }}>
           <label style={{
             fontSize: '13px',
-            color: darkMode ? '#e0e0e0' : '#374151',
+            color: darkMode ? '#e0e0e0' : '#111111',
             cursor: 'pointer',
             userSelect: 'none'
           }}>
@@ -322,7 +322,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
         <div style={{
           marginTop: '16px',
           padding: '16px',
-          background: darkMode ? '#2d2d44' : '#f9fafb',
+          background: darkMode ? '#222222' : '#f9fafb',
           borderRadius: '8px',
           border: `1px solid ${darkMode ? '#3d3d5c' : '#e5e7eb'}`
         }}>
@@ -330,7 +330,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
             margin: '0 0 12px 0',
             fontSize: '13px',
             fontWeight: 600,
-            color: darkMode ? '#e0e0e0' : '#111827'
+            color: darkMode ? '#e0e0e0' : '#0a0a0a'
           }}>
             Storage Details
           </h4>
@@ -341,7 +341,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
               <div style={{
                 fontSize: '12px',
                 fontWeight: 600,
-                color: darkMode ? '#e0e0e0' : '#111827',
+                color: darkMode ? '#e0e0e0' : '#0a0a0a',
                 marginBottom: '8px'
               }}>
                 IndexedDB
@@ -351,7 +351,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
                 gap: '8px',
                 fontSize: '11px',
-                color: darkMode ? '#8b8b9e' : '#6b7280'
+                color: darkMode ? '#888888' : '#6b7280'
               }}>
                 {Object.entries(stats.indexedDB).map(([key, value]) => (
                   <div key={key}>
@@ -371,14 +371,14 @@ export default function StorageHealthMonitor({ darkMode = false }) {
               <div style={{
                 fontSize: '12px',
                 fontWeight: 600,
-                color: darkMode ? '#e0e0e0' : '#111827',
+                color: darkMode ? '#e0e0e0' : '#0a0a0a',
                 marginBottom: '8px'
               }}>
                 LocalStorage
               </div>
               <div style={{
                 fontSize: '11px',
-                color: darkMode ? '#8b8b9e' : '#6b7280'
+                color: darkMode ? '#888888' : '#6b7280'
               }}>
                 <div>
                   <span style={{ color: darkMode ? '#6366f1' : '#6366f1' }}>
@@ -408,14 +408,14 @@ export default function StorageHealthMonitor({ darkMode = false }) {
               <div style={{
                 fontSize: '12px',
                 fontWeight: 600,
-                color: darkMode ? '#e0e0e0' : '#111827',
+                color: darkMode ? '#e0e0e0' : '#0a0a0a',
                 marginBottom: '8px'
               }}>
                 Device Sync
               </div>
               <div style={{
                 fontSize: '11px',
-                color: darkMode ? '#8b8b9e' : '#6b7280'
+                color: darkMode ? '#888888' : '#6b7280'
               }}>
                 <div>
                   <span style={{ color: darkMode ? '#6366f1' : '#6366f1' }}>
@@ -445,7 +445,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
               <div style={{
                 fontSize: '12px',
                 fontWeight: 600,
-                color: darkMode ? '#e0e0e0' : '#111827',
+                color: darkMode ? '#e0e0e0' : '#0a0a0a',
                 marginBottom: '8px'
               }}>
                 Recent Health Checks
@@ -454,7 +454,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
                 maxHeight: '120px',
                 overflowY: 'auto',
                 fontSize: '11px',
-                color: darkMode ? '#8b8b9e' : '#6b7280'
+                color: darkMode ? '#888888' : '#6b7280'
               }}>
                 {stats.failover.healthHistory.slice().reverse().map((health, index) => (
                   <div
@@ -496,7 +496,7 @@ export default function StorageHealthMonitor({ darkMode = false }) {
       <div style={{
         marginTop: '12px',
         fontSize: '11px',
-        color: darkMode ? '#8b8b9e' : '#6b7280',
+        color: darkMode ? '#888888' : '#6b7280',
         textAlign: 'center'
       }}>
         Last updated: {new Date().toLocaleTimeString()}

@@ -902,7 +902,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill,minmax(320px,1fr))", gap: 12 }}>
             {filtered.filter(o => o.status === "READY_FOR_PICKUP").map(o => {
-              const p = DELIVERY_PARTNERS[o.source] || { color: "#999", icon: "📦", name: safeStr(o.source, "Unknown") };
+              const p = DELIVERY_PARTNERS[o.source] || { color: "#666666", icon: "📦", name: safeStr(o.source, "Unknown") };
               const cust = o.customer || {};
               const total = safeMoney(o.total);
               const codAmt = safeMoney(o.codAmount);
@@ -1047,7 +1047,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
           </div>
         )}
         {filtered.filter(o => pipelineFilter !== "ALL" || o.status !== "READY_FOR_PICKUP").map(o => {
-          const p = DELIVERY_PARTNERS[o.source] || { color: "#999", icon: "📦", name: safeStr(o.source, "Unknown") };
+          const p = DELIVERY_PARTNERS[o.source] || { color: "#666666", icon: "📦", name: safeStr(o.source, "Unknown") };
           const cust = o.customer || {};
           const total = safeMoney(o.total);
           const codAmt = safeMoney(o.codAmount);
@@ -1224,7 +1224,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
         const isTerminal = TERMINAL_STATUSES.includes(so.status);
         const isActive = ["PACKING","READY_FOR_PICKUP","PICKED_UP","OUT_FOR_DELIVERY"].includes(so.status);
         const isCodPending = so.paymentMode === "COD" && so.paymentStatus !== "PAID" && !["DELIVERED","FAILED","CANCELLED"].includes(so.status);
-        const partnerInfo = DELIVERY_PARTNERS[so.source] || { color: "#999", name: safeStr(so.source, "Unknown") };
+        const partnerInfo = DELIVERY_PARTNERS[so.source] || { color: "#666666", name: safeStr(so.source, "Unknown") };
         
         // Calculate time states
         const elapsedMin = so.createdAt ? Math.round((Date.now() - new Date(so.createdAt)) / 60000) : null;
@@ -1511,7 +1511,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {(Array.isArray(riders) ? riders : []).map(rider => {
                 if (!rider || typeof rider !== "object") return null;
-                const partner = DELIVERY_PARTNERS[rider.partner] || { color: "#999", name: safeStr(rider.partner, "Unknown") };
+                const partner = DELIVERY_PARTNERS[rider.partner] || { color: "#666666", name: safeStr(rider.partner, "Unknown") };
                 const rating = safeMoney(rider.rating);
                 const deliveries = safeMoney(rider.deliveries);
                 const statusColor = rider.status === "available" ? "var(--cafe-success)" : rider.status === "on_delivery" ? "var(--cafe-warning)" : "var(--cafe-danger)";
@@ -1565,7 +1565,7 @@ export default function Delivery({ deliveryOrders, setDeliveryOrders, orders, se
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {(Array.isArray(settlements) ? settlements : []).map(settlement => {
-                const partner = DELIVERY_PARTNERS[settlement.partner] || { name: safeStr(settlement.partner, "Unknown"), color: "#999" };
+                const partner = DELIVERY_PARTNERS[settlement.partner] || { name: safeStr(settlement.partner, "Unknown"), color: "#666666" };
                 const gross = safeMoney(settlement.totalRevenue);
                 const commission = Math.min(safeMoney(settlement.commission), gross);
                 const net = Math.max(0, gross - commission);

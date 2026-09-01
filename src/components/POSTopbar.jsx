@@ -43,9 +43,9 @@ export default function POSTopbar({
 
   return (
     <div style={{
-      background: darkMode ? '#2a2a2a' : '#ffffff',
+      background: darkMode ? '#0a0a0a' : '#ffffff',
       padding: screenSize === 'small' ? '12px 16px' : '8px 16px',
-      borderBottom: `1px solid ${darkMode ? '#444' : '#d1d5db'}`,
+      borderBottom: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
       boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
       minHeight: screenSize === 'small' ? '60px' : 'auto',
       position: 'relative',
@@ -65,7 +65,7 @@ export default function POSTopbar({
             <div style={{ 
               fontSize: '10px', 
               color: darkMode ? '#9ca3af' : '#6b7280',
-              background: darkMode ? '#333' : '#f3f4f6',
+              background: darkMode ? '#222222' : '#f3f4f6',
               padding: '3px 8px',
               borderRadius: '8px'
             }}>
@@ -83,9 +83,9 @@ export default function POSTopbar({
             }}
             style={{
               padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
-              background: (qrOrders || []).length > 0 ? '#10b981' : (darkMode ? '#333' : '#f3f4f6'),
+              background: (qrOrders || []).length > 0 ? '#10b981' : (darkMode ? '#222222' : '#f3f4f6'),
               color: (qrOrders || []).length > 0 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
-              border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
               borderRadius: screenSize === 'small' ? '8px' : '4px',
               fontSize: screenSize === 'small' ? '13px' : '11px',
               cursor: 'pointer',
@@ -118,9 +118,9 @@ export default function POSTopbar({
               onClick={() => setShowAggregatorDropdown(!showAggregatorDropdown)}
               style={{
                 padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
-                background: pendingAggregatorOrders > 0 ? '#ef4444' : (darkMode ? '#333' : '#f3f4f6'),
+                background: pendingAggregatorOrders > 0 ? '#ef4444' : (darkMode ? '#222222' : '#f3f4f6'),
                 color: pendingAggregatorOrders > 0 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
-                border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 borderRadius: screenSize === 'small' ? '8px' : '4px',
                 fontSize: screenSize === 'small' ? '13px' : '11px',
                 cursor: 'pointer',
@@ -154,8 +154,8 @@ export default function POSTopbar({
                 top: '100%',
                 right: 0,
                 marginTop: '8px',
-                background: darkMode ? '#2a2a2a' : '#ffffff',
-                border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                background: darkMode ? '#0a0a0a' : '#ffffff',
+                border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
                 zIndex: 5000,
@@ -166,11 +166,11 @@ export default function POSTopbar({
               }}>
                 <div style={{
                   padding: '12px 16px',
-                  borderBottom: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
-                  background: darkMode ? '#333' : '#f9fafb',
+                  borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                  background: darkMode ? '#222222' : '#f9fafb',
                   fontSize: '13px',
                   fontWeight: '700',
-                  color: darkMode ? '#fff' : '#1e293b',
+                  color: darkMode ? '#fff' : '#0a0a0a',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
@@ -193,7 +193,7 @@ export default function POSTopbar({
                 </div>
 
                 {(aggregatorOrders || []).filter(o => o && o.status === 'pending').length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: darkMode ? '#999' : '#9ca3af' }}>
+                  <div style={{ padding: '24px', textAlign: 'center', color: darkMode ? '#666666' : '#9ca3af' }}>
                     <div style={{ fontSize: '32px', marginBottom: '8px' }}>✅</div>
                     <div style={{ fontSize: '13px' }}>No pending orders</div>
                   </div>
@@ -201,8 +201,8 @@ export default function POSTopbar({
                   (aggregatorOrders || []).filter(o => o && o.status === 'pending').map(order => (
                     <div key={order.id} style={{
                       padding: '12px 16px',
-                      borderBottom: `1px solid ${darkMode ? '#444' : '#f3f4f6'}`,
-                      background: darkMode ? '#2a2a2a' : '#ffffff'
+                      borderBottom: `1px solid ${darkMode ? '#222222' : '#f3f4f6'}`,
+                      background: darkMode ? '#0a0a0a' : '#ffffff'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -216,20 +216,20 @@ export default function POSTopbar({
                           }}>
                             {order.platform}
                           </span>
-                          <span style={{ fontSize: '12px', fontWeight: '600', color: darkMode ? '#fff' : '#1e293b' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: darkMode ? '#fff' : '#0a0a0a' }}>
                             {order.orderId}
                           </span>
                         </div>
-                        <span style={{ fontSize: '11px', color: darkMode ? '#999' : '#6b7280' }}>{order.time}</span>
+                        <span style={{ fontSize: '11px', color: darkMode ? '#666666' : '#6b7280' }}>{order.time}</span>
                       </div>
-                      <div style={{ fontSize: '12px', color: darkMode ? '#bbb' : '#6b7280', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginBottom: '4px' }}>
                         {order.customer}
                       </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#888' : '#9ca3af', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#666666' : '#9ca3af', marginBottom: '8px' }}>
                         {order.items}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#fff' : '#1e293b' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#fff' : '#0a0a0a' }}>
                           ₹{order.total}
                         </span>
                         <span style={{ fontSize: '11px', color: '#ef4444' }}>
@@ -283,9 +283,9 @@ export default function POSTopbar({
               onClick={() => setShowHeldOrders(true)}
               style={{
                 padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
-                background: (heldOrders || []).length > 0 ? '#8b5cf6' : (darkMode ? '#333' : '#f3f4f6'),
+                background: (heldOrders || []).length > 0 ? '#8b5cf6' : (darkMode ? '#222222' : '#f3f4f6'),
                 color: (heldOrders || []).length > 0 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
-                border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 borderRadius: screenSize === 'small' ? '8px' : '4px',
                 fontSize: screenSize === 'small' ? '13px' : '11px',
                 cursor: 'pointer',
@@ -318,9 +318,9 @@ export default function POSTopbar({
                 onClick={() => setShowShortcuts(true)}
                 style={{
                   padding: '6px 10px',
-                  background: darkMode ? '#333' : '#f3f4f6',
-                  color: darkMode ? '#d1d5db' : '#374151',
-                  border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                  background: darkMode ? '#222222' : '#f3f4f6',
+                  color: darkMode ? '#d1d5db' : '#111111',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '4px',
                   fontSize: '11px',
                   fontWeight: '600',
@@ -343,9 +343,9 @@ export default function POSTopbar({
                 placeholder="Search..."
                 style={{
                   padding: '6px 8px',
-                  background: darkMode ? '#1f1f1f' : '#f9fafb',
-                  color: darkMode ? '#f3f4f6' : '#1f2937',
-                  border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                  background: darkMode ? '#0a0a0a' : '#f9fafb',
+                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '4px',
                   fontSize: '11px',
                   width: '150px'

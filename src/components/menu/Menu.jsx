@@ -125,11 +125,11 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
     <>
       {/* Controls */}
       <div style={{
-        background: darkMode ? '#252538' : '#ffffff',
+        background: darkMode ? '#111111' : '#ffffff',
         borderRadius: '16px',
         padding: screenSize === 'small' ? '12px' : '16px',
         marginBottom: screenSize === 'small' ? '16px' : '20px',
-        border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)'
       }}>
         <div style={{
@@ -146,12 +146,12 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               flex: 1,
               minWidth: screenSize === 'small' ? '200px' : '300px',
               padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
               borderRadius: '10px',
               fontSize: screenSize === 'small' ? '13px' : '14px',
               outline: 'none',
-              background: darkMode ? '#1a1a2e' : '#ffffff',
-              color: darkMode ? '#ffffff' : '#111827'
+              background: darkMode ? '#000000' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#0a0a0a'
             }}
           />
           <select
@@ -159,11 +159,11 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={{
               padding: screenSize === 'small' ? '10px 14px' : '12px 16px',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
               borderRadius: '10px',
               fontSize: screenSize === 'small' ? '13px' : '14px',
-              background: darkMode ? '#1a1a2e' : '#ffffff',
-              color: darkMode ? '#ffffff' : '#111827',
+              background: darkMode ? '#000000' : '#ffffff',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               outline: 'none',
               cursor: 'pointer'
             }}
@@ -176,7 +176,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
             onClick={handleAddItem}
             style={{
               padding: screenSize === 'small' ? '10px 16px' : '12px 24px',
-              background: darkMode ? '#111827' : '#3b82f6',
+              background: darkMode ? '#0a0a0a' : '#3b82f6',
               color: '#ffffff',
               border: 'none',
               borderRadius: '10px',
@@ -187,11 +187,11 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               boxShadow: darkMode ? '0 2px 4px rgba(17, 24, 39, 0.2)' : '0 2px 4px rgba(59, 130, 246, 0.2)'
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = darkMode ? '#1f2937' : '#2563eb';
+              e.target.style.background = darkMode ? '#0a0a0a' : '#2563eb';
               e.target.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = darkMode ? '#111827' : '#3b82f6';
+              e.target.style.background = darkMode ? '#0a0a0a' : '#3b82f6';
               e.target.style.transform = 'translateY(0)';
             }}
           >
@@ -208,10 +208,10 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
         marginBottom: screenSize === 'small' ? '16px' : '20px'
       }}>
         <div style={{
-          background: darkMode ? '#252538' : '#ffffff',
+          background: darkMode ? '#111111' : '#ffffff',
           borderRadius: '16px',
           padding: screenSize === 'small' ? '16px' : '20px',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
           boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
           position: 'relative',
           overflow: 'hidden'
@@ -226,16 +226,16 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
             borderRadius: '50%',
             opacity: 0.1
           }}></div>
-          <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
             📦 Total Items
           </div>
-          <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>{inventory.length}</div>
+          <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{inventory.length}</div>
         </div>
         <div style={{
-          background: darkMode ? '#252538' : '#ffffff',
+          background: darkMode ? '#111111' : '#ffffff',
           borderRadius: '16px',
           padding: screenSize === 'small' ? '16px' : '20px',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
           boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
           position: 'relative',
           overflow: 'hidden'
@@ -250,16 +250,16 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
             borderRadius: '50%',
             opacity: 0.1
           }}></div>
-          <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
             ⚠️ Low Stock
           </div>
           <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#f59e0b' }}>{lowStockCount}</div>
         </div>
         <div style={{
-          background: darkMode ? '#252538' : '#ffffff',
+          background: darkMode ? '#111111' : '#ffffff',
           borderRadius: '16px',
           padding: screenSize === 'small' ? '16px' : '20px',
-          border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
           boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
           position: 'relative',
           overflow: 'hidden'
@@ -274,7 +274,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
             borderRadius: '50%',
             opacity: 0.1
           }}></div>
-          <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+          <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
             💰 Total Value
           </div>
           <div style={{ fontSize: screenSize === 'small' ? '28px' : '36px', fontWeight: '700', color: '#10b981' }}>₹{totalValue.toLocaleString()}</div>
@@ -283,20 +283,20 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
 
       {/* Inventory Table */}
       <div style={{
-        background: darkMode ? '#252538' : '#ffffff',
+        background: darkMode ? '#111111' : '#ffffff',
         borderRadius: '16px',
         padding: screenSize === 'small' ? '16px' : '20px',
-        border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         boxShadow: darkMode ? '0 4px 6px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
         overflow: 'auto'
       }}>
         {filteredItems.length === 0 ? (
-          <div style={{ padding: '60px 40px', textAlign: 'center', color: darkMode ? '#8b8b9e' : '#9ca3af' }}>
+          <div style={{ padding: '60px 40px', textAlign: 'center', color: darkMode ? '#888888' : '#9ca3af' }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>📦</div>
-            <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '8px' }}>
+            <div style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
               {search || categoryFilter !== 'ALL' ? 'No items found' : 'No inventory items yet'}
             </div>
-            <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+            <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>
               {search || categoryFilter !== 'ALL' ? 'Try a different search or filter' : 'Add your first item to get started'}
             </div>
           </div>
@@ -309,8 +309,8 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               <div
                 key={item.id}
                 style={{
-                  background: darkMode ? '#1a1a2e' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                  background: darkMode ? '#000000' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '12px',
                   padding: screenSize === 'small' ? '12px' : '16px',
                   marginBottom: screenSize === 'small' ? '10px' : '12px',
@@ -331,10 +331,10 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                 }}
               >
                 <div style={{ flex: 1, width: screenSize === 'small' ? '100%' : 'auto' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', marginBottom: '8px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     {item.name}
                   </div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '6px' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '6px' }}>
                     📂 {item.category}
                   </div>
                   <div style={{ 
@@ -349,7 +349,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   }}>
                     {isLowStock ? '⚠️ ' : '✅ '} Qty: {item.quantity} {item.unit} • Min: {item.minStock} {item.unit}
                   </div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b' }}>
                     💰 Value: ₹{itemValue.toFixed(2)}
                   </div>
                 </div>
@@ -358,9 +358,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onClick={() => handleAdjustStock(item, -1)}
                     style={{
                       padding: screenSize === 'small' ? '8px 12px' : '10px 16px',
-                      background: darkMode ? '#2d2d44' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      background: darkMode ? '#222222' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
                       fontSize: screenSize === 'small' ? '12px' : '13px',
                       fontWeight: '600',
@@ -368,10 +368,10 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                       transition: 'all 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.background = darkMode ? '#2d2d44' : '#e5e7eb';
+                      e.target.style.background = darkMode ? '#222222' : '#e5e7eb';
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = darkMode ? '#2d2d44' : '#ffffff';
+                      e.target.style.background = darkMode ? '#222222' : '#ffffff';
                     }}
                   >
                     −
@@ -380,9 +380,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onClick={() => handleAdjustStock(item, 1)}
                     style={{
                       padding: screenSize === 'small' ? '8px 12px' : '10px 16px',
-                      background: darkMode ? '#2d2d44' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      background: darkMode ? '#222222' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
                       fontSize: screenSize === 'small' ? '12px' : '13px',
                       fontWeight: '600',
@@ -390,10 +390,10 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                       transition: 'all 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
-                      e.target.style.background = darkMode ? '#2d2d44' : '#e5e7eb';
+                      e.target.style.background = darkMode ? '#222222' : '#e5e7eb';
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = darkMode ? '#2d2d44' : '#ffffff';
+                      e.target.style.background = darkMode ? '#222222' : '#ffffff';
                     }}
                   >
                     +
@@ -427,7 +427,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     onClick={() => handleDeleteItem(item.id)}
                     style={{
                       padding: screenSize === 'small' ? '8px 12px' : '10px 16px',
-                      background: darkMode ? '#2d2d44' : '#ffffff',
+                      background: darkMode ? '#222222' : '#ffffff',
                       color: '#ef4444',
                       border: `1px solid ${darkMode ? '#dc2626' : '#fecaca'}`,
                       borderRadius: '8px',
@@ -441,7 +441,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                       e.target.style.color = darkMode ? '#ffffff' : '#dc2626';
                     }}
                     onMouseLeave={(e) => {
-                      e.target.style.background = darkMode ? '#2d2d44' : '#ffffff';
+                      e.target.style.background = darkMode ? '#222222' : '#ffffff';
                       e.target.style.color = '#ef4444';
                     }}
                   >
@@ -471,26 +471,26 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
           padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: screenSize === 'small' ? '0' : '20px',
             padding: screenSize === 'small' ? '20px' : '32px',
             width: '500px',
             maxWidth: screenSize === 'small' ? '100vw' : '90vw',
             maxHeight: screenSize === 'small' ? '100vh' : '90vh',
             overflow: 'auto',
-            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '24px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 {selectedItem ? '✏️ Edit Item' : '➕ Add Item'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
                 style={{
                   padding: '8px 12px',
-                  background: darkMode ? '#1a1a2e' : '#f3f4f6',
-                  color: darkMode ? '#ffffff' : '#111827',
+                  background: darkMode ? '#000000' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
                   border: 'none',
                   borderRadius: '10px',
                   cursor: 'pointer',
@@ -498,8 +498,8 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   transition: 'all 0.2s ease',
                   minHeight: screenSize === 'small' ? '44px' : 'auto'
                 }}
-                onMouseEnter={(e) => e.target.style.background = darkMode ? '#2d2d48' : '#e5e7eb'}
-                onMouseLeave={(e) => e.target.style.background = darkMode ? '#1a1a2e' : '#f3f4f6'}
+                onMouseEnter={(e) => e.target.style.background = darkMode ? '#000000' : '#e5e7eb'}
+                onMouseLeave={(e) => e.target.style.background = darkMode ? '#000000' : '#f3f4f6'}
               >
                 ✕
               </button>
@@ -507,7 +507,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '12px' : '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                   📦 Name
                 </label>
                 <input
@@ -517,9 +517,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   style={{
                     width: '100%',
                     padding: screenSize === 'small' ? '14px' : '12px',
-                    background: darkMode ? '#1a1a2e' : '#ffffff',
-                    color: darkMode ? '#ffffff' : '#111827',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                    background: darkMode ? '#000000' : '#ffffff',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '10px',
                     fontSize: screenSize === 'small' ? '16px' : '14px',
                     outline: 'none',
@@ -529,7 +529,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                   📂 Category
                 </label>
                 <select
@@ -538,9 +538,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   style={{
                     width: '100%',
                     padding: screenSize === 'small' ? '14px' : '12px',
-                    background: darkMode ? '#1a1a2e' : '#ffffff',
-                    color: darkMode ? '#ffffff' : '#111827',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                    background: darkMode ? '#000000' : '#ffffff',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '10px',
                     fontSize: screenSize === 'small' ? '16px' : '14px',
                     outline: 'none',
@@ -555,7 +555,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               </div>
               <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                     🔢 Quantity
                   </label>
                   <input
@@ -565,9 +565,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     style={{
                       width: '100%',
                       padding: screenSize === 'small' ? '14px' : '12px',
-                      background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '10px',
                       fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
@@ -577,7 +577,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   />
                 </div>
                 <div style={{ width: screenSize === 'small' ? '100%' : '120px' }}>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#888888', marginBottom: '8px', fontWeight: '500' }}>
                     📏 Unit
                   </label>
                   <select
@@ -586,9 +586,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     style={{
                       width: '100%',
                       padding: screenSize === 'small' ? '14px' : '12px',
-                      background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '10px',
                       fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
@@ -604,7 +604,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
               </div>
               <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', flexDirection: screenSize === 'small' ? 'column' : 'row' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                     ⚠️ Min Stock
                   </label>
                   <input
@@ -614,9 +614,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     style={{
                       width: '100%',
                       padding: screenSize === 'small' ? '14px' : '12px',
-                      background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '10px',
                       fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
@@ -626,7 +626,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
+                  <label style={{ display: 'block', fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '8px', fontWeight: '500' }}>
                     💰 Cost (₹)
                   </label>
                   <input
@@ -636,9 +636,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                     style={{
                       width: '100%',
                       padding: screenSize === 'small' ? '14px' : '12px',
-                      background: darkMode ? '#1a1a2e' : '#ffffff',
-                      color: darkMode ? '#ffffff' : '#111827',
-                      border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '10px',
                       fontSize: screenSize === 'small' ? '16px' : '14px',
                       outline: 'none',
@@ -655,9 +655,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                 onClick={() => setShowModal(false)}
                 style={{
                   padding: screenSize === 'small' ? '14px' : '12px 24px',
-                  background: darkMode ? '#2d2d44' : '#f3f4f6',
-                  color: darkMode ? '#ffffff' : '#111827',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  background: darkMode ? '#222222' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                   borderRadius: '10px',
                   fontSize: screenSize === 'small' ? '15px' : '14px',
                   fontWeight: '600',
@@ -673,7 +673,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                 onClick={handleSaveItem}
                 style={{
                   padding: screenSize === 'small' ? '14px' : '12px 24px',
-                  background: '#111827',
+                  background: '#0a0a0a',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
@@ -686,11 +686,11 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   minHeight: screenSize === 'small' ? '48px' : 'auto'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = '#1f2937';
+                  e.target.style.background = '#0a0a0a';
                   e.target.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = '#111827';
+                  e.target.style.background = '#0a0a0a';
                   e.target.style.transform = 'translateY(0)';
                 }}
               >
@@ -717,18 +717,18 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
           zIndex: 2000
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '20px',
             padding: '32px',
             width: '400px',
             maxWidth: '90vw',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginBottom: '12px', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '12px', margin: 0 }}>
               🗑️ Delete Item
             </h3>
-            <p style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#64748b', marginBottom: '24px' }}>
               Are you sure you want to delete this inventory item?
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -739,9 +739,9 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                 }}
                 style={{
                   padding: '12px 24px',
-                  background: darkMode ? '#2d2d44' : '#f3f4f6',
-                  color: darkMode ? '#ffffff' : '#111827',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                  background: darkMode ? '#222222' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                   borderRadius: '10px',
                   fontSize: '14px',
                   fontWeight: '600',
@@ -749,11 +749,11 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = darkMode ? '#2d2d44' : '#e5e7eb';
+                  e.target.style.background = darkMode ? '#222222' : '#e5e7eb';
                   e.target.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = darkMode ? '#2d2d44' : '#f3f4f6';
+                  e.target.style.background = darkMode ? '#222222' : '#f3f4f6';
                   e.target.style.transform = 'translateY(0)';
                 }}
               >
@@ -805,18 +805,18 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
           zIndex: 2000
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '20px',
             padding: '32px',
             width: '400px',
             maxWidth: '90vw',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
           }}>
-            <h3 style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginBottom: '12px', margin: 0 }}>
+            <h3 style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '12px', margin: 0 }}>
               ℹ️ Notice
             </h3>
-            <p style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#8b8b9e', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#888888', marginBottom: '24px' }}>
               {alertMessage}
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -824,7 +824,7 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                 onClick={() => setShowAlert(false)}
                 style={{
                   padding: '12px 24px',
-                  background: '#111827',
+                  background: '#0a0a0a',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '10px',
@@ -835,11 +835,11 @@ function InventoryContent({ inventory = [], setInventory, darkMode = true }) {
                   boxShadow: '0 2px 4px rgba(17, 24, 39, 0.2)'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.background = '#1f2937';
+                  e.target.style.background = '#0a0a0a';
                   e.target.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.background = '#111827';
+                  e.target.style.background = '#0a0a0a';
                   e.target.style.transform = 'translateY(0)';
                 }}
               >
@@ -1069,24 +1069,24 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: darkMode ? '#1a1a2e' : '#f8fafc',
+      background: darkMode ? '#000000' : '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       overflow: 'hidden'
     }}>
       {/* Sub-tabs */}
       <div style={{
-        background: darkMode ? '#1f1f35' : '#ffffff',
+        background: darkMode ? '#0a0a0a' : '#ffffff',
         padding: '12px 24px',
         display: 'flex',
         gap: '12px',
-        borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+        borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
       }}>
         <button
           onClick={() => setActiveTab('menu')}
           style={{
             padding: '10px 24px',
-            background: activeTab === 'menu' ? '#6366f1' : (darkMode ? '#2d2d44' : '#e5e7eb'),
-            color: activeTab === 'menu' ? '#ffffff' : (darkMode ? '#ffffff' : '#111827'),
+            background: activeTab === 'menu' ? '#6366f1' : (darkMode ? '#222222' : '#e5e7eb'),
+            color: activeTab === 'menu' ? '#ffffff' : (darkMode ? '#ffffff' : '#0a0a0a'),
             border: 'none',
             borderRadius: '8px',
             fontSize: '14px',
@@ -1101,8 +1101,8 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
           onClick={() => setActiveTab('stock')}
           style={{
             padding: '10px 24px',
-            background: activeTab === 'stock' ? '#6366f1' : (darkMode ? '#2d2d44' : '#e5e7eb'),
-            color: activeTab === 'stock' ? '#ffffff' : (darkMode ? '#ffffff' : '#111827'),
+            background: activeTab === 'stock' ? '#6366f1' : (darkMode ? '#222222' : '#e5e7eb'),
+            color: activeTab === 'stock' ? '#ffffff' : (darkMode ? '#ffffff' : '#0a0a0a'),
             border: 'none',
             borderRadius: '8px',
             fontSize: '14px',
@@ -1123,11 +1123,11 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
           <>
             {/* Top Bar Filters & Search */}
             <div style={{
-              background: darkMode ? '#252538' : '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '16px',
               padding: '20px',
               marginBottom: '24px',
-              border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
               display: 'flex',
               flexDirection: 'column',
               gap: '16px'
@@ -1142,10 +1142,10 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                     flex: 1,
                     minWidth: '250px',
                     padding: '12px 16px',
-                    background: darkMode ? '#1a1a2e' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                    background: darkMode ? '#000000' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '8px',
-                    color: darkMode ? '#ffffff' : '#111827',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     fontSize: '14px',
                     outline: 'none'
                   }}
@@ -1156,10 +1156,10 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                   onChange={(e) => setSortBy(e.target.value)}
                   style={{
                     padding: '12px 16px',
-                    background: darkMode ? '#1a1a2e' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                    background: darkMode ? '#000000' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '8px',
-                    color: darkMode ? '#ffffff' : '#111827',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     fontSize: '14px',
                     outline: 'none',
                     cursor: 'pointer'
@@ -1197,9 +1197,9 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                     onClick={() => setCategoryFilter(cat)}
                     style={{
                       padding: '8px 16px',
-                      background: categoryFilter === cat ? '#6366f1' : (darkMode ? '#1a1a2e' : '#f3f4f6'),
-                      color: categoryFilter === cat ? '#ffffff' : (darkMode ? '#ffffff' : '#111827'),
-                      border: `1px solid ${categoryFilter === cat ? '#6366f1' : (darkMode ? '#2d2d44' : '#e5e7eb')}`,
+                      background: categoryFilter === cat ? '#6366f1' : (darkMode ? '#000000' : '#f3f4f6'),
+                      color: categoryFilter === cat ? '#ffffff' : (darkMode ? '#ffffff' : '#0a0a0a'),
+                      border: `1px solid ${categoryFilter === cat ? '#6366f1' : (darkMode ? '#222222' : '#e5e7eb')}`,
                       borderRadius: '20px',
                       fontSize: '13px',
                       fontWeight: '500',
@@ -1228,20 +1228,20 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                 display: 'flex',
                 gap: '12px',
                 paddingTop: '12px',
-                borderTop: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 alignItems: 'center',
                 flexWrap: 'wrap'
               }}>
-                <span style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#64748b', fontWeight: '500' }}>⚡ Bulk Actions:</span>
+                <span style={{ fontSize: '13px', color: darkMode ? '#888888' : '#64748b', fontWeight: '500' }}>⚡ Bulk Actions:</span>
                 <button
                   onClick={() => handleBulkAction('enable-all')}
-                  style={{ padding: '6px 12px', background: darkMode ? '#2d2d44' : '#e5e7eb', color: darkMode ? '#ffffff' : '#111827', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', background: darkMode ? '#222222' : '#e5e7eb', color: darkMode ? '#ffffff' : '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                 >
                   Enable All
                 </button>
                 <button
                   onClick={() => handleBulkAction('disable-all')}
-                  style={{ padding: '6px 12px', background: darkMode ? '#2d2d44' : '#e5e7eb', color: darkMode ? '#ffffff' : '#111827', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', background: darkMode ? '#222222' : '#e5e7eb', color: darkMode ? '#ffffff' : '#0a0a0a', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
                 >
                   Deactivate All
                 </button>
@@ -1263,16 +1263,16 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
               gap: '16px',
               marginBottom: '24px'
             }}>
-              <div style={{ background: darkMode ? '#252538' : '#ffffff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Total Items</div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827' }}>{menuItems.length}</div>
+              <div style={{ background: darkMode ? '#111111' : '#ffffff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#64748b', marginBottom: '4px' }}>Total Items</div>
+                <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{menuItems.length}</div>
               </div>
-              <div style={{ background: darkMode ? '#252538' : '#ffffff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Active & Live</div>
+              <div style={{ background: darkMode ? '#111111' : '#ffffff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#64748b', marginBottom: '4px' }}>Active & Live</div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{activeItemsCount}</div>
               </div>
-              <div style={{ background: darkMode ? '#252538' : '#ffffff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#64748b', marginBottom: '4px' }}>Sold Out / 86'ed</div>
+              <div style={{ background: darkMode ? '#111111' : '#ffffff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#64748b', marginBottom: '4px' }}>Sold Out / 86'ed</div>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#ef4444' }}>{outOfStockCount}</div>
               </div>
             </div>
@@ -1284,9 +1284,9 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
               gap: '20px'
             }}>
               {filteredItems.length === 0 ? (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: darkMode ? '#8b8b9e' : '#64748b' }}>
+                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: darkMode ? '#888888' : '#64748b' }}>
                   <div style={{ fontSize: '48px', marginBottom: '12px' }}>🍽️</div>
-                  <div style={{ fontSize: '16px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111827' }}>No matching items found</div>
+                  <div style={{ fontSize: '16px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>No matching items found</div>
                 </div>
               ) : (
                 filteredItems.map(item => {
@@ -1298,9 +1298,9 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                     <div
                       key={item.id}
                       style={{
-                        background: darkMode ? '#252538' : '#ffffff',
+                        background: darkMode ? '#111111' : '#ffffff',
                         borderRadius: '16px',
-                        border: `1px solid ${isEightySixed ? '#f43f5e' : (darkMode ? '#2d2d44' : '#e5e7eb')}`,
+                        border: `1px solid ${isEightySixed ? '#f43f5e' : (darkMode ? '#222222' : '#e5e7eb')}`,
                         padding: '20px',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1335,8 +1335,8 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                           ) : null}
                           <span style={{ fontSize: '32px', display: item.image ? 'none' : 'block' }}>{item.emoji || '🧁'}</span>
                           <div>
-                            <h4 style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111827', margin: 0 }}>{item.name}</h4>
-                            <span style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b' }}>{item.category}</span>
+                            <h4 style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>{item.name}</h4>
+                            <span style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b' }}>{item.category}</span>
                           </div>
                         </div>
 
@@ -1346,7 +1346,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
 
                         {/* Price Cost Breakdown */}
                         <div style={{
-                          background: darkMode ? '#1a1a2e' : '#f8f9fa',
+                          background: darkMode ? '#000000' : '#f8f9fa',
                           borderRadius: '8px',
                           padding: '10px 12px',
                           margin: '12px 0',
@@ -1355,12 +1355,12 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                           fontSize: '12px'
                         }}>
                           <div>
-                            <span style={{ color: darkMode ? '#8b8b9e' : '#64748b' }}>Price:</span>
-                            <span style={{ color: darkMode ? '#ffffff' : '#111827', fontWeight: '700', marginLeft: '4px' }}>₹{item.price}</span>
+                            <span style={{ color: darkMode ? '#888888' : '#64748b' }}>Price:</span>
+                            <span style={{ color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '700', marginLeft: '4px' }}>₹{item.price}</span>
                           </div>
                           <div>
-                            <span style={{ color: darkMode ? '#8b8b9e' : '#64748b' }}>Cost:</span>
-                            <span style={{ color: darkMode ? '#ffffff' : '#111827', marginLeft: '4px' }}>₹{item.cost || 0}</span>
+                            <span style={{ color: darkMode ? '#888888' : '#64748b' }}>Cost:</span>
+                            <span style={{ color: darkMode ? '#ffffff' : '#0a0a0a', marginLeft: '4px' }}>₹{item.cost || 0}</span>
                           </div>
                           <div>
                             <span style={{ color: '#10b981', fontWeight: '600' }}>{marginPct}% Margin</span>
@@ -1375,8 +1375,8 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                           style={{
                             flex: 1,
                             padding: '8px',
-                            background: isEightySixed ? '#f43f5e' : (darkMode ? '#2d2d44' : '#e5e7eb'),
-                            color: isEightySixed ? '#ffffff' : (darkMode ? '#ffffff' : '#111827'),
+                            background: isEightySixed ? '#f43f5e' : (darkMode ? '#222222' : '#e5e7eb'),
+                            color: isEightySixed ? '#ffffff' : (darkMode ? '#ffffff' : '#0a0a0a'),
                             border: 'none',
                             borderRadius: '6px',
                             fontSize: '12px',
@@ -1439,73 +1439,73 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
           zIndex: 1000
         }}>
           <div style={{
-            background: darkMode ? '#252538' : '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '16px',
             padding: '28px',
             width: '450px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#111827', marginTop: 0, marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginTop: 0, marginBottom: '20px' }}>
               {selectedItem ? 'Edit Menu Item' : 'Create Menu Item'}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>📷 Item Image URL</label>
+                <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>📷 Item Image URL</label>
                 <input
                   type="text"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                   placeholder="https://example.com/image.jpg"
-                  style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a', fontSize: '13px' }}
                 />
                 <div style={{ fontSize: '11px', color: darkMode ? '#6b7280' : '#9ca3af', marginTop: '4px' }}>Leave empty to use emoji instead</div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ width: '70px' }}>
-                  <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Emoji</label>
+                  <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Emoji</label>
                   <input
                     type="text"
                     value={formData.emoji}
                     onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
-                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827', textAlign: 'center' }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a', textAlign: 'center' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Item Name</label>
+                  <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Item Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Price (₹)</label>
+                  <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Price (₹)</label>
                   <input
                     type="number"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Cost (₹)</label>
+                  <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Cost (₹)</label>
                   <input
                     type="number"
                     value={formData.cost}
                     onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Category</label>
+                <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Category</label>
                 {showCustomCategory ? (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
@@ -1514,7 +1514,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                       onChange={(e) => setCustomCategory(e.target.value)}
                       placeholder="Enter custom category..."
                       autoFocus
-                      style={{ flex: 1, padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                      style={{ flex: 1, padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                     />
                     <button
                       type="button"
@@ -1534,7 +1534,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                         setShowCustomCategory(false);
                         setCustomCategory('');
                       }}
-                      style={{ padding: '10px 16px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                      style={{ padding: '10px 16px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
                     >
                       ✕
                     </button>
@@ -1549,7 +1549,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                         setFormData({ ...formData, category: e.target.value });
                       }
                     }}
-                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                   >
                     <option value="Breads">Breads</option>
                     <option value="Pastries">Pastries</option>
@@ -1563,7 +1563,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Dietary Tag</label>
+                <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Dietary Tag</label>
                 {showCustomDietary ? (
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
@@ -1572,7 +1572,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                       onChange={(e) => setCustomDietary(e.target.value)}
                       placeholder="Enter custom dietary tag..."
                       autoFocus
-                      style={{ flex: 1, padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                      style={{ flex: 1, padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                     />
                     <button
                       type="button"
@@ -1592,7 +1592,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                         setShowCustomDietary(false);
                         setCustomDietary('');
                       }}
-                      style={{ padding: '10px 16px', background: darkMode ? '#1a1a2e' : '#ffffff', color: darkMode ? '#ffffff' : '#111827', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
+                      style={{ padding: '10px 16px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', fontSize: '14px', cursor: 'pointer' }}
                     >
                       ✕
                     </button>
@@ -1607,7 +1607,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                         setFormData({ ...formData, dietary: e.target.value });
                       }
                     }}
-                    style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827' }}
+                    style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a' }}
                   >
                     <option value="veg">Vegetarian (Veg)</option>
                     <option value="non-veg">Non-Vegetarian (Non-Veg)</option>
@@ -1619,11 +1619,11 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#64748b', display: 'block', marginBottom: '6px' }}>Description</label>
+                <label style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', display: 'block', marginBottom: '6px' }}>Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  style={{ width: '100%', padding: '10px', background: darkMode ? '#1a1a2e' : '#ffffff', border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#111827', resize: 'none', height: '60px' }}
+                  style={{ width: '100%', padding: '10px', background: darkMode ? '#000000' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '6px', color: darkMode ? '#ffffff' : '#0a0a0a', resize: 'none', height: '60px' }}
                 />
               </div>
             </div>
@@ -1631,7 +1631,7 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
             <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowModal(false)}
-                style={{ padding: '10px 20px', background: darkMode ? '#2d2d44' : '#e5e7eb', color: darkMode ? '#ffffff' : '#111827', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                style={{ padding: '10px 20px', background: darkMode ? '#222222' : '#e5e7eb', color: darkMode ? '#ffffff' : '#0a0a0a', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
               >
                 Cancel
               </button>

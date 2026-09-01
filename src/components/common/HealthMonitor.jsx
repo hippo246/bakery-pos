@@ -88,7 +88,7 @@ export default function HealthMonitor({ visible = false, onClose }) {
     left: '50%',
     transform: 'translate(-50%, -50%)',
     backgroundColor: '#1E1E1E',
-    border: '2px solid #333',
+    border: '2px solid #222222',
     borderRadius: '12px',
     padding: '20px',
     minWidth: '600px',
@@ -106,7 +106,7 @@ export default function HealthMonitor({ visible = false, onClose }) {
     alignItems: 'center',
     marginBottom: '20px',
     paddingBottom: '15px',
-    borderBottom: '1px solid #333'
+    borderBottom: '1px solid #222222'
   };
 
   const titleStyle = {
@@ -116,7 +116,7 @@ export default function HealthMonitor({ visible = false, onClose }) {
   };
 
   const closeButtonStyle = {
-    backgroundColor: '#333',
+    backgroundColor: '#222222',
     color: '#FFF',
     border: 'none',
     borderRadius: '6px',
@@ -131,7 +131,7 @@ export default function HealthMonitor({ visible = false, onClose }) {
     padding: '15px',
     backgroundColor: '#2A2A2A',
     borderRadius: '8px',
-    border: '1px solid #333'
+    border: '1px solid #222222'
   };
 
   const sectionTitleStyle = {
@@ -176,12 +176,12 @@ export default function HealthMonitor({ visible = false, onClose }) {
 
   const healthDetailStyle = {
     fontSize: '11px',
-    color: '#888'
+    color: '#666666'
   };
 
   const queueItemStyle = {
     backgroundColor: '#1E1E1E',
-    border: '1px solid #333',
+    border: '1px solid #222222',
     borderRadius: '4px',
     padding: '10px',
     marginBottom: '8px',
@@ -201,9 +201,9 @@ export default function HealthMonitor({ visible = false, onClose }) {
   };
 
   const secondaryButtonStyle = {
-    backgroundColor: '#333',
+    backgroundColor: '#222222',
     color: '#FFF',
-    border: '1px solid #444',
+    border: '1px solid #222222',
     borderRadius: '6px',
     padding: '8px 16px',
     cursor: 'pointer',
@@ -266,7 +266,7 @@ export default function HealthMonitor({ visible = false, onClose }) {
             ))}
           </div>
         ) : (
-          <div style={{ color: '#888', fontSize: '14px' }}>Loading health status...</div>
+          <div style={{ color: '#666666', fontSize: '14px' }}>Loading health status...</div>
         )}
       </div>
 
@@ -283,13 +283,13 @@ export default function HealthMonitor({ visible = false, onClose }) {
                 <div style={{ fontWeight: '600', marginBottom: '4px' }}>
                   {item.operationType}
                 </div>
-                <div style={{ color: '#888', fontSize: '11px' }}>
+                <div style={{ color: '#666666', fontSize: '11px' }}>
                   Attempts: {item.attempts} | Time: {new Date(item.timestamp).toLocaleTimeString()}
                 </div>
               </div>
             ))}
             {recoveryQueue.length > 5 && (
-              <div style={{ color: '#888', fontSize: '11px', marginTop: '8px' }}>
+              <div style={{ color: '#666666', fontSize: '11px', marginTop: '8px' }}>
                 +{recoveryQueue.length - 5} more items
               </div>
             )}
@@ -322,7 +322,7 @@ export default function HealthMonitor({ visible = false, onClose }) {
             ))}
           </div>
         ) : (
-          <div style={{ color: '#888', fontSize: '14px' }}>Loading circuit breakers...</div>
+          <div style={{ color: '#666666', fontSize: '14px' }}>Loading circuit breakers...</div>
         )}
         <div style={{ marginTop: '12px' }}>
           <button onClick={handleResetCircuitBreakers} style={secondaryButtonStyle}>

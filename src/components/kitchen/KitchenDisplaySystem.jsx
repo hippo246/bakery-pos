@@ -1887,7 +1887,7 @@ Printed: ${new Date().toLocaleString()}
                       minHeight: '48px',
                       cursor: printer.status === 'online' ? 'pointer' : 'not-allowed',
                       background: selectedPrinter === printer.id ? '#00ff00' : '#000000',
-                      color: selectedPrinter === printer.id ? '#000000' : printer.status === 'online' ? '#00ff00' : '#444444',
+                      color: selectedPrinter === printer.id ? '#000000' : printer.status === 'online' ? '#00ff00' : '#222222444',
                       borderBottom: '1px dashed #00ff00',
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -1912,7 +1912,7 @@ Printed: ${new Date().toLocaleString()}
                     </span>
                   </div>
                 ))}
-                <div style={{ padding: '12px 16px', fontSize: '11px', color: '#444444', borderTop: '1px solid #333' }}>
+                <div style={{ padding: '12px 16px', fontSize: '11px', color: '#222222444', borderTop: '1px solid #222222' }}>
                   {printers.filter(p => p.status === 'online').length}/{printers.length} printers online
                 </div>
               </div>
@@ -2599,115 +2599,118 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
       )}
       {/* Card Header */}
       <div style={{
-        padding: screenSize === 'small' ? '16px' : '20px',
+        padding: screenSize === 'small' ? '12px' : '16px',
         background: '#ffffff',
         borderBottom: '2px dashed #000000',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        position: 'relative',
-        minHeight: screenSize === 'small' ? '70px' : '80px'
+        position: 'relative'
       }}
       onClick={() => setExpanded(!expanded)}
       >
-        {/* Status Badge */}
-        <div style={{
-          position: 'absolute',
-          top: screenSize === 'small' ? '12px' : '16px',
-          right: screenSize === 'small' ? '12px' : '16px',
-          padding: screenSize === 'small' ? '6px 12px' : '10px 18px',
-          background: isOverdue ? '#ff0000' : kot.status === KOTStatus.READY ? '#00ff00' : kot.status === KOTStatus.PREPARING ? '#0000ff' : kot.status === KOTStatus.PENDING ? '#ffaa00' : '#808080',
-          color: kot.status === KOTStatus.PENDING ? '#000000' : '#ffffff',
-          borderRadius: '0px',
-          fontSize: screenSize === 'small' ? '12px' : '14px',
-          fontWeight: '900',
-          textTransform: 'uppercase',
-          border: '2px solid #000000',
-          zIndex: 10,
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          lineHeight: '1.3',
-          boxShadow: '2px 2px 0px rgba(0,0,0,0.15)'
-        }}>
-          <div>{kot.status}</div>
-          <div style={{ fontSize: screenSize === 'small' ? '9px' : '11px', marginTop: '4px', borderTop: '2px solid currentColor', width: '100%', paddingTop: '4px', fontWeight: 'bold' }}>
-            {percentage}% DONE
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: screenSize === 'small' ? 'flex-start' : 'flex-start', marginBottom: screenSize === 'small' ? '8px' : '12px', flexDirection: screenSize === 'small' ? 'column' : 'row', gap: screenSize === 'small' ? '8px' : '0', paddingRight: screenSize === 'small' ? '80px' : '100px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: screenSize === 'small' ? '8px' : '12px', gap: screenSize === 'small' ? '8px' : '12px' }}>
+          {/* Left side - Order info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: screenSize === 'small' ? '6px' : '8px', flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
             <span style={{ 
-              fontSize: screenSize === 'small' ? '18px' : '24px', 
+              fontSize: screenSize === 'small' ? '14px' : '18px', 
               fontWeight: 'bold', 
               color: '#000000',
               fontFamily: '"Courier New", monospace'
             }}>#{kot.orderNumber}</span>
             {kot.token && (
               <span style={{
-                padding: screenSize === 'small' ? '4px 8px' : '6px 10px',
+                padding: screenSize === 'small' ? '2px 6px' : '4px 8px',
                 background: '#000000',
                 color: '#ffffff',
                 borderRadius: '0px',
-                fontSize: screenSize === 'small' ? '11px' : '12px',
+                fontSize: screenSize === 'small' ? '9px' : '10px',
                 fontWeight: 'bold',
                 border: '1px solid #000000',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                flexShrink: 0
               }}>
                 {kot.token}
               </span>
             )}
             {kot.station && (
               <span style={{
-                padding: screenSize === 'small' ? '4px 8px' : '6px 10px',
+                padding: screenSize === 'small' ? '2px 6px' : '4px 8px',
                 background: '#000000',
                 color: '#ffffff',
                 borderRadius: '0px',
-                fontSize: screenSize === 'small' ? '11px' : '12px',
+                fontSize: screenSize === 'small' ? '9px' : '10px',
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
                 border: '1px solid #000000',
-                fontFamily: '"Courier New", monospace'
+                fontFamily: '"Courier New", monospace',
+                flexShrink: 0
               }}>
                 {kot.station}
               </span>
             )}
           </div>
-          
-          {/* Countdown Timer */}
+
+          {/* Right side - Status Badge */}
           <div style={{
-            padding: screenSize === 'small' ? '4px 8px' : '6px 10px',
-            background: isOverdue ? '#ff0000' : timeLeft < 300 ? '#ffff00' : '#00ff00',
-            color: '#000000',
+            padding: screenSize === 'small' ? '4px 8px' : '6px 12px',
+            background: isOverdue ? '#ff0000' : kot.status === KOTStatus.READY ? '#00ff00' : kot.status === KOTStatus.PREPARING ? '#0000ff' : kot.status === KOTStatus.PENDING ? '#ffaa00' : '#808080',
+            color: kot.status === KOTStatus.PENDING ? '#000000' : '#ffffff',
             borderRadius: '0px',
-            fontSize: screenSize === 'small' ? '12px' : '14px',
-            fontWeight: 'bold',
-            fontFamily: '"Courier New", monospace',
-            border: '1px solid #000000',
-            whiteSpace: 'nowrap'
+            fontSize: screenSize === 'small' ? '10px' : '12px',
+            fontWeight: '900',
+            textTransform: 'uppercase',
+            border: '2px solid #000000',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            lineHeight: '1.2',
+            boxShadow: '2px 2px 0px rgba(0,0,0,0.15)',
+            flexShrink: 0,
+            minWidth: screenSize === 'small' ? '60px' : '80px'
           }}>
-            {isOverdue ? 'OVERDUE' : formatTime(timeLeft)}
+            <div>{kot.status}</div>
+            <div style={{ fontSize: screenSize === 'small' ? '8px' : '9px', marginTop: '2px', borderTop: '1px solid currentColor', width: '100%', paddingTop: '2px', fontWeight: 'bold' }}>
+              {percentage}%
+            </div>
           </div>
         </div>
 
-        {/* Order Meta Info */}
-        <div style={{ display: 'flex', gap: screenSize === 'small' ? '12px' : '16px', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#000000', flexWrap: 'wrap', fontFamily: '"Courier New", monospace' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>Customer:</span>
-            <span>{kot.customer?.name || 'Walk-in'}</span>
+        {/* Second row - Countdown and meta info */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: screenSize === 'small' ? '8px' : '12px', flexWrap: 'wrap' }}>
+          {/* Countdown Timer */}
+          <div style={{
+            padding: screenSize === 'small' ? '3px 6px' : '4px 8px',
+            background: isOverdue ? '#ff0000' : timeLeft < 300 ? '#ffff00' : '#00ff00',
+            color: '#000000',
+            borderRadius: '0px',
+            fontSize: screenSize === 'small' ? '10px' : '11px',
+            fontWeight: 'bold',
+            fontFamily: '"Courier New", monospace',
+            border: '1px solid #000000',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
+          }}>
+            {isOverdue ? 'OVERDUE' : formatTime(timeLeft)}
           </div>
-          {kot.customer?.table && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>Table:</span>
-              <span>{kot.customer.table}</span>
+
+          {/* Order Meta Info */}
+          <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', fontSize: screenSize === 'small' ? '9px' : '10px', color: '#000000', flexWrap: 'wrap', fontFamily: '"Courier New", monospace', flex: 1, justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <span>{kot.customer?.name || 'Walk-in'}</span>
             </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>Age:</span>
-            <span style={{ fontWeight: 'bold' }}>{orderAge}m</span>
+            {kot.customer?.table && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <span>•</span>
+                <span>T{kot.customer.table}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+              <span>•</span>
+              <span style={{ fontWeight: 'bold' }}>{orderAge}m</span>
+            </div>
           </div>
         </div>
       </div>

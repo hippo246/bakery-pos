@@ -2646,7 +2646,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       height: '100%',
       width: '100%',
       maxWidth: '100%',
-      background: darkMode ? '#1a1a1a' : '#f5f7fa',
+      background: darkMode ? '#000000' : '#f5f7fa',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       overflow: 'hidden'
     }}>
@@ -2683,7 +2683,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         minHeight: 0,
         maxWidth: '100%',
         flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row',
-        background: screenSize === 'small' ? '#f3f4f6' : 'transparent'
+        background: screenSize === 'small' ? (darkMode ? '#111111' : '#f3f4f6') : 'transparent'
       }}>
         {/* Left Column - Menu */}
         {(screenSize !== 'small' || activeView === 'menu') && (
@@ -2691,16 +2691,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             flex: screenSize === 'small' ? 1 : screenSize === 'medium' ? 1 : 1,
             display: 'flex',
             flexDirection: 'column',
-            background: '#ffffff',
+            background: darkMode ? '#0a0a0a' : '#ffffff',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             overflow: 'hidden',
             minHeight: screenSize === 'small' ? '300px' : 'auto',
             minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '280px',
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '40%' : 'none'
           }}>
           {/* Categories */}
-          <div style={{ padding: '10px', borderBottom: '1px solid #e5e7eb', position: 'relative' }}>
+          <div style={{ padding: '10px', borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, position: 'relative' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {categories.map(category => (
                 <button
@@ -2708,9 +2708,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   onClick={() => setSelectedCategory(category)}
                   style={{
                     padding: '6px 12px',
-                    background: selectedCategory === category ? '#2563eb' : '#f3f4f6',
-                    color: selectedCategory === category ? '#ffffff' : '#374151',
-                    border: selectedCategory === category ? 'none' : '1px solid #e5e7eb',
+                    background: selectedCategory === category ? '#6366f1' : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: selectedCategory === category ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                    border: selectedCategory === category ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '6px',
                     fontSize: '12px',
                     fontWeight: '500',
@@ -2730,8 +2730,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 top: '100%',
                 left: '0',
                 right: '0',
-                background: darkMode ? '#2a2a2a' : '#ffffff',
-                border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+                background: darkMode ? '#0a0a0a' : '#ffffff',
+                border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 borderRadius: '8px',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 zIndex: 4000,
@@ -2749,20 +2749,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}
                     style={{
                       padding: '12px 16px',
-                      borderBottom: `1px solid ${darkMode ? '#444' : '#f3f4f6'}`,
+                      borderBottom: `1px solid ${darkMode ? '#222222' : '#f3f4f6'}`,
                       cursor: 'pointer',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = darkMode ? '#333' : '#f9fafb'}
-                    onMouseLeave={(e) => e.target.style.background = darkMode ? '#2a2a2a' : '#ffffff'}
+                    onMouseEnter={(e) => e.target.style.background = darkMode ? '#222222' : '#f9fafb'}
+                    onMouseLeave={(e) => e.target.style.background = darkMode ? '#0a0a0a' : '#ffffff'}
                   >
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#fff' : '#1f2937' }}>{item.name}</div>
-                      <div style={{ fontSize: '12px', color: darkMode ? '#999' : '#6b7280' }}>{item.category}</div>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#fff' : '#0a0a0a' }}>{item.name}</div>
+                      <div style={{ fontSize: '12px', color: darkMode ? '#666666' : '#6b7280' }}>{item.category}</div>
                     </div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#2563eb' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#6366f1' : '#2563eb' }}>
                       ₹{item.price.toFixed(2)}
                     </div>
                   </div>
@@ -2791,7 +2791,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     key={item.id}
                     onClick={() => addToCart(item, quantityInput)}
                     style={{
-                      background: '#ffffff',
+                      background: darkMode ? '#111111' : '#ffffff',
                       padding: screenSize === 'small' ? '12px' : '16px',
                       display: 'flex',
                       flexDirection: 'column',
@@ -2799,8 +2799,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       gap: '8px',
                       opacity: item.active && !item.eightySixed ? 1 : 0.5,
                       border: item.active && !item.eightySixed ? 
-                            (isLowStock ? '2px solid #f59e0b' : '1px solid #e5e7eb') : 
-                            '1px solid #e5e7eb',
+                            (isLowStock ? '2px solid #f59e0b' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`) : 
+                            `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                       cursor: item.active && !item.eightySixed ? 'pointer' : 'not-allowed',
                       transition: 'all 0.15s ease',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
@@ -2808,15 +2808,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}
                     onMouseEnter={(e) => {
                       if (item.active && !item.eightySixed) {
-                        e.target.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.15)';
-                        e.target.style.borderColor = '#2563eb';
+                        e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.15)';
+                        e.target.style.borderColor = darkMode ? '#6366f1' : '#2563eb';
                         e.target.style.transform = 'translateY(-2px)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (item.active && !item.eightySixed) {
                         e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                        e.target.style.borderColor = isLowStock ? '#f59e0b' : '#e5e7eb';
+                        e.target.style.borderColor = isLowStock ? '#f59e0b' : (darkMode ? '#222222' : '#e5e7eb');
                         e.target.style.transform = 'translateY(0)';
                       }
                     }}
@@ -2826,7 +2826,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         position: 'absolute',
                         top: '8px',
                         right: '8px',
-                        background: '#f59e0b',
+                        background: darkMode ? '#d97706' : '#f59e0b',
                         color: '#ffffff',
                         padding: '2px 6px',
                         borderRadius: '4px',
@@ -2851,7 +2851,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     <span style={{ 
                       fontSize: screenSize === 'small' ? '11px' : '12px', 
                       fontWeight: '500', 
-                      color: '#1f2937',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
                       textAlign: 'center',
                       lineHeight: '1.3'
                     }}>
@@ -2860,7 +2860,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     <span style={{ 
                       fontSize: screenSize === 'small' ? '13px' : '14px', 
                       fontWeight: '600', 
-                      color: '#2563eb'
+                      color: darkMode ? '#6366f1' : '#2563eb'
                     }}>
                       ₹{item.price.toFixed(2)}
                     </span>
@@ -2880,9 +2880,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             maxWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '320px' : '400px',
             display: 'flex',
             flexDirection: 'column',
-            background: '#ffffff',
+            background: darkMode ? '#0a0a0a' : '#ffffff',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             overflow: 'hidden',
             flexShrink: 0,
             minHeight: screenSize === 'small' ? '400px' : 'auto'
@@ -2890,16 +2890,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           {/* Cart Header */}
           <div style={{
             padding: screenSize === 'small' ? '8px' : '10px',
-            borderBottom: '1px solid #e5e7eb',
-            background: '#f9fafb',
+            borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+            background: darkMode ? '#111111' : '#f9fafb',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: '#1f2937' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
               Cart ({cartCount})
             </div>
-            <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '700', color: '#2563eb' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '700', color: darkMode ? '#6366f1' : '#2563eb' }}>
               ₹{cartTotal.toFixed(2)}
             </div>
           </div>
@@ -2908,8 +2908,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           {cart.length > 2 && (
             <div style={{
               padding: screenSize === 'small' ? '4px 8px' : '5px 10px',
-              borderBottom: '1px solid #f1f5f9',
-              background: '#f9fafb'
+              borderBottom: `1px solid ${darkMode ? '#222222' : '#f1f5f9'}`,
+              background: darkMode ? '#111111' : '#f9fafb'
             }}>
               <div style={{ position: 'relative' }}>
                 <span style={{
@@ -2918,7 +2918,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   top: '50%',
                   transform: 'translateY(-50%)',
                   fontSize: '11px',
-                  color: '#94a3b8',
+                  color: darkMode ? '#9ca3af' : '#94a3b8',
                   pointerEvents: 'none'
                 }}>🔍</span>
                 <input
@@ -2929,11 +2929,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     width: '100%',
                     padding: screenSize === 'small' ? '4px 26px 4px 24px' : '5px 28px 5px 26px',
-                    border: '1px solid #e2e8f0',
+                    border: `1px solid ${darkMode ? '#222222' : '#e2e8f0'}`,
                     borderRadius: '6px',
                     fontSize: '11px',
-                    background: '#ffffff',
-                    color: '#1f2937',
+                    background: darkMode ? '#111111' : '#ffffff',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     outline: 'none'
                   }}
                 />
@@ -2947,7 +2947,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       transform: 'translateY(-50%)',
                       background: 'none',
                       border: 'none',
-                      color: '#94a3b8',
+                      color: darkMode ? '#9ca3af' : '#94a3b8',
                       cursor: 'pointer',
                       fontSize: '11px',
                       padding: '2px',
@@ -2967,7 +2967,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <div style={{
                 textAlign: 'center',
                 padding: screenSize === 'small' ? '24px 12px' : '30px 15px',
-                color: '#9ca3af',
+                color: darkMode ? '#6b7280' : '#9ca3af',
                 fontSize: screenSize === 'small' ? '11px' : '12px'
               }}>
                 <div style={{ fontSize: screenSize === 'small' ? '32px' : '36px', marginBottom: '12px' }}>🛒</div>
@@ -2982,18 +2982,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   key={`${item.id}-${index}`} 
                   onClick={() => toggleCartItemSelection(index)}
                   style={{
-                    background: selectedCartItems.includes(index) ? '#dbeafe' : '#f9fafb',
+                    background: selectedCartItems.includes(index) ? (darkMode ? '#1e1b4b' : '#dbeafe') : (darkMode ? '#111111' : '#f9fafb'),
                     borderRadius: '6px',
                     padding: screenSize === 'small' ? '6px' : '8px',
                     marginBottom: screenSize === 'small' ? '4px' : '6px',
-                    border: selectedCartItems.includes(index) ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    border: selectedCartItems.includes(index) ? `2px solid ${darkMode ? '#6366f1' : '#3b82f6'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     cursor: 'pointer'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '500', color: '#1f2937' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                           {selectedCartItems.includes(index) && <span style={{ marginRight: '4px' }}>✓</span>}
                           {item.name}
                           {item.isCustom && (
@@ -3002,9 +3002,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                               fontSize: '10px', 
                               padding: '1px 4px', 
                               borderRadius: '3px',
-                              background: '#fef3c7',
-                              color: '#92400e',
-                              border: '1px solid #f59e0b',
+                              background: darkMode ? '#4c1d95' : '#fef3c7',
+                              color: darkMode ? '#a78bfa' : '#92400e',
+                              border: `1px solid ${darkMode ? '#fbbf24' : '#f59e0b'}`,
                               fontWeight: '600'
                             }}>
                               Custom
@@ -3017,8 +3017,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                               padding: '1px 4px', 
                               borderRadius: '3px',
                               background: item.noteType === 'allergy' ? '#fef2f2' : '#dbeafe',
-                              color: item.noteType === 'allergy' ? '#dc2626' : '#2563eb',
-                              border: item.noteType === 'allergy' ? '1px solid #ef4444' : '1px solid #3b82f6',
+                              color: item.noteType === 'allergy' ? '#dc2626' : (darkMode ? '#6366f1' : '#2563eb'),
+                              border: item.noteType === 'allergy' ? '1px solid #ef4444' : `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
                               fontWeight: '600'
                             }}>
                               {item.noteType === 'allergy' ? '⚠️' : '📝'}
@@ -3030,18 +3030,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           size="small"
                         />
                       </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: '#6b7280' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                         ₹{item.price.toFixed(2)} × {item.quantity}
                       </div>
                       {item.baseItemName && (
-                        <div style={{ fontSize: screenSize === 'small' ? '8px' : '9px', color: '#92400e', fontStyle: 'italic' }}>
+                        <div style={{ fontSize: screenSize === 'small' ? '8px' : '9px', color: darkMode ? '#a78bfa' : '#92400e', fontStyle: 'italic' }}>
                           Base: {item.baseItemName}
                         </div>
                       )}
                       {item.notes && (
                         <div style={{ 
                           fontSize: screenSize === 'small' ? '9px' : '10px', 
-                          color: item.noteType === 'allergy' ? '#dc2626' : '#6b7280',
+                          color: item.noteType === 'allergy' ? (darkMode ? '#ef4444' : '#dc2626') : (darkMode ? '#9ca3af' : '#6b7280'),
                           fontStyle: 'italic',
                           marginTop: '2px',
                           maxWidth: '100%',
@@ -3060,8 +3060,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       }}
                       style={{
                         padding: screenSize === 'small' ? '2px 5px' : '3px 6px',
-                        background: '#fee2e2',
-                        color: '#dc2626',
+                        background: darkMode ? '#4c1d95' : '#fee2e2',
+                        color: darkMode ? '#a78bfa' : '#dc2626',
                         border: 'none',
                         borderRadius: '4px',
                         fontSize: screenSize === 'small' ? '11px' : '12px',
@@ -3072,7 +3072,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       ✕
                     </button>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: '#1f2937' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 </div>
@@ -3081,8 +3081,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
             {/* Item Actions Panel */}
             {selectedCartItems.length > 0 && (
-              <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: '1px solid #e5e7eb', background: '#dbeafe' }}>
-                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: '#1e40af', marginBottom: '6px' }}>
+              <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, background: darkMode ? '#1e1b4b' : '#dbeafe' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: darkMode ? '#818cf8' : '#1e40af', marginBottom: '6px' }}>
                   {selectedCartItems.length} item{selectedCartItems.length > 1 ? 's' : ''} selected
                 </div>
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
@@ -3097,9 +3097,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '6px 8px',
-                      background: isEditingCartItems && itemActionMode === 'quantity' ? '#3b82f6' : '#ffffff',
-                      color: isEditingCartItems && itemActionMode === 'quantity' ? 'white' : '#374151',
-                      border: '1px solid #3b82f6',
+                      background: isEditingCartItems && itemActionMode === 'quantity' ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#111111' : '#ffffff'),
+                      color: isEditingCartItems && itemActionMode === 'quantity' ? 'white' : (darkMode ? '#ffffff' : '#111111'),
+                      border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
                       borderRadius: '4px',
                       fontSize: '11px',
                       cursor: 'pointer',
@@ -3119,9 +3119,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '6px 8px',
-                      background: isEditingCartItems && itemActionMode === 'discount' ? '#3b82f6' : '#ffffff',
-                      color: isEditingCartItems && itemActionMode === 'discount' ? 'white' : '#374151',
-                      border: '1px solid #3b82f6',
+                      background: isEditingCartItems && itemActionMode === 'discount' ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#111111' : '#ffffff'),
+                      color: isEditingCartItems && itemActionMode === 'discount' ? 'white' : (darkMode ? '#ffffff' : '#111111'),
+                      border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
                       borderRadius: '4px',
                       fontSize: '11px',
                       cursor: 'pointer',
@@ -3141,9 +3141,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '6px 8px',
-                      background: isEditingCartItems && itemActionMode === 'amount' ? '#3b82f6' : '#ffffff',
-                      color: isEditingCartItems && itemActionMode === 'amount' ? 'white' : '#374151',
-                      border: '1px solid #3b82f6',
+                      background: isEditingCartItems && itemActionMode === 'amount' ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#111111' : '#ffffff'),
+                      color: isEditingCartItems && itemActionMode === 'amount' ? 'white' : (darkMode ? '#ffffff' : '#111111'),
+                      border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
                       borderRadius: '4px',
                       fontSize: '11px',
                       cursor: 'pointer',
@@ -3160,9 +3160,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '6px 8px',
-                      background: isEditingCartItems && itemActionMode === 'notes' ? '#3b82f6' : '#ffffff',
-                      color: isEditingCartItems && itemActionMode === 'notes' ? 'white' : '#374151',
-                      border: '1px solid #3b82f6',
+                      background: isEditingCartItems && itemActionMode === 'notes' ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#111111' : '#ffffff'),
+                      color: isEditingCartItems && itemActionMode === 'notes' ? 'white' : (darkMode ? '#ffffff' : '#111111'),
+                      border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
                       borderRadius: '4px',
                       fontSize: '11px',
                       cursor: 'pointer',
@@ -3179,9 +3179,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}
                     style={{
                       padding: '6px 8px',
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: '1px solid #ef4444',
+                      background: darkMode ? '#4c1d95' : '#fee2e2',
+                      color: darkMode ? '#a78bfa' : '#dc2626',
+                      border: `1px solid ${darkMode ? '#6366f1' : '#ef4444'}`,
                       borderRadius: '4px',
                       fontSize: '11px',
                       cursor: 'pointer',
@@ -3202,9 +3202,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         style={{
                           flex: 1,
                           padding: '6px',
-                          background: noteType === 'regular' ? '#3b82f6' : '#f3f4f6',
-                          color: noteType === 'regular' ? 'white' : '#374151',
-                          border: '1px solid #3b82f6',
+                          background: noteType === 'regular' ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#111111' : '#f3f4f6'),
+                          color: noteType === 'regular' ? 'white' : (darkMode ? '#ffffff' : '#111111'),
+                          border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
                           borderRadius: '4px',
                           fontSize: '11px',
                           fontWeight: '500',
@@ -3218,8 +3218,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         style={{
                           flex: 1,
                           padding: '6px',
-                          background: noteType === 'allergy' ? '#ef4444' : '#f3f4f6',
-                          color: noteType === 'allergy' ? 'white' : '#374151',
+                          background: noteType === 'allergy' ? '#ef4444' : (darkMode ? '#111111' : '#f3f4f6'),
+                          color: noteType === 'allergy' ? 'white' : (darkMode ? '#ffffff' : '#111111'),
                           border: '1px solid #ef4444',
                           borderRadius: '4px',
                           fontSize: '11px',
@@ -3236,12 +3236,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         width: '100%',
                         minHeight: noteType === 'allergy' ? '80px' : '60px',
                         padding: '8px',
-                        border: noteType === 'allergy' ? '2px solid #ef4444' : '1px solid #e5e7eb',
+                        border: noteType === 'allergy' ? '2px solid #ef4444' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                         borderRadius: '4px',
                         fontSize: '12px',
                         resize: 'vertical',
                         marginBottom: '6px',
-                        background: noteType === 'allergy' ? '#fef2f2' : '#ffffff'
+                        background: noteType === 'allergy' ? '#fef2f2' : (darkMode ? '#111111' : '#ffffff')
                       }}
                       onChange={(e) => {
                         const notes = e.target.value;
@@ -3286,7 +3286,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           flex: 1,
                           padding: '8px',
                           background: '#6b7280',
-                          border: '1px solid #6b7280',
+                          border: `1px solid ${darkMode ? '#4b5563' : '#6b7280'}`,
                           borderRadius: '4px',
                           fontSize: '12px',
                           fontWeight: '600',
@@ -3304,11 +3304,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 {isEditingCartItems && itemActionMode !== 'notes' && (
                   <div style={{ 
                     padding: '8px', 
-                    background: '#dbeafe', 
-                    border: '1px solid #3b82f6', 
+                    background: darkMode ? '#1e1b4b' : '#dbeafe', 
+                    border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`, 
                     borderRadius: '4px',
                     fontSize: '11px',
-                    color: '#1e40af',
+                    color: darkMode ? '#818cf8' : '#1e40af',
                     textAlign: 'center'
                   }}>
                     Use the main numpad to enter {itemActionMode}. Press C to cancel.
@@ -3349,7 +3349,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '14px', color: '#6b7280', padding: '2px 4px',
+                    fontSize: '14px', color: darkMode ? '#9ca3af' : '#6b7280', padding: '2px 4px',
                     lineHeight: 1,
                   }}
                 >✕</button>
@@ -3389,9 +3389,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             padding: '4px 8px',
                             background: active
                               ? 'rgba(52,211,153,0.25)'
-                              : (screenSize === 'small' ? '#f3f4f6' : 'rgba(255,255,255,0.05)'),
-                            color: active ? '#34d399' : (screenSize === 'small' ? '#374151' : '#9ca3af'),
-                            border: `1px solid ${active ? '#34d399' : (screenSize === 'small' ? '#e5e7eb' : 'rgba(255,255,255,0.08)')}`,
+                              : (darkMode ? (screenSize === 'small' ? '#111111' : 'rgba(255,255,255,0.05)') : (screenSize === 'small' ? '#f3f4f6' : 'rgba(255,255,255,0.05)')),
+                            color: active ? '#34d399' : (darkMode ? (screenSize === 'small' ? '#ffffff' : '#9ca3af') : (screenSize === 'small' ? '#111111' : '#9ca3af')),
+                            border: `1px solid ${active ? '#34d399' : (darkMode ? (screenSize === 'small' ? '#222222' : 'rgba(255,255,255,0.08)') : (screenSize === 'small' ? '#e5e7eb' : 'rgba(255,255,255,0.08)'))}`,
                             borderRadius: '6px', fontSize: '11px', fontWeight: '600',
                             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
                             transition: 'all 0.12s',
@@ -3417,7 +3417,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 2, padding: '8px 10px',
                     background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
-                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    color: screenSize === 'small' ? '#0a0a0a' : '#ffffff',
                     border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: '8px', fontSize: '12px', outline: 'none',
                   }}
@@ -3430,7 +3430,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1, padding: '8px 6px',
                     background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
-                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    color: screenSize === 'small' ? '#0a0a0a' : '#ffffff',
                     border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: '8px', fontSize: '12px', outline: 'none',
                   }}
@@ -3444,7 +3444,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     width: '48px', padding: '8px 6px', textAlign: 'center',
                     background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
-                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    color: screenSize === 'small' ? '#0a0a0a' : '#ffffff',
                     border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: '8px', fontSize: '12px', outline: 'none',
                   }}
@@ -3459,7 +3459,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     width: '100%', padding: '8px 10px',
                     background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
-                    color: screenSize === 'small' ? '#374151' : '#9ca3af',
+                    color: screenSize === 'small' ? '#111111' : '#9ca3af',
                     border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: '8px', fontSize: '12px', outline: 'none', cursor: 'pointer',
                   }}
@@ -3481,7 +3481,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     width: '100%', padding: '8px 10px',
                     background: screenSize === 'small' ? '#ffffff' : 'rgba(255,255,255,0.07)',
-                    color: screenSize === 'small' ? '#1f2937' : '#ffffff',
+                    color: screenSize === 'small' ? '#0a0a0a' : '#ffffff',
                     border: `1px solid ${screenSize === 'small' ? '#d1d5db' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: '8px', fontSize: '12px', outline: 'none',
                   }}
@@ -3516,10 +3516,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   width: '100%', padding: '9px',
                   background: (customOrderName && customOrderPrice)
                     ? 'linear-gradient(135deg, #34d399 0%, #10b981 100%)'
-                    : (screenSize === 'small' ? '#e5e7eb' : 'rgba(255,255,255,0.06)'),
+                    : (darkMode ? (screenSize === 'small' ? '#222222' : 'rgba(255,255,255,0.06)') : (screenSize === 'small' ? '#e5e7eb' : 'rgba(255,255,255,0.06)')),
                   color: (customOrderName && customOrderPrice)
                     ? '#ffffff'
-                    : (screenSize === 'small' ? '#9ca3af' : '#4b5563'),
+                    : (darkMode ? (screenSize === 'small' ? '#9ca3af' : '#ffffff') : (screenSize === 'small' ? '#9ca3af' : '#222222')),
                   border: 'none', borderRadius: '8px',
                   fontSize: '12px', fontWeight: '700', cursor: (customOrderName && customOrderPrice) ? 'pointer' : 'not-allowed',
                   transition: 'all 0.15s',
@@ -3532,26 +3532,26 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           )}
 
           {/* Cart Footer */}
-          <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+          <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, background: darkMode ? '#111111' : '#f9fafb' }}>
             {/* Order Summary */}
             <div style={{ marginBottom: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginBottom: '2px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
                 <span>Subtotal</span>
                 <span>₹{cartSubtotal.toFixed(2)}</span>
               </div>
               {discount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#059669', marginBottom: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#34d399' : '#059669', marginBottom: '2px' }}>
                   <span>Discount ({discount}%)</span>
                   <span>-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
               {gstRate > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginBottom: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
                   <span>GST ({gstRate}%)</span>
                   <span>₹{taxAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: '#1f2937', paddingTop: '3px', borderTop: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', paddingTop: '3px', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                 <span>Total</span>
                 <span>₹{cartTotal.toFixed(2)}</span>
               </div>
@@ -3565,7 +3565,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               marginTop: '4px'
             }}>
               {/* Row 1: Customer Type Pill */}
-              <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                 <button
                   onClick={() => { setSelectedCustomer(null); setCustomerPhone(''); }}
                   style={{
@@ -3573,8 +3573,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     padding: '5px 0',
                     fontSize: '10px',
                     fontWeight: '700',
-                    background: !selectedCustomer ? '#1e40af' : '#f3f4f6',
-                    color: !selectedCustomer ? '#ffffff' : '#9ca3af',
+                    background: !selectedCustomer ? (darkMode ? '#6366f1' : '#1e40af') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: !selectedCustomer ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
                     border: 'none',
                     cursor: 'pointer',
                     display: 'flex',
@@ -3593,8 +3593,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     padding: '5px 0',
                     fontSize: '10px',
                     fontWeight: '700',
-                    background: selectedCustomer ? '#1e40af' : '#f3f4f6',
-                    color: selectedCustomer ? '#ffffff' : '#9ca3af',
+                    background: selectedCustomer ? (darkMode ? '#6366f1' : '#1e40af') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: selectedCustomer ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
                     border: 'none',
                     cursor: 'pointer',
                     display: 'flex',
@@ -3614,7 +3614,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               {/* Row 2: Dining Type Pill & Table Chip */}
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 {/* Dining Type toggle */}
-                <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #e5e7eb', flex: 1.2 }}>
+                <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, flex: 1.2 }}>
                   <button
                     onClick={() => { setOrderType('dine-in'); }}
                     style={{
@@ -3622,8 +3622,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       padding: '5px 0',
                       fontSize: '10px',
                       fontWeight: '700',
-                      background: orderType === 'dine-in' ? '#2563eb' : '#f3f4f6',
-                      color: orderType === 'dine-in' ? '#ffffff' : '#9ca3af',
+                      background: orderType === 'dine-in' ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: orderType === 'dine-in' ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
                       border: 'none',
                       cursor: 'pointer',
                       display: 'flex',
@@ -3642,8 +3642,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       padding: '5px 0',
                       fontSize: '10px',
                       fontWeight: '700',
-                      background: orderType === 'takeaway' ? '#2563eb' : '#f3f4f6',
-                      color: orderType === 'takeaway' ? '#ffffff' : '#9ca3af',
+                      background: orderType === 'takeaway' ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: orderType === 'takeaway' ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
                       border: 'none',
                       cursor: 'pointer',
                       display: 'flex',
@@ -3665,9 +3665,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1,
                     padding: '5px 8px',
-                    background: orderType === 'takeaway' ? 'rgba(0,0,0,0.03)' : selectedTable ? '#ede9fe' : '#f3f4f6',
-                    color: orderType === 'takeaway' ? '#cbd5e1' : selectedTable ? '#6d28d9' : '#475569',
-                    border: orderType === 'takeaway' ? '1px dashed #cbd5e1' : selectedTable ? '1px solid #c4b5fd' : '1px solid #e5e7eb',
+                    background: orderType === 'takeaway' ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)') : selectedTable ? (darkMode ? '#4c1d95' : '#ede9fe') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: orderType === 'takeaway' ? (darkMode ? '#6b7280' : '#cbd5e1') : selectedTable ? '#a78bfa' : (darkMode ? '#9ca3af' : '#475569'),
+                    border: orderType === 'takeaway' ? `1px dashed ${darkMode ? '#4b5563' : '#cbd5e1'}` : selectedTable ? `1px solid ${darkMode ? '#6d28d9' : '#c4b5fd'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '6px',
                     fontSize: '10px',
                     fontWeight: '700',
@@ -3725,16 +3725,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
           {/* Quick Actions */}
           <div style={{
-            background: screenSize === 'small' ? '#ffffff' : 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+            background: screenSize === 'small' ? (darkMode ? '#111111' : '#ffffff') : (darkMode ? 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)' : 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)'),
             borderRadius: '14px',
-            border: screenSize === 'small' ? '1px solid #e5e7eb' : '1px solid rgba(255,255,255,0.07)',
+            border: screenSize === 'small' ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.07)'}`,
             padding: screenSize === 'small' ? '10px' : '12px',
             backdropFilter: screenSize === 'small' ? 'none' : 'blur(8px)'
           }}>
             <div style={{
               fontSize: '10px',
               fontWeight: '700',
-              color: screenSize === 'small' ? '#6b7280' : 'rgba(255,255,255,0.35)',
+              color: screenSize === 'small' ? (darkMode ? '#9ca3af' : '#6b7280') : (darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.35)'),
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
               marginBottom: '10px',
@@ -3918,9 +3918,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
           {/* Numpad */}
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
-            border: '1px solid #e5e7eb',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             padding: screenSize === 'small' ? '6px' : '8px',
             flex: 1,
             minHeight: screenSize === 'small' ? '300px' : 'auto'
@@ -3937,8 +3937,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1,
                     padding: screenSize === 'small' ? '4px' : '5px',
-                    background: numpadMode === mode ? '#2563eb' : '#f3f4f6',
-                    color: numpadMode === mode ? '#ffffff' : '#374151',
+                    background: numpadMode === mode ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: numpadMode === mode ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
                     border: isEditingCartItems && itemActionMode === mode ? '2px solid #3b82f6' : 'none',
                     borderRadius: '4px',
                     fontSize: screenSize === 'small' ? '9px' : '10px',
@@ -3955,11 +3955,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {isEditingCartItems && (
               <div style={{ 
                 padding: '6px 8px', 
-                background: '#dbeafe', 
-                border: '1px solid #3b82f6', 
+                background: darkMode ? '#1e1b4b' : '#dbeafe', 
+                border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`, 
                 borderRadius: '4px',
                 fontSize: screenSize === 'small' ? '9px' : '10px',
-                color: '#1e40af',
+                color: darkMode ? '#818cf8' : '#1e40af',
                 textAlign: 'center',
                 marginBottom: screenSize === 'small' ? '4px' : '6px',
                 fontWeight: '500'
@@ -3978,9 +3978,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   width: '100%',
                   padding: screenSize === 'small' ? '5px 6px' : '6px 8px',
-                  background: '#f8fafc',
-                  color: '#1e293b',
-                  border: '1px solid #cbd5e1',
+                  background: darkMode ? '#111111' : '#f8fafc',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#222222' : '#cbd5e1'}`,
                   borderRadius: '4px',
                   fontSize: screenSize === 'small' ? '10px' : '11px',
                   outline: 'none',
@@ -3993,8 +3993,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   top: '100%',
                   left: 0,
                   right: 0,
-                  background: darkMode ? '#2a2a2a' : '#ffffff',
-                  border: `1px solid ${darkMode ? '#444' : '#cbd5e1'}`,
+                  background: darkMode ? '#0a0a0a' : '#ffffff',
+                  border: `1px solid ${darkMode ? '#222222' : '#cbd5e1'}`,
                   borderRadius: '4px',
                   marginTop: '3px',
                   maxHeight: '150px',
@@ -4012,18 +4012,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       style={{
                         padding: '6px 8px',
                         cursor: 'pointer',
-                        borderBottom: `1px solid ${darkMode ? '#444' : '#f1f5f9'}`,
+                        borderBottom: `1px solid ${darkMode ? '#222222' : '#f1f5f9'}`,
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         fontSize: '11px',
-                        color: darkMode ? '#fff' : '#1e293b'
+                        color: darkMode ? '#fff' : '#0a0a0a'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#333' : '#f8fafc'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = darkMode ? '#2a2a2a' : '#ffffff'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#222222' : '#f8fafc'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = darkMode ? '#0a0a0a' : '#ffffff'}
                     >
                       <span>{item.name}</span>
-                      <span style={{ fontSize: '9px', color: '#64748b', background: darkMode ? '#444' : '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>
+                      <span style={{ fontSize: '9px', color: darkMode ? '#9ca3af' : '#64748b', background: darkMode ? '#222222' : '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>
                         {item.code || 'N/A'}
                       </span>
                     </div>
@@ -4032,7 +4032,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               )}
             </div>
             
-            <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: '#64748b', marginBottom: screenSize === 'small' ? '4px' : '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', marginBottom: screenSize === 'small' ? '4px' : '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               {numpadMode === 'quantity' ? 'Quantity' : numpadMode === 'discount' ? 'Discount %' : numpadMode === 'tip' ? 'Tip Amount' : numpadMode === 'gst' ? 'GST Rate %' : 'Amount'}
             </div>
             <div style={{ position: 'relative', width: '100%', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>
@@ -4044,9 +4044,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   width: '100%',
                   padding: screenSize === 'small' ? '8px 32px 8px 10px' : '10px 36px 10px 10px',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  border: '2px solid #e2e8f0',
+                  background: darkMode ? '#111111' : '#ffffff',
+                  color: darkMode ? '#ffffff' : '#0f172a',
+                  border: `2px solid ${darkMode ? '#222222' : '#e2e8f0'}`,
                   borderRadius: '8px',
                   fontSize: screenSize === 'small' ? '16px' : '18px',
                   fontWeight: '700',
@@ -4078,7 +4078,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: '#dc2626',
+                  color: darkMode ? '#ef4444' : '#dc2626',
                   fontSize: '16px',
                   fontWeight: '700',
                   cursor: 'pointer',
@@ -4102,8 +4102,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     onClick={() => handleNumpadClick(key)}
                     style={{
                       padding: screenSize === 'small' ? '12px' : '14px',
-                      background: key === '⌫' ? '#fee2e2' : '#f3f4f6',
-                      color: key === '⌫' ? '#dc2626' : '#1f2937',
+                      background: key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: key === '⌫' ? '#dc2626' : (darkMode ? '#ffffff' : '#0a0a0a'),
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: screenSize === 'small' ? '16px' : '18px',
@@ -4113,10 +4113,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       outline: 'none'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = key === '⌫' ? '#fecaca' : '#e5e7eb';
+                      e.currentTarget.style.background = key === '⌫' ? '#fecaca' : (darkMode ? '#222222' : '#e5e7eb');
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = key === '⌫' ? '#fee2e2' : '#f3f4f6';
+                      e.currentTarget.style.background = key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6');
                     }}
                   >
                     {key}
@@ -4177,26 +4177,26 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: darkMode ? '#1f2937' : '#ffffff',
+            background: darkMode ? '#0a0a0a' : '#ffffff',
             borderRadius: '16px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             width: screenSize === 'small' ? '95vw' : '700px',
             maxWidth: '95vw',
             maxHeight: '90vh',
             overflow: 'hidden',
-            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
+            border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`
           }}>
             {/* Header */}
             <div style={{
-              background: darkMode ? '#111827' : '#f9fafb',
+              background: darkMode ? '#0a0a0a' : '#f9fafb',
               padding: '20px 24px',
-              borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
               <div>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#111827', marginBottom: '4px' }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#0a0a0a', marginBottom: '4px' }}>
                   👤 Customer Lookup
                 </div>
                 <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
@@ -4210,7 +4210,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   setShowAddCustomerForm(false);
                 }}
                 style={{
-                  background: darkMode ? '#374151' : '#f3f4f6',
+                  background: darkMode ? '#111111' : '#f3f4f6',
                   border: 'none',
                   color: darkMode ? '#f3f4f6' : '#6b7280',
                   width: '36px',
@@ -4228,7 +4228,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Search and Add */}
-            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}` }}>
+            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}` }}>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <input
                   type="text"
@@ -4238,10 +4238,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1,
                     padding: '12px 16px',
-                    background: darkMode ? '#374151' : '#f9fafb',
-                    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                    background: darkMode ? '#111111' : '#f9fafb',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '8px',
-                    color: darkMode ? '#f3f4f6' : '#111827',
+                    color: darkMode ? '#f3f4f6' : '#0a0a0a',
                     fontSize: '14px'
                   }}
                 />
@@ -4268,9 +4268,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div style={{
                   marginTop: '16px',
                   padding: '16px',
-                  background: darkMode ? '#374151' : '#f9fafb',
+                  background: darkMode ? '#111111' : '#f9fafb',
                   borderRadius: '8px',
-                  border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ display: 'grid', gap: '12px' }}>
                     <input
@@ -4280,10 +4280,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       placeholder="Customer Name *"
                       style={{
                         padding: '10px 14px',
-                        background: darkMode ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        background: darkMode ? '#0a0a0a' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         borderRadius: '6px',
-                        color: darkMode ? '#f3f4f6' : '#111827',
+                        color: darkMode ? '#f3f4f6' : '#0a0a0a',
                         fontSize: '13px'
                       }}
                     />
@@ -4294,10 +4294,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       placeholder="Phone Number *"
                       style={{
                         padding: '10px 14px',
-                        background: darkMode ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        background: darkMode ? '#0a0a0a' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         borderRadius: '6px',
-                        color: darkMode ? '#f3f4f6' : '#111827',
+                        color: darkMode ? '#f3f4f6' : '#0a0a0a',
                         fontSize: '13px'
                       }}
                     />
@@ -4308,10 +4308,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       placeholder="Email Address"
                       style={{
                         padding: '10px 14px',
-                        background: darkMode ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        background: darkMode ? '#0a0a0a' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         borderRadius: '6px',
-                        color: darkMode ? '#f3f4f6' : '#111827',
+                        color: darkMode ? '#f3f4f6' : '#0a0a0a',
                         fontSize: '13px'
                       }}
                     />
@@ -4322,10 +4322,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       placeholder="Address"
                       style={{
                         padding: '10px 14px',
-                        background: darkMode ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                        background: darkMode ? '#0a0a0a' : '#ffffff',
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                         borderRadius: '6px',
-                        color: darkMode ? '#f3f4f6' : '#111827',
+                        color: darkMode ? '#f3f4f6' : '#0a0a0a',
                         fontSize: '13px'
                       }}
                     />
@@ -4396,8 +4396,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     <div
                       key={customer.id}
                       style={{
-                        background: darkMode ? '#374151' : '#f9fafb',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`,
+                        background: darkMode ? '#111111' : '#f9fafb',
+                        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                         borderRadius: '12px',
                         padding: '16px',
                         cursor: 'pointer',
@@ -4411,7 +4411,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                         <div>
-                          <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#f3f4f6' : '#111827', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#f3f4f6' : '#0a0a0a', marginBottom: '4px' }}>
                             {customer.name}
                           </div>
                           <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
@@ -4447,7 +4447,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
                         <div>
                           <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Total Orders</div>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
                             {customer.totalOrders || 0}
                           </div>
                         </div>
@@ -4460,7 +4460,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         {customer.address && (
                           <div style={{ gridColumn: '1 / -1' }}>
                             <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Address</div>
-                            <div style={{ fontSize: '13px', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                            <div style={{ fontSize: '13px', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
                               {customer.address}
                             </div>
                           </div>
@@ -4490,22 +4490,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: screenSize === 'small' ? '95vw' : '500px',
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Select Table
               </h3>
               <button
                 onClick={() => setShowTableSelector(false)}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -4545,21 +4545,21 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     background: showMergeMode 
                       ? isSelectedForMerge 
                         ? '#8b5cf6' 
-                        : '#f3f4f6'
+                        : (darkMode ? '#111111' : '#f3f4f6')
                       : selectedTable?.id === table.id 
-                        ? '#2563eb' 
+                        ? (darkMode ? '#6366f1' : '#2563eb')
                         : table.status === 'occupied' 
                           ? '#fee2e2' 
-                          : '#f3f4f6',
+                          : (darkMode ? '#111111' : '#f3f4f6'),
                     color: showMergeMode 
                       ? isSelectedForMerge 
                         ? '#ffffff' 
-                        : '#374151'
+                        : (darkMode ? '#ffffff' : '#111111')
                       : selectedTable?.id === table.id 
                         ? '#ffffff' 
                         : table.status === 'occupied' 
                           ? '#dc2626' 
-                          : '#374151',
+                          : (darkMode ? '#ffffff' : '#111111'),
                     border: isMerged 
                       ? '3px solid #8b5cf6'
                       : showMergeMode && isSelectedForMerge
@@ -4568,7 +4568,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           ? '2px solid #2563eb' 
                           : table.status === 'occupied' 
                             ? '2px solid #f59e0b' 
-                            : '1px solid #e5e7eb',
+                            : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '12px',
                     fontSize: '14px',
                     fontWeight: '600',
@@ -4616,30 +4616,30 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   )}
                   <span style={{ fontSize: '20px' }}>🪑</span>
                   <span style={{ fontSize: '16px', fontWeight: '700' }}>{table.name}</span>
-                  <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: '500' }}>
+                  <span style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', fontWeight: '500' }}>
                     👥 {table.capacity} seats
                   </span>
                   {isMerged && !showMergeMode && (
-                    <span style={{ fontSize: '10px', color: '#8b5cf6', fontWeight: '600' }}>
+                    <span style={{ fontSize: '10px', color: darkMode ? '#a78bfa' : '#8b5cf6', fontWeight: '600' }}>
                       + {mergedWith.join(', ')}
                     </span>
                   )}
                   {table.status === 'occupied' && (
-                    <span style={{ fontSize: '10px', color: '#f59e0b', fontWeight: '600' }}>
+                    <span style={{ fontSize: '10px', color: darkMode ? '#fbbf24' : '#f59e0b', fontWeight: '600' }}>
                       ⏱ Occupied
                     </span>
                   )}
                   {table.currentToken && (
-                    <span style={{ fontSize: '10px', fontWeight: '700', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: '700', background: darkMode ? '#4c1d95' : '#fef3c7', color: darkMode ? '#a78bfa' : '#92400e', padding: '2px 6px', borderRadius: '4px' }}>
                       🎫 {table.currentToken}
                     </span>
                   )}
-                  <span style={{ fontSize: '10px', textTransform: 'capitalize', color: '#6b7280' }}>
+                  <span style={{ fontSize: '10px', textTransform: 'capitalize', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                     {table.status || 'available'}
                   </span>
                 </button>
               );}) : (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                   No tables available
                 </div>
               )}
@@ -4678,9 +4678,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: showMergeMode ? '#8b5cf6' : '#f3f4f6',
-                  color: showMergeMode ? '#ffffff' : '#374151',
-                  border: showMergeMode ? '2px solid #8b5cf6' : '1px solid #e5e7eb',
+                  background: showMergeMode ? '#8b5cf6' : (darkMode ? '#111111' : '#f3f4f6'),
+                  color: showMergeMode ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                  border: showMergeMode ? '2px solid #8b5cf6' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '8px',
                   fontSize: '14px',
                   cursor: 'pointer',
@@ -4749,9 +4749,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '8px',
                   fontSize: '14px',
                   cursor: 'pointer'
@@ -4780,7 +4780,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: screenSize === 'small' ? '95vw' : '600px',
@@ -4789,15 +4789,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Held Orders ({heldOrders.length})
               </h3>
               <button
                 onClick={() => setShowHeldOrders(false)}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -4814,7 +4814,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <div style={{
                 textAlign: 'center',
                 padding: '40px',
-                color: '#6b7280',
+                color: darkMode ? '#9ca3af' : '#6b7280',
                 fontSize: '14px'
               }}>
                 No held orders
@@ -4825,32 +4825,32 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   <div
                     key={heldOrder.id}
                     style={{
-                      background: '#f9fafb',
-                      border: '1px solid #e5e7eb',
+                      background: darkMode ? '#111111' : '#f9fafb',
+                      border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                       borderRadius: '8px',
                       padding: '16px'
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                           {heldOrder.cart.length} items
                         </div>
-                        <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                           {new Date(heldOrder.timestamp).toLocaleString()}
                         </div>
                       </div>
-                      <div style={{ fontSize: '16px', fontWeight: '600', color: '#2563eb' }}>
+                      <div style={{ fontSize: '16px', fontWeight: '600', color: darkMode ? '#6366f1' : '#2563eb' }}>
                         ₹{heldOrder.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
                       </div>
                     </div>
                     {heldOrder.customer && (
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '8px' }}>
                         Customer: {heldOrder.customer.name}
                       </div>
                     )}
                     {heldOrder.table && (
-                      <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '8px' }}>
                         Table: {heldOrder.table.name}
                       </div>
                     )}
@@ -4860,7 +4860,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         style={{
                           flex: 1,
                           padding: '10px',
-                          background: '#2563eb',
+                          background: darkMode ? '#6366f1' : '#2563eb',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '6px',
@@ -4874,8 +4874,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         onClick={() => handleDeleteHeldOrder(heldOrder.id)}
                         style={{
                           padding: '10px 16px',
-                          background: '#fee2e2',
-                          color: '#dc2626',
+                          background: darkMode ? '#4c1d95' : '#fee2e2',
+                          color: darkMode ? '#a78bfa' : '#dc2626',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '13px',
@@ -4925,7 +4925,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#ffffff', margin: 0 }}>
                   ⌨️ POS Keyboard Shortcuts
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                <p style={{ margin: '4px 0 0 0', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#888888' }}>
                   Boost checkout speed with hardware keys
                 </p>
               </div>
@@ -5041,22 +5041,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: screenSize === 'small' ? '95vw' : '400px',
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 GST Settings
               </h3>
               <button
                 onClick={() => setShowGstSettings(false)}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -5070,7 +5070,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
                 GST Rate (%)
               </label>
               <input
@@ -5083,9 +5083,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   width: '100%',
                   padding: '12px',
-                  background: '#f9fafb',
-                  color: '#1f2937',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#111111' : '#f9fafb',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '8px',
                   fontSize: '14px'
                 }}
@@ -5099,8 +5099,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1,
                     padding: '10px',
-                    background: gstRate === rate ? '#2563eb' : '#f3f4f6',
-                    color: gstRate === rate ? '#ffffff' : '#374151',
+                    background: gstRate === rate ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: gstRate === rate ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '13px',
@@ -5117,9 +5117,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '6px',
                   fontSize: '14px',
                   cursor: 'pointer'
@@ -5135,7 +5135,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: '#2563eb',
+                  background: darkMode ? '#6366f1' : '#2563eb',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
@@ -5165,22 +5165,22 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: screenSize === 'small' ? '95vw' : '400px',
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Print Settings
               </h3>
               <button
                 onClick={() => setShowPrintSettings(false)}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -5196,7 +5196,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
             {/* Print Options */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
                 Number of Copies
               </label>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -5207,8 +5207,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '10px',
-                      background: printCopies === num ? '#2563eb' : '#f3f4f6',
-                      color: printCopies === num ? '#ffffff' : '#374151',
+                      background: printCopies === num ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: printCopies === num ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',
@@ -5222,7 +5222,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
                 Print Documents
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -5230,9 +5230,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   onClick={() => setPrintKot(!printKot)}
                   style={{
                     padding: '12px',
-                    background: printKot ? '#dbeafe' : '#f3f4f6',
-                    color: printKot ? '#1e40af' : '#374151',
-                    border: printKot ? '1px solid #93c5fd' : '1px solid #e5e7eb',
+                    background: printKot ? (darkMode ? '#4c1d95' : '#dbeafe') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: printKot ? '#a78bfa' : (darkMode ? '#ffffff' : '#111111'),
+                    border: printKot ? `1px solid ${darkMode ? '#6d28d9' : '#93c5fd'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '6px',
                     fontSize: '14px',
                     cursor: 'pointer',
@@ -5249,9 +5249,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   onClick={() => setPrintReceiptEnabled(!printReceiptEnabled)}
                   style={{
                     padding: '12px',
-                    background: printReceiptEnabled ? '#dbeafe' : '#f3f4f6',
-                    color: printReceiptEnabled ? '#1e40af' : '#374151',
-                    border: printReceiptEnabled ? '1px solid #93c5fd' : '1px solid #e5e7eb',
+                    background: printReceiptEnabled ? (darkMode ? '#4c1d95' : '#dbeafe') : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: printReceiptEnabled ? '#a78bfa' : (darkMode ? '#ffffff' : '#111111'),
+                    border: printReceiptEnabled ? `1px solid ${darkMode ? '#6d28d9' : '#93c5fd'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '6px',
                     fontSize: '14px',
                     cursor: 'pointer',
@@ -5274,9 +5274,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '6px',
                   fontSize: '14px',
                   cursor: 'pointer'
@@ -5374,7 +5374,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '22px', fontWeight: '700', color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
                     Secure Checkout
                   </h3>
-                  <p style={{ margin: '4px 0 0 0', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#8b8b9e' }}>
+                  <p style={{ margin: '4px 0 0 0', fontSize: screenSize === 'small' ? '11px' : '12px', color: '#888888' }}>
                     Order: <span style={{ color: '#6366f1', fontWeight: '600' }}>#{Date.now().toString().slice(-6)}</span>
                   </p>
                 </div>
@@ -5420,24 +5420,24 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     padding: '20px',
                     border: '1px solid rgba(255, 255, 255, 0.04)'
                   }}>
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8b8b9e' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888888' }}>
                       Bill Details
                     </h4>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Subtotal</span>
+                      <span style={{ fontSize: '14px', color: '#888888' }}>Subtotal</span>
                       <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{cartSubtotal.toFixed(2)}</span>
                     </div>
                     
                     {discount > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '14px', color: '#8b8b9e' }}>Discount ({discount}%)</span>
+                        <span style={{ fontSize: '14px', color: '#888888' }}>Discount ({discount}%)</span>
                         <span style={{ fontSize: '15px', fontWeight: '600', color: '#10b981' }}>-₹{discountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     
                     {gstEnabled && taxAmount > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '14px', color: '#8b8b9e' }}>GST ({gstRate}%)</span>
+                        <span style={{ fontSize: '14px', color: '#888888' }}>GST ({gstRate}%)</span>
                         <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{taxAmount.toFixed(2)}</span>
                       </div>
                     )}
@@ -5527,7 +5527,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
                   {discount > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px 14px' }}>
-                      <span style={{ color: '#8b8b9e', fontSize: '13px', fontWeight: '600' }}>Select Discount Rate:</span>
+                      <span style={{ color: '#888888', fontSize: '13px', fontWeight: '600' }}>Select Discount Rate:</span>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {[5, 10, 15, 20].map(val => (
                           <button
@@ -5570,7 +5570,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
                   {gstEnabled && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '10px 14px' }}>
-                      <span style={{ color: '#8b8b9e', fontSize: '13px' }}>GST Rate:</span>
+                      <span style={{ color: '#888888', fontSize: '13px' }}>GST Rate:</span>
                       <input
                         type="number"
                         value={gstRate}
@@ -5594,7 +5594,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
                   {showTipInput && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px 14px' }}>
-                      <span style={{ color: '#8b8b9e', fontSize: '13px', fontWeight: '600' }}>Add Tip / Service Charge:</span>
+                      <span style={{ color: '#888888', fontSize: '13px', fontWeight: '600' }}>Add Tip / Service Charge:</span>
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {[0, 20, 50, 100].map(val => (
                           <button
@@ -5637,7 +5637,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
                   {showNotesInput && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px 14px' }}>
-                      <span style={{ color: '#8b8b9e', fontSize: '13px', fontWeight: '600' }}>Special Instructions / Order Note:</span>
+                      <span style={{ color: '#888888', fontSize: '13px', fontWeight: '600' }}>Special Instructions / Order Note:</span>
                       <textarea
                         value={orderNotes}
                         onChange={(e) => setOrderNotes(e.target.value)}
@@ -5673,7 +5673,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       <div style={{ fontSize: '24px' }}>👤</div>
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff' }}>{selectedCustomer.name}</div>
-                        <div style={{ fontSize: '12px', color: '#8b8b9e', marginTop: '2px' }}>{selectedCustomer.phone || 'No phone'}</div>
+                        <div style={{ fontSize: '12px', color: '#888888', marginTop: '2px' }}>{selectedCustomer.phone || 'No phone'}</div>
                       </div>
                     </div>
                   )}
@@ -5685,7 +5685,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   
                   {/* Payment Methods Grid */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#888888', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Payment Method
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? 'repeat(3, 1fr)' : 'repeat(3, 1fr)', gap: '8px' }}>
@@ -5740,7 +5740,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   {/* Quick Cash Suggestions - only for Cash */}
                   {paymentMethod === 'CASH' && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', color: '#8b8b9e', width: '100%', fontWeight: '600' }}>Quick Cash</span>
+                      <span style={{ fontSize: '12px', color: '#888888', width: '100%', fontWeight: '600' }}>Quick Cash</span>
                       {suggestions.map((val) => (
                         <button
                           key={val}
@@ -5766,7 +5766,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   {/* Saved Cards - only for CARD */}
                   {paymentMethod === 'CARD' && savedCards.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', color: '#8b8b9e', fontWeight: '600' }}>Saved Cards</span>
+                      <span style={{ fontSize: '12px', color: '#888888', fontWeight: '600' }}>Saved Cards</span>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {savedCards.map(card => (
                           <div
@@ -5792,7 +5792,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                                 <div style={{ fontSize: '13px', color: '#ffffff', fontWeight: '500' }}>
                                   {card.card_name}
                                 </div>
-                                <div style={{ fontSize: '11px', color: '#8b8b9e' }}>
+                                <div style={{ fontSize: '11px', color: '#888888' }}>
                                   {card.card_network} •••• {card.last4}
                                 </div>
                               </div>
@@ -5824,14 +5824,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   {paymentMethod === 'SPLIT' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#8b8b9e' }}>Split Bill Details</span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#888888' }}>Split Bill Details</span>
                         <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: '600' }}>
                           Remaining: ₹{(cartTotal - splitPayments.reduce((sum, p) => sum + (p.amount || 0), 0)).toFixed(2)}
                         </span>
                       </div>
                       
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(0,0,0,0.1)', padding: '8px 10px', borderRadius: '8px' }}>
-                        <span style={{ fontSize: '12px', color: '#8b8b9e' }}>Split equally:</span>
+                        <span style={{ fontSize: '12px', color: '#888888' }}>Split equally:</span>
                         <input
                           type="number"
                           value={splitByPeople}
@@ -5883,7 +5883,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             }}
                             style={{
                               padding: '8px',
-                              background: '#1a1a2e',
+                              background: '#000000',
                               color: '#ffffff',
                               border: '1px solid rgba(255,255,255,0.1)',
                               borderRadius: '6px',
@@ -5907,7 +5907,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             }}
                             style={{
                               padding: '8px',
-                              background: '#1a1a2e',
+                              background: '#000000',
                               color: '#ffffff',
                               border: '1px solid rgba(255,255,255,0.1)',
                               borderRadius: '6px',
@@ -6081,7 +6081,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                                 fontWeight: '600',
                                 color: checkoutNumpadMode === mode 
                                   ? (mode === 'amount' ? '#10b981' : mode === 'discount' ? '#f59e0b' : mode === 'tip' ? '#ec4899' : '#6366f1')
-                                  : '#8b8b9e',
+                                  : '#888888',
                                 whiteSpace: 'nowrap'
                               }}>
                                 {mode === 'amount' ? '💰' : mode === 'discount' ? '🏷️' : mode === 'tip' ? '💖' : '📊'}
@@ -6097,7 +6097,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         padding: screenSize === 'small' ? '14px 16px 12px' : '16px 18px 14px',
                         borderBottom: '1px solid rgba(255,255,255,0.05)'
                       }}>
-                        <div style={{ fontSize: '11px', color: '#8b8b9e', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{getDisplayLabel()}</div>
+                        <div style={{ fontSize: '11px', color: '#888888', fontWeight: '600', marginBottom: '6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{getDisplayLabel()}</div>
                         <div style={{
                           fontSize: screenSize === 'small' ? '24px' : '28px',
                           fontWeight: '800',
@@ -6269,7 +6269,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         background: isPaymentValid
                           ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
                           : 'rgba(255, 255, 255, 0.03)',
-                        color: isPaymentValid ? '#ffffff' : '#8b8b9e',
+                        color: isPaymentValid ? '#ffffff' : '#888888',
                         border: isPaymentValid ? 'none' : '1px solid rgba(255, 255, 255, 0.03)',
                         borderRadius: '10px',
                         fontSize: screenSize === 'small' ? '15px' : '14px',
@@ -6292,7 +6292,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     borderRadius: '12px',
                     border: '1px solid rgba(255, 255, 255, 0.04)'
                   }}>
-                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#8b8b9e', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#888888', marginBottom: '8px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       📄 Receipt Delivery
                     </label>
                     <select
@@ -6301,7 +6301,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       style={{
                         width: '100%',
                         padding: '10px',
-                        background: '#1a1a2e',
+                        background: '#000000',
                         color: '#ffffff',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                         borderRadius: '8px',
@@ -6400,14 +6400,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <h3 style={{ fontSize: '22px', fontWeight: '700', color: '#ffffff', margin: '0 0 8px 0' }}>
                 Scan to Pay
               </h3>
-              <p style={{ margin: 0, fontSize: '14px', color: '#8b8b9e' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: '#888888' }}>
                 Total: <span style={{ color: '#6366f1', fontWeight: '600' }}>₹{cartTotal.toFixed(2)}</span>
               </p>
             </div>
 
             {upiQRData && (
               <div style={{
-                background: '#ffffff',
+                background: darkMode ? '#111111' : '#ffffff',
                 padding: '20px',
                 borderRadius: '16px',
                 display: 'flex',
@@ -6422,7 +6422,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </div>
             )}
 
-            <div style={{ textAlign: 'center', fontSize: '12px', color: '#8b8b9e', lineHeight: '1.5' }}>
+            <div style={{ textAlign: 'center', fontSize: '12px', color: '#888888', lineHeight: '1.5' }}>
               Scan this QR code with any UPI app<br/>
               (PhonePe, Paytm, Google Pay, etc.)
             </div>
@@ -6488,14 +6488,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: screenSize === 'small' ? '95vw' : '500px',
             maxWidth: screenSize === 'small' ? '95vw' : '90vw'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Split Bill
               </h3>
               <button
@@ -6506,8 +6506,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 }}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -6522,16 +6522,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {/* Order Summary */}
-            <div style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+            <div style={{ background: darkMode ? '#111111' : '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                 <span>Total Amount</span>
-                <span style={{ color: '#2563eb' }}>₹{cartTotal.toFixed(2)}</span>
+                <span style={{ color: darkMode ? '#6366f1' : '#2563eb' }}>₹{cartTotal.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Split Mode Selection */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px', display: 'block' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '12px', display: 'block' }}>
                 Split Mode
               </label>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -6548,9 +6548,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '12px',
-                      background: splitMode === mode.id ? '#2563eb' : '#f3f4f6',
-                      color: splitMode === mode.id ? '#ffffff' : '#374151',
-                      border: splitMode === mode.id ? '2px solid #2563eb' : '1px solid #e5e7eb',
+                      background: splitMode === mode.id ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: splitMode === mode.id ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                      border: splitMode === mode.id ? `2px solid ${darkMode ? '#6366f1' : '#2563eb'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                       borderRadius: '6px',
                       fontSize: '13px',
                       cursor: 'pointer'
@@ -6565,7 +6565,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {/* Equal Split Options */}
             {splitMode === 'equal' && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '12px', display: 'block' }}>
+                <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '12px', display: 'block' }}>
                   Number of People
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -6576,9 +6576,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       style={{
                         flex: 1,
                         padding: '12px',
-                        background: '#f3f4f6',
-                        color: '#374151',
-                        border: '1px solid #e5e7eb',
+                        background: darkMode ? '#111111' : '#f3f4f6',
+                        color: darkMode ? '#ffffff' : '#111111',
+                        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                         borderRadius: '6px',
                         fontSize: '14px',
                         cursor: 'pointer'
@@ -6603,9 +6603,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     style={{
                       flex: 1,
                       padding: '12px',
-                      background: '#f9fafb',
-                      color: '#1f2937',
-                      border: '1px solid #e5e7eb',
+                      background: darkMode ? '#111111' : '#f9fafb',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
+                      border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                       borderRadius: '6px',
                       fontSize: '14px'
                     }}
@@ -6640,7 +6640,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       style={{
                         padding: '10px',
                         background: paymentMethod === method.id ? '#2563eb' : '#f3f4f6',
-                        color: paymentMethod === method.id ? '#ffffff' : '#374151',
+                        color: paymentMethod === method.id ? '#ffffff' : '#111111',
                         border: paymentMethod === method.id ? '2px solid #2563eb' : '1px solid #e5e7eb',
                         borderRadius: '6px',
                         fontSize: '12px',
@@ -6657,7 +6657,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {/* Split Payments List */}
             {splitPayments.length > 0 && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px', display: 'block' }}>
+                <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
                   Split Payments ({splitPayments.length})
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -6669,29 +6669,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '12px',
-                        background: '#f9fafb',
+                        background: darkMode ? '#111111' : '#f9fafb',
                         borderRadius: '6px',
-                        border: '1px solid #e5e7eb'
+                        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#1f2937' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                           Person {index + 1} - {payment.method}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                        <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                           {new Date(payment.time).toLocaleTimeString()}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#2563eb' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#6366f1' : '#2563eb' }}>
                           ₹{payment.amount.toFixed(2)}
                         </span>
                         <button
                           onClick={() => removeSplitPayment(payment.id)}
                           style={{
                             padding: '6px 10px',
-                            background: '#fee2e2',
-                            color: '#dc2626',
+                            background: darkMode ? '#4c1d95' : '#fee2e2',
+                            color: darkMode ? '#a78bfa' : '#dc2626',
                             border: 'none',
                             borderRadius: '4px',
                             fontSize: '12px',
@@ -6704,15 +6704,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: '12px', padding: '12px', background: '#dbeafe', borderRadius: '6px' }}>
+                <div style={{ marginTop: '12px', padding: '12px', background: darkMode ? '#4c1d95' : '#dbeafe', borderRadius: '6px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
-                    <span style={{ color: '#1e40af' }}>Total Paid</span>
-                    <span style={{ fontWeight: '600', color: '#1e40af' }}>
+                    <span style={{ color: darkMode ? '#a78bfa' : '#1e40af' }}>Total Paid</span>
+                    <span style={{ fontWeight: '600', color: darkMode ? '#a78bfa' : '#1e40af' }}>
                       ₹{splitPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginTop: '4px' }}>
-                    <span style={{ color: '#1e40af' }}>Remaining</span>
+                    <span style={{ color: darkMode ? '#a78bfa' : '#1e40af' }}>Remaining</span>
                     <span style={{ fontWeight: '600', color: '#dc2626' }}>
                       ₹{(cartTotal - splitPayments.reduce((sum, p) => sum + p.amount, 0)).toFixed(2)}
                     </span>
@@ -6732,9 +6732,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '14px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '8px',
                   fontSize: '14px',
                   cursor: 'pointer'
@@ -6780,16 +6780,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 5000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             maxWidth: screenSize === 'small' ? '95vw' : '400px',
             width: screenSize === 'small' ? '95vw' : '90%',
             overflow: 'hidden'
           }}>
-            <div style={{ padding: '20px', background: '#ffffff' }}>
+            <div style={{ padding: '20px', background: darkMode ? '#111111' : '#ffffff' }}>
               <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a2e', marginBottom: '12px', fontFamily: 'Georgia, serif' }}>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', marginBottom: '12px', fontFamily: 'Georgia, serif' }}>
                   {selectedItemForModifiers.name}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
@@ -6799,8 +6799,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       onClick={() => toggleModifier(modifier)}
                       style={{
                         padding: '10px',
-                        background: selectedModifiers.find(m => m.id === modifier.id) ? '#1a1a2e' : '#f5f0e6',
-                        color: selectedModifiers.find(m => m.id === modifier.id) ? '#f5f5f5' : '#1a1a2e',
+                        background: selectedModifiers.find(m => m.id === modifier.id) ? '#000000' : '#f5f0e6',
+                        color: selectedModifiers.find(m => m.id === modifier.id) ? '#f5f5f5' : '#000000',
                         border: selectedModifiers.find(m => m.id === modifier.id) ? '2px solid #c9a227' : '1px solid #d4c4a8',
                         borderRadius: '4px',
                         fontSize: '13px',
@@ -6820,9 +6820,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: '#f5f0e6',
-                    color: '#2c2c2c',
-                    border: '1px solid #d4c4a8',
+                    background: darkMode ? '#111111' : '#f5f0e6',
+                    color: darkMode ? '#ffffff' : '#2c2c2c',
+                    border: `1px solid ${darkMode ? '#222222' : '#d4c4a8'}`,
                     borderRadius: '4px',
                     fontSize: '14px',
                     fontWeight: '500',
@@ -6840,7 +6840,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   style={{
                     flex: 1,
                     padding: '12px',
-                    background: '#1a1a2e',
+                    background: '#000000',
                     color: '#f5f5f5',
                     border: '2px solid #c9a227',
                     borderRadius: '4px',
@@ -6874,26 +6874,26 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 5000
         }}>
           <div style={{
-            background: darkMode ? '#1f2937' : '#ffffff',
+            background: darkMode ? '#0a0a0a' : '#ffffff',
             borderRadius: '16px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
             maxWidth: '900px',
             width: '95%',
             maxHeight: '90vh',
             overflow: 'hidden',
-            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
+            border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`
           }}>
             {/* Header */}
             <div style={{
-              background: darkMode ? '#111827' : '#f9fafb',
+              background: darkMode ? '#0a0a0a' : '#f9fafb',
               padding: '20px 24px',
-              borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
               <div>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#111827', marginBottom: '4px' }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#0a0a0a', marginBottom: '4px' }}>
                   📋 Order History
                 </div>
                 <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
@@ -6903,7 +6903,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <button
                 onClick={() => setShowOrderHistory(false)}
                 style={{
-                  background: darkMode ? '#374151' : '#f3f4f6',
+                  background: darkMode ? '#111111' : '#f3f4f6',
                   border: 'none',
                   color: darkMode ? '#f3f4f6' : '#6b7280',
                   width: '36px',
@@ -6916,8 +6916,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   fontSize: '18px',
                   transition: 'all 0.2s'
                 }}
-                onMouseEnter={(e) => e.target.style.background = darkMode ? '#4b5563' : '#e5e7eb'}
-                onMouseLeave={(e) => e.target.style.background = darkMode ? '#374151' : '#f3f4f6'}
+                onMouseEnter={(e) => e.target.style.background = darkMode ? '#222222' : '#e5e7eb'}
+                onMouseLeave={(e) => e.target.style.background = darkMode ? '#111111' : '#f3f4f6'}
               >
                 ×
               </button>
@@ -6926,7 +6926,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {/* Filters and Search */}
             <div style={{
               padding: '16px 24px',
-              borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
               display: 'flex',
               gap: '12px',
               flexWrap: 'wrap'
@@ -6940,10 +6940,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   flex: 1,
                   minWidth: '200px',
                   padding: '10px 14px',
-                  background: darkMode ? '#374151' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  background: darkMode ? '#111111' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                   borderRadius: '8px',
-                  color: darkMode ? '#f3f4f6' : '#111827',
+                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
                   fontSize: '14px'
                 }}
               />
@@ -6952,10 +6952,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 onChange={(e) => setOrderHistoryFilter(e.target.value)}
                 style={{
                   padding: '10px 14px',
-                  background: darkMode ? '#374151' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  background: darkMode ? '#111111' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                   borderRadius: '8px',
-                  color: darkMode ? '#f3f4f6' : '#111827',
+                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
                   fontSize: '14px',
                   cursor: 'pointer'
                 }}
@@ -6971,10 +6971,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 onChange={(e) => setOrderHistorySort(e.target.value)}
                 style={{
                   padding: '10px 14px',
-                  background: darkMode ? '#374151' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                  background: darkMode ? '#111111' : '#f9fafb',
+                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                   borderRadius: '8px',
-                  color: darkMode ? '#f3f4f6' : '#111827',
+                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
                   fontSize: '14px',
                   cursor: 'pointer'
                 }}
@@ -7000,8 +7000,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     <div
                       key={order.id}
                       style={{
-                        background: darkMode ? '#374151' : '#f9fafb',
-                        border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`,
+                        background: darkMode ? '#111111' : '#f9fafb',
+                        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                         borderRadius: '12px',
                         padding: '16px',
                         cursor: 'pointer',
@@ -7009,17 +7009,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         borderLeft: order.isQROrder ? '4px solid #8b5cf6' : '4px solid transparent'
                       }}
                       onMouseEnter={(e) => e.target.style.borderColor = darkMode ? '#6b7280' : '#d1d5db'}
-                      onMouseLeave={(e) => e.target.style.borderColor = darkMode ? '#4b5563' : '#e5e7eb'}
+                      onMouseLeave={(e) => e.target.style.borderColor = darkMode ? '#222222' : '#e5e7eb'}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
                             padding: '8px 12px',
                             borderRadius: '8px',
-                            background: darkMode ? '#1f2937' : '#e5e7eb',
+                            background: darkMode ? '#0a0a0a' : '#e5e7eb',
                             fontWeight: '600',
                             fontSize: '14px',
-                            color: darkMode ? '#f3f4f6' : '#111827'
+                            color: darkMode ? '#f3f4f6' : '#0a0a0a'
                           }}>
                             #{order.id.split('-')[1] || order.id.slice(-6)}
                           </div>
@@ -7057,19 +7057,19 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '12px' }}>
                         <div>
                           <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Customer</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
                             {order.customerName || 'Walk-in'}
                           </div>
                         </div>
                         <div>
                           <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Table</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
                             {order.tableName || 'Counter'}
                           </div>
                         </div>
                         <div>
                           <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Items</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#111827' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
                             {order.items?.length || 0}
                           </div>
                         </div>
@@ -7120,8 +7120,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             flex: 1,
                             minWidth: '100px',
                             padding: '8px 16px',
-                            background: darkMode ? '#4b5563' : '#e5e7eb',
-                            color: darkMode ? '#f3f4f6' : '#374151',
+                            background: darkMode ? '#222222' : '#e5e7eb',
+                            color: darkMode ? '#f3f4f6' : '#111111',
                             border: 'none',
                             borderRadius: '6px',
                             fontSize: '13px',
@@ -7130,7 +7130,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             transition: 'all 0.2s'
                           }}
                           onMouseEnter={(e) => e.target.style.background = darkMode ? '#6b7280' : '#d1d5db'}
-                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#4b5563' : '#e5e7eb'}
+                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#222222' : '#e5e7eb'}
                         >
                           👁️ View
                         </button>
@@ -7154,8 +7154,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             flex: 1,
                             minWidth: '100px',
                             padding: '8px 16px',
-                            background: darkMode ? '#4b5563' : '#e5e7eb',
-                            color: darkMode ? '#f3f4f6' : '#374151',
+                            background: darkMode ? '#222222' : '#e5e7eb',
+                            color: darkMode ? '#f3f4f6' : '#111111',
                             border: 'none',
                             borderRadius: '6px',
                             fontSize: '13px',
@@ -7164,7 +7164,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             transition: 'all 0.2s'
                           }}
                           onMouseEnter={(e) => e.target.style.background = darkMode ? '#6b7280' : '#d1d5db'}
-                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#4b5563' : '#e5e7eb'}
+                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#222222' : '#e5e7eb'}
                         >
                           🖨️ Print
                         </button>
@@ -7186,17 +7186,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                                 flex: 1,
                                 minWidth: '100px',
                                 padding: '8px 16px',
-                                background: '#f59e0b',
+                                background: darkMode ? '#b45309' : '#f59e0b',
                                 color: '#ffffff',
                                 border: 'none',
                                 borderRadius: '6px',
                                 fontSize: '13px',
                                 fontWeight: '600',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                translation: 'all 0.2s'
                               }}
-                              onMouseEnter={(e) => e.target.style.background = '#d97706'}
-                              onMouseLeave={(e) => e.target.style.background = '#f59e0b'}
+                              onMouseEnter={(e) => e.target.style.background = darkMode ? '#92400e' : '#d97706'}
+                              onMouseLeave={(e) => e.target.style.background = darkMode ? '#b45309' : '#f59e0b'}
                             >
                               💰 Refund
                             </button>
@@ -7242,11 +7242,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             {/* Footer */}
             <div style={{
               padding: '16px 24px',
-              borderTop: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+              borderTop: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: darkMode ? '#111827' : '#f9fafb'
+              background: darkMode ? '#0a0a0a' : '#f9fafb'
             }}>
               <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
                 Showing {filteredOrders.length} of {allOrders.length} orders
@@ -7293,7 +7293,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 5000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             maxWidth: '500px',
@@ -7303,7 +7303,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             border: '2px solid #c9a227'
           }}>
             <div style={{
-              background: '#1a1a2e',
+              background: '#000000',
               color: '#f5f5f5',
               padding: '16px 20px',
               fontSize: '16px',
@@ -7334,14 +7334,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div style={{ padding: '20px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Date</div>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>{new Date(selectedOrderForView.createdAt).toLocaleString()}</div>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif' }}>{new Date(selectedOrderForView.createdAt).toLocaleString()}</div>
               </div>
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Items</div>
                 {selectedOrderForView.items?.map((item, index) => (
-                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f5f0e6' }}>
-                    <span style={{ fontSize: '14px', color: '#1a1a2e', fontFamily: 'Georgia, serif' }}>{item.name} × {item.qty}</span>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a2e', fontFamily: '"Courier New", monospace' }}>₹{((item.price || 0) * (item.qty || 1)).toFixed(2)}</span>
+                  <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${darkMode ? '#222222' : '#f5f0e6'}` }}>
+                    <span style={{ fontSize: '14px', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif' }}>{item.name} × {item.qty}</span>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', fontFamily: '"Courier New", monospace' }}>₹{((item.price || 0) * (item.qty || 1)).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -7363,8 +7363,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   </div>
                 )}
                 {selectedOrderForView.splitPayments && selectedOrderForView.splitPayments.length > 0 && (
-                  <div style={{ marginTop: '12px', marginBottom: '12px', padding: '12px', background: '#f5f0e6', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif', marginBottom: '8px' }}>
+                  <div style={{ marginTop: '12px', marginBottom: '12px', padding: '12px', background: darkMode ? '#111111' : '#f5f0e6', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif', marginBottom: '8px' }}>
                       Split Payment
                     </div>
                     {selectedOrderForView.splitPayments.map((payment, index) => (
@@ -7375,7 +7375,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     ))}
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '600', color: '#1a1a2e', fontFamily: 'Georgia, serif', marginTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: '600', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif', marginTop: '12px' }}>
                   <span>Total</span>
                   <span style={{ fontFamily: '"Courier New", monospace' }}>₹{selectedOrderForView.total?.toFixed(2) || '0.00'}</span>
                 </div>
@@ -7403,17 +7403,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             borderRadius: '16px',
             padding: '32px',
             width: '400px',
             maxWidth: '90vw',
-            border: '1px solid #2d2d44'
+            border: '1px solid #222222'
           }}>
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
               Void Last Item
             </h3>
-            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: '#888888', marginBottom: '24px' }}>
               Are you sure you want to remove the last item from the cart?
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -7421,7 +7421,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 onClick={() => setShowVoidConfirm(false)}
                 style={{
                   padding: '12px 24px',
-                  background: '#2d2d44',
+                  background: '#222222',
                   color: '#e0e0e0',
                   border: 'none',
                   borderRadius: '8px',
@@ -7470,7 +7470,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: '24px',
             width: '500px',
@@ -7479,15 +7479,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             overflow: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Receipt
               </h3>
               <button
                 onClick={() => setShowReceipt(false)}
                 style={{
                   padding: '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer'
@@ -7503,11 +7503,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 fontFamily: 'Courier New, monospace',
                 fontSize: '12px',
                 lineHeight: '1.4',
-                color: '#000',
+                color: darkMode ? '#ffffff' : '#000',
                 padding: '16px',
-                background: '#fff',
+                background: darkMode ? '#111111' : '#fff',
                 borderRadius: '4px',
-                border: '2px solid #000',
+                border: `2px solid ${darkMode ? '#ffffff' : '#000'}`,
                 maxWidth: '280px',
                 margin: '0 auto',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
@@ -7566,7 +7566,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       padding: '16px', 
                       border: '3px solid #000', 
                       borderRadius: '8px',
-                      background: '#f9fafb'
+                      background: darkMode ? '#111111' : '#f9fafb'
                     }}>
                       <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '4px', color: '#666' }}>YOUR TOKEN</div>
                       <div style={{ fontSize: '48px', fontWeight: '800', color: '#000', lineHeight: 1 }}>
@@ -7700,9 +7700,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #e5e7eb',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '6px',
                   fontSize: '14px',
                   cursor: 'pointer'
@@ -7730,17 +7730,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#252538',
+            background: '#111111',
             borderRadius: '16px',
             padding: '32px',
             width: '400px',
             maxWidth: '90vw',
-            border: '1px solid #2d2d44'
+            border: '1px solid #222222'
           }}>
             <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', margin: 0 }}>
               Notice
             </h3>
-            <p style={{ fontSize: '14px', color: '#8b8b9e', marginBottom: '24px' }}>
+            <p style={{ fontSize: '14px', color: '#888888', marginBottom: '24px' }}>
               {alertMessage}
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -7779,7 +7779,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: '24px',
             width: '500px',
@@ -7788,13 +7788,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             overflow: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Voice Order
               </h3>
               <button
                 onClick={() => setShowVoiceOrder(false)}
                 style={{
-                  background: '#f3f4f6',
+                  background: darkMode ? '#111111' : '#f3f4f6',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '8px 12px',
@@ -7830,7 +7830,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           zIndex: 3000
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: '12px',
             padding: '24px',
             width: '400px',
@@ -7838,40 +7838,40 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '32px', marginRight: '12px' }}>🛒</span>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 Previous Cart Found
               </h3>
             </div>
             
             <div style={{
-              backgroundColor: '#fef3c7',
+              backgroundColor: darkMode ? '#4c1d95' : '#fef3c7',
               padding: '12px',
               borderRadius: '8px',
               marginBottom: '16px',
               fontSize: '14px',
-              color: '#92400e'
+              color: darkMode ? '#a78bfa' : '#92400e'
             }}>
               <strong>Reason:</strong> {cartRestoreReason}
             </div>
 
             {restoredCart && (
               <div style={{
-                backgroundColor: '#f8fafc',
+                backgroundColor: darkMode ? '#111111' : '#f8fafc',
                 padding: '12px',
                 borderRadius: '8px',
                 marginBottom: '16px',
                 fontSize: '14px'
               }}>
-                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                <div style={{ fontWeight: '600', marginBottom: '8px', color: darkMode ? '#ffffff' : '#111111' }}>
                   {restoredCart.length} item(s) in cart
                 </div>
                 {restoredCart.slice(0, 3).map((item, index) => (
-                  <div key={index} style={{ color: '#64748b', fontSize: '13px' }}>
+                  <div key={index} style={{ color: darkMode ? '#9ca3af' : '#64748b', fontSize: '13px' }}>
                     {item.quantity} × {item.name}
                   </div>
                 ))}
                 {restoredCart.length > 3 && (
-                  <div style={{ color: '#64748b', fontSize: '13px' }}>
+                  <div style={{ color: darkMode ? '#9ca3af' : '#64748b', fontSize: '13px' }}>
                     +{restoredCart.length - 3} more item(s)
                   </div>
                 )}
@@ -7932,7 +7932,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: screenSize === 'small' ? '0' : '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: '900px',
@@ -7941,15 +7941,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             overflow: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 📱 QR Orders ( Pay at Counter )
               </h3>
               <button
                 onClick={() => setShowQrOrdersPanel(false)}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -7964,7 +7964,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
 
             {qrOrders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: screenSize === 'small' ? '20px' : '40px', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', padding: screenSize === 'small' ? '20px' : '40px', color: darkMode ? '#9ca3af' : '#64748b' }}>
                 <div style={{ fontSize: screenSize === 'small' ? '36px' : '48px', marginBottom: '12px' }}>📱</div>
                 <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '600' }}>No pending QR orders</div>
                 <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', marginTop: '4px' }}>Orders placed via QR codes will appear here</div>
@@ -7973,29 +7973,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <div className="table-responsive" style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Table</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Items</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Total</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Payment Method</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                    <tr style={{ background: darkMode ? '#111111' : '#f8fafc', borderBottom: `2px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Table</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Items</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Total</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Payment Method</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {qrOrders.map((order, index) => (
-                      <tr key={order.id} style={{ borderBottom: index < qrOrders.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#1e293b', fontWeight: '600' }}>
+                      <tr key={order.id} style={{ borderBottom: index < qrOrders.length - 1 ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none' }}>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600' }}>
                           #{order.id.slice(-6)}
                         </td>
-                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#64748b' }}>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: darkMode ? '#9ca3af' : '#64748b' }}>
                           {order.tableName || 'Counter'}
                         </td>
-                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#64748b', maxWidth: '250px' }}>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: darkMode ? '#9ca3af' : '#64748b', maxWidth: '250px' }}>
                           {order.items?.map(item => `${item.name} x${item.qty}`).join(', ') || '-'}
                         </td>
-                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: '#1e293b', fontWeight: '600' }}>
+                        <td style={{ padding: '12px 16px', fontSize: screenSize === 'small' ? '12px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600' }}>
                           ₹{order.total?.toFixed(2) || '0.00'}
                         </td>
                         <td style={{ padding: '12px 16px' }}>
@@ -8016,7 +8016,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             borderRadius: '20px',
                             fontSize: '11px',
                             fontWeight: '600',
-                            background: '#f59e0b',
+                            background: darkMode ? '#d97706' : '#f59e0b',
                             color: '#ffffff'
                           }}>
                             Pending Payment
@@ -8068,7 +8068,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           padding: screenSize === 'small' ? '0' : '16px'
         }}>
           <div style={{
-            background: '#ffffff',
+            background: darkMode ? '#111111' : '#ffffff',
             borderRadius: screenSize === 'small' ? '0' : '12px',
             padding: screenSize === 'small' ? '16px' : '24px',
             width: '800px',
@@ -8077,15 +8077,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             overflow: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
                 📦 All Aggregator Orders
               </h3>
               <button
                 onClick={() => setShowAggregatorPanel(false)}
                 style={{
                   padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
-                  background: '#f3f4f6',
-                  color: '#374151',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
                   border: 'none',
                   borderRadius: screenSize === 'small' ? '8px' : '6px',
                   cursor: 'pointer',
@@ -8102,20 +8102,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div className="table-responsive" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Platform</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Customer</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Items</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Total</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Commission</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                  <tr style={{ background: darkMode ? '#111111' : '#f8fafc', borderBottom: `2px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Platform</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Customer</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Items</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Total</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Commission</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {aggregatorOrders.map((order, index) => (
-                    <tr key={order.id} style={{ borderBottom: index < aggregatorOrders.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                    <tr key={order.id} style={{ borderBottom: index < aggregatorOrders.length - 1 ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none' }}>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{
                           padding: '4px 12px',
@@ -8128,10 +8128,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           {order.platform}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{order.orderId}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{order.customer}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b', maxWidth: '200px' }}>{order.items}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>₹{order.total}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600' }}>{order.orderId}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#9ca3af' : '#64748b' }}>{order.customer}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#9ca3af' : '#64748b', maxWidth: '200px' }}>{order.items}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600' }}>₹{order.total}</td>
                       <td style={{ padding: '12px 16px', fontSize: '14px', color: '#ef4444', fontWeight: '600' }}>-₹{order.commission}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <select
@@ -8142,7 +8142,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                             borderRadius: '6px',
                             fontSize: '12px',
                             fontWeight: '600',
-                            border: '1px solid #e5e7eb',
+                            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                             cursor: 'pointer'
                           }}
                         >

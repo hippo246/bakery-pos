@@ -14,9 +14,9 @@ export default function SearchInput({
       placeholder={placeholder}
       style={{
         padding: '6px 8px',
-        background: darkMode ? '#1f1f1f' : '#f9fafb',
-        color: darkMode ? '#f3f4f6' : '#1f2937',
-        border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+        background: darkMode ? '#0a0a0a' : '#f9fafb',
+        color: darkMode ? '#f3f4f6' : '#0a0a0a',
+        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         borderRadius: '4px',
         fontSize: '11px',
         width: '150px'

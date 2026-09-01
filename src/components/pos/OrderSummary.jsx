@@ -1,19 +1,25 @@
 import React from 'react';
 
 export default function OrderSummary({
-  cart,
-  discount,
-  gstRate,
+  cart = [],
+  discount = 0,
+  gstRate = 0,
   gstEnabled,
-  tipAmount,
+  tipAmount = 0,
   screenSize = 'large',
   darkMode = true
 }) {
   const cartSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const discountAmount = (cartSubtotal * discount) / 100;
-  const taxableAmount = cartSubtotal - discountAmount;
-  const taxAmount = gstEnabled ? (taxableAmount * gstRate) / 100 : 0;
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const discountAmount = Math.min(cartSubtotal, (cartSubtotal * discount) / 100);
+  const taxableAmount = Math.max(0, cartSubtotal - discountAmount);
+  const cgstAmount = gstEnabled ? (taxableAmount * gstRate) / 200 : 0;
+  const sgstAmount = cgstAmount;
+  const taxAmount = cgstAmount + sgstAmount;
   const total = taxableAmount + taxAmount + tipAmount;
+  const roundedTotal = Math.round(total);
+  const roundOffAmount = roundedTotal - total;
+  const formatMoney = (value) => value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div style={{
@@ -28,7 +34,7 @@ export default function OrderSummary({
       <div style={{
         fontSize: '14px',
         fontWeight: '600',
-        color: darkMode ? '#e0e0e0' : '#374151',
+        color: darkMode ? '#e0e0e0' : '#111111',
         marginBottom: '4px'
       }}>
         Order Summary
@@ -40,8 +46,8 @@ export default function OrderSummary({
         fontSize: '13px',
         color: darkMode ? '#9ca3af' : '#6b7280'
       }}>
-        <span>Subtotal</span>
-        <span>₹{cartSubtotal.toFixed(2)}</span>
+        <span>Subtotal {itemCount > 0 && `(${itemCount} ${itemCount === 1 ? 'item' : 'items'})`}</span>
+        <span>₹{formatMoney(cartSubtotal)}</span>
       </div>
 
       {discount > 0 && (
@@ -52,7 +58,7 @@ export default function OrderSummary({
           color: darkMode ? '#f59e0b' : '#d97706'
         }}>
           <span>Discount ({discount}%)</span>
-          <span>-₹{discountAmount.toFixed(2)}</span>
+          <span title={`You saved ₹${formatMoney(discountAmount)}`}>-₹{formatMoney(discountAmount)}</span>
         </div>
       )}
 
@@ -64,7 +70,20 @@ export default function OrderSummary({
           color: darkMode ? '#9ca3af' : '#6b7280'
         }}>
           <span>GST ({gstRate}%)</span>
-          <span>₹{taxAmount.toFixed(2)}</span>
+          <span>₹{formatMoney(taxAmount)}</span>
+        </div>
+      )}
+
+      {gstEnabled && taxAmount > 0 && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: darkMode ? '#6b7280' : '#9ca3af',
+          paddingLeft: '8px'
+        }}>
+          <span>CGST {(gstRate / 2).toFixed(1)}% + SGST {(gstRate / 2).toFixed(1)}%</span>
+          <span>₹{formatMoney(cgstAmount)} + ₹{formatMoney(sgstAmount)}</span>
         </div>
       )}
 
@@ -76,11 +95,27 @@ export default function OrderSummary({
           color: darkMode ? '#ec4899' : '#db2777'
         }}>
           <span>Tip</span>
-          <span>₹{tipAmount.toFixed(2)}</span>
+          <span>₹{formatMoney(tipAmount)}</span>
         </div>
       )}
 
-      <div style={{
+      {Math.abs(roundOffAmount) >= 0.005 && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '13px',
+          color: darkMode ? '#9ca3af' : '#6b7280'
+        }}>
+          <span>Round Off</span>
+          <span>{roundOffAmount >= 0 ? '+' : '-'}₹{formatMoney(Math.abs(roundOffAmount))}</span>
+        </div>
+      )}
+
+      <div
+        role="status"
+        aria-live="polite"
+        title={Math.abs(roundOffAmount) >= 0.005 ? `Before rounding: ₹${formatMoney(total)}` : undefined}
+        style={{
         display: 'flex',
         justifyContent: 'space-between',
         paddingTop: '12px',
@@ -88,10 +123,10 @@ export default function OrderSummary({
         borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb'}`,
         fontSize: screenSize === 'small' ? '18px' : '20px',
         fontWeight: '700',
-        color: darkMode ? '#ffffff' : '#1f2937'
+        color: darkMode ? '#ffffff' : '#0a0a0a'
       }}>
         <span>Total</span>
-        <span>₹{total.toFixed(2)}</span>
+        <span>₹{formatMoney(roundedTotal)}</span>
       </div>
     </div>
   );

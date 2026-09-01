@@ -25,7 +25,7 @@ export default function Receipt({
       padding: screenSize === 'small' ? '0' : '16px'
     }}>
       <div style={{
-        background: '#ffffff',
+        background: darkMode ? '#0a0a0a' : '#ffffff',
         borderRadius: screenSize === 'small' ? '0' : '12px',
         padding: screenSize === 'small' ? '16px' : '24px',
         width: screenSize === 'small' ? '100vw' : '400px',
@@ -37,12 +37,12 @@ export default function Receipt({
           <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>
             {order.storeName || 'Bakery POS'}
           </div>
-          <div style={{ fontSize: '11px', color: '#6b7280' }}>
+          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
             {order.storeAddress || ''}
           </div>
         </div>
 
-        <div style={{ borderBottom: '1px dashed #e5e7eb', paddingBottom: '12px', marginBottom: '12px' }}>
+        <div style={{ borderBottom: `1px dashed ${darkMode ? '#222222' : '#e5e7eb'}`, paddingBottom: '12px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
             <span>Order #:</span>
             <span>{order.invoiceNumber || order.id?.slice(-6)}</span>
@@ -57,7 +57,7 @@ export default function Receipt({
           </div>
         </div>
 
-        <div style={{ borderBottom: '1px dashed #e5e7eb', paddingBottom: '12px', marginBottom: '12px' }}>
+        <div style={{ borderBottom: `1px dashed ${darkMode ? '#222222' : '#e5e7eb'}`, paddingBottom: '12px', marginBottom: '12px' }}>
           {order.items?.map((item, idx) => (
             <div key={idx} style={{ marginBottom: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -65,7 +65,7 @@ export default function Receipt({
                 <span>₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>
               {item.modifiers && item.modifiers.length > 0 && (
-                <div style={{ fontSize: '10px', color: '#6b7280', marginLeft: '8px' }}>
+                <div style={{ fontSize: '10px', color: darkMode ? '#9ca3af' : '#6b7280', marginLeft: '8px' }}>
                   {item.modifiers.map(m => m.name).join(', ')}
                 </div>
               )}
@@ -88,13 +88,13 @@ export default function Receipt({
             <span>GST:</span>
             <span>₹{order.tax?.toFixed(2) || '0.00'}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '700', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '700', paddingTop: '8px', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
             <span>TOTAL:</span>
             <span>₹{order.total?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '11px', color: '#6b7280' }}>
+        <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
           <div>Payment: {order.paymentMethod}</div>
           <div>Status: {order.paymentStatus}</div>
         </div>
@@ -105,7 +105,7 @@ export default function Receipt({
             style={{
               flex: 1,
               padding: '12px',
-              background: '#6366f1',
+              background: darkMode ? '#4f46e5' : '#6366f1',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',
@@ -121,7 +121,7 @@ export default function Receipt({
             style={{
               flex: 1,
               padding: '12px',
-              background: '#10b981',
+              background: darkMode ? '#059669' : '#10b981',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',
@@ -137,7 +137,7 @@ export default function Receipt({
             style={{
               flex: 1,
               padding: '12px',
-              background: '#374151',
+              background: darkMode ? '#222222' : '#111111',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',

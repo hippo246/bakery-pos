@@ -121,7 +121,7 @@ export default function SecurityDashboard() {
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '100vh',
-        background: '#1e293b',
+        background: '#0a0a0a',
         color: '#fff'
       }}>
         <div style={{ textAlign: 'center' }}>
@@ -141,7 +141,7 @@ export default function SecurityDashboard() {
     }}>
       {/* Header */}
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         padding: '24px',
         borderBottom: '1px solid #334155'
       }}>
@@ -168,7 +168,7 @@ export default function SecurityDashboard() {
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderBottom: '1px solid #334155',
         padding: '0 24px'
       }}>
@@ -275,7 +275,7 @@ function OverviewTab({ securityData, alerts, overallScore, securityLevel }) {
       }}>
         {cards.map((card, index) => (
           <div key={index} style={{
-            background: '#1e293b',
+            background: '#0a0a0a',
             borderRadius: '12px',
             padding: '20px',
             border: '1px solid #334155'
@@ -303,7 +303,7 @@ function OverviewTab({ securityData, alerts, overallScore, securityLevel }) {
                   width: '48px',
                   height: '48px',
                   borderRadius: '50%',
-                  background: '#1e293b',
+                  background: '#0a0a0a',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -320,7 +320,7 @@ function OverviewTab({ securityData, alerts, overallScore, securityLevel }) {
 
       {/* Quick Actions */}
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderRadius: '12px',
         padding: '24px',
         marginBottom: '24px',
@@ -377,7 +377,7 @@ function OverviewTab({ securityData, alerts, overallScore, securityLevel }) {
 
       {/* Recent Alerts */}
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderRadius: '12px',
         padding: '24px',
         border: '1px solid #334155'
@@ -391,7 +391,7 @@ function OverviewTab({ securityData, alerts, overallScore, securityLevel }) {
               <div key={index} style={{
                 padding: '12px',
                 background: alert.severity === 'critical' ? '#7f1d1d' : 
-                           alert.severity === 'warning' ? '#78350f' : '#1e293b',
+                           alert.severity === 'warning' ? '#78350f' : '#0a0a0a',
                 borderRadius: '8px',
                 border: `1px solid ${alert.severity === 'critical' ? '#dc2626' : 
                                    alert.severity === 'warning' ? '#ea580c' : '#334155'}`
@@ -418,7 +418,7 @@ function EncryptionTab({ data }) {
   return (
     <div>
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderRadius: '12px',
         padding: '24px',
         marginBottom: '24px',
@@ -446,7 +446,7 @@ function EncryptionTab({ data }) {
       </div>
 
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderRadius: '12px',
         padding: '24px',
         border: '1px solid #334155'
@@ -460,7 +460,7 @@ function EncryptionTab({ data }) {
               <div key={index} style={{
                 padding: '12px',
                 background: rec.level === 'critical' ? '#7f1d1d' : 
-                           rec.level === 'warning' ? '#78350f' : '#1e293b',
+                           rec.level === 'warning' ? '#78350f' : '#0a0a0a',
                 borderRadius: '8px',
                 border: `1px solid ${rec.level === 'critical' ? '#dc2626' : 
                                    rec.level === 'warning' ? '#ea580c' : '#334155'}`
@@ -483,7 +483,7 @@ function PermissionsTab({ data }) {
   return (
     <div>
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderRadius: '12px',
         padding: '24px',
         marginBottom: '24px',
@@ -526,7 +526,7 @@ function SessionsTab({ data }) {
   return (
     <div>
       <div style={{
-        background: '#1e293b',
+        background: '#0a0a0a',
         borderRadius: '12px',
         padding: '24px',
         marginBottom: '24px',
@@ -585,7 +585,7 @@ function AlertsTab({ alerts, onRefresh }) {
 
       {alerts.length === 0 ? (
         <div style={{
-          background: '#1e293b',
+          background: '#0a0a0a',
           borderRadius: '12px',
           padding: '48px',
           textAlign: 'center',
@@ -598,7 +598,7 @@ function AlertsTab({ alerts, onRefresh }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {alerts.map((alert, index) => (
             <div key={index} style={{
-              background: '#1e293b',
+              background: '#0a0a0a',
               borderRadius: '8px',
               padding: '16px',
               border: `1px solid ${alert.severity === 'critical' ? '#dc2626' : 
@@ -644,7 +644,7 @@ function RecommendationsTab({ securityData }) {
       
       {allRecommendations.length === 0 ? (
         <div style={{
-          background: '#1e293b',
+          background: '#0a0a0a',
           borderRadius: '12px',
           padding: '48px',
           textAlign: 'center',
@@ -657,7 +657,7 @@ function RecommendationsTab({ securityData }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {allRecommendations.map((rec, index) => (
             <div key={index} style={{
-              background: '#1e293b',
+              background: '#0a0a0a',
               borderRadius: '8px',
               padding: '16px',
               border: `1px solid ${rec.level === 'critical' ? '#dc2626' : 

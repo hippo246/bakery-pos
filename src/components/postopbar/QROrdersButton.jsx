@@ -11,9 +11,9 @@ export default function QROrdersButton({
       onClick={onClick}
       style={{
         padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
-        background: (qrOrders || []).length > 0 ? '#10b981' : (darkMode ? '#333' : '#f3f4f6'),
+        background: (qrOrders || []).length > 0 ? '#10b981' : (darkMode ? '#222222' : '#f3f4f6'),
         color: (qrOrders || []).length > 0 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
-        border: `1px solid ${darkMode ? '#444' : '#e5e7eb'}`,
+        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         borderRadius: screenSize === 'small' ? '8px' : '4px',
         fontSize: screenSize === 'small' ? '13px' : '11px',
         cursor: 'pointer',

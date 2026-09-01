@@ -59,8 +59,8 @@ export default function Sidebar({
   return (
     <div style={{
       width: isMenuOpen ? '260px' : '70px',
-      background: darkMode ? '#1f2937' : '#ffffff',
-      borderRight: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+      background: darkMode ? '#0a0a0a' : '#ffffff',
+      borderRight: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
       display: 'flex',
       flexDirection: 'column',
       transition: 'width 0.3s ease',
@@ -73,7 +73,7 @@ export default function Sidebar({
       {/* Logo/Brand */}
       <div style={{
         padding: isMenuOpen ? '20px' : '15px',
-        borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+        borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: isMenuOpen ? 'flex-start' : 'center',
@@ -84,7 +84,7 @@ export default function Sidebar({
           <span style={{
             fontSize: '18px',
             fontWeight: '700',
-            color: darkMode ? '#ffffff' : '#1f2937'
+            color: darkMode ? '#ffffff' : '#0a0a0a'
           }}>
             BakeryPOS
           </span>
@@ -186,7 +186,7 @@ export default function Sidebar({
               padding: '8px',
               background: darkMode ? 'rgba(0,0,0,0.2)' : '#f9fafb',
               borderRadius: '8px',
-              border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
+              border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`
             }}
           >
             {menuTabs.map(tab => (
@@ -271,7 +271,7 @@ export default function Sidebar({
               padding: '8px',
               background: darkMode ? 'rgba(0,0,0,0.2)' : '#f9fafb',
               borderRadius: '8px',
-              border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
+              border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`
             }}
           >
             {customersTabs.map(tab => (
@@ -351,7 +351,7 @@ export default function Sidebar({
             padding: '12px',
             background: darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6',
             color: darkMode ? '#9ca3af' : '#6b7280',
-            border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
             borderRadius: '8px',
             fontSize: '20px',
             cursor: 'pointer',

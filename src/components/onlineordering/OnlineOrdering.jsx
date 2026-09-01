@@ -148,7 +148,7 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
         }}>
           <div>
             <div style={{
-              color: '#111827',
+              color: '#0a0a0a',
               fontSize: screenSize === 'small' ? '18px' : '20px',
               fontWeight: '600'
             }}>
@@ -162,7 +162,7 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
             onClick={() => setShowCart(true)}
             style={{
               padding: screenSize === 'small' ? '10px 16px' : '12px 20px',
-              background: '#111827',
+              background: '#0a0a0a',
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
@@ -228,7 +228,7 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
               width: '100%',
               padding: screenSize === 'small' ? '12px 16px' : '16px 20px',
               background: '#ffffff',
-              color: '#111827',
+              color: '#0a0a0a',
               border: '1px solid #d1d5db',
               borderRadius: '8px',
               fontSize: screenSize === 'small' ? '14px' : '15px',
@@ -251,8 +251,8 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
               onClick={() => setSelectedCategory(category)}
               style={{
                 padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
-                background: selectedCategory === category ? '#111827' : '#ffffff',
-                color: selectedCategory === category ? '#ffffff' : '#111827',
+                background: selectedCategory === category ? '#0a0a0a' : '#ffffff',
+                color: selectedCategory === category ? '#ffffff' : '#0a0a0a',
                 border: selectedCategory === category ? 'none' : '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: screenSize === 'small' ? '13px' : '14px',
@@ -343,14 +343,14 @@ function MenuItemCard({ item, onAddToCart, cartQuantity, onUpdateQuantity }) {
         </div>
       )}
       <div style={{ padding: '16px' }}>
-        <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827', marginBottom: '8px' }}>
+        <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
           {item.name}
         </div>
         <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px', minHeight: '36px' }}>
           {item.description || 'Delicious bakery item'}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
             ₹{item.price?.toFixed(2) || '0.00'}
           </div>
           {cartQuantity > 0 ? (
@@ -361,7 +361,7 @@ function MenuItemCard({ item, onAddToCart, cartQuantity, onUpdateQuantity }) {
                   width: '32px',
                   height: '32px',
                   background: '#f3f4f6',
-                  color: '#111827',
+                  color: '#0a0a0a',
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '18px',
@@ -373,7 +373,7 @@ function MenuItemCard({ item, onAddToCart, cartQuantity, onUpdateQuantity }) {
               >
                 -
               </button>
-              <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827', minWidth: '24px', textAlign: 'center' }}>
+              <span style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a', minWidth: '24px', textAlign: 'center' }}>
                 {cartQuantity}
               </span>
               <button
@@ -381,7 +381,7 @@ function MenuItemCard({ item, onAddToCart, cartQuantity, onUpdateQuantity }) {
                 style={{
                   width: '32px',
                   height: '32px',
-                  background: '#111827',
+                  background: '#0a0a0a',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '6px',
@@ -400,7 +400,7 @@ function MenuItemCard({ item, onAddToCart, cartQuantity, onUpdateQuantity }) {
               onClick={onAddToCart}
               style={{
                 padding: '10px 20px',
-                background: '#111827',
+                background: '#0a0a0a',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '6px',
@@ -439,7 +439,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <div style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+        <div style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>
           Your Cart ({cart.length})
         </div>
         <button
@@ -447,7 +447,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
           style={{
             padding: '8px',
             background: '#f9fafb',
-            color: '#111827',
+            color: '#0a0a0a',
             border: '1px solid #e5e7eb',
             borderRadius: '6px',
             fontSize: '16px',
@@ -475,7 +475,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
                 borderBottom: '1px solid #f3f4f6'
               }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#111827', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
                     {item.name}
                   </div>
                   <div style={{ fontSize: '14px', color: '#6b7280' }}>
@@ -483,7 +483,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a' }}>
                     ₹{(item.price * item.quantity).toFixed(2)}
                   </div>
                   <div style={{ display: 'flex', gap: '4px' }}>
@@ -493,7 +493,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
                         width: '28px',
                         height: '28px',
                         background: '#f3f4f6',
-                        color: '#111827',
+                        color: '#0a0a0a',
                         border: 'none',
                         borderRadius: '4px',
                         fontSize: '14px',
@@ -502,7 +502,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
                     >
                       -
                     </button>
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827', minWidth: '20px', textAlign: 'center' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#0a0a0a', minWidth: '20px', textAlign: 'center' }}>
                       {item.quantity}
                     </span>
                     <button
@@ -510,7 +510,7 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
                       style={{
                         width: '28px',
                         height: '28px',
-                        background: '#111827',
+                        background: '#0a0a0a',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '4px',
@@ -546,14 +546,14 @@ function CartSidebar({ cart, cartTotal, onClose, onRemoveItem, onUpdateQuantity,
         <div style={{ padding: '24px', borderTop: '1px solid #e5e7eb' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
             <span style={{ fontSize: '16px', fontWeight: '500', color: '#6b7280' }}>Subtotal</span>
-            <span style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>₹{cartTotal.toFixed(2)}</span>
+            <span style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>₹{cartTotal.toFixed(2)}</span>
           </div>
           <button
             onClick={onCheckout}
             style={{
               width: '100%',
               padding: '16px',
-              background: '#111827',
+              background: '#0a0a0a',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',
@@ -594,7 +594,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
         padding: '24px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ fontSize: '20px', fontWeight: '600', color: '#0a0a0a' }}>
             Checkout
           </div>
           <button
@@ -602,7 +602,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
             style={{
               padding: '8px',
               background: '#f9fafb',
-              color: '#111827',
+              color: '#0a0a0a',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               fontSize: '16px',
@@ -620,24 +620,24 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
           padding: '16px',
           marginBottom: '24px'
         }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginBottom: '12px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '12px' }}>
             Order Summary
           </div>
           {cart.map(item => (
             <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
               <span style={{ color: '#6b7280' }}>{item.name} × {item.quantity}</span>
-              <span style={{ fontWeight: '500', color: '#111827' }}>₹{(item.price * item.quantity).toFixed(2)}</span>
+              <span style={{ fontWeight: '500', color: '#0a0a0a' }}>₹{(item.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}
           <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827' }}>Total</span>
-            <span style={{ fontSize: '18px', fontWeight: '600', color: '#111827' }}>₹{cartTotal.toFixed(2)}</span>
+            <span style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a' }}>Total</span>
+            <span style={{ fontSize: '18px', fontWeight: '600', color: '#0a0a0a' }}>₹{cartTotal.toFixed(2)}</span>
           </div>
         </div>
 
         <form onSubmit={onSubmit}>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111111', marginBottom: '8px' }}>
               Full Name *
             </label>
             <input
@@ -649,7 +649,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 width: '100%',
                 padding: '12px 16px',
                 background: '#ffffff',
-                color: '#111827',
+                color: '#0a0a0a',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -660,7 +660,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111111', marginBottom: '8px' }}>
               Phone Number *
             </label>
             <input
@@ -672,7 +672,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 width: '100%',
                 padding: '12px 16px',
                 background: '#ffffff',
-                color: '#111827',
+                color: '#0a0a0a',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -683,7 +683,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111111', marginBottom: '8px' }}>
               Email
             </label>
             <input
@@ -694,7 +694,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 width: '100%',
                 padding: '12px 16px',
                 background: '#ffffff',
-                color: '#111827',
+                color: '#0a0a0a',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -705,7 +705,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111111', marginBottom: '8px' }}>
               Delivery Address *
             </label>
             <textarea
@@ -717,7 +717,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 width: '100%',
                 padding: '12px 16px',
                 background: '#ffffff',
-                color: '#111827',
+                color: '#0a0a0a',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -729,7 +729,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111111', marginBottom: '8px' }}>
               Special Instructions
             </label>
             <textarea
@@ -740,7 +740,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 width: '100%',
                 padding: '12px 16px',
                 background: '#ffffff',
-                color: '#111827',
+                color: '#0a0a0a',
                 border: '1px solid #d1d5db',
                 borderRadius: '6px',
                 fontSize: '14px',
@@ -752,7 +752,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#111111', marginBottom: '8px' }}>
               Payment Method *
             </label>
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -762,8 +762,8 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 style={{
                   flex: 1,
                   padding: '12px 16px',
-                  background: paymentMethod === 'cash' ? '#111827' : '#ffffff',
-                  color: paymentMethod === 'cash' ? '#ffffff' : '#111827',
+                  background: paymentMethod === 'cash' ? '#0a0a0a' : '#ffffff',
+                  color: paymentMethod === 'cash' ? '#ffffff' : '#0a0a0a',
                   border: paymentMethod === 'cash' ? 'none' : '1px solid #d1d5db',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -779,8 +779,8 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
                 style={{
                   flex: 1,
                   padding: '12px 16px',
-                  background: paymentMethod === 'online' ? '#111827' : '#ffffff',
-                  color: paymentMethod === 'online' ? '#ffffff' : '#111827',
+                  background: paymentMethod === 'online' ? '#0a0a0a' : '#ffffff',
+                  color: paymentMethod === 'online' ? '#ffffff' : '#0a0a0a',
                   border: paymentMethod === 'online' ? 'none' : '1px solid #d1d5db',
                   borderRadius: '6px',
                   fontSize: '14px',
@@ -798,7 +798,7 @@ function CheckoutModal({ cart, cartTotal, customerInfo, setCustomerInfo, payment
             style={{
               width: '100%',
               padding: '16px',
-              background: '#111827',
+              background: '#0a0a0a',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',

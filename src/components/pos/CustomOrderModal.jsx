@@ -48,22 +48,22 @@ export default function CustomOrderModal({
       padding: screenSize === 'small' ? '0' : '16px'
     }}>
       <div style={{
-        background: darkMode ? '#1f2937' : '#ffffff',
+        background: darkMode ? '#0a0a0a' : '#ffffff',
         borderRadius: screenSize === 'small' ? '0' : '16px',
         padding: screenSize === 'small' ? '16px' : '24px',
         width: screenSize === 'small' ? '100vw' : '450px',
         maxWidth: screenSize === 'small' ? '100vw' : '90vw'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937', margin: 0 }}>
+          <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
             ➕ Custom Order
           </h3>
           <button
             onClick={onClose}
             style={{
               padding: '8px 12px',
-              background: darkMode ? '#374151' : '#f3f4f6',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              background: darkMode ? '#111111' : '#f3f4f6',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -81,7 +81,7 @@ export default function CustomOrderModal({
               display: 'block',
               fontSize: '14px',
               fontWeight: '600',
-              color: darkMode ? '#e0e0e0' : '#374151',
+              color: darkMode ? '#e0e0e0' : '#111111',
               marginBottom: '8px'
             }}>
               Item_NAME *
@@ -94,10 +94,10 @@ export default function CustomOrderModal({
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: darkMode ? '#1f2937' : '#ffffff',
-                border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+                background: darkMode ? '#0a0a0a' : '#ffffff',
+                border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
                 borderRadius: '8px',
-                color: darkMode ? '#ffffff' : '#1f2937',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -110,7 +110,7 @@ export default function CustomOrderModal({
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: darkMode ? '#e0e0e0' : '#374151',
+                color: darkMode ? '#e0e0e0' : '#111111',
                 marginBottom: '8px'
               }}>
                 Price *
@@ -123,10 +123,10 @@ export default function CustomOrderModal({
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: darkMode ? '#1f2937' : '#ffffff',
-                  border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+                  background: darkMode ? '#0a0a0a' : '#ffffff',
+                  border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
                   borderRadius: '8px',
-                  color: darkMode ? '#ffffff' : '#1f2937',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
                   fontSize: '14px',
                   outline: 'none'
                 }}
@@ -137,7 +137,7 @@ export default function CustomOrderModal({
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: '600',
-                color: darkMode ? '#e0e0e0' : '#374151',
+                color: darkMode ? '#e0e0e0' : '#111111',
                 marginBottom: '8px'
               }}>
                 Quantity
@@ -150,10 +150,10 @@ export default function CustomOrderModal({
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: darkMode ? '#1f2937' : '#ffffff',
-                  border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+                  background: darkMode ? '#0a0a0a' : '#ffffff',
+                  border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
                   borderRadius: '8px',
-                  color: darkMode ? '#ffffff' : '#1f2937',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
                   fontSize: '14px',
                   outline: 'none'
                 }}
@@ -166,7 +166,7 @@ export default function CustomOrderModal({
               display: 'block',
               fontSize: '14px',
               fontWeight: '600',
-              color: darkMode ? '#e0e0e0' : '#374151',
+              color: darkMode ? '#e0e0e0' : '#111111',
               marginBottom: '8px'
             }}>
               Category
@@ -179,10 +179,10 @@ export default function CustomOrderModal({
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: darkMode ? '#1f2937' : '#ffffff',
-                border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+                background: darkMode ? '#0a0a0a' : '#ffffff',
+                border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
                 borderRadius: '8px',
-                color: darkMode ? '#ffffff' : '#1f2937',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -194,7 +194,7 @@ export default function CustomOrderModal({
               display: 'block',
               fontSize: '14px',
               fontWeight: '600',
-              color: darkMode ? '#e0e0e0' : '#374151',
+              color: darkMode ? '#e0e0e0' : '#111111',
               marginBottom: '8px'
             }}>
               Notes
@@ -207,10 +207,10 @@ export default function CustomOrderModal({
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: darkMode ? '#1f2937' : '#ffffff',
-                border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+                background: darkMode ? '#0a0a0a' : '#ffffff',
+                border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
                 borderRadius: '8px',
-                color: darkMode ? '#ffffff' : '#1f2937',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
                 fontSize: '14px',
                 outline: 'none',
                 resize: 'vertical'
@@ -224,8 +224,8 @@ export default function CustomOrderModal({
               style={{
                 flex: 1,
                 padding: '12px',
-                background: darkMode ? '#374151' : '#f3f4f6',
-                color: darkMode ? '#ffffff' : '#1f2937',
+                background: darkMode ? '#111111' : '#f3f4f6',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',

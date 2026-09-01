@@ -113,7 +113,7 @@ export default function CustomerFeedback({ onNavigate }) {
             style={{
               fontSize: starSize,
               cursor: onRating ? 'pointer' : 'default',
-              color: star <= rating ? '#fbbf24' : '#4b5563',
+              color: star <= rating ? '#fbbf24' : '#222222',
               transition: 'transform 0.2s'
             }}
             onMouseEnter={(e) => onRating && (e.target.style.transform = 'scale(1.2)')}
@@ -152,7 +152,7 @@ export default function CustomerFeedback({ onNavigate }) {
             <div style={{
               fontSize: screenSize === 'small' ? '20px' : '28px',
               fontWeight: '800',
-              color: '#1e293b',
+              color: '#0a0a0a',
               letterSpacing: '-0.5px'
             }}>
               ⭐ Customer Feedback
@@ -282,7 +282,7 @@ export default function CustomerFeedback({ onNavigate }) {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a', marginBottom: '16px' }}>
                   Rating Distribution
                 </div>
                 {[5, 4, 3, 2, 1].map(star => {
@@ -307,21 +307,21 @@ export default function CustomerFeedback({ onNavigate }) {
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 padding: '20px'
               }}>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '16px' }}>
+                <div style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a', marginBottom: '16px' }}>
                   Category Ratings
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '14px', color: '#64748b' }}>🍽️ Food Quality</span>
-                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{averageFoodRating} ⭐</span>
+                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a' }}>{averageFoodRating} ⭐</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '14px', color: '#64748b' }}>🤝 Service</span>
-                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{averageServiceRating} ⭐</span>
+                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a' }}>{averageServiceRating} ⭐</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '14px', color: '#64748b' }}>🎨 Ambiance</span>
-                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>{averageAmbianceRating} ⭐</span>
+                    <span style={{ fontSize: '16px', fontWeight: '600', color: '#0a0a0a' }}>{averageAmbianceRating} ⭐</span>
                   </div>
                 </div>
               </div>
@@ -340,7 +340,7 @@ export default function CustomerFeedback({ onNavigate }) {
                 borderBottom: '1px solid #e5e7eb',
                 fontSize: screenSize === 'small' ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#1e293b'
+                color: '#0a0a0a'
               }}>
                 📋 Recent Feedbacks
               </div>
@@ -357,7 +357,7 @@ export default function CustomerFeedback({ onNavigate }) {
                   <tbody>
                     {feedbacks.slice(0, 5).map((feedback, index) => (
                       <tr key={feedback.id} style={{ borderBottom: index < 4 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{feedback.customer}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0a0a0a', fontWeight: '600' }}>{feedback.customer}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#f59e0b', fontWeight: '600' }}>{feedback.overallRating} ⭐</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b', maxWidth: '300px' }}>{feedback.comment}</td>
                         <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{feedback.date}</td>
@@ -383,7 +383,7 @@ export default function CustomerFeedback({ onNavigate }) {
               borderBottom: '1px solid #e5e7eb',
               fontSize: screenSize === 'small' ? '16px' : '18px',
               fontWeight: '700',
-              color: '#1e293b'
+              color: '#0a0a0a'
             }}>
               📝 All Feedbacks ({feedbacks.length})
             </div>
@@ -403,7 +403,7 @@ export default function CustomerFeedback({ onNavigate }) {
                 <tbody>
                   {feedbacks.map((feedback, index) => (
                     <tr key={feedback.id} style={{ borderBottom: index < feedbacks.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{feedback.customer}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0a0a0a', fontWeight: '600' }}>{feedback.customer}</td>
                       <td style={{ padding: '12px 16px', fontSize: '14px', color: '#f59e0b', fontWeight: '600' }}>{feedback.foodRating} ⭐</td>
                       <td style={{ padding: '12px 16px', fontSize: '14px', color: '#f59e0b', fontWeight: '600' }}>{feedback.serviceRating} ⭐</td>
                       <td style={{ padding: '12px 16px', fontSize: '14px', color: '#f59e0b', fontWeight: '600' }}>{feedback.ambianceRating} ⭐</td>
@@ -428,7 +428,7 @@ export default function CustomerFeedback({ onNavigate }) {
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📊</div>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '8px' }}>
               Advanced Analytics
             </div>
             <div style={{ fontSize: '14px', color: '#64748b' }}>
@@ -446,14 +446,14 @@ export default function CustomerFeedback({ onNavigate }) {
             padding: screenSize === 'small' ? '20px' : '32px',
             maxWidth: '600px'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '24px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '24px' }}>
               ⚙️ Feedback Settings
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
                     Enable QR Code Feedback
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
@@ -479,7 +479,7 @@ export default function CustomerFeedback({ onNavigate }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
                     Auto-Prompt Feedback
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
@@ -504,7 +504,7 @@ export default function CustomerFeedback({ onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Prompt After (minutes)
                 </label>
                 <input
@@ -522,7 +522,7 @@ export default function CustomerFeedback({ onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Reward Points for Feedback
                 </label>
                 <input
@@ -582,7 +582,7 @@ export default function CustomerFeedback({ onNavigate }) {
             padding: '32px',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '20px' }}>
               📱 Feedback QR Code
             </div>
 
@@ -619,7 +619,7 @@ export default function CustomerFeedback({ onNavigate }) {
                 style={{
                   padding: '12px 24px',
                   background: '#f9fafb',
-                  color: '#111827',
+                  color: '#0a0a0a',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -671,13 +671,13 @@ export default function CustomerFeedback({ onNavigate }) {
             width: '90%',
             padding: '32px'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '24px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '24px' }}>
               ⭐ Submit Feedback
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   Customer Name
                 </label>
                 <input
@@ -696,7 +696,7 @@ export default function CustomerFeedback({ onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   Order ID (Optional)
                 </label>
                 <input
@@ -715,28 +715,28 @@ export default function CustomerFeedback({ onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   🍽️ Food Quality
                 </label>
                 <StarRating rating={feedbackData.foodRating} onRating={(rating) => setFeedbackData({ ...feedbackData, foodRating: rating })} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   🤝 Service
                 </label>
                 <StarRating rating={feedbackData.serviceRating} onRating={(rating) => setFeedbackData({ ...feedbackData, serviceRating: rating })} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   🎨 Ambiance
                 </label>
                 <StarRating rating={feedbackData.ambianceRating} onRating={(rating) => setFeedbackData({ ...feedbackData, ambianceRating: rating })} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   Comments
                 </label>
                 <textarea
@@ -761,7 +761,7 @@ export default function CustomerFeedback({ onNavigate }) {
                   style={{
                     padding: '12px 24px',
                     background: '#f9fafb',
-                    color: '#111827',
+                    color: '#0a0a0a',
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                     fontSize: '14px',
@@ -810,7 +810,7 @@ function StatCard({ label, value, icon, color, screenSize }) {
         </div>
         <div style={{ fontSize: '24px' }}>{icon}</div>
       </div>
-      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: '#1e293b' }}>
+      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: '#0a0a0a' }}>
         {value}
       </div>
     </div>

@@ -192,7 +192,7 @@ function SpeakButton({
             transform: 'translateY(-50%)',
             marginLeft: position === 'right' ? '8px' : 0,
             marginRight: position === 'left' ? '8px' : 0,
-            backgroundColor: '#1f2937',
+            backgroundColor: '#0a0a0a',
             borderRadius: '8px',
             padding: '8px',
             display: 'flex',
@@ -207,7 +207,7 @@ function SpeakButton({
               padding: '4px 8px',
               borderRadius: '4px',
               border: 'none',
-              backgroundColor: '#4b5563',
+              backgroundColor: '#222222',
               color: 'white',
               cursor: 'pointer',
               fontSize: '12px'

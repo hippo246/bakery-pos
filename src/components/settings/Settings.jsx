@@ -100,14 +100,14 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
   });
 
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
-    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
-    bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
-    border:   darkMode ? '#2d2d44' : '#d1d5db',
-    text:     darkMode ? '#ffffff' : '#1f2937',
-    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
-    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    bg:       darkMode ? '#000000' : '#f5f7fa',
+    bgEle:    darkMode ? '#0a0a0a' : '#ffffff',
+    bgCard:   darkMode ? '#111111' : '#ffffff',
+    bgInput:  darkMode ? '#000000' : '#f8fafc',
+    border:   darkMode ? '#222222' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#0a0a0a',
+    textSub:  darkMode ? '#e0e0e0' : '#222222',
+    textMute: darkMode ? '#888888' : '#6b7280',
     accent:   '#6366f1',
   };
 
@@ -637,7 +637,7 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
                 onClick={() => dispatch({ type: 'UPDATE_FORM_DATA', payload: { qrEnabled: !state.formData.qrEnabled } })}
                 style={{
                   width: '48px', height: '26px', borderRadius: '13px', flexShrink: 0,
-                  background: state.formData.qrEnabled ? '#6366f1' : (darkMode ? '#374151' : '#d1d5db'),
+                  background: state.formData.qrEnabled ? '#6366f1' : (darkMode ? '#111111' : '#d1d5db'),
                   position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
                 }}
               >
@@ -708,7 +708,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     qrShowCategoryFilter: settings.qrShowCategoryFilter !== false,
     qrShowSearch: settings.qrShowSearch !== false,
     qrAllowCallWaiter: settings.qrAllowCallWaiter !== false,
-    qrPrimaryColor: settings.qrPrimaryColor || '#111827',
+    qrPrimaryColor: settings.qrPrimaryColor || '#0a0a0a',
     qrAccentColor: settings.qrAccentColor || '#10b981',
     qrOrderingUrl: settings.qrOrderingUrl || (typeof window !== 'undefined' ? window.location.origin + '/qr-ordering.html' : '/qr-ordering.html'),
     // QR Receipt controls
@@ -838,7 +838,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     mobileShowLabels:   settings.mobileShowLabels    ?? true,
     mobileNavStyle:     settings.mobileNavStyle      ?? 'pill',
     mobileIconSize:     settings.mobileIconSize      ?? 'md',
-    tabletLayoutMode:   settings.tabletLayoutMode    ?? 'sidebar',
+    tabletLayoutMode:   settings.tabletLayoutMode    ?? 'topbar', // Tablets now always use topbar like laptops
     tabletSidebarMode:  settings.tabletSidebarMode   ?? 'compact',
     // Receipt additional fields
     storeLogo: settings.storeLogo || '',
@@ -1518,14 +1518,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
 
   // Theme colors
   const t = {
-    bg:       darkMode ? '#1a1a2e' : '#f5f7fa',
-    bgEle:    darkMode ? '#1f1f35' : '#ffffff',
-    bgCard:   darkMode ? '#252538' : '#ffffff',
-    bgInput:  darkMode ? '#1a1a2e' : '#f8fafc',
-    border:   darkMode ? '#2d2d44' : '#d1d5db',
-    text:     darkMode ? '#ffffff' : '#1f2937',
-    textSub:  darkMode ? '#e0e0e0' : '#4b5563',
-    textMute: darkMode ? '#8b8b9e' : '#6b7280',
+    bg:       darkMode ? '#000000' : '#f5f7fa',
+    bgEle:    darkMode ? '#0a0a0a' : '#ffffff',
+    bgCard:   darkMode ? '#111111' : '#ffffff',
+    bgInput:  darkMode ? '#000000' : '#f8fafc',
+    border:   darkMode ? '#222222' : '#d1d5db',
+    text:     darkMode ? '#ffffff' : '#0a0a0a',
+    textSub:  darkMode ? '#e0e0e0' : '#222222',
+    textMute: darkMode ? '#888888' : '#6b7280',
     accent:   '#6366f1',
   };
 
@@ -1561,16 +1561,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🌍 Regional Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Currency
                       </label>
                       <select
@@ -1579,11 +1579,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -1595,7 +1595,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Language
                       </label>
                       <select
@@ -1604,11 +1604,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -1617,10 +1617,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         <option value="hi">Hindi</option>
                       </select>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`, marginTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, marginTop: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151' }}>Color-Blind Mode</div>
-                        <div style={{ fontSize: '12px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '2px' }}>Use patterns and icons instead of just colors for status</div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Color-Blind Mode</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Use patterns and icons instead of just colors for status</div>
                       </div>
                       <button
                         onClick={() => handleInputChange('colorBlindMode', !formData.colorBlindMode)}
@@ -1628,7 +1628,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '48px',
                           height: '28px',
                           borderRadius: '14px',
-                          background: formData.colorBlindMode ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          background: formData.colorBlindMode ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                           border: 'none',
                           cursor: 'pointer',
                           position: 'relative',
@@ -1656,8 +1656,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   onClick={() => setActiveSection('mobileui')}
                   style={{
                     padding: '16px 20px',
-                    background: darkMode ? '#252538' : '#f9fafb',
-                    border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                    background: darkMode ? '#111111' : '#f9fafb',
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '16px',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1668,18 +1668,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     transition: 'all 0.15s',
                   }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = '#6366f1'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = darkMode ? '#2d2d44' : '#e5e7eb'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = darkMode ? '#222222' : '#e5e7eb'}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '24px' }}>📱</span>
                     <div>
-                      <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#1f2937' }}>Mobile & Tablet UI</div>
-                      <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '2px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Mobile & Tablet UI</div>
+                      <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>
                         Bottom bar, nav style, icons, tablet sidebar
                       </div>
                     </div>
                   </div>
-                  <span style={{ fontSize: '18px', color: darkMode ? '#4b5563' : '#9ca3af' }}>›</span>
+                  <span style={{ fontSize: '18px', color: darkMode ? '#222222' : '#9ca3af' }}>›</span>
                 </button>
               </div>
             )}
@@ -1688,24 +1688,24 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               const dm = darkMode;
               const card = {
                 padding: '20px',
-                background: screenSize === 'small' ? 'transparent' : (dm ? '#252538' : '#f9fafb'),
+                background: screenSize === 'small' ? 'transparent' : (dm ? '#111111' : '#f9fafb'),
                 borderRadius: '16px',
-                border: screenSize === 'small' ? 'none' : `1px solid ${dm ? '#2d2d44' : '#e5e7eb'}`,
+                border: screenSize === 'small' ? 'none' : `1px solid ${dm ? '#222222' : '#e5e7eb'}`,
                 marginBottom: '0',
               };
               const label = {
                 display: 'block', fontSize: '13px', fontWeight: '600',
-                color: dm ? '#e0e0e0' : '#374151', marginBottom: '8px',
+                color: dm ? '#e0e0e0' : '#111111', marginBottom: '8px',
               };
               const hint = { fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af', marginTop: '6px' };
               const select = {
                 width: '100%',
                 padding: screenSize === 'small' ? '14px 16px' : '11px 14px',
-                border: `1px solid ${dm ? '#2d2d44' : '#d1d5db'}`,
+                border: `1px solid ${dm ? '#222222' : '#d1d5db'}`,
                 borderRadius: '10px',
                 fontSize: screenSize === 'small' ? '16px' : '14px',
-                background: dm ? '#1a1a2e' : '#ffffff',
-                color: dm ? '#ffffff' : '#1f2937',
+                background: dm ? '#000000' : '#ffffff',
+                color: dm ? '#ffffff' : '#0a0a0a',
                 outline: 'none',
                 minHeight: screenSize === 'small' ? '52px' : '44px',
                 cursor: 'pointer',
@@ -1715,7 +1715,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   onClick={() => handleInputChange(key, !formData[key])}
                   style={{
                     width: '48px', height: '26px', borderRadius: '13px',
-                    background: formData[key] ? '#6366f1' : (dm ? '#374151' : '#d1d5db'),
+                    background: formData[key] ? '#6366f1' : (dm ? '#111111' : '#d1d5db'),
                     position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
                     flexShrink: 0,
                   }}
@@ -1733,12 +1733,12 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 <div key={key} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '14px 16px',
-                  background: dm ? '#1a1a2e' : '#ffffff',
+                  background: dm ? '#000000' : '#ffffff',
                   borderRadius: '12px',
-                  border: `1px solid ${dm ? '#2d2d44' : '#e5e7eb'}`,
+                  border: `1px solid ${dm ? '#222222' : '#e5e7eb'}`,
                 }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: dm ? '#ffffff' : '#1f2937' }}>{title}</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: dm ? '#ffffff' : '#0a0a0a' }}>{title}</div>
                     {desc && <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af', marginTop: '3px' }}>{desc}</div>}
                   </div>
                   {toggle(key)}
@@ -1766,7 +1766,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '28px' }}>📱</span>
                     <div>
-                      <div style={{ fontSize: '18px', fontWeight: '700', color: dm ? '#ffffff' : '#111827' }}>Mobile & Tablet UI</div>
+                      <div style={{ fontSize: '18px', fontWeight: '700', color: dm ? '#ffffff' : '#0a0a0a' }}>Mobile & Tablet UI</div>
                       <div style={{ fontSize: '13px', color: dm ? '#6b7280' : '#9ca3af' }}>Customise navigation, icons, and layout for every screen size</div>
                     </div>
                   </div>
@@ -1775,7 +1775,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   {/* PHONE — NAV BAR                               */}
                   {/* ────────────────────────────────────────────── */}
                   <div style={card}>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#1f2937', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#0a0a0a', marginBottom: '16px' }}>
                       📲 Phone Navigation Bar
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1810,8 +1810,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 padding: '12px 8px',
                                 background: formData.mobileNavStyle === opt.value
                                   ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
-                                  : (dm ? '#1a1a2e' : '#ffffff'),
-                                border: `1.5px solid ${formData.mobileNavStyle === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
+                                  : (dm ? '#000000' : '#ffffff'),
+                                border: `1.5px solid ${formData.mobileNavStyle === opt.value ? '#6366f1' : (dm ? '#222222' : '#e5e7eb')}`,
                                 borderRadius: '12px',
                                 cursor: 'pointer',
                                 display: 'flex', flexDirection: 'column',
@@ -1820,7 +1820,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                               }}
                             >
                               <span style={{ fontSize: '20px' }}>{opt.emoji}</span>
-                              <span style={{ fontSize: '12px', fontWeight: '600', color: formData.mobileNavStyle === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#374151') }}>{opt.label}</span>
+                              <span style={{ fontSize: '12px', fontWeight: '600', color: formData.mobileNavStyle === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#111111') }}>{opt.label}</span>
                               <span style={{ fontSize: '10px', color: dm ? '#6b7280' : '#9ca3af', textAlign: 'center' }}>{opt.desc}</span>
                             </button>
                           ))}
@@ -1843,8 +1843,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 padding: '12px 8px',
                                 background: formData.mobileIconSize === opt.value
                                   ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
-                                  : (dm ? '#1a1a2e' : '#ffffff'),
-                                border: `1.5px solid ${formData.mobileIconSize === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
+                                  : (dm ? '#000000' : '#ffffff'),
+                                border: `1.5px solid ${formData.mobileIconSize === opt.value ? '#6366f1' : (dm ? '#222222' : '#e5e7eb')}`,
                                 borderRadius: '12px',
                                 cursor: 'pointer',
                                 display: 'flex', flexDirection: 'column',
@@ -1853,7 +1853,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                               }}
                             >
                               <span style={{ fontSize: opt.px }}>🛒</span>
-                              <span style={{ fontSize: '12px', fontWeight: '600', color: formData.mobileIconSize === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#374151') }}>{opt.label}</span>
+                              <span style={{ fontSize: '12px', fontWeight: '600', color: formData.mobileIconSize === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#111111') }}>{opt.label}</span>
                             </button>
                           ))}
                         </div>
@@ -1869,7 +1869,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   {/* PHONE — VISIBLE TABS                          */}
                   {/* ────────────────────────────────────────────── */}
                   <div style={card}>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#1f2937', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
                       🗂 Bottom Bar Tabs
                     </div>
                     <div style={{ fontSize: '13px', color: dm ? '#6b7280' : '#9ca3af', marginBottom: '14px' }}>
@@ -1927,9 +1927,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                               padding: '9px 13px',
                               background: isSelected
                                 ? '#6366f1'
-                                : (dm ? '#1a1a2e' : '#f3f4f6'),
+                                : (dm ? '#000000' : '#f3f4f6'),
                               color: isSelected ? '#ffffff' : (dm ? '#9ca3af' : '#6b7280'),
-                              border: `1px solid ${isSelected ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
+                              border: `1px solid ${isSelected ? '#6366f1' : (dm ? '#222222' : '#e5e7eb')}`,
                               borderRadius: '10px',
                               fontSize: '13px', fontWeight: '500',
                               cursor: 'pointer',
@@ -1954,119 +1954,33 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   {/* TABLET — LAYOUT & SIDEBAR                      */}
                   {/* ────────────────────────────────────────────── */}
                   <div style={card}>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#1f2937', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#0a0a0a', marginBottom: '16px' }}>
                       🖥️ Tablet Layout
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
                       <div>
                         <label style={label}>Layout Mode</label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {[
-                            {
-                              value: 'sidebar',
-                              title: 'Sidebar',
-                              desc: 'Vertical navigation on the left side — classic tablet layout.',
-                              emoji: '📱',
-                            },
-                            {
-                              value: 'topbar',
-                              title: 'Top Bar',
-                              desc: 'Horizontal navigation at the top — more screen space for content.',
-                              emoji: '🔝',
-                            },
-                          ].map(opt => (
-                            <button
-                              key={opt.value}
-                              onClick={() => handleInputChange('tabletLayoutMode', opt.value)}
-                              style={{
-                                padding: '14px 16px',
-                                background: formData.tabletLayoutMode === opt.value
-                                  ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
-                                  : (dm ? '#1a1a2e' : '#ffffff'),
-                                border: `1.5px solid ${formData.tabletLayoutMode === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
-                                borderRadius: '12px',
-                                cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '12px',
-                                transition: 'all 0.15s',
-                                textAlign: 'left',
-                              }}
-                            >
-                              <span style={{ fontSize: '20px' }}>{opt.emoji}</span>
-                              <div>
-                                <div style={{ fontSize: '14px', fontWeight: '600', color: formData.tabletLayoutMode === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#374151') }}>
-                                  {opt.title}
-                                </div>
-                                <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af' }}>
-                                  {opt.desc}
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Sidebar mode - only shown when sidebar layout is selected */}
-                      {formData.tabletLayoutMode === 'sidebar' && (
-                        <>
-                          <div style={{ height: '1px', background: dm ? '#2d2d44' : '#e5e7eb', margin: '8px 0' }} />
+                        <div style={{
+                          padding: '14px 16px',
+                          background: dm ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)',
+                          border: '1.5px solid #6366f1',
+                          borderRadius: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px'
+                        }}>
+                          <span style={{ fontSize: '20px' }}>🔝</span>
                           <div>
-                            <label style={label}>Sidebar Mode</label>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {[
-                                {
-                                  value: 'compact',
-                                  title: 'Compact (icon-only)',
-                                  desc: 'Always visible, icons only — saves space without hiding navigation.',
-                                  emoji: '☰',
-                                },
-                                {
-                                  value: 'full',
-                                  title: 'Full (expandable)',
-                                  desc: 'Starts collapsed to icons, tap the toggle to expand with labels.',
-                                  emoji: '⬅️',
-                                },
-                                {
-                                  value: 'hidden',
-                                  title: 'Hidden (top bar)',
-                                  desc: 'No sidebar — uses the scrollable header tab bar instead.',
-                                  emoji: '🔝',
-                                },
-                              ].map(opt => (
-                                <button
-                                  key={opt.value}
-                                  onClick={() => handleInputChange('tabletSidebarMode', opt.value)}
-                                  style={{
-                                    padding: '14px 16px',
-                                    background: formData.tabletSidebarMode === opt.value
-                                      ? (dm ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)')
-                                      : (dm ? '#1a1a2e' : '#ffffff'),
-                                    border: `1.5px solid ${formData.tabletSidebarMode === opt.value ? '#6366f1' : (dm ? '#2d2d44' : '#e5e7eb')}`,
-                                    borderRadius: '12px',
-                                    cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '12px',
-                                    textAlign: 'left', width: '100%',
-                                    transition: 'all 0.15s',
-                                  }}
-                                >
-                                  <span style={{ fontSize: '22px', flexShrink: 0 }}>{opt.emoji}</span>
-                                  <div>
-                                    <div style={{ fontSize: '14px', fontWeight: '600', color: formData.tabletSidebarMode === opt.value ? '#6366f1' : (dm ? '#e0e0e0' : '#1f2937') }}>
-                                      {opt.title}
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af', marginTop: '2px', lineHeight: 1.4 }}>
-                                      {opt.desc}
-                                    </div>
-                                  </div>
-                                  {formData.tabletSidebarMode === opt.value && (
-                                    <span style={{ marginLeft: 'auto', fontSize: '16px', color: '#6366f1', flexShrink: 0 }}>✓</span>
-                                  )}
-                                </button>
-                              ))}
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#6366f1' }}>
+                              Top Bar (Fixed)
+                            </div>
+                            <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af' }}>
+                              Tablets now use the same horizontal navigation as laptops for consistency.
                             </div>
                           </div>
-                        </>
-                      )}
+                        </div>
+                      </div>
 
                     </div>
                   </div>
@@ -2079,16 +1993,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🏪 Store Information
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Store Name
                       </label>
                       <input
@@ -2099,18 +2013,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Store Address
                       </label>
                       <input
@@ -2121,11 +2035,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -2133,7 +2047,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1fr', gap: '16px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                           Phone
                         </label>
                         <input
@@ -2144,18 +2058,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%',
                             padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                             borderRadius: '12px',
                             fontSize: screenSize === 'small' ? '16px' : '15px',
-                            background: darkMode ? '#1a1a2e' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#1f2937',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
                             outline: 'none',
                             minHeight: screenSize === 'small' ? '52px' : '48px'
                           }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                           Email
                         </label>
                         <input
@@ -2166,11 +2080,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%',
                             padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                            border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                             borderRadius: '12px',
                             fontSize: screenSize === 'small' ? '16px' : '15px',
-                            background: darkMode ? '#1a1a2e' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#1f2937',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
                             outline: 'none',
                             minHeight: screenSize === 'small' ? '52px' : '48px'
                           }}
@@ -2186,16 +2100,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     💰 Tax Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Tax Rate (%)
                       </label>
                       <input
@@ -2206,11 +2120,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -2227,16 +2141,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Legal Compliance */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     📋 Legal Compliance
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         GSTIN
                       </label>
                       <input
@@ -2247,18 +2161,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         FSSAI License
                       </label>
                       <input
@@ -2269,18 +2183,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Tariff Code
                       </label>
                       <input
@@ -2291,18 +2205,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Google Review URL
                       </label>
                       <input
@@ -2313,11 +2227,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -2329,16 +2243,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Receipt Settings */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🧾 Receipt Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Store Logo URL
                       </label>
                       <input
@@ -2349,18 +2263,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Receipt Footer
                       </label>
                       <input
@@ -2371,18 +2285,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Receipt Font Size
                       </label>
                       <select
@@ -2391,11 +2305,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -2405,10 +2319,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         <option value="14">14px (Large)</option>
                       </select>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                       <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#1f2937' }}>Auto-print Receipt</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '4px' }}>Automatically print receipt after payment</div>
+                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Auto-print Receipt</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Automatically print receipt after payment</div>
                       </div>
                       <div
                         onClick={() => handleInputChange('autoPrintReceipt', !formData.autoPrintReceipt)}
@@ -2416,7 +2330,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '52px',
                           height: '28px',
                           borderRadius: '14px',
-                          background: formData.autoPrintReceipt ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          background: formData.autoPrintReceipt ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                           position: 'relative',
                           cursor: 'pointer',
                           transition: 'background 0.2s'
@@ -2441,11 +2355,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Display Options */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     👁️ Display Options
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2459,15 +2373,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'showPaymentDetailsOnReceipt', label: 'Show Payment Details' },
                       { key: 'showBillIdOnReceipt', label: 'Show Bill ID on Receipt' }
                     ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#1f2937' }}>{label}</div>
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
                         <div
                           onClick={() => handleInputChange(key, !formData[key])}
                           style={{
                             width: '52px',
                             height: '28px',
                             borderRadius: '14px',
-                            background: formData[key] ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'background 0.2s'
@@ -2498,16 +2412,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* POS Mode */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🛒 POS Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         POS Mode
                       </label>
                       <select
@@ -2516,11 +2430,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -2535,11 +2449,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Order Requirements */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     📋 Order Requirements
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2551,15 +2465,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'autoCreateKOT', label: 'Auto-create KOT on order completion' },
                       { key: 'autoAssignTables', label: 'Auto-assign available tables' }
                     ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#1f2937' }}>{label}</div>
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
                         <div
                           onClick={() => handleInputChange(key, !formData[key])}
                           style={{
                             width: '52px',
                             height: '28px',
                             borderRadius: '14px',
-                            background: formData[key] ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'background 0.2s'
@@ -2585,16 +2499,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Payment Settings */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     💳 Payment Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Razorpay Key ID
                       </label>
                       <input
@@ -2605,21 +2519,21 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
-                      <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '8px' }}>
+                      <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '8px' }}>
                         Your Razorpay key ID for card, UPI, and wallet payments
                       </div>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         UPI ID (for QR payments)
                       </label>
                       <input
@@ -2630,20 +2544,20 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                       <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#1f2937' }}>Enable split payments</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '4px' }}>Allow customers to split payment across methods</div>
+                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Enable split payments</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Allow customers to split payment across methods</div>
                       </div>
                       <div
                         onClick={() => handleInputChange('enableSplitPayment', !formData.enableSplitPayment)}
@@ -2651,7 +2565,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '52px',
                           height: '28px',
                           borderRadius: '14px',
-                          background: formData.enableSplitPayment ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          background: formData.enableSplitPayment ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                           position: 'relative',
                           cursor: 'pointer',
                           transition: 'background 0.2s'
@@ -2676,11 +2590,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 {/* Discount Settings */}
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🏷️ Discount Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2691,15 +2605,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'enableOrderNotes', label: 'Enable order notes' },
                       { key: 'enableHoldOrders', label: 'Enable hold orders feature' }
                     ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#1f2937' }}>{label}</div>
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
                         <div
                           onClick={() => handleInputChange(key, !formData[key])}
                           style={{
                             width: '52px',
                             height: '28px',
                             borderRadius: '14px',
-                            background: formData[key] ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'background 0.2s'
@@ -2729,21 +2643,21 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               const dm = darkMode;
               const cardStyle = {
                 padding: '20px',
-                background: screenSize === 'small' ? 'transparent' : (dm ? '#252538' : '#f9fafb'),
+                background: screenSize === 'small' ? 'transparent' : (dm ? '#111111' : '#f9fafb'),
                 borderRadius: '16px',
-                border: screenSize === 'small' ? 'none' : `1px solid ${dm ? '#2d2d44' : '#e5e7eb'}`,
+                border: screenSize === 'small' ? 'none' : `1px solid ${dm ? '#222222' : '#e5e7eb'}`,
               };
               const labelStyle = {
                 display: 'block', fontSize: '13px', fontWeight: '600',
-                color: dm ? '#e0e0e0' : '#374151', marginBottom: '8px',
+                color: dm ? '#e0e0e0' : '#111111', marginBottom: '8px',
               };
               const inputStyle = {
                 padding: '10px 12px',
-                border: `1px solid ${dm ? '#2d2d44' : '#d1d5db'}`,
+                border: `1px solid ${dm ? '#222222' : '#d1d5db'}`,
                 borderRadius: '10px',
                 fontSize: screenSize === 'small' ? '16px' : '14px',
-                background: dm ? '#1a1a2e' : '#ffffff',
-                color: dm ? '#ffffff' : '#1f2937',
+                background: dm ? '#000000' : '#ffffff',
+                color: dm ? '#ffffff' : '#0a0a0a',
                 outline: 'none',
                 width: '100%',
               };
@@ -2751,19 +2665,19 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '14px 16px',
-                  background: dm ? '#1a1a2e' : '#ffffff',
+                  background: dm ? '#000000' : '#ffffff',
                   borderRadius: '12px',
-                  border: `1px solid ${dm ? '#2d2d44' : '#e5e7eb'}`,
+                  border: `1px solid ${dm ? '#222222' : '#e5e7eb'}`,
                 }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '500', color: dm ? '#f9fafb' : '#1f2937' }}>{title}</div>
+                    <div style={{ fontSize: '14px', fontWeight: '500', color: dm ? '#f9fafb' : '#0a0a0a' }}>{title}</div>
                     {desc && <div style={{ fontSize: '12px', color: dm ? '#6b7280' : '#9ca3af', marginTop: '2px' }}>{desc}</div>}
                   </div>
                   <div
                     onClick={() => handleInputChange(field, !formData[field])}
                     style={{
                       width: '48px', height: '26px', borderRadius: '13px', flexShrink: 0,
-                      background: formData[field] ? '#6366f1' : (dm ? '#374151' : '#d1d5db'),
+                      background: formData[field] ? '#6366f1' : (dm ? '#111111' : '#d1d5db'),
                       position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
                     }}
                   >
@@ -2783,7 +2697,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={cardStyle}>
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#1f2937', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#ffffff' : '#0a0a0a', marginBottom: '16px' }}>
                       ✚ Custom Order — Inline Panel
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2824,9 +2738,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             <div key={idx} style={{
                               display: 'flex', alignItems: 'center', gap: '8px',
                               padding: '10px 12px',
-                              background: dm ? '#1a1a2e' : '#ffffff',
+                              background: dm ? '#000000' : '#ffffff',
                               borderRadius: '10px',
-                              border: `1px solid ${dm ? '#2d2d44' : '#e5e7eb'}`,
+                              border: `1px solid ${dm ? '#222222' : '#e5e7eb'}`,
                             }}>
                               {/* Icon */}
                               <input
@@ -2839,10 +2753,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 }}
                                 style={{
                                   width: '44px', textAlign: 'center', padding: '6px 4px',
-                                  background: dm ? '#252538' : '#f3f4f6',
-                                  border: `1px solid ${dm ? '#374151' : '#e5e7eb'}`,
+                                  background: dm ? '#111111' : '#f3f4f6',
+                                  border: `1px solid ${dm ? '#111111' : '#e5e7eb'}`,
                                   borderRadius: '8px', fontSize: '18px', outline: 'none',
-                                  color: dm ? '#ffffff' : '#1f2937',
+                                  color: dm ? '#ffffff' : '#0a0a0a',
                                 }}
                               />
                               {/* Name */}
@@ -2857,10 +2771,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 placeholder="Name"
                                 style={{
                                   flex: 1, padding: '6px 10px',
-                                  background: dm ? '#252538' : '#f3f4f6',
-                                  border: `1px solid ${dm ? '#374151' : '#e5e7eb'}`,
+                                  background: dm ? '#111111' : '#f3f4f6',
+                                  border: `1px solid ${dm ? '#111111' : '#e5e7eb'}`,
                                   borderRadius: '8px', fontSize: '13px', outline: 'none',
-                                  color: dm ? '#ffffff' : '#1f2937',
+                                  color: dm ? '#ffffff' : '#0a0a0a',
                                 }}
                               />
                               {/* Price */}
@@ -2875,10 +2789,10 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 placeholder="₹"
                                 style={{
                                   width: '68px', padding: '6px 8px', textAlign: 'right',
-                                  background: dm ? '#252538' : '#f3f4f6',
-                                  border: `1px solid ${dm ? '#374151' : '#e5e7eb'}`,
+                                  background: dm ? '#111111' : '#f3f4f6',
+                                  border: `1px solid ${dm ? '#111111' : '#e5e7eb'}`,
                                   borderRadius: '8px', fontSize: '13px', outline: 'none',
-                                  color: dm ? '#ffffff' : '#1f2937',
+                                  color: dm ? '#ffffff' : '#0a0a0a',
                                 }}
                               />
                               {/* Remove */}
@@ -2886,7 +2800,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 onClick={() => handleInputChange('customOrderPresets', presets.filter((_, i) => i !== idx))}
                                 style={{
                                   background: 'transparent',
-                                  border: `1px solid ${dm ? '#374151' : '#e5e7eb'}`,
+                                  border: `1px solid ${dm ? '#111111' : '#e5e7eb'}`,
                                   borderRadius: '8px', padding: '6px 8px',
                                   cursor: 'pointer', fontSize: '13px',
                                   color: dm ? '#6b7280' : '#9ca3af',
@@ -2902,14 +2816,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           style={{
                             width: '100%', padding: '11px',
                             background: 'transparent',
-                            border: `1.5px dashed ${dm ? '#374151' : '#d1d5db'}`,
+                            border: `1.5px dashed ${dm ? '#111111' : '#d1d5db'}`,
                             borderRadius: '10px', cursor: 'pointer',
                             fontSize: '13px', fontWeight: '600',
                             color: dm ? '#6b7280' : '#9ca3af',
                             transition: 'border-color 0.15s',
                           }}
                           onMouseEnter={e => e.currentTarget.style.borderColor = '#6366f1'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = dm ? '#374151' : '#d1d5db'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = dm ? '#111111' : '#d1d5db'}
                         >
                           + Add Preset
                         </button>
@@ -2925,16 +2839,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🔢 Item Code Configuration
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Code Type
                       </label>
                       <select
@@ -2943,11 +2857,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -2966,18 +2880,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     👨‍🍳 Kitchen Display
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                       <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#1f2937' }}>Enable Kitchen Display</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '4px' }}>Show kitchen orders on dedicated display</div>
+                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Enable Kitchen Display</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Show kitchen orders on dedicated display</div>
                       </div>
                       <div
                         onClick={() => handleInputChange('kitchenDisplayEnabled', !formData.kitchenDisplayEnabled)}
@@ -2985,7 +2899,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '52px',
                           height: '28px',
                           borderRadius: '14px',
-                          background: formData.kitchenDisplayEnabled ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          background: formData.kitchenDisplayEnabled ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                           position: 'relative',
                           cursor: 'pointer',
                           transition: 'background 0.2s'
@@ -3040,7 +2954,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         onClick={() => handleInputChange('qrOrderingEnabled', !formData.qrOrderingEnabled)}
                         style={{
                           width: '48px', height: '26px',
-                          background: formData.qrOrderingEnabled ? '#10b981' : '#2d2d48',
+                          background: formData.qrOrderingEnabled ? '#10b981' : '#000000',
                           borderRadius: '13px', position: 'relative', cursor: 'pointer',
                           transition: 'background 0.2s'
                         }}
@@ -3148,7 +3062,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             onClick={() => handleInputChange(key, !formData[key])}
                             style={{
                               width: '40px', height: '22px', flexShrink: 0,
-                              background: formData[key] ? '#10b981' : '#2d2d48',
+                              background: formData[key] ? '#10b981' : '#000000',
                               borderRadius: '11px', position: 'relative', cursor: 'pointer',
                               transition: 'background 0.2s', marginLeft: '12px'
                             }}
@@ -3183,7 +3097,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           </div>
                           <div
                             onClick={() => handleInputChange(key, !formData[key])}
-                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                           >
                             <div style={{ position: 'absolute', top: '3px', left: formData[key] ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                           </div>
@@ -3202,7 +3116,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </div>
                       <div
                         onClick={() => handleInputChange('qrEnableTipping', !formData.qrEnableTipping)}
-                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableTipping ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableTipping ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                       >
                         <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableTipping ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </div>
@@ -3248,7 +3162,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           </div>
                           <div
                             onClick={() => handleInputChange(key, !formData[key])}
-                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                           >
                             <div style={{ position: 'absolute', top: '3px', left: formData[key] ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                           </div>
@@ -3306,7 +3220,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           </div>
                           <div
                             onClick={() => handleInputChange(key, !formData[key])}
-                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                            style={{ width: '40px', height: '22px', flexShrink: 0, background: formData[key] ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                           >
                             <div style={{ position: 'absolute', top: '3px', left: formData[key] ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                           </div>
@@ -3326,7 +3240,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </div>
                       <div
                         onClick={() => handleInputChange('qrEnableBusinessHours', !formData.qrEnableBusinessHours)}
-                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableBusinessHours ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableBusinessHours ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                       >
                         <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableBusinessHours ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </div>
@@ -3388,7 +3302,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </div>
                       <div
                         onClick={() => handleInputChange('qrEnableSequentialInvoices', !formData.qrEnableSequentialInvoices)}
-                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableSequentialInvoices ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableSequentialInvoices ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                       >
                         <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableSequentialInvoices ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </div>
@@ -3449,7 +3363,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </div>
                       <div
                         onClick={() => handleInputChange('qrEnableThermalPrinter', !formData.qrEnableThermalPrinter)}
-                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableThermalPrinter ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrEnableThermalPrinter ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                       >
                         <div style={{ position: 'absolute', top: '3px', left: formData.qrEnableThermalPrinter ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </div>
@@ -3491,7 +3405,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </div>
                       <div
                         onClick={() => handleInputChange('qrShowReceiptOnOrder', !formData.qrShowReceiptOnOrder)}
-                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrShowReceiptOnOrder ? '#10b981' : '#2d2d48', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
+                        style={{ width: '40px', height: '22px', flexShrink: 0, background: formData.qrShowReceiptOnOrder ? '#10b981' : '#000000', borderRadius: '11px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '12px' }}
                       >
                         <div style={{ position: 'absolute', top: '3px', left: formData.qrShowReceiptOnOrder ? '21px' : '3px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                       </div>
@@ -3510,7 +3424,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           </div>
                           <div
                             onClick={() => handleInputChange(key, !formData[key])}
-                            style={{ width: '36px', height: '20px', flexShrink: 0, background: formData[key] ? '#10b981' : '#2d2d48', borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '10px' }}
+                            style={{ width: '36px', height: '20px', flexShrink: 0, background: formData[key] ? '#10b981' : '#000000', borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s', marginLeft: '10px' }}
                           >
                             <div style={{ position: 'absolute', top: '2px', left: formData[key] ? '18px' : '2px', width: '16px', height: '16px', background: t.bgInput, borderRadius: '50%', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                           </div>
@@ -3553,7 +3467,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       background: '#000000',
                       borderRadius: '36px',
                       border: '12px solid #000000',
-                      boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 3px #2d2d44',
+                      boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 3px #222222',
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
@@ -3586,7 +3500,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         
                         {/* Mock App Header */}
                         <div style={{
-                          background: formData.qrPrimaryColor || '#1f1f35',
+                          background: formData.qrPrimaryColor || '#0a0a0a',
                           padding: '24px 12px 14px',
                           borderBottom: '1px solid rgba(255,255,255,0.08)',
                           textAlign: 'center',
@@ -3716,7 +3630,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
 
                 {/* Global Toggle */}
                 <div style={{
-                  background: 'linear-gradient(135deg, #1f1f35 0%, #252538 100%)',
+                  background: 'linear-gradient(135deg, #0a0a0a 0%, #111111 100%)',
                   borderRadius: '16px',
                   border: `1px solid ${t.border}`,
                   padding: '28px',
@@ -3742,9 +3656,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       }}
                       style={{
                         padding: '10px 20px',
-                        background: Object.values(formData.tabDarkModes).every(Boolean) ? '#6366f1' : '#1a1a2e',
+                        background: Object.values(formData.tabDarkModes).every(Boolean) ? '#6366f1' : '#000000',
                         color: t.text,
-                        border: `1px solid ${Object.values(formData.tabDarkModes).every(Boolean) ? '#6366f1' : '#2d2d44'}`,
+                        border: `1px solid ${Object.values(formData.tabDarkModes).every(Boolean) ? '#6366f1' : '#222222'}`,
                         borderRadius: '10px',
                         fontSize: '13px',
                         fontWeight: '600',
@@ -3762,9 +3676,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       }}
                       style={{
                         padding: '10px 20px',
-                        background: Object.values(formData.tabDarkModes).every(v => !v) ? '#f59e0b' : '#1a1a2e',
+                        background: Object.values(formData.tabDarkModes).every(v => !v) ? '#f59e0b' : '#000000',
                         color: t.text,
-                        border: `1px solid ${Object.values(formData.tabDarkModes).every(v => !v) ? '#f59e0b' : '#2d2d44'}`,
+                        border: `1px solid ${Object.values(formData.tabDarkModes).every(v => !v) ? '#f59e0b' : '#222222'}`,
                         borderRadius: '10px',
                         fontSize: '13px',
                         fontWeight: '600',
@@ -3819,7 +3733,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             padding: '14px 16px',
                             background: t.bgInput,
                             borderRadius: '12px',
-                            border: `1px solid ${isDark ? '#6366f1' : '#2d2d44'}`,
+                            border: `1px solid ${isDark ? '#6366f1' : '#222222'}`,
                             transition: 'border-color 0.2s'
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -3838,7 +3752,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                                 width: '44px',
                                 height: '24px',
                                 borderRadius: '12px',
-                                background: isDark ? '#6366f1' : '#374151',
+                                background: isDark ? '#6366f1' : '#111111',
                                 position: 'relative',
                                 cursor: 'pointer',
                                 transition: 'background 0.25s',
@@ -3892,18 +3806,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🔔 Notifications
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                       <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#1f2937' }}>Enable Notifications</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '4px' }}>Receive alerts for important events</div>
+                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Enable Notifications</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Receive alerts for important events</div>
                       </div>
                       <div
                         onClick={() => handleInputChange('enableNotifications', !formData.enableNotifications)}
@@ -3911,7 +3825,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '52px',
                           height: '28px',
                           borderRadius: '14px',
-                          background: formData.enableNotifications ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          background: formData.enableNotifications ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                           position: 'relative',
                           cursor: 'pointer',
                           transition: 'background 0.2s'
@@ -3939,18 +3853,18 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🖥️ Display Settings
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                       <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#1f2937' }}>Low Stock Alerts</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '4px' }}>Alert when inventory is running low</div>
+                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Low Stock Alerts</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Alert when inventory is running low</div>
                       </div>
                       <div
                         onClick={() => handleInputChange('lowStockAlert', !formData.lowStockAlert)}
@@ -3958,7 +3872,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           width: '52px',
                           height: '28px',
                           borderRadius: '14px',
-                          background: formData.lowStockAlert ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                          background: formData.lowStockAlert ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                           position: 'relative',
                           cursor: 'pointer',
                           transition: 'background 0.2s'
@@ -3986,11 +3900,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     💾 Backup & Restore
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -4012,7 +3926,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       Download Backup
                     </button>
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Restore Backup
                       </label>
                       <input
@@ -4022,11 +3936,11 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
@@ -4041,15 +3955,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     💸 Refund Management
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#6b7280', lineHeight: '1.6' }}>
+                    <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#6b7280', lineHeight: '1.6' }}>
                       Process refunds for completed payments. All refunds are processed through Razorpay.
                     </div>
                     <button
@@ -4089,15 +4003,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🔒 PCI DSS Compliance
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#6b7280', lineHeight: '1.6' }}>
+                    <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#6b7280', lineHeight: '1.6' }}>
                       Payment Card Industry Data Security Standard compliance settings for secure payment processing.
                     </div>
                     {[
@@ -4105,15 +4019,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'enableCardTokenization', label: 'Enable card tokenization (save cards securely)' },
                       { key: 'requireCvvForSavedCards', label: 'Require CVV for saved card payments' }
                     ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#1f2937' }}>{label}</div>
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
                         <div
                           onClick={() => handleInputChange(key, !formData[key])}
                           style={{
                             width: '52px',
                             height: '28px',
                             borderRadius: '14px',
-                            background: formData[key] ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'background 0.2s'
@@ -4134,7 +4048,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       </div>
                     ))}
                     <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#374151', marginBottom: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
                         Card data retention period (days)
                       </label>
                       <input
@@ -4146,16 +4060,16 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#2d2d44' : '#d1d5db'}`,
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#1a1a2e' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#1f2937',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
                           outline: 'none',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
-                      <div style={{ fontSize: '13px', color: darkMode ? '#8b8b9e' : '#6b7280', marginTop: '8px' }}>
+                      <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '8px' }}>
                         Maximum time to retain card data for security compliance
                       </div>
                     </div>
@@ -4164,15 +4078,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
 
                 <div style={{
                   padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#252538' : '#f9fafb'),
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
                   borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937' }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
                     🛡️ GDPR Compliance
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#6b7280', lineHeight: '1.6' }}>
+                    <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#6b7280', lineHeight: '1.6' }}>
                       General Data Protection Regulation compliance for customer data handling.
                     </div>
                     {[
@@ -4180,15 +4094,15 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'enableDataExport', label: 'Allow customer data export requests' },
                       { key: 'enableDataDeletion', label: 'Allow customer data deletion requests' }
                     ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#1a1a2e' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#1f2937' }}>{label}</div>
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
                         <div
                           onClick={() => handleInputChange(key, !formData[key])}
                           style={{
                             width: '52px',
                             height: '28px',
                             borderRadius: '14px',
-                            background: formData[key] ? '#10b981' : (darkMode ? '#2d2d44' : '#d1d5db'),
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'background 0.2s'
@@ -4383,7 +4297,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                               onClick={() => handleInputChange(tabId, { ...tabSettings, [setting.key]: !tabSettings[setting.key] })}
                               style={{
                                 width: '40px', height: '22px', flexShrink: 0,
-                                background: tabSettings[setting.key] ? '#10b981' : '#2d2d48',
+                                background: tabSettings[setting.key] ? '#10b981' : '#000000',
                                 borderRadius: '11px', position: 'relative', cursor: 'pointer',
                                 transition: 'background 0.2s', marginLeft: '12px'
                               }}
@@ -4436,7 +4350,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       height: '100%',
       background: screenSize === 'small'
         ? (darkMode ? '#0f0f1e' : '#f2f2f7')
-        : (darkMode ? '#1a1a2e' : '#f5f7fa'),
+        : (darkMode ? '#000000' : '#f5f7fa'),
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
       overflow: 'hidden'
     }}>
@@ -4490,7 +4404,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             {/* Center: title */}
             <span style={{
               fontSize: '17px', fontWeight: '600',
-              color: darkMode ? '#ffffff' : '#111827',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               position: 'absolute', left: '50%',
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
@@ -4528,7 +4442,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   {/* Group label */}
                   <div style={{
                     fontSize: '12px', fontWeight: '700',
-                    color: darkMode ? '#4b5563' : '#8e8e93',
+                    color: darkMode ? '#222222' : '#8e8e93',
                     textTransform: 'uppercase', letterSpacing: '0.07em',
                     paddingLeft: '4px', marginBottom: '8px',
                   }}>
@@ -4578,7 +4492,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             fontSize: '16px', fontWeight: '500',
-                            color: darkMode ? '#f9fafb' : '#111827',
+                            color: darkMode ? '#f9fafb' : '#0a0a0a',
                           }}>
                             {section.label}
                           </div>
@@ -4587,7 +4501,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         {/* Chevron */}
                         <span style={{
                           fontSize: '18px',
-                          color: darkMode ? '#374151' : '#c7c7cc',
+                          color: darkMode ? '#111111' : '#c7c7cc',
                           flexShrink: 0,
                         }}>›</span>
                       </button>
@@ -4633,7 +4547,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     style={{
                       flex: 1, padding: '13px',
                       background: darkMode ? 'rgba(255,255,255,0.08)' : '#f3f4f6',
-                      color: darkMode ? '#d1d5db' : '#374151',
+                      color: darkMode ? '#d1d5db' : '#111111',
                       border: 'none', borderRadius: '12px',
                       fontSize: '15px', fontWeight: '500',
                       cursor: 'pointer',
@@ -4672,17 +4586,17 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         {/* Sidebar */}
         <div style={{
           width: '280px',
-          background: darkMode ? '#1f1f35' : '#ffffff',
-          borderRight: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+          background: darkMode ? '#0a0a0a' : '#ffffff',
+          borderRight: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
           padding: '20px',
           overflowY: 'auto',
           flexShrink: 0
         }}>
           <div style={{ margin: '0 0 24px' }}>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937', marginBottom: '4px' }}>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
               Settings
             </div>
-            <div style={{ fontSize: '14px', color: darkMode ? '#8b8b9e' : '#6b7280' }}>
+            <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#6b7280' }}>
               Configure your bakery
             </div>
           </div>
@@ -4703,7 +4617,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     style={{
                       padding: '12px 16px',
                       background: activeSection === section.id ? (darkMode ? '#6366f1' : '#eff6ff') : 'transparent',
-                      color: activeSection === section.id ? '#ffffff' : (darkMode ? '#e0e0e0' : '#374151'),
+                      color: activeSection === section.id ? '#ffffff' : (darkMode ? '#e0e0e0' : '#111111'),
                       border: activeSection === section.id ? 'none' : '1px solid transparent',
                       borderRadius: '10px',
                       fontSize: '14px', fontWeight: '500',
@@ -4727,24 +4641,24 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
           flex: 1,
           padding: '24px',
           overflow: 'auto',
-          background: darkMode ? '#1a1a2e' : '#f5f7fa',
+          background: darkMode ? '#000000' : '#f5f7fa',
           minHeight: 0
         }}>
           <div style={{
-            background: darkMode ? '#1f1f35' : '#ffffff',
+            background: darkMode ? '#0a0a0a' : '#ffffff',
             borderRadius: '12px',
             padding: '24px',
             maxWidth: activeSection === 'qr' ? '1100px' : '700px',
-            border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
             margin: '0 auto',
             transition: 'max-width 0.2s ease-in-out',
           }}>
             <div style={{
               margin: '0 0 24px',
               fontSize: '18px', fontWeight: '700',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               paddingBottom: '16px',
-              borderBottom: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`
+              borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
             }}>
               {activeSectionMeta?.label}
             </div>
@@ -4755,7 +4669,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
             <div style={{
               display: 'flex', gap: '12px',
               marginTop: '24px', paddingTop: '20px',
-              borderTop: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+              borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
               justifyContent: 'flex-end',
             }}>
               <button
@@ -4763,9 +4677,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 disabled={!hasChanges}
                 style={{
                   padding: '10px 24px',
-                  background: hasChanges ? (darkMode ? '#252538' : '#f9fafb') : (darkMode ? '#1a1a2e' : '#f3f4f6'),
-                  color: hasChanges ? (darkMode ? '#e0e0e0' : '#374151') : '#9ca3af',
-                  border: `1px solid ${darkMode ? '#2d2d44' : '#e5e7eb'}`,
+                  background: hasChanges ? (darkMode ? '#111111' : '#f9fafb') : (darkMode ? '#000000' : '#f3f4f6'),
+                  color: hasChanges ? (darkMode ? '#e0e0e0' : '#111111') : '#9ca3af',
+                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '10px', fontSize: '14px', fontWeight: '500',
                   cursor: hasChanges ? 'pointer' : 'not-allowed',
                   transition: 'all 0.15s',
@@ -4776,7 +4690,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 disabled={!hasChanges}
                 style={{
                   padding: '10px 24px',
-                  background: hasChanges ? '#6366f1' : (darkMode ? '#252538' : '#e5e7eb'),
+                  background: hasChanges ? '#6366f1' : (darkMode ? '#111111' : '#e5e7eb'),
                   color: hasChanges ? '#ffffff' : '#9ca3af',
                   border: 'none', borderRadius: '10px',
                   fontSize: '14px', fontWeight: '600',

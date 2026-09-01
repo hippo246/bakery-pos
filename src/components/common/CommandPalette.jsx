@@ -368,7 +368,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
             display: "flex",
             alignItems: "center",
             gap: 16,
-            background: "#2d2d44",
+            background: "#222222",
             padding: "16px 20px",
             borderRadius: "12px",
             border: "2px solid #3d3d5c",
@@ -422,7 +422,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
               border: "1px solid #3d3d5c",
               borderRadius: "6px",
               fontSize: isMobile ? 13 : 12,
-              color: "#8b8b9e",
+              color: "#888888",
               fontWeight: 600
             }}>
               ESC
@@ -454,7 +454,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
             <div style={{
               padding: 48,
               textAlign: "center",
-              color: "#8b8b9e"
+              color: "#888888"
             }}>
               <div style={{ fontSize: 56, marginBottom: 20, opacity: 0.5 }}>🔍</div>
               <div style={{ fontSize: 16, marginBottom: 10, fontWeight: 600, color: "#e0e0e0" }}>No results found</div>
@@ -473,7 +473,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   style={{
                     padding: "12px 24px",
-                    background: "#2d2d44",
+                    background: "#222222",
                     border: "1px solid #3d3d5c",
                     borderRadius: "10px",
                     color: "#e0e0e0",
@@ -488,7 +488,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = "#3d3d5c";
-                    e.currentTarget.style.background = "#2d2d44";
+                    e.currentTarget.style.background = "#222222";
                   }}
                 >
                   Open Settings
@@ -501,7 +501,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   style={{
                     padding: "12px 24px",
-                    background: "#2d2d44",
+                    background: "#222222",
                     border: "1px solid #3d3d5c",
                     borderRadius: "10px",
                     color: "#e0e0e0",
@@ -516,7 +516,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = "#3d3d5c";
-                    e.currentTarget.style.background = "#2d2d44";
+                    e.currentTarget.style.background = "#222222";
                   }}
                 >
                   Create New Order
@@ -529,7 +529,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   style={{
                     padding: "12px 24px",
-                    background: "#2d2d44",
+                    background: "#222222",
                     border: "1px solid #3d3d5c",
                     borderRadius: "10px",
                     color: "#e0e0e0",
@@ -544,7 +544,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = "#3d3d5c";
-                    e.currentTarget.style.background = "#2d2d44";
+                    e.currentTarget.style.background = "#222222";
                   }}
                 >
                   Add Guest
@@ -556,7 +556,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   style={{
                     padding: "12px 24px",
-                    background: "#2d2d44",
+                    background: "#222222",
                     border: "1px solid #3d3d5c",
                     borderRadius: "10px",
                     color: "#e0e0e0",
@@ -571,7 +571,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = "#3d3d5c";
-                    e.currentTarget.style.background = "#2d2d44";
+                    e.currentTarget.style.background = "#222222";
                   }}
                 >
                   Clear Search
@@ -586,7 +586,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   padding: "8px 12px",
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "#8b8b9e",
+                  color: "#888888",
                   textTransform: "uppercase",
                   letterSpacing: "0.5px"
                 }}>
@@ -620,7 +620,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                     padding: isMobile ? "20px 24px" : "16px 20px",
                     borderRadius: "12px",
                     cursor: "pointer",
-                    background: index === selectedIndex ? "rgba(99, 102, 241, 0.2)" : "#2d2d44",
+                    background: index === selectedIndex ? "rgba(99, 102, 241, 0.2)" : "#222222",
                     border: index === selectedIndex ? "1px solid #6366f1" : "1px solid #3d3d5c",
                     display: "flex",
                     alignItems: "center",
@@ -636,7 +636,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                   }}
                   onMouseLeave={(e) => {
                     if (index !== selectedIndex) {
-                      e.currentTarget.style.background = "#2d2d44";
+                      e.currentTarget.style.background = "#222222";
                       e.currentTarget.style.borderColor = "#3d3d5c";
                     }
                   }}
@@ -653,7 +653,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                     </div>
                     <div style={{
                       fontSize: isMobile ? 14 : 12,
-                      color: "#8b8b9e"
+                      color: "#888888"
                     }}>
                       {item.description}
                     </div>
@@ -668,7 +668,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                       padding: isMobile ? "6px 10px" : "4px 8px",
                       background: "#1e1e2e",
                       borderRadius: "6px",
-                      color: "#8b8b9e",
+                      color: "#888888",
                       border: "1px solid #3d3d5c",
                       fontWeight: 600
                     }}>
@@ -681,7 +681,7 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
                         border: "1px solid #3d3d5c",
                         borderRadius: "6px",
                         fontSize: isMobile ? 13 : 11,
-                        color: "#8b8b9e",
+                        color: "#888888",
                         fontWeight: 600
                       }}>
                         {item.shortcut}
@@ -718,8 +718,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate, currentTab
           alignItems: "center",
           justifyContent: "space-between",
           fontSize: 11,
-          color: "#8b8b9e",
-          background: "#2d2d44"
+          color: "#888888",
+          background: "#222222"
         }}>
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
             <span><kbd style={{ padding: "2px 6px", background: "#1e1e2e", border: "1px solid #3d3d5c", borderRadius: "4px", fontWeight: 600 }}>↑↓</kbd> Navigate</span>

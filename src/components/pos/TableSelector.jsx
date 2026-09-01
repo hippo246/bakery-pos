@@ -17,7 +17,7 @@ export default function TableSelector({
       <div style={{
         fontSize: '14px',
         fontWeight: '600',
-        color: darkMode ? '#e0e0e0' : '#374151',
+        color: darkMode ? '#e0e0e0' : '#111111',
         marginBottom: '12px'
       }}>
         🪑 Table
@@ -38,7 +38,7 @@ export default function TableSelector({
                 : (darkMode ? 'rgba(255,255,255,0.05)' : '#f9fafb'),
               color: selectedTable?.id === table.id
                 ? '#ffffff'
-                : (darkMode ? '#8b8b9e' : '#6b7280'),
+                : (darkMode ? '#888888' : '#6b7280'),
               border: selectedTable?.id === table.id
                 ? 'none'
                 : `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e7eb'}`,

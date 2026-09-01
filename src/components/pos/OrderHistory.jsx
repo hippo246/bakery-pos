@@ -43,7 +43,7 @@ export default function OrderHistory({
       padding: screenSize === 'small' ? '0' : '16px'
     }}>
       <div style={{
-        background: darkMode ? '#1f2937' : '#ffffff',
+        background: darkMode ? '#0a0a0a' : '#ffffff',
         borderRadius: screenSize === 'small' ? '0' : '16px',
         padding: screenSize === 'small' ? '16px' : '24px',
         width: screenSize === 'small' ? '100vw' : '700px',
@@ -52,15 +52,15 @@ export default function OrderHistory({
         overflow: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937', margin: 0 }}>
+          <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
             📋 Order History
           </h3>
           <button
             onClick={onClose}
             style={{
               padding: '8px 12px',
-              background: darkMode ? '#374151' : '#f3f4f6',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              background: darkMode ? '#111111' : '#f3f4f6',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -82,10 +82,10 @@ export default function OrderHistory({
             style={{
               flex: 1,
               padding: '10px 14px',
-              background: darkMode ? '#1f2937' : '#ffffff',
-              border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+              background: darkMode ? '#0a0a0a' : '#ffffff',
+              border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
               borderRadius: '8px',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               fontSize: '14px'
             }}
           />
@@ -94,10 +94,10 @@ export default function OrderHistory({
             onChange={(e) => setFilter(e.target.value)}
             style={{
               padding: '10px 14px',
-              background: darkMode ? '#1f2937' : '#ffffff',
-              border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+              background: darkMode ? '#0a0a0a' : '#ffffff',
+              border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
               borderRadius: '8px',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               fontSize: '14px'
             }}
           >
@@ -110,10 +110,10 @@ export default function OrderHistory({
             onChange={(e) => setSort(e.target.value)}
             style={{
               padding: '10px 14px',
-              background: darkMode ? '#1f2937' : '#ffffff',
-              border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+              background: darkMode ? '#0a0a0a' : '#ffffff',
+              border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
               borderRadius: '8px',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               fontSize: '14px'
             }}
           >
@@ -170,7 +170,7 @@ export default function OrderHistory({
                   <div style={{
                     fontSize: '14px',
                     fontWeight: '600',
-                    color: darkMode ? '#ffffff' : '#1f2937'
+                    color: darkMode ? '#ffffff' : '#0a0a0a'
                   }}>
                     {order.invoiceNumber || order.id}
                   </div>
@@ -190,7 +190,7 @@ export default function OrderHistory({
                 </div>
                 <div style={{
                   fontSize: '12px',
-                  color: darkMode ? '#8b8b9e' : '#6b7280',
+                  color: darkMode ? '#888888' : '#6b7280',
                   marginBottom: '4px'
                 }}>
                   {order.customerName || 'Walk-in'}

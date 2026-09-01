@@ -48,14 +48,14 @@ export default function QROrdersPanel({
               <div style={{
                 fontSize: '14px',
                 fontWeight: '600',
-                color: darkMode ? '#ffffff' : '#1f2937',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
                 marginBottom: '4px'
               }}>
                 {order.customerName || 'Walk-in'}
               </div>
               <div style={{
                 fontSize: '12px',
-                color: darkMode ? '#8b8b9e' : '#6b7280'
+                color: darkMode ? '#888888' : '#6b7280'
               }}>
                 Table: {order.tableName || 'Counter'}
               </div>
@@ -90,7 +90,7 @@ export default function QROrdersPanel({
               style={{
                 flex: 1,
                 padding: '10px',
-                background: '#10b981',
+                background: darkMode ? '#059669' : '#10b981',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '8px',
@@ -105,8 +105,8 @@ export default function QROrdersPanel({
               onClick={() => onDismiss(order.id)}
               style={{
                 padding: '10px 16px',
-                background: darkMode ? '#374151' : '#f3f4f6',
-                color: darkMode ? '#ffffff' : '#1f2937',
+                background: darkMode ? '#111111' : '#f3f4f6',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '13px',

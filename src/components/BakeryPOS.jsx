@@ -110,7 +110,8 @@ export default function BakeryPOS({
   const mobileShowLabels    = settings?.mobileShowLabels    ?? true;
   const mobileNavStyle      = settings?.mobileNavStyle      ?? 'pill';   // 'pill' | 'underline' | 'icon-only'
   const mobileIconSize      = settings?.mobileIconSize      ?? 'md';     // 'sm' | 'md' | 'lg'
-  const tabletLayoutMode    = settings?.tabletLayoutMode    ?? 'sidebar'; // 'sidebar' | 'topbar'
+  // Force tablets to use topbar layout (same as laptops)
+  const tabletLayoutMode    = isTablet ? 'topbar' : (settings?.tabletLayoutMode ?? 'topbar'); // 'sidebar' | 'topbar'
   const tabletSidebarMode   = settings?.tabletSidebarMode   ?? 'compact'; // 'compact' | 'full' | 'hidden'
   const storeName           = settings?.storeName           || 'BakeryPOS';
 
@@ -161,23 +162,16 @@ export default function BakeryPOS({
   /* ── Content padding-left for desktop sidebar / tablet sidebar ──── */
   const getContentPaddingLeft = () => {
     if (isMobile) return '0';
-    if (isTablet) {
-      if (tabletLayoutMode === 'topbar') return '0';
-      if (tabletSidebarMode === 'hidden') return '0';
-      if (tabletSidebarMode === 'full')    return tabletSidebarOpen ? '240px' : '64px';
-      return '64px'; // compact always-visible icon sidebar
-    }
+    if (isTablet) return '0'; // Tablets always use topbar now
     return '0'; // desktop uses header tab bar
   };
 
   /* ────────────────────────────────────────────────────────────────── */
-  /* ── Tablet sidebar dimensions                                    ── */
+  /* ── Tablet sidebar dimensions (disabled - tablets now use topbar) ── */
   const TABLET_SIDEBAR_FULL_W  = 220;
   const TABLET_SIDEBAR_ICON_W  = 64;
-  const showTabletSidebar      = isTablet && tabletLayoutMode === 'sidebar' && tabletSidebarMode !== 'hidden';
-  const tabletSidebarW         = tabletSidebarMode === 'full'
-    ? (tabletSidebarOpen ? TABLET_SIDEBAR_FULL_W : TABLET_SIDEBAR_ICON_W)
-    : TABLET_SIDEBAR_ICON_W;
+  const showTabletSidebar      = false; // Tablets always use topbar now
+  const tabletSidebarW         = 0;
 
   /* ── Theme colors ────────────────────────────────────────────────── */
   const dm = darkMode; // shorthand
@@ -338,9 +332,9 @@ export default function BakeryPOS({
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          TABLET TOPBAR (768-1279px with topbar mode)
+          TABLET TOPBAR (768-1279px - always uses topbar like laptops)
           ══════════════════════════════════════════════════════════════ */}
-      {isTablet && tabletLayoutMode === 'topbar' && (
+      {isTablet && (
         <TabletTopbar
           activeTab={activeTab}
           onNavigate={handleNavigate}
@@ -359,15 +353,15 @@ export default function BakeryPOS({
         />
       )}
 
-      {/* Tablet dropdowns for topbar mode */}
-      {menuDropdownOpen && isTablet && tabletLayoutMode === 'topbar' && (
+      {/* Tablet dropdowns (tablets always use topbar) */}
+      {menuDropdownOpen && isTablet && (
         <DesktopDropdown ref={null} coords={dropdownCoords} items={[
           { id: 'menu',    label: 'Menu Items' },
           { id: 'recipes', label: 'Recipes' },
           { id: 'waste',   label: 'Waste' },
         ]} activeTab={activeTab} onNavigate={(id) => { handleNavigate(id); setMenuDropdownOpen(false); }} />
       )}
-      {customersDropdownOpen && isTablet && tabletLayoutMode === 'topbar' && (
+      {customersDropdownOpen && isTablet && (
         <DesktopDropdown ref={null} coords={dropdownCoords} items={[
           { id: 'crm',          label: 'Customers' },
           { id: 'reservations', label: 'Reservations' },
@@ -375,22 +369,8 @@ export default function BakeryPOS({
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          TABLET SIDEBAR (medium/tablet breakpoints)
+          TABLET SIDEBAR (disabled - tablets now use topbar like laptops)
           ══════════════════════════════════════════════════════════════ */}
-      {showTabletSidebar && (
-        <TabletSidebar
-          activeTab={activeTab}
-          onNavigate={handleNavigate}
-          isOpen={tabletSidebarOpen}
-          onToggle={() => setTabletSidebarOpen(p => !p)}
-          mode={tabletSidebarMode}
-          width={tabletSidebarW}
-          darkMode={dm}
-          storeName={storeName}
-          onToggleTheme={() => setDarkMode(p => !p)}
-          isDark={dm}
-        />
-      )}
 
       {/* ══════════════════════════════════════════════════════════════
           MOBILE HEADER  (phone only — top mini bar)
@@ -413,7 +393,7 @@ export default function BakeryPOS({
         overflow: 'auto',
         minHeight: 0,
         WebkitOverflowScrolling: 'touch',
-        paddingLeft: showTabletSidebar ? `${tabletSidebarW}px` : '0',
+        paddingLeft: isTablet ? '0' : (showTabletSidebar ? `${tabletSidebarW}px` : '0'),
         paddingBottom: isMobile && mobileNavPosition === 'bottom'
           ? 'calc(70px + env(safe-area-inset-bottom))'
           : '0',
@@ -507,14 +487,14 @@ function DesktopDropdown({ coords, items, activeTab, onNavigate }) {
           style={{
             width: '100%', textAlign: 'left',
             padding: '10px 16px',
-            background: activeTab === item.id ? '#6366f1' : '#2d2d44',
+            background: activeTab === item.id ? '#6366f1' : '#222222',
             color: activeTab === item.id ? '#ffffff' : '#e0e0e0',
             border: 'none', borderRadius: '6px',
             fontSize: '13px', fontWeight: activeTab === item.id ? '600' : '400',
             cursor: 'pointer', transition: 'all 0.15s ease',
           }}
           onMouseEnter={e => { if (activeTab !== item.id) e.currentTarget.style.background = '#3d3d5c'; }}
-          onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = '#2d2d44'; }}
+          onMouseLeave={e => { if (activeTab !== item.id) e.currentTarget.style.background = '#222222'; }}
         >
           {item.label}
         </button>
@@ -556,7 +536,7 @@ function MobileHeader({ storeName, activeTab, darkMode: dm, onToggleTheme, navPo
         <div>
           <div style={{
             fontSize: '15px', fontWeight: '700', lineHeight: 1,
-            color: dm ? '#ffffff' : '#111827',
+            color: dm ? '#ffffff' : '#0a0a0a',
             letterSpacing: '-0.02em',
           }}>{storeName}</div>
           {currentTab && (
@@ -727,8 +707,8 @@ function NavBarButton({ tab, isActive, navStyle, showLabels, iconPx, darkMode: d
 /* ── Mobile More Drawer ──────────────────────────────────────────────── */
 function MobileMoreDrawer({ moreTabs, activeTab, navPosition, darkMode: dm, onNavigate, onClose }) {
   const isBottom = navPosition !== 'top';
-  const bg = dm ? '#1a1a2e' : '#ffffff';
-  const border = dm ? '#2d2d44' : '#e5e7eb';
+  const bg = dm ? '#000000' : '#ffffff';
+  const border = dm ? '#222222' : '#e5e7eb';
 
   return (
     <>
@@ -804,7 +784,7 @@ function MobileMoreDrawer({ moreTabs, activeTab, navPosition, darkMode: dm, onNa
                   background: isActive
                     ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
                     : (dm ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
-                  color: isActive ? '#6366f1' : (dm ? '#d1d5db' : '#374151'),
+                  color: isActive ? '#6366f1' : (dm ? '#d1d5db' : '#111111'),
                   border: isActive
                     ? '1px solid rgba(99,102,241,0.4)'
                     : `1px solid ${dm ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
@@ -834,7 +814,7 @@ function TabletSidebar({
   activeTab, onNavigate, isOpen, onToggle, mode,
   width, darkMode: dm, storeName, onToggleTheme, isDark,
 }) {
-  const bg     = dm ? '#111827' : '#ffffff';
+  const bg     = dm ? '#0a0a0a' : '#ffffff';
   const border = dm ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
   const accent = '#6366f1';
 
@@ -851,7 +831,7 @@ function TabletSidebar({
       {showText && (
         <div style={{
           padding: '4px 12px', fontSize: '10px', fontWeight: '700',
-          color: dm ? '#4b5563' : '#9ca3af', textTransform: 'uppercase',
+          color: dm ? '#222222' : '#9ca3af', textTransform: 'uppercase',
           letterSpacing: '0.08em', marginBottom: '2px',
         }}>
           {label}
@@ -943,7 +923,7 @@ function TabletSidebar({
             fontSize: '16px',
           }}>🥐</div>
           {showText && (
-            <span style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#fff' : '#111827', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: dm ? '#fff' : '#0a0a0a', whiteSpace: 'nowrap' }}>
               {storeName}
             </span>
           )}

@@ -45,7 +45,7 @@ export default function ModifiersModal({
       padding: screenSize === 'small' ? '0' : '16px'
     }}>
       <div style={{
-        background: darkMode ? '#1f2937' : '#ffffff',
+        background: darkMode ? '#0a0a0a' : '#ffffff',
         borderRadius: screenSize === 'small' ? '0' : '16px',
         padding: screenSize === 'small' ? '16px' : '24px',
         width: screenSize === 'small' ? '100vw' : '500px',
@@ -54,15 +54,15 @@ export default function ModifiersModal({
         overflow: 'auto'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#1f2937', margin: 0 }}>
+          <h3 style={{ fontSize: screenSize === 'small' ? '18px' : '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
             Customize {item.name}
           </h3>
           <button
             onClick={onClose}
             style={{
               padding: '8px 12px',
-              background: darkMode ? '#374151' : '#f3f4f6',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              background: darkMode ? '#111111' : '#f3f4f6',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -78,7 +78,7 @@ export default function ModifiersModal({
           <div style={{
             fontSize: '14px',
             fontWeight: '600',
-            color: darkMode ? '#e0e0e0' : '#374151',
+            color: darkMode ? '#e0e0e0' : '#111111',
             marginBottom: '12px'
           }}>
             Select Modifiers
@@ -108,7 +108,7 @@ export default function ModifiersModal({
                 <span style={{
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: darkMode ? '#e0e0e0' : '#374151'
+                  color: darkMode ? '#e0e0e0' : '#111111'
                 }}>
                   {modifier.name}
                 </span>
@@ -135,8 +135,8 @@ export default function ModifiersModal({
             style={{
               flex: 1,
               padding: '12px',
-              background: darkMode ? '#374151' : '#f3f4f6',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              background: darkMode ? '#111111' : '#f3f4f6',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               border: 'none',
               borderRadius: '8px',
               fontSize: '14px',
@@ -151,7 +151,7 @@ export default function ModifiersModal({
             style={{
               flex: 1,
               padding: '12px',
-              background: '#6366f1',
+              background: darkMode ? '#4f46e5' : '#6366f1',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',

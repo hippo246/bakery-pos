@@ -133,7 +133,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
             <div style={{
               fontSize: screenSize === 'small' ? '20px' : '28px',
               fontWeight: '800',
-              color: '#1e293b',
+              color: '#0a0a0a',
               letterSpacing: '-0.5px'
             }}>
               🛵 Aggregator Integration
@@ -247,7 +247,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#1e293b' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#0a0a0a' }}>
                   📋 Recent Online Orders
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -286,11 +286,11 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                   <tbody>
                     {onlineOrders.map((order, index) => (
                       <tr key={order.id} style={{ borderBottom: index < onlineOrders.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1e293b', fontWeight: '600' }}>{order.id}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#0a0a0a', fontWeight: '600' }}>{order.id}</td>
                         <td style={{ padding: '12px 16px', fontSize: '13px', color: '#64748b' }}>{order.aggregator}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1e293b' }}>{order.customer}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#0a0a0a' }}>{order.customer}</td>
                         <td style={{ padding: '12px 16px', fontSize: '13px', color: '#64748b' }}>{order.items}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1e293b', fontWeight: '600' }}>₹{order.total}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: '#0a0a0a', fontWeight: '600' }}>₹{order.total}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -364,7 +364,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                 padding: '20px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>{account.name}</div>
+                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#0a0a0a' }}>{account.name}</div>
                   <span style={{
                     padding: '4px 12px',
                     borderRadius: '20px',
@@ -379,21 +379,21 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
 
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>API Key</div>
-                  <div style={{ fontSize: '14px', color: '#1e293b', fontFamily: 'monospace' }}>{account.apiKey || 'Not configured'}</div>
+                  <div style={{ fontSize: '14px', color: '#0a0a0a', fontFamily: 'monospace' }}>{account.apiKey || 'Not configured'}</div>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Commission Rate</div>
-                  <div style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{account.commission}%</div>
+                  <div style={{ fontSize: '14px', color: '#0a0a0a', fontWeight: '600' }}>{account.commission}%</div>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Last Sync</div>
-                  <div style={{ fontSize: '14px', color: '#1e293b' }}>{account.lastSync}</div>
+                  <div style={{ fontSize: '14px', color: '#0a0a0a' }}>{account.lastSync}</div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: '500' }}>Auto-Accept</div>
+                  <div style={{ fontSize: '13px', color: '#0a0a0a', fontWeight: '500' }}>Auto-Accept</div>
                   <button
                     onClick={() => handleToggleAutoAccept(account.id)}
                     style={{
@@ -457,14 +457,14 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
             padding: screenSize === 'small' ? '20px' : '32px',
             maxWidth: '600px'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '24px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '24px' }}>
               ⚙️ Auto-Acceptance Settings
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
                     Enable Auto-Acceptance
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
@@ -489,7 +489,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Maximum Preparation Time (minutes)
                 </label>
                 <input
@@ -508,7 +508,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
                     Auto-Reject Out of Stock Items
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
@@ -533,7 +533,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Auto-Accept Hours
                 </label>
                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -595,7 +595,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               padding: screenSize === 'small' ? '16px' : '20px',
               borderBottom: '1px solid #e5e7eb'
             }}>
-              <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#1e293b' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '700', color: '#0a0a0a' }}>
                 📊 Commission Tracking
               </div>
             </div>
@@ -616,9 +616,9 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                 <tbody>
                   {commissionData.map((data, index) => (
                     <tr key={index} style={{ borderBottom: index < commissionData.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{data.aggregator}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#1e293b' }}>{data.totalOrders}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>₹{data.grossRevenue.toLocaleString()}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0a0a0a', fontWeight: '600' }}>{data.aggregator}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#0a0a0a' }}>{data.totalOrders}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#0a0a0a', fontWeight: '600' }}>₹{data.grossRevenue.toLocaleString()}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>{((data.commission / data.grossRevenue) * 100).toFixed(1)}%</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#ef4444', fontWeight: '600' }}>₹{data.commission.toLocaleString()}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#10b981', fontWeight: '600' }}>₹{data.netRevenue.toLocaleString()}</td>
@@ -628,9 +628,9 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                 </tbody>
                 <tfoot>
                   <tr style={{ background: '#f8fafc', borderTop: '2px solid #e5e7eb' }}>
-                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '700' }}>Total</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '700' }}>{totalOnlineOrders}</td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#1e293b', fontWeight: '700' }}>₹{totalGrossRevenue.toLocaleString()}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#0a0a0a', fontWeight: '700' }}>Total</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#0a0a0a', fontWeight: '700' }}>{totalOnlineOrders}</td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#0a0a0a', fontWeight: '700' }}>₹{totalGrossRevenue.toLocaleString()}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#64748b' }}>-</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#ef4444', fontWeight: '700' }}>₹{totalCommission.toLocaleString()}</td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '14px', color: '#10b981', fontWeight: '700' }}>₹{totalNetRevenue.toLocaleString()}</td>
@@ -651,14 +651,14 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
             padding: screenSize === 'small' ? '20px' : '32px',
             maxWidth: '700px'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '24px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '24px' }}>
               🌐 Native Online Ordering
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
                     Enable Native Ordering
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
@@ -683,7 +683,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Domain
                 </label>
                 <input
@@ -702,7 +702,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                   Theme Color
                 </label>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -715,7 +715,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                         height: '40px',
                         borderRadius: '8px',
                         background: color,
-                        border: nativeOrdering.themeColor === color ? '3px solid #1e293b' : '2px solid #e5e7eb',
+                        border: nativeOrdering.themeColor === color ? '3px solid #0a0a0a' : '2px solid #e5e7eb',
                         cursor: 'pointer'
                       }}
                     />
@@ -725,7 +725,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                     Delivery Fee (₹)
                   </label>
                   <input
@@ -742,7 +742,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
                     Min Order Value (₹)
                   </label>
                   <input
@@ -817,7 +817,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
             <div style={{
               fontSize: '18px',
               fontWeight: '700',
-              color: '#1e293b',
+              color: '#0a0a0a',
               marginBottom: '20px'
             }}>
               Add Aggregator Account
@@ -825,7 +825,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   Platform
                 </label>
                 <select style={{
@@ -843,7 +843,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   API Key
                 </label>
                 <input
@@ -860,7 +860,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#111111', marginBottom: '6px' }}>
                   Commission Rate (%)
                 </label>
                 <input
@@ -883,7 +883,7 @@ export default function AggregatorIntegration({ orders = [], onNavigate }) {
                     flex: 1,
                     padding: '12px',
                     background: '#f9fafb',
-                    color: '#111827',
+                    color: '#0a0a0a',
                     border: '1px solid #e5e7eb',
                     borderRadius: '6px',
                     fontSize: '14px',
@@ -933,7 +933,7 @@ function StatCard({ label, value, icon, color, screenSize }) {
         </div>
         <div style={{ fontSize: '24px' }}>{icon}</div>
       </div>
-      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: '#1e293b' }}>
+      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: '#0a0a0a' }}>
         {value}
       </div>
     </div>

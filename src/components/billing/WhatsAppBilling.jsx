@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function WhatsAppBilling({ orders, customers, onNavigate }) {
+export default function WhatsAppBilling({ orders, customers, onNavigate, darkMode = true }) {
   const [activeTab, setActiveTab] = useState('whatsapp');
   const [screenSize, setScreenSize] = useState('large');
   const [showSendModal, setShowSendModal] = useState(false);
@@ -77,21 +77,21 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
     } : bill));
   };
 
-  const StatCard = ({ label, value, icon, color, screenSize }) => (
+  const StatCard = ({ label, value, icon, color, screenSize, darkMode }) => (
     <div style={{
-      background: '#ffffff',
+      background: darkMode ? '#111111' : '#ffffff',
       borderRadius: '12px',
-      border: '1px solid #e5e7eb',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+      boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
       padding: screenSize === 'small' ? '16px' : '20px'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {label}
         </div>
         <div style={{ fontSize: '24px' }}>{icon}</div>
       </div>
-      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: '#1e293b' }}>
+      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
         {value}
       </div>
     </div>
@@ -102,15 +102,15 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: '#f8fafc',
+      background: darkMode ? '#000000' : '#f8fafc',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       {/* Header */}
       <div style={{
-        background: '#ffffff',
+        background: darkMode ? '#111111' : '#ffffff',
         padding: screenSize === 'small' ? '16px' : '24px 32px',
-        borderBottom: '1px solid #e5e7eb',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+        boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <div style={{
           display: 'flex',
@@ -123,12 +123,12 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
             <div style={{
               fontSize: screenSize === 'small' ? '20px' : '28px',
               fontWeight: '800',
-              color: '#1e293b',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               letterSpacing: '-0.5px'
             }}>
               📱 WhatsApp Billing & E-Way Bills
             </div>
-            <div style={{ color: '#64748b', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
+            <div style={{ color: darkMode ? '#888888' : '#64748b', fontSize: screenSize === 'small' ? '12px' : '14px' }}>
               Send e-bills via WhatsApp and generate E-way bills
             </div>
           </div>
@@ -137,9 +137,9 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
 
       {/* Tabs */}
       <div style={{
-        background: '#ffffff',
+        background: darkMode ? '#111111' : '#ffffff',
         padding: screenSize === 'small' ? '12px 16px' : '16px 32px',
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
         display: 'flex',
         gap: '8px',
         overflow: 'auto'
@@ -151,8 +151,8 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
             style={{
               padding: screenSize === 'small' ? '8px 16px' : '10px 20px',
               background: activeTab === tab ? '#25d366' : 'transparent',
-              color: activeTab === tab ? '#ffffff' : '#64748b',
-              border: activeTab === tab ? 'none' : '1px solid #e5e7eb',
+              color: activeTab === tab ? '#ffffff' : darkMode ? '#888888' : '#64748b',
+              border: activeTab === tab ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
               borderRadius: '6px',
               fontSize: screenSize === 'small' ? '12px' : '13px',
               fontWeight: '500',
@@ -177,48 +177,48 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
               gap: screenSize === 'small' ? '12px' : '20px',
               marginBottom: screenSize === 'small' ? '16px' : '24px'
             }}>
-              <StatCard label="Bills Sent" value={sentBills.length} icon="📤" color="#25d366" screenSize={screenSize} />
-              <StatCard label="Delivered" value={sentBills.filter(b => b.status === 'delivered').length} icon="✅" color="#10b981" screenSize={screenSize} />
-              <StatCard label="Failed" value={sentBills.filter(b => b.status === 'failed').length} icon="❌" color="#ef4444" screenSize={screenSize} />
-              <StatCard label="Success Rate" value="67%" icon="📊" color="#6366f1" screenSize={screenSize} />
+              <StatCard label="Bills Sent" value={sentBills.length} icon="📤" color="#25d366" screenSize={screenSize} darkMode={darkMode} />
+              <StatCard label="Delivered" value={sentBills.filter(b => b.status === 'delivered').length} icon="✅" color="#10b981" screenSize={screenSize} darkMode={darkMode} />
+              <StatCard label="Failed" value={sentBills.filter(b => b.status === 'failed').length} icon="❌" color="#ef4444" screenSize={screenSize} darkMode={darkMode} />
+              <StatCard label="Success Rate" value="67%" icon="📊" color="#6366f1" screenSize={screenSize} darkMode={darkMode} />
             </div>
 
             {/* Sent Bills Table */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
               overflow: 'hidden',
               marginBottom: '24px'
             }}>
               <div style={{
                 padding: screenSize === 'small' ? '16px' : '20px',
-                borderBottom: '1px solid #e5e7eb',
+                borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 fontSize: screenSize === 'small' ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#1e293b'
+                color: darkMode ? '#ffffff' : '#0a0a0a'
               }}>
                 📤 Sent WhatsApp Bills
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Customer</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Phone</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Sent At</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                    <tr style={{ background: darkMode ? '#000000' : '#f8fafc', borderBottom: `2px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Customer</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Phone</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Sent At</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sentBills.map((bill, index) => (
-                      <tr key={bill.id} style={{ borderBottom: index < sentBills.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{bill.orderId}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{bill.customer}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{bill.phone}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{bill.sentAt}</td>
+                      <tr key={bill.id} style={{ borderBottom: index < sentBills.length - 1 ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600' }}>{bill.orderId}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{bill.customer}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{bill.phone}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{bill.sentAt}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -240,30 +240,30 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
 
             {/* Sample Orders for Sending */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
               overflow: 'hidden'
             }}>
               <div style={{
                 padding: screenSize === 'small' ? '16px' : '20px',
-                borderBottom: '1px solid #e5e7eb',
+                borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 fontSize: screenSize === 'small' ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#1e293b'
+                color: darkMode ? '#ffffff' : '#0a0a0a'
               }}>
                 📋 Orders (Send Bill via WhatsApp)
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Customer</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Amount</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Phone</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Action</th>
+                    <tr style={{ background: darkMode ? '#000000' : '#f8fafc', borderBottom: `2px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Customer</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Amount</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Phone</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -272,11 +272,11 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                       { id: 'ORD-007', customer: 'Anita Desai', amount: 890, phone: '+919876543214' },
                       { id: 'ORD-008', customer: 'Rajesh Verma', amount: 2100, phone: '+919876543215' }
                     ].map((order, index) => (
-                      <tr key={order.id} style={{ borderBottom: index < 2 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600' }}>{order.id}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{order.customer}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b', fontWeight: '600' }}>₹{order.amount}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{order.phone}</td>
+                      <tr key={order.id} style={{ borderBottom: index < 2 ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600' }}>{order.id}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{order.customer}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b', fontWeight: '600' }}>₹{order.amount}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{order.phone}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <button
                             onClick={() => handleSendWhatsApp(order)}
@@ -312,49 +312,49 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
               gap: screenSize === 'small' ? '12px' : '20px',
               marginBottom: screenSize === 'small' ? '16px' : '24px'
             }}>
-              <StatCard label="E-Way Bills" value={ewayBills.length} icon="📋" color="#6366f1" screenSize={screenSize} />
-              <StatCard label="Active" value={ewayBills.filter(b => b.status === 'active').length} icon="✅" color="#10b981" screenSize={screenSize} />
-              <StatCard label="Cancelled" value={ewayBills.filter(b => b.status === 'cancelled').length} icon="❌" color="#ef4444" screenSize={screenSize} />
-              <StatCard label="Expiring Soon" value="1" icon="⏰" color="#f59e0b" screenSize={screenSize} />
+              <StatCard label="E-Way Bills" value={ewayBills.length} icon="📋" color="#6366f1" screenSize={screenSize} darkMode={darkMode} />
+              <StatCard label="Active" value={ewayBills.filter(b => b.status === 'active').length} icon="✅" color="#10b981" screenSize={screenSize} darkMode={darkMode} />
+              <StatCard label="Cancelled" value={ewayBills.filter(b => b.status === 'cancelled').length} icon="❌" color="#ef4444" screenSize={screenSize} darkMode={darkMode} />
+              <StatCard label="Expiring Soon" value="1" icon="⏰" color="#f59e0b" screenSize={screenSize} darkMode={darkMode} />
             </div>
 
             {/* E-Way Bills Table */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
               overflow: 'hidden',
               marginBottom: '24px'
             }}>
               <div style={{
                 padding: screenSize === 'small' ? '16px' : '20px',
-                borderBottom: '1px solid #e5e7eb',
+                borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 fontSize: screenSize === 'small' ? '16px' : '18px',
                 fontWeight: '700',
-                color: '#1e293b'
+                color: darkMode ? '#ffffff' : '#0a0a0a'
               }}>
                 📋 Generated E-Way Bills
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>E-Way No</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Order ID</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Generated At</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Valid Until</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                    <tr style={{ background: darkMode ? '#000000' : '#f8fafc', borderBottom: `2px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>E-Way No</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Order ID</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Generated At</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Valid Until</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: darkMode ? '#888888' : '#64748b', textTransform: 'uppercase' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {ewayBills.map((bill, index) => (
-                      <tr key={bill.id} style={{ borderBottom: index < ewayBills.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#1e293b', fontWeight: '600', fontFamily: 'monospace' }}>{bill.ewayNo}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{bill.orderId}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{bill.generatedAt}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#64748b' }}>{bill.validUntil}</td>
+                      <tr key={bill.id} style={{ borderBottom: index < ewayBills.length - 1 ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '600', fontFamily: 'monospace' }}>{bill.ewayNo}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{bill.orderId}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{bill.generatedAt}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: darkMode ? '#888888' : '#64748b' }}>{bill.validUntil}</td>
                         <td style={{ padding: '12px 16px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -428,19 +428,19 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
 
             {/* Generate E-Way Bill Form */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
               padding: '24px'
             }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '20px' }}>
                 Generate New E-Way Bill
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#888888' : '#111111', marginBottom: '6px' }}>
                     Order ID
                   </label>
                   <input
@@ -449,14 +449,16 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#888888' : '#111111', marginBottom: '6px' }}>
                     Invoice Number
                   </label>
                   <input
@@ -465,14 +467,16 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#888888' : '#111111', marginBottom: '6px' }}>
                     Invoice Date
                   </label>
                   <input
@@ -480,14 +484,16 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: darkMode ? '#888888' : '#111111', marginBottom: '6px' }}>
                     Invoice Value (₹)
                   </label>
                   <input
@@ -496,9 +502,11 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
@@ -526,23 +534,23 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
             {/* WhatsApp Settings */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
               padding: '24px'
             }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '20px' }}>
                 📱 WhatsApp Settings
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
                       Enable WhatsApp Billing
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b' }}>
                       Allow sending bills via WhatsApp
                     </div>
                   </div>
@@ -550,8 +558,8 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     onClick={() => setWhatsappSettings({ ...whatsappSettings, enabled: !whatsappSettings.enabled })}
                     style={{
                       padding: '6px 16px',
-                      background: whatsappSettings.enabled ? '#25d366' : '#e5e7eb',
-                      color: whatsappSettings.enabled ? '#ffffff' : '#64748b',
+                      background: whatsappSettings.enabled ? '#25d366' : darkMode ? '#222222' : '#e5e7eb',
+                      color: whatsappSettings.enabled ? '#ffffff' : darkMode ? '#888888' : '#64748b',
                       border: 'none',
                       borderRadius: '20px',
                       fontSize: '12px',
@@ -565,10 +573,10 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
                       Auto-Send Bills
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b' }}>
                       Automatically send bills after order completion
                     </div>
                   </div>
@@ -576,8 +584,8 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     onClick={() => setWhatsappSettings({ ...whatsappSettings, autoSend: !whatsappSettings.autoSend })}
                     style={{
                       padding: '6px 16px',
-                      background: whatsappSettings.autoSend ? '#25d366' : '#e5e7eb',
-                      color: whatsappSettings.autoSend ? '#ffffff' : '#64748b',
+                      background: whatsappSettings.autoSend ? '#25d366' : darkMode ? '#222222' : '#e5e7eb',
+                      color: whatsappSettings.autoSend ? '#ffffff' : darkMode ? '#888888' : '#64748b',
                       border: 'none',
                       borderRadius: '20px',
                       fontSize: '12px',
@@ -590,7 +598,7 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     Business Number
                   </label>
                   <input
@@ -601,15 +609,17 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     API Key
                   </label>
                   <input
@@ -620,9 +630,11 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
@@ -646,23 +658,23 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
 
             {/* E-Way Bill Settings */}
             <div style={{
-              background: '#ffffff',
+              background: darkMode ? '#111111' : '#ffffff',
               borderRadius: '12px',
-              border: '1px solid #e5e7eb',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              boxShadow: darkMode ? '0 4px 6px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
               padding: '24px'
             }}>
-              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '20px' }}>
                 📋 E-Way Bill Settings
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '4px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
                       Enable E-Way Bills
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#64748b' }}>
                       Enable E-Way bill generation
                     </div>
                   </div>
@@ -670,8 +682,8 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     onClick={() => setEwaySettings({ ...ewaySettings, enabled: !ewaySettings.enabled })}
                     style={{
                       padding: '6px 16px',
-                      background: ewaySettings.enabled ? '#10b981' : '#e5e7eb',
-                      color: ewaySettings.enabled ? '#ffffff' : '#64748b',
+                      background: ewaySettings.enabled ? '#10b981' : darkMode ? '#222222' : '#e5e7eb',
+                      color: ewaySettings.enabled ? '#ffffff' : darkMode ? '#888888' : '#64748b',
                       border: 'none',
                       borderRadius: '20px',
                       fontSize: '12px',
@@ -684,7 +696,7 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     GSTIN
                   </label>
                   <input
@@ -695,16 +707,18 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a',
                       textTransform: 'uppercase'
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     Username
                   </label>
                   <input
@@ -715,15 +729,17 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     Password
                   </label>
                   <input
@@ -734,15 +750,17 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
                     Environment
                   </label>
                   <select
@@ -751,9 +769,11 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      border: '1px solid #d1d5db',
+                      border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                       borderRadius: '8px',
-                      fontSize: '14px'
+                      fontSize: '14px',
+                      background: darkMode ? '#000000' : '#ffffff',
+                      color: darkMode ? '#ffffff' : '#0a0a0a'
                     }}
                   >
                     <option value="production">Production</option>
@@ -804,7 +824,7 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
             width: '90%',
             padding: '32px'
           }}>
-            <div style={{ fontSize: '20px', fontWeight: '700', color: '#1e293b', marginBottom: '20px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a0a0a', marginBottom: '20px' }}>
               📱 Send Bill via WhatsApp
             </div>
 
@@ -833,7 +853,7 @@ export default function WhatsAppBilling({ orders, customers, onNavigate }) {
                 style={{
                   padding: '12px 24px',
                   background: '#f9fafb',
-                  color: '#111827',
+                  color: '#0a0a0a',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   fontSize: '14px',

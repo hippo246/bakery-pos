@@ -54,7 +54,7 @@ export default function CustomerSelector({
         <div style={{
           fontSize: '14px',
           fontWeight: '600',
-          color: darkMode ? '#e0e0e0' : '#374151'
+          color: darkMode ? '#e0e0e0' : '#111111'
         }}>
           👤 Customer
         </div>
@@ -62,7 +62,7 @@ export default function CustomerSelector({
           onClick={() => setShowLookup(!showLookup)}
           style={{
             padding: '6px 12px',
-            background: darkMode ? '#6366f1' : '#6366f1',
+            background: darkMode ? '#4f46e5' : '#6366f1',
             color: '#ffffff',
             border: 'none',
             borderRadius: '6px',
@@ -85,14 +85,14 @@ export default function CustomerSelector({
           <div style={{
             fontSize: '14px',
             fontWeight: '600',
-            color: darkMode ? '#ffffff' : '#1f2937',
+            color: darkMode ? '#ffffff' : '#0a0a0a',
             marginBottom: '4px'
           }}>
             {selectedCustomer.name}
           </div>
           <div style={{
             fontSize: '12px',
-            color: darkMode ? '#8b8b9e' : '#6b7280'
+            color: darkMode ? '#888888' : '#6b7280'
           }}>
             {selectedCustomer.phone}
           </div>
@@ -122,10 +122,10 @@ export default function CustomerSelector({
             style={{
               width: '100%',
               padding: '10px 14px',
-              background: darkMode ? '#1f2937' : '#ffffff',
-              border: `1px solid ${darkMode ? '#374151' : '#d1d5db'}`,
+              background: darkMode ? '#0a0a0a' : '#ffffff',
+              border: `1px solid ${darkMode ? '#111111' : '#d1d5db'}`,
               borderRadius: '8px',
-              color: darkMode ? '#ffffff' : '#1f2937',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
               fontSize: '13px',
               outline: 'none',
               marginBottom: '8px'
@@ -166,13 +166,13 @@ export default function CustomerSelector({
                 <div style={{
                   fontSize: '13px',
                   fontWeight: '600',
-                  color: darkMode ? '#ffffff' : '#1f2937'
+                  color: darkMode ? '#ffffff' : '#0a0a0a'
                 }}>
                   {customer.name}
                 </div>
                 <div style={{
                   fontSize: '11px',
-                  color: darkMode ? '#8b8b9e' : '#6b7280'
+                  color: darkMode ? '#888888' : '#6b7280'
                 }}>
                   {customer.phone}
                 </div>
@@ -202,9 +202,9 @@ export default function CustomerSelector({
             <div style={{
               marginTop: '12px',
               padding: '12px',
-              background: darkMode ? '#374151' : '#f9fafb',
+              background: darkMode ? '#111111' : '#f9fafb',
               borderRadius: '8px',
-              border: `1px solid ${darkMode ? '#4b5563' : '#e5e7eb'}`
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
             }}>
               <div style={{ display: 'grid', gap: '8px' }}>
                 <input
@@ -214,10 +214,10 @@ export default function CustomerSelector({
                   onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
                   style={{
                     padding: '8px 12px',
-                    background: darkMode ? '#1f2937' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                    background: darkMode ? '#0a0a0a' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '6px',
-                    color: darkMode ? '#ffffff' : '#1f2937',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     fontSize: '12px'
                   }}
                 />
@@ -228,10 +228,10 @@ export default function CustomerSelector({
                   onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                   style={{
                     padding: '8px 12px',
-                    background: darkMode ? '#1f2937' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                    background: darkMode ? '#0a0a0a' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '6px',
-                    color: darkMode ? '#ffffff' : '#1f2937',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     fontSize: '12px'
                   }}
                 />
@@ -242,10 +242,10 @@ export default function CustomerSelector({
                   onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
                   style={{
                     padding: '8px 12px',
-                    background: darkMode ? '#1f2937' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#4b5563' : '#d1d5db'}`,
+                    background: darkMode ? '#0a0a0a' : '#ffffff',
+                    border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                     borderRadius: '6px',
-                    color: darkMode ? '#ffffff' : '#1f2937',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
                     fontSize: '12px'
                   }}
                 />
@@ -254,7 +254,7 @@ export default function CustomerSelector({
                   disabled={!newCustomer.name || !newCustomer.phone}
                   style={{
                     padding: '8px',
-                    background: '#10b981',
+                    background: darkMode ? '#059669' : '#10b981',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '6px',

@@ -477,7 +477,7 @@ function VoiceOrderRecorder({
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '32px', marginBottom: '12px' }}>🎤</div>
-          <h3 style={{ margin: '0 0 8px', color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+          <h3 style={{ margin: '0 0 8px', color: '#0a0a0a', fontSize: '16px', fontWeight: '600' }}>
             Voice Order
           </h3>
           <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>
@@ -514,7 +514,7 @@ function VoiceOrderRecorder({
                 style={{
                   padding: '6px 12px',
                   backgroundColor: selectedLanguage === lang.code ? '#2563eb' : '#f3f4f6',
-                  color: selectedLanguage === lang.code ? '#ffffff' : '#374151',
+                  color: selectedLanguage === lang.code ? '#ffffff' : '#111111',
                   border: selectedLanguage === lang.code ? '1px solid #2563eb' : '1px solid #e5e7eb',
                   borderRadius: '6px',
                   fontSize: '12px',
@@ -595,7 +595,7 @@ function VoiceOrderRecorder({
             style={{
               padding: '12px 24px',
               backgroundColor: '#f3f4f6',
-              color: '#374151',
+              color: '#111111',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               fontSize: '14px',
@@ -660,7 +660,7 @@ function VoiceOrderRecorder({
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'pulse 1.5s infinite' }}>🎤</div>
-          <h3 style={{ margin: '0 0 8px', color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+          <h3 style={{ margin: '0 0 8px', color: '#0a0a0a', fontSize: '16px', fontWeight: '600' }}>
             Recording...
           </h3>
           <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>
@@ -810,7 +810,7 @@ function VoiceOrderRecorder({
                   onMouseEnter={() => setSelectedSuggestionIndex(index)}
                 >
                   <div>
-                    <div style={{ fontWeight: '500', color: '#1f2937' }}>
+                    <div style={{ fontWeight: '500', color: '#0a0a0a' }}>
                       {suggestion.name}
                     </div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>
@@ -853,7 +853,7 @@ function VoiceOrderRecorder({
                   border: '1px solid #e5e7eb',
                   borderRadius: '6px',
                   fontSize: '12px',
-                  color: '#374151',
+                  color: '#111111',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   minWidth: '40px'
@@ -878,7 +878,7 @@ function VoiceOrderRecorder({
               flex: 1,
               padding: '12px 24px',
               backgroundColor: '#f3f4f6',
-              color: '#374151',
+              color: '#111111',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               fontSize: '14px',
@@ -945,7 +945,7 @@ function VoiceOrderRecorder({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ fontSize: '24px', marginRight: '8px' }}>{parsedOrder.validation?.valid === false ? '⚠️' : '✓'}</span>
-            <h3 style={{ margin: 0, color: '#1f2937', fontSize: '16px', fontWeight: '600' }}>
+            <h3 style={{ margin: 0, color: '#0a0a0a', fontSize: '16px', fontWeight: '600' }}>
               {parsedOrder.validation?.valid === false ? 'Needs Review' : 'Order Parsed'}
             </h3>
           </div>
@@ -999,7 +999,7 @@ function VoiceOrderRecorder({
 
         {/* Table */}
         {parsedOrder.tableNumber && (
-          <div style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600', color: '#374151', padding: '8px 12px', background: '#f3f4f6', borderRadius: '6px' }}>
+          <div style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600', color: '#111111', padding: '8px 12px', background: '#f3f4f6', borderRadius: '6px' }}>
             Table {parsedOrder.tableNumber}
           </div>
         )}
@@ -1017,7 +1017,7 @@ function VoiceOrderRecorder({
                 fontSize: '13px'
               }}
             >
-              <span style={{ color: '#374151' }}>{item.quantity}x {item.name}</span>
+              <span style={{ color: '#111111' }}>{item.quantity}x {item.name}</span>
               <span style={{ fontWeight: '600', color: '#2563eb' }}>₹{item.price * item.quantity}</span>
             </div>
           ))}
@@ -1038,7 +1038,7 @@ function VoiceOrderRecorder({
               flex: 1,
               padding: '12px 24px',
               backgroundColor: '#f3f4f6',
-              color: '#374151',
+              color: '#111111',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               fontSize: '14px',
@@ -1151,7 +1151,7 @@ function VoiceOrderRecorder({
             style={{
               padding: '12px 24px',
               backgroundColor: '#f3f4f6',
-              color: '#374151',
+              color: '#111111',
               border: '1px solid #e5e7eb',
               borderRadius: '6px',
               fontSize: '14px',

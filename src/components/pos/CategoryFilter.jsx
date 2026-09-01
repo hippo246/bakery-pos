@@ -29,7 +29,7 @@ export default function CategoryFilter({
               : (darkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6'),
             color: selectedCategory === category 
               ? '#ffffff' 
-              : (darkMode ? '#8b8b9e' : '#6b7280'),
+              : (darkMode ? '#888888' : '#6b7280'),
             border: selectedCategory === category 
               ? 'none' 
               : `1px solid ${darkMode ? 'rgba(255,255,255,0.08)' : '#e5e7eb'}`,
