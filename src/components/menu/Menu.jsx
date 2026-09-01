@@ -866,6 +866,35 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [customDietary, setCustomDietary] = useState('');
   const [showCustomDietary, setShowCustomDietary] = useState(false);
+  
+  // Happy hour pricing configuration
+  const [happyHourEnabled, setHappyHourEnabled] = useState(false);
+  const [happyHourStartTime, setHappyHourStartTime] = useState('15:00');
+  const [happyHourEndTime, setHappyHourEndTime] = useState('18:00');
+  const [happyHourDiscount, setHappyHourDiscount] = useState(20);
+  const [happyHourDays, setHappyHourDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const [happyHourApplicableItems, setHappyHourApplicableItems] = useState(['coffee', 'tea', 'pastry', 'cake']);
+  const [showHappyHourSettings, setShowHappyHourSettings] = useState(false);
+  
+  // Combo deals configuration
+  const [comboDeals, setComboDeals] = useState([
+    {
+      id: 'coffee_pastry',
+      name: 'Coffee + Pastry',
+      items: ['coffee', 'pastry'],
+      discount: 15,
+      price: null
+    },
+    {
+      id: 'breakfast_combo',
+      name: 'Breakfast Combo',
+      items: ['coffee', 'sandwich', 'pastry'],
+      discount: 20,
+      price: null
+    }
+  ]);
+  const [showComboDealsSettings, setShowComboDealsSettings] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -914,6 +943,54 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
       console.error('Error saving menu to localStorage:', error);
     }
   }, [menuItems]);
+  
+  // Save happy hour settings to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('happy_hour_settings', JSON.stringify({
+        enabled: happyHourEnabled,
+        startTime: happyHourStartTime,
+        endTime: happyHourEndTime,
+        discount: happyHourDiscount,
+        days: happyHourDays,
+        applicableItems: happyHourApplicableItems
+      }));
+    } catch (error) {
+      console.error('Failed to save happy hour settings:', error);
+    }
+  }, [happyHourEnabled, happyHourStartTime, happyHourEndTime, happyHourDiscount, happyHourDays, happyHourApplicableItems]);
+  
+  // Save combo deals to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('combo_deals', JSON.stringify(comboDeals));
+    } catch (error) {
+      console.error('Failed to save combo deals:', error);
+    }
+  }, [comboDeals]);
+  
+  // Load happy hour and combo settings on mount
+  useEffect(() => {
+    try {
+      const savedHappyHour = localStorage.getItem('happy_hour_settings');
+      if (savedHappyHour) {
+        const parsed = JSON.parse(savedHappyHour);
+        setHappyHourEnabled(parsed.enabled || false);
+        setHappyHourStartTime(parsed.startTime || '15:00');
+        setHappyHourEndTime(parsed.endTime || '18:00');
+        setHappyHourDiscount(parsed.discount || 20);
+        setHappyHourDays(parsed.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+        setHappyHourApplicableItems(parsed.applicableItems || ['coffee', 'tea', 'pastry', 'cake']);
+      }
+      
+      const savedComboDeals = localStorage.getItem('combo_deals');
+      if (savedComboDeals) {
+        setComboDeals(JSON.parse(savedComboDeals));
+      }
+    } catch (error) {
+      console.error('Failed to load pricing settings:', error);
+    }
+  }, []);
 
   const categories = ['ALL', 'Breads', 'Pastries', 'Cakes', 'Coffee', 'Beverages', 'Savory'];
 
@@ -1151,6 +1228,39 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                   }}
                 />
                 
+                <button
+                  onClick={() => setShowHappyHourSettings(!showHappyHourSettings)}
+                  style={{
+                    padding: '12px 16px',
+                    background: happyHourEnabled ? '#8b5cf6' : (darkMode ? '#222222' : '#f3f4f6'),
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                  title="Happy Hour Settings"
+                >
+                  🕐 Happy Hour
+                </button>
+                <button
+                  onClick={() => setShowComboDealsSettings(!showComboDealsSettings)}
+                  style={{
+                    padding: '12px 16px',
+                    background: darkMode ? '#222222' : '#f3f4f6',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                  title="Combo Deals Settings"
+                >
+                  🎁 Combos
+                </button>
+                
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
@@ -1215,13 +1325,135 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                       background: 'rgba(255,255,255,0.15)',
                       padding: '2px 6px',
                       borderRadius: '10px',
-                      fontSize: '11px'
+                      fontSize: '11px',
+                      fontWeight: '600'
                     }}>
                       {categoryCounts[cat] || 0}
                     </span>
                   </button>
                 ))}
               </div>
+              
+              {/* Happy Hour Settings Panel */}
+              {showHappyHourSettings && (
+                <div style={{
+                  padding: '16px',
+                  background: darkMode ? '#1e1b4b' : '#dbeafe',
+                  borderRadius: '12px',
+                  marginTop: '16px',
+                  border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                      🕐 Happy Hour Settings
+                    </div>
+                    <button
+                      onClick={() => setHappyHourEnabled(!happyHourEnabled)}
+                      style={{
+                        padding: '8px 16px',
+                        background: happyHourEnabled ? '#10b981' : '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {happyHourEnabled ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280', display: 'block', marginBottom: '6px' }}>Start Time</label>
+                      <input
+                        type="time"
+                        value={happyHourStartTime}
+                        onChange={(e) => setHappyHourStartTime(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: darkMode ? '#111111' : '#ffffff',
+                          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                          borderRadius: '8px',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280', display: 'block', marginBottom: '6px' }}>End Time</label>
+                      <input
+                        type="time"
+                        value={happyHourEndTime}
+                        onChange={(e) => setHappyHourEndTime(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          background: darkMode ? '#111111' : '#ffffff',
+                          border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                          borderRadius: '8px',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280', display: 'block', marginBottom: '6px' }}>Discount: {happyHourDiscount}%</label>
+                    <input
+                      type="range"
+                      min="5"
+                      max="50"
+                      step="5"
+                      value={happyHourDiscount}
+                      onChange={(e) => setHappyHourDiscount(parseInt(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                    Days: {happyHourDays.join(', ')}
+                  </div>
+                </div>
+              )}
+              
+              {/* Combo Deals Settings Panel */}
+              {showComboDealsSettings && (
+                <div style={{
+                  padding: '16px',
+                  background: darkMode ? '#1e1b4b' : '#dbeafe',
+                  borderRadius: '12px',
+                  marginTop: '16px',
+                  border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`
+                }}>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '16px' }}>
+                    🎁 Combo Deals
+                  </div>
+                  {comboDeals.map(combo => (
+                    <div key={combo.id} style={{
+                      padding: '12px',
+                      background: darkMode ? '#111111' : '#ffffff',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                          {combo.name}
+                        </div>
+                        <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                          {combo.items.join(' + ')}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#10b981' }}>
+                        -{combo.discount}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Bulk Actions Panel */}
               <div style={{

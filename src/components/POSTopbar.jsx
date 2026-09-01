@@ -19,7 +19,10 @@ export default function POSTopbar({
   setShowShortcuts,
   searchQuery,
   setSearchQuery,
-  setShowSearchResults
+  setShowSearchResults,
+  kdsSyncStatus = 'connected',
+  printerStatus = 'online',
+  orderHandoffStatus = 'idle'
 }) {
   const aggregatorDropdownRef = useRef(null);
 
@@ -311,6 +314,57 @@ export default function POSTopbar({
               )}
             </button>
           )}
+
+          {/* Operational Status Indicators */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginLeft: screenSize === 'small' ? '0' : '12px' }}>
+            {/* KDS Sync Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: kdsSyncStatus === 'connected' ? '#10b981' : (kdsSyncStatus === 'syncing' ? '#f59e0b' : '#ef4444'),
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '600',
+              color: '#ffffff'
+            }} title="Kitchen Display System Status">
+              <span>{kdsSyncStatus === 'connected' ? '📺' : (kdsSyncStatus === 'syncing' ? '🔄' : '❌')}</span>
+              {screenSize !== 'small' && <span>KDS</span>}
+            </div>
+            
+            {/* Printer Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: printerStatus === 'online' ? '#10b981' : (printerStatus === 'error' ? '#f59e0b' : '#ef4444'),
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '600',
+              color: '#ffffff'
+            }} title="Kitchen Printer Status">
+              <span>{printerStatus === 'online' ? '🖨️' : (printerStatus === 'error' ? '⚠️' : '❌')}</span>
+              {screenSize !== 'small' && <span>Printer</span>}
+            </div>
+            
+            {/* Order Handoff Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: orderHandoffStatus === 'idle' ? '#6b7280' : (orderHandoffStatus === 'kitchen' ? '#f59e0b' : (orderHandoffStatus === 'ready' ? '#10b981' : '#8b5cf6')),
+              borderRadius: '6px',
+              fontSize: '10px',
+              fontWeight: '600',
+              color: '#ffffff'
+            }} title="Order Handoff Status">
+              <span>{orderHandoffStatus === 'idle' ? '🔄' : (orderHandoffStatus === 'kitchen' ? '👨‍🍳' : (orderHandoffStatus === 'ready' ? '✅' : '🧾'))}</span>
+              {screenSize !== 'small' && <span>{orderHandoffStatus === 'idle' ? 'Idle' : (orderHandoffStatus === 'kitchen' ? 'Kitchen' : (orderHandoffStatus === 'ready' ? 'Ready' : 'Served'))}</span>}
+            </div>
+          </div>
 
           {posMode === 'advanced' && (
             <>

@@ -8,6 +8,11 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
   const [selectedToken, setSelectedToken] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [qrOrders, setQROrders] = useState([]);
+  const [tvMode, setTvMode] = useState(false);
+  const [tvAuthRequired, setTvAuthRequired] = useState(true);
+  const [tvPin, setTvPin] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   // Poll for QR orders from localStorage
   useEffect(() => {
@@ -162,7 +167,37 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
     doc.save(`token_${token.token}.pdf`);
   };
 
+  const handleTvModeToggle = () => {
+    if (tvMode) {
+      setTvMode(false);
+      setTvAuthRequired(true);
+    } else {
+      setShowAuthModal(true);
+      setTvPin('');
+      setAuthError('');
+    }
+  };
+
+  const handleAuthSubmit = () => {
+    const storedPin = localStorage.getItem('tv_mode_pin') || '1234';
+    if (tvPin === storedPin) {
+      setTvMode(true);
+      setShowAuthModal(false);
+      setTvAuthRequired(false);
+      setTvPin('');
+      setAuthError('');
+    } else {
+      setAuthError('Incorrect PIN');
+    }
+  };
+
+  const handleExitTvMode = () => {
+    setTvMode(false);
+    setTvAuthRequired(true);
+  };
+
   return (
+    <>
     <div style={{
       display: 'flex',
       flexDirection: 'column',
@@ -200,6 +235,34 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
               Manage and track customer tokens
             </p>
           </div>
+          <button
+            onClick={handleTvModeToggle}
+            style={{
+              padding: '12px 20px',
+              background: tvMode ? '#ef4444' : '#6366f1',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 2px 8px rgba(99, 102, 241, 0.3)';
+            }}
+          >
+            {tvMode ? '🚫 Exit TV Mode' : '📺 TV Mode'}
+          </button>
         </div>
 
         {/* Stats Cards */}
@@ -798,5 +861,276 @@ export default function TokenManagement({ orders, setOrders, onNavigate, darkMod
         </div>
       )}
     </div>
+
+    {/* TV Mode View */}
+    {tvMode && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: '#000000',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '40px'
+      }}>
+        {/* TV Mode Header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '40px',
+          paddingBottom: '20px',
+          borderBottom: '2px solid #333'
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: '48px',
+              fontWeight: '700',
+              color: '#ffffff',
+              margin: 0
+            }}>
+              🎫 Token Display
+            </h1>
+            <p style={{
+              fontSize: '20px',
+              color: '#888888',
+              margin: '8px 0 0 0'
+            }}>
+              {new Date().toLocaleString()}
+            </p>
+          </div>
+          <button
+            onClick={handleExitTvMode}
+            style={{
+              padding: '16px 32px',
+              background: '#ef4444',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: '18px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            🚫 Exit
+          </button>
+        </div>
+
+        {/* TV Mode Token Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: '30px',
+          flex: 1,
+          overflow: 'auto'
+        }}>
+          {tokens.filter(t => t.status === 'PENDING' || t.status === 'PREPARING').map(token => (
+            <div
+              key={token.id}
+              style={{
+                background: '#111111',
+                borderRadius: '20px',
+                padding: '40px',
+                border: `3px solid ${
+                  token.status === 'PENDING' ? '#f59e0b' :
+                  token.status === 'PREPARING' ? '#3b82f6' :
+                  token.status === 'READY' ? '#10b981' : '#666666'
+                }`,
+                boxShadow: `0 0 30px ${
+                  token.status === 'PENDING' ? 'rgba(245, 158, 11, 0.3)' :
+                  token.status === 'PREPARING' ? 'rgba(59, 130, 246, 0.3)' :
+                  token.status === 'READY' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                }`
+              }}
+            >
+              <div style={{
+                fontSize: '72px',
+                fontWeight: '800',
+                color: '#ffffff',
+                textAlign: 'center',
+                marginBottom: '20px'
+              }}>
+                {token.token}
+              </div>
+              <div style={{
+                fontSize: '32px',
+                fontWeight: '700',
+                color: token.status === 'PENDING' ? '#f59e0b' :
+                       token.status === 'PREPARING' ? '#3b82f6' :
+                       token.status === 'READY' ? '#10b981' : '#666666',
+                textAlign: 'center',
+                marginBottom: '20px',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                background: token.status === 'PENDING' ? 'rgba(245, 158, 11, 0.1)' :
+                           token.status === 'PREPARING' ? 'rgba(59, 130, 246, 0.1)' :
+                           token.status === 'READY' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }}>
+                {token.status}
+              </div>
+              {token.tableNumber && (
+                <div style={{
+                  fontSize: '24px',
+                  color: '#888888',
+                  textAlign: 'center',
+                  marginBottom: '10px'
+                }}>
+                  🪑 Table {token.tableNumber}
+                </div>
+              )}
+              <div style={{
+                fontSize: '20px',
+                color: '#666666',
+                textAlign: 'center'
+              }}>
+                {token.items?.length || 0} items • ₹{token.total?.toFixed(2) || '0.00'}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* TV Mode Stats Footer */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '40px',
+          padding: '30px',
+          background: '#111111',
+          borderRadius: '16px',
+          marginTop: '30px'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', fontWeight: '700', color: '#f59e0b' }}>
+              {pendingTokens}
+            </div>
+            <div style={{ fontSize: '18px', color: '#888888' }}>Pending</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', fontWeight: '700', color: '#3b82f6' }}>
+              {preparingTokens}
+            </div>
+            <div style={{ fontSize: '18px', color: '#888888' }}>Preparing</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', fontWeight: '700', color: '#10b981' }}>
+              {readyTokens}
+            </div>
+            <div style={{ fontSize: '18px', color: '#888888' }}>Ready</div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Authentication Modal */}
+    {showAuthModal && (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.8)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000
+      }}>
+        <div style={{
+          background: darkMode ? '#111111' : '#ffffff',
+          borderRadius: '20px',
+          padding: '40px',
+          maxWidth: '400px',
+          width: '90%',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: '700',
+            color: darkMode ? '#ffffff' : '#0a0a0a',
+            margin: '0 0 8px 0'
+          }}>
+            🔐 TV Mode Authentication
+          </h2>
+          <p style={{
+            fontSize: '14px',
+            color: darkMode ? '#888888' : '#888888',
+            margin: '0 0 24px 0'
+          }}>
+            Enter PIN to enable TV display mode
+          </p>
+          <input
+            type="password"
+            value={tvPin}
+            onChange={(e) => setTvPin(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAuthSubmit()}
+            placeholder="Enter PIN (default: 1234)"
+            maxLength={4}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: darkMode ? '#000000' : '#f9fafb',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
+              border: `2px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+              borderRadius: '12px',
+              fontSize: '20px',
+              letterSpacing: '8px',
+              textAlign: 'center',
+              outline: 'none',
+              marginBottom: '16px'
+            }}
+            autoFocus
+          />
+          {authError && (
+            <div style={{
+              color: '#ef4444',
+              fontSize: '14px',
+              marginBottom: '16px',
+              textAlign: 'center'
+            }}>
+              {authError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setShowAuthModal(false)}
+              style={{
+                flex: 1,
+                padding: '16px',
+                background: darkMode ? '#222222' : '#e5e7eb',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAuthSubmit}
+              style={{
+                flex: 1,
+                padding: '16px',
+                background: '#6366f1',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Enable
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+</>
   );
 }

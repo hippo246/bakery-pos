@@ -21,11 +21,158 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [discount, setDiscount] = useState(0);
   const [gstRate, setGstRate] = useState(settings.gstRate || 18);
   const [gstEnabled, setGstEnabled] = useState(settings.gstEnabled !== false); // Default to true unless explicitly disabled
+  const [gstSplitType, setGstSplitType] = useState(settings.gstSplitType || 'unified'); // 'unified' or 'sgst_cgst'
+  const [serviceChargeEnabled, setServiceChargeEnabled] = useState(settings.serviceChargeEnabled || false);
+  const [serviceChargeRate, setServiceChargeRate] = useState(settings.serviceChargeRate || 5);
+  const [serviceChargeType, setServiceChargeType] = useState(settings.serviceChargeType || 'percentage'); // 'percentage' or 'fixed'
   const [tipAmount, setTipAmount] = useState(0);
   const [orderNotes, setOrderNotes] = useState('');
   const [showCustomDiscount, setShowCustomDiscount] = useState(false);
   const [showTipInput, setShowTipInput] = useState(false);
   const [showNotesInput, setShowNotesInput] = useState(false);
+  
+  // Happy hour pricing configuration (controlled from menu UI)
+  const [happyHourEnabled, setHappyHourEnabled] = useState(false);
+  const [happyHourStartTime, setHappyHourStartTime] = useState('15:00');
+  const [happyHourEndTime, setHappyHourEndTime] = useState('18:00');
+  const [happyHourDiscount, setHappyHourDiscount] = useState(20);
+  const [happyHourDays, setHappyHourDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  const [happyHourApplicableItems, setHappyHourApplicableItems] = useState(['coffee', 'tea', 'pastry', 'cake']);
+  const [showHappyHourSettings, setShowHappyHourSettings] = useState(false);
+  
+  // Combo deals configuration (controlled from menu UI)
+  const [comboDeals, setComboDeals] = useState([
+    {
+      id: 'coffee_pastry',
+      name: 'Coffee + Pastry',
+      items: ['coffee', 'pastry'],
+      discount: 15,
+      price: null
+    },
+    {
+      id: 'breakfast_combo',
+      name: 'Breakfast Combo',
+      items: ['coffee', 'sandwich', 'pastry'],
+      discount: 20,
+      price: null
+    }
+  ]);
+  const [showComboDealsSettings, setShowComboDealsSettings] = useState(false);
+  
+  // Operational status indicators
+  const [kdsSyncStatus, setKdsSyncStatus] = useState('connected'); // 'connected', 'syncing', 'disconnected'
+  const [printerStatus, setPrinterStatus] = useState('online'); // 'online', 'offline', 'error'
+  const [orderHandoffStatus, setOrderHandoffStatus] = useState('idle'); // 'idle', 'kitchen', 'ready', 'served'
+  
+  // Load happy hour and combo settings from localStorage
+  useEffect(() => {
+    try {
+      const savedHappyHour = localStorage.getItem('happy_hour_settings');
+      if (savedHappyHour) {
+        const parsed = JSON.parse(savedHappyHour);
+        setHappyHourEnabled(parsed.enabled || false);
+        setHappyHourStartTime(parsed.startTime || '15:00');
+        setHappyHourEndTime(parsed.endTime || '18:00');
+        setHappyHourDiscount(parsed.discount || 20);
+        setHappyHourDays(parsed.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+        setHappyHourApplicableItems(parsed.applicableItems || ['coffee', 'tea', 'pastry', 'cake']);
+      }
+      
+      const savedComboDeals = localStorage.getItem('combo_deals');
+      if (savedComboDeals) {
+        setComboDeals(JSON.parse(savedComboDeals));
+      }
+    } catch (error) {
+      console.error('Failed to load pricing settings:', error);
+    }
+  }, []);
+  
+  // Happy hour config object (computed from state)
+  const happyHourConfig = {
+    enabled: happyHourEnabled,
+    startTime: happyHourStartTime,
+    endTime: happyHourEndTime,
+    discount: happyHourDiscount,
+    days: happyHourDays,
+    applicableItems: happyHourApplicableItems
+  };
+  
+  // Check if happy hour is currently active
+  const isHappyHourActive = () => {
+    if (!happyHourConfig.enabled) return false;
+    
+    const now = new Date();
+    const currentDay = now.toLocaleDateString('en-US', { weekday: 'short' });
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    const [startHours, startMins] = happyHourConfig.startTime.split(':').map(Number);
+    const [endHours, endMins] = happyHourConfig.endTime.split(':').map(Number);
+    const startTime = startHours * 60 + startMins;
+    const endTime = endHours * 60 + endMins;
+    
+    const isCorrectDay = happyHourConfig.days.includes(currentDay);
+    const isCorrectTime = currentTime >= startTime && currentTime <= endTime;
+    
+    return isCorrectDay && isCorrectTime;
+  };
+  
+  // Get happy hour price for an item
+  const getHappyHourPrice = (item) => {
+    if (!isHappyHourActive()) return item.price;
+    
+    const itemCategory = item.category?.toLowerCase() || item.name?.toLowerCase();
+    const isApplicable = happyHourConfig.applicableItems.some(cat => 
+      itemCategory.includes(cat.toLowerCase())
+    );
+    
+    if (isApplicable) {
+      return item.price * (1 - happyHourConfig.discount / 100);
+    }
+    
+    return item.price;
+  };
+  
+  // Check for combo deals in cart
+  const detectComboDeals = () => {
+    const applicableCombos = [];
+    
+    comboDeals.forEach(combo => {
+      const cartItemNames = cart.map(item => item.name.toLowerCase());
+      const hasAllItems = combo.items.every(requiredItem => 
+        cartItemNames.some(cartItem => cartItem.includes(requiredItem.toLowerCase()))
+      );
+      
+      if (hasAllItems) {
+        applicableCombos.push(combo);
+      }
+    });
+    
+    return applicableCombos;
+  };
+  
+  // Calculate combo discount
+  const calculateComboDiscount = () => {
+    const applicableCombos = detectComboDeals();
+    let totalDiscount = 0;
+    
+    applicableCombos.forEach(combo => {
+      if (combo.price) {
+        // Fixed price combo
+        const comboItemsTotal = cart
+          .filter(item => combo.items.some(ci => item.name.toLowerCase().includes(ci.toLowerCase())))
+          .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        totalDiscount += comboItemsTotal - combo.price;
+      } else {
+        // Percentage discount combo
+        const comboItemsTotal = cart
+          .filter(item => combo.items.some(ci => item.name.toLowerCase().includes(ci.toLowerCase())))
+          .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        totalDiscount += comboItemsTotal * (combo.discount / 100);
+      }
+    });
+    
+    return totalDiscount;
+  };
   
   // Initialize KOT manager
   const kotManager = getKOTManager();
@@ -40,6 +187,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   }, [kotManager]);
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerOrderHistory, setCustomerOrderHistory] = useState({}); // Track orders per customer
+  const [showRecentlyOrdered, setShowRecentlyOrdered] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [splitPayments, setSplitPayments] = useState([]); // Array of {method, amount}
   const [splitByPeople, setSplitByPeople] = useState(0); // Number of people to split by
@@ -84,6 +233,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [selectedOrderForView, setSelectedOrderForView] = useState(null);
+  const [editingOrderId, setEditingOrderId] = useState(null); // Track which order is being edited
+  const [editingOrderOriginal, setEditingOrderOriginal] = useState(null); // Store original order data for reference
   const [quickCodeInput, setQuickCodeInput] = useState('');
   const [showQuickActions, setShowQuickActions] = useState(true);
   const [activePanel, setActivePanel] = useState(null); // 'customer', 'table', 'notes', 'payment', 'promo'
@@ -113,6 +264,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [showGstSettings, setShowGstSettings] = useState(false);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
+  const [dashboardPage, setDashboardPage] = useState(0); // 0 or 1 for two-pager
   const [paymentAmount, setPaymentAmount] = useState('');
   const [showPrintSettings, setShowPrintSettings] = useState(false);
   const [printCopies, setPrintCopies] = useState(1);
@@ -826,15 +978,23 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
   const cartSubtotal = cart.reduce((sum, item) => {
     if (!item) return sum;
-    return sum + ((item.price || 0) * (item.quantity || 0));
+    const happyHourPrice = getHappyHourPrice(item);
+    const priceToUse = happyHourPrice < item.price ? happyHourPrice : item.price;
+    return sum + (priceToUse * (item.quantity || 0));
   }, 0);
+  const comboDiscount = calculateComboDiscount();
   const cartCount = cart.reduce((sum, item) => {
     if (!item) return sum;
     return sum + (item.quantity || 0);
   }, 0);
-  const discountAmount = (cartSubtotal * discount) / 100;
+  const discountAmount = (cartSubtotal * discount) / 100 + comboDiscount;
   const taxAmount = gstEnabled ? ((cartSubtotal - discountAmount) * gstRate) / 100 : 0;
-  const cartTotal = cartSubtotal - discountAmount + taxAmount + (parseFloat(tipAmount) || 0);
+  const serviceChargeAmount = serviceChargeEnabled 
+    ? (serviceChargeType === 'percentage' 
+        ? ((cartSubtotal - discountAmount) * serviceChargeRate) / 100 
+        : serviceChargeRate)
+    : 0;
+  const cartTotal = cartSubtotal - discountAmount + taxAmount + serviceChargeAmount + (parseFloat(tipAmount) || 0);
 
   const handleCheckout = () => {
     if (!cart || cart.length === 0) return;
@@ -1479,10 +1639,27 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               <span>-₹${discountAmt.toFixed(2)}</span>
             </div>
           `}
-          ${order.gstEnabled !== false && (order.gstRate || 0) > 0 && `
+          ${order.gstEnabled === true && (order.gstRate || 0) > 0 && `
+            ${order.gstSplitType === 'sgst_cgst' ? `
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>SGST (${(order.gstRate / 2).toFixed(1)}%):</span>
+                <span>₹${(taxAmt / 2).toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>CGST (${(order.gstRate / 2).toFixed(1)}%):</span>
+                <span>₹${(taxAmt / 2).toFixed(2)}</span>
+              </div>
+            ` : `
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span>GST (${order.gstRate}%):</span>
+                <span>₹${taxAmt.toFixed(2)}</span>
+              </div>
+            `}
+          `}
+          ${order.serviceChargeEnabled === true && order.serviceChargeAmount > 0 && `
             <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-              <span>GST (${order.gstRate}%):</span>
-              <span>₹${taxAmt.toFixed(2)}</span>
+              <span>Service Charge (${order.serviceChargeType === 'percentage' ? order.serviceChargeRate + '%' : '₹' + order.serviceChargeRate}):</span>
+              <span>₹${order.serviceChargeAmount.toFixed(2)}</span>
             </div>
           `}
           <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 8px; border-top: 1px solid #000; padding-top: 8px;">
@@ -1548,8 +1725,17 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       text += `Discount (${order.discount}%): -₹${discountAmt.toFixed(2)}\n`;
     }
     
-    if (order.gstEnabled !== false && (order.gstRate || 0) > 0) {
-      text += `GST (${order.gstRate}%): ₹${taxAmt.toFixed(2)}\n`;
+    if (order.gstEnabled === true && (order.gstRate || 0) > 0) {
+      if (order.gstSplitType === 'sgst_cgst') {
+        text += `SGST (${(order.gstRate / 2).toFixed(1)}%): ₹${(taxAmt / 2).toFixed(2)}\n`;
+        text += `CGST (${(order.gstRate / 2).toFixed(1)}%): ₹${(taxAmt / 2).toFixed(2)}\n`;
+      } else {
+        text += `GST (${order.gstRate}%): ₹${taxAmt.toFixed(2)}\n`;
+      }
+    }
+    
+    if (order.serviceChargeEnabled === true && order.serviceChargeAmount > 0) {
+      text += `Service Charge (${order.serviceChargeType === 'percentage' ? order.serviceChargeRate + '%' : '₹' + order.serviceChargeRate}): ₹${order.serviceChargeAmount.toFixed(2)}\n`;
     }
     
     text += '================================\n';
@@ -1600,7 +1786,12 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       discountAmount: discountAmount || 0,
       gstEnabled: gstEnabled,
       gstRate: gstRate || 0,
+      gstSplitType: gstSplitType || 'unified',
       taxAmount: taxAmount || 0,
+      serviceChargeEnabled: serviceChargeEnabled,
+      serviceChargeRate: serviceChargeRate,
+      serviceChargeType: serviceChargeType,
+      serviceChargeAmount: serviceChargeAmount,
       tipAmount: parseFloat(tipAmount) || 0,
       notes: orderNotes || '',
       paymentMethod: paymentMethod || 'CASH',
@@ -1631,7 +1822,30 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       }
     };
 
-    setOrders(prev => [...(prev || []), newOrder]);
+    // Handle edit mode - update existing order instead of creating new
+    if (editingOrderId) {
+      setOrders(prev => prev.map(order => {
+        if (order.id === editingOrderId) {
+          // Update existing order with new items
+          const updatedOrder = {
+            ...order,
+            items: [...(order.items || []), ...newOrder.items],
+            total: order.total + newOrder.total,
+            subtotal: order.subtotal + newOrder.subtotal,
+            taxAmount: order.taxAmount + newOrder.taxAmount,
+            updatedAt: new Date().toISOString(),
+            paymentMethod: paymentMethod,
+            splitPayments: splitPayments.length > 0 ? splitPayments : undefined
+          };
+          return updatedOrder;
+        }
+        return order;
+      }));
+      setEditingOrderId(null); // Clear edit mode
+    } else {
+      setOrders(prev => [...(prev || []), newOrder]);
+    }
+    
     setLastOrder(newOrder);
     setCart([]);
     setDiscount(0);
@@ -2036,7 +2250,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       discount: discount,
       discountAmount: discountAmount,
       gstRate: gstRate,
+      gstEnabled: gstEnabled,
+      gstSplitType: gstSplitType,
       taxAmount: taxAmount,
+      serviceChargeEnabled: serviceChargeEnabled,
+      serviceChargeRate: serviceChargeRate,
+      serviceChargeType: serviceChargeType,
+      serviceChargeAmount: serviceChargeAmount,
       paymentMethod: 'SPLIT',
       splitPayments: splitPayments,
       customerId: selectedCustomer?.id || null,
@@ -2060,7 +2280,27 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     setSelectedTable(null);
     setOrderType('dine-in');
     setPaymentMethod('CASH');
-    setShowSplitBillModal(false);
+    setTipAmount(0);
+    setOrderNotes('');
+    
+    // Track customer order history
+    if (selectedCustomer && selectedCustomer.id) {
+      setCustomerOrderHistory(prev => {
+        const customerHistory = prev[selectedCustomer.id] || [];
+        const updatedHistory = [
+          ...customerHistory,
+          {
+            orderId: newOrder.id,
+            items: cart.map(item => ({ name: item.name, id: item.id, price: item.price })),
+            date: new Date().toISOString()
+          }
+        ].slice(-3); // Keep only last 3 orders
+        return {
+          ...prev,
+          [selectedCustomer.id]: updatedHistory
+        };
+      });
+    }
     setSplitPayments([]);
     setShowReceipt(true);
 
@@ -2244,11 +2484,32 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         </div>
       `;
     }
-    if (lastOrder.gstEnabled !== false && (lastOrder.gstRate || 0) > 0) {
+    if (lastOrder.gstEnabled === true && (lastOrder.gstRate || 0) > 0) {
+      if (lastOrder.gstSplitType === 'sgst_cgst') {
+        receiptHTML += `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>SGST (${(lastOrder.gstRate / 2).toFixed(1)}%):</span>
+            <span>₹${(taxAmt / 2).toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>CGST (${(lastOrder.gstRate / 2).toFixed(1)}%):</span>
+            <span>₹${(taxAmt / 2).toFixed(2)}</span>
+          </div>
+        `;
+      } else {
+        receiptHTML += `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>GST (${lastOrder.gstRate}%):</span>
+            <span>₹${taxAmt.toFixed(2)}</span>
+          </div>
+        `;
+      }
+    }
+    if (lastOrder.serviceChargeEnabled === true && lastOrder.serviceChargeAmount > 0) {
       receiptHTML += `
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-          <span>GST (${lastOrder.gstRate}%):</span>
-          <span>₹${taxAmt.toFixed(2)}</span>
+          <span>Service Charge (${lastOrder.serviceChargeType === 'percentage' ? lastOrder.serviceChargeRate + '%' : '₹' + lastOrder.serviceChargeRate}):</span>
+          <span>₹${lastOrder.serviceChargeAmount.toFixed(2)}</span>
         </div>
       `;
     }
@@ -2670,6 +2931,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         setShowSearchResults={setShowSearchResults}
+        kdsSyncStatus={kdsSyncStatus}
+        printerStatus={printerStatus}
+        orderHandoffStatus={orderHandoffStatus}
       />
 
 
@@ -2702,6 +2966,24 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           {/* Categories */}
           <div style={{ padding: '10px', borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, position: 'relative' }}>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {selectedCustomer && customerOrderHistory[selectedCustomer.id]?.length > 0 && (
+                <button
+                  onClick={() => setShowRecentlyOrdered(!showRecentlyOrdered)}
+                  style={{
+                    padding: '6px 12px',
+                    background: showRecentlyOrdered ? '#10b981' : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: showRecentlyOrdered ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  ⭐ Recently Ordered
+                </button>
+              )}
               {categories.map(category => (
                 <button
                   key={category}
@@ -2722,6 +3004,64 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 </button>
               ))}
             </div>
+            
+            {/* Recently Ordered Items */}
+            {showRecentlyOrdered && selectedCustomer && customerOrderHistory[selectedCustomer.id] && (
+              <div style={{
+                padding: '12px',
+                background: darkMode ? '#1e1b4b' : '#dbeafe',
+                borderRadius: '8px',
+                marginBottom: '12px',
+                border: `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '12px' }}>
+                  ⭐ {selectedCustomer.name}'s Recent Orders
+                </div>
+                {customerOrderHistory[selectedCustomer.id].reverse().map((order, orderIndex) => (
+                  <div key={order.orderId} style={{
+                    marginBottom: orderIndex < customerOrderHistory[selectedCustomer.id].length - 1 ? '12px' : '0',
+                    paddingBottom: orderIndex < customerOrderHistory[selectedCustomer.id].length - 1 ? '12px' : '0',
+                    borderBottom: orderIndex < customerOrderHistory[selectedCustomer.id].length - 1 ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none'
+                  }}>
+                    <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '6px' }}>
+                      {new Date(order.date).toLocaleDateString()} - Order #{order.orderId.slice(-6)}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {order.items.map(item => {
+                        const menuItem = menuItems.find(mi => mi.id === item.id);
+                        return menuItem ? (
+                          <div
+                            key={item.id}
+                            onClick={() => addToCart(menuItem, 1)}
+                            style={{
+                              padding: '6px 10px',
+                              background: darkMode ? '#111111' : '#ffffff',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              color: darkMode ? '#ffffff' : '#0a0a0a',
+                              cursor: 'pointer',
+                              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.target.style.background = darkMode ? '#6366f1' : '#2563eb';
+                              e.target.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.target.style.background = darkMode ? '#111111' : '#ffffff';
+                              e.target.style.color = darkMode ? '#ffffff' : '#0a0a0a';
+                            }}
+                          >
+                            {item.name}
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
@@ -2784,12 +3124,33 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             }}>
               {filteredItems.map(item => {
                 const inventoryItem = inventory.find(inv => inv.name === item.name);
-                const isLowStock = inventoryItem && inventoryItem.quantity < 10;
+                const stockQuantity = inventoryItem ? inventoryItem.quantity : null;
+                const isLowStock = stockQuantity !== null && stockQuantity < 10;
+                const isOutOfStock = stockQuantity !== null && stockQuantity <= 0;
+                const happyHourPrice = getHappyHourPrice(item);
+                const isHappyHourItem = happyHourPrice < item.price;
+                
+                // Check if item is part of a combo deal
+                const applicableCombo = comboDeals.find(combo => 
+                  combo.items.some(ci => item.name.toLowerCase().includes(ci.toLowerCase()))
+                );
+                const comboPrice = applicableCombo ? item.price * (1 - applicableCombo.discount / 100) : null;
                 
                 return (
                   <div
                     key={item.id}
-                    onClick={() => addToCart(item, quantityInput)}
+                    onClick={() => {
+                      if (isOutOfStock) {
+                        setAlertMessage(`${item.name} is out of stock!`);
+                        setShowAlert(true);
+                        return;
+                      }
+                      if (isLowStock) {
+                        setAlertMessage(`Only ${stockQuantity} ${item.name}(s) left!`);
+                        setShowAlert(true);
+                      }
+                      addToCart(item, quantityInput);
+                    }}
                     style={{
                       background: darkMode ? '#111111' : '#ffffff',
                       padding: screenSize === 'small' ? '12px' : '16px',
@@ -2797,57 +3158,79 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: '8px',
-                      opacity: item.active && !item.eightySixed ? 1 : 0.5,
-                      border: item.active && !item.eightySixed ? 
+                      opacity: (item.active && !item.eightySixed && !isOutOfStock) ? 1 : 0.5,
+                      border: (item.active && !item.eightySixed && !isOutOfStock) ? 
                             (isLowStock ? '2px solid #f59e0b' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`) : 
-                            `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                      cursor: item.active && !item.eightySixed ? 'pointer' : 'not-allowed',
+                            (isOutOfStock ? '2px solid #ef4444' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`),
+                      cursor: (item.active && !item.eightySixed && !isOutOfStock) ? 'pointer' : 'not-allowed',
                       transition: 'all 0.15s ease',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      minHeight: screenSize === 'small' ? '100px' : '120px'
+                      minHeight: screenSize === 'small' ? '100px' : '120px',
+                      position: 'relative'
                     }}
                     onMouseEnter={(e) => {
-                      if (item.active && !item.eightySixed) {
+                      if (item.active && !item.eightySixed && !isOutOfStock) {
                         e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.15)';
                         e.target.style.borderColor = darkMode ? '#6366f1' : '#2563eb';
                         e.target.style.transform = 'translateY(-2px)';
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (item.active && !item.eightySixed) {
+                      if (item.active && !item.eightySixed && !isOutOfStock) {
                         e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
                         e.target.style.borderColor = isLowStock ? '#f59e0b' : (darkMode ? '#222222' : '#e5e7eb');
                         e.target.style.transform = 'translateY(0)';
                       }
                     }}
                   >
-                    {isLowStock && (
+                    {stockQuantity !== null && (
                       <div style={{
                         position: 'absolute',
                         top: '8px',
                         right: '8px',
-                        background: darkMode ? '#d97706' : '#f59e0b',
+                        background: isOutOfStock ? '#ef4444' : (isLowStock ? '#f59e0b' : '#10b981'),
                         color: '#ffffff',
                         padding: '2px 6px',
                         borderRadius: '4px',
                         fontSize: '10px',
                         fontWeight: '600'
                       }}>
-                        Low
+                        {isOutOfStock ? 'Out of Stock' : `${stockQuantity} left`}
+                      </div>
+                    )}
+                    {isHappyHourItem && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        background: '#8b5cf6',
+                        color: '#ffffff',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: '600'
+                      }}>
+                        -{happyHourConfig.discount}%
                       </div>
                     )}
                     {item.image ? (
                       <img
                         src={item.image}
                         alt={item.name}
-                        style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }}
+                        style={{ 
+                          width: '100%', 
+                          height: '80px', 
+                          borderRadius: '8px', 
+                          objectFit: 'cover',
+                          marginBottom: '8px'
+                        }}
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.nextElementSibling.style.display = 'block';
                         }}
                       />
                     ) : null}
-                    <span style={{ fontSize: screenSize === 'small' ? '28px' : '32px', display: item.image ? 'none' : 'block' }}>{item.emoji || '🥐'}</span>
+                    <span style={{ fontSize: screenSize === 'small' ? '32px' : '36px', display: item.image ? 'none' : 'block', marginBottom: item.image ? '0' : '8px' }}>{item.emoji || '🥐'}</span>
                     <span style={{ 
                       fontSize: screenSize === 'small' ? '11px' : '12px', 
                       fontWeight: '500', 
@@ -2857,13 +3240,60 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}>
                       {item.name}
                     </span>
-                    <span style={{ 
-                      fontSize: screenSize === 'small' ? '13px' : '14px', 
-                      fontWeight: '600', 
-                      color: darkMode ? '#6366f1' : '#2563eb'
-                    }}>
-                      ₹{item.price.toFixed(2)}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                      {isHappyHourItem ? (
+                        <>
+                          <span style={{ 
+                            fontSize: screenSize === 'small' ? '11px' : '12px', 
+                            fontWeight: '400', 
+                            color: darkMode ? '#9ca3af' : '#6b7280',
+                            textDecoration: 'line-through'
+                          }}>
+                            ₹{item.price.toFixed(2)}
+                          </span>
+                          <span style={{ 
+                            fontSize: screenSize === 'small' ? '13px' : '14px', 
+                            fontWeight: '600', 
+                            color: '#8b5cf6'
+                          }}>
+                            ₹{happyHourPrice.toFixed(2)}
+                          </span>
+                        </>
+                      ) : comboPrice ? (
+                        <>
+                          <span style={{ 
+                            fontSize: screenSize === 'small' ? '11px' : '12px', 
+                            fontWeight: '400', 
+                            color: darkMode ? '#9ca3af' : '#6b7280',
+                            textDecoration: 'line-through'
+                          }}>
+                            ₹{item.price.toFixed(2)}
+                          </span>
+                          <span style={{ 
+                            fontSize: screenSize === 'small' ? '13px' : '14px', 
+                            fontWeight: '600', 
+                            color: '#10b981'
+                          }}>
+                            ₹{comboPrice.toFixed(2)}
+                          </span>
+                          <span style={{ 
+                            fontSize: screenSize === 'small' ? '9px' : '10px', 
+                            fontWeight: '500', 
+                            color: '#10b981'
+                          }}>
+                            {applicableCombo.name}
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ 
+                          fontSize: screenSize === 'small' ? '13px' : '14px', 
+                          fontWeight: '600', 
+                          color: darkMode ? '#6366f1' : '#2563eb'
+                        }}>
+                          ₹{item.price.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -2896,11 +3326,98 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-              Cart ({cartCount})
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                {editingOrderId ? (
+                  <span style={{ color: '#10b981' }}>
+                    ✏️ Editing Order #{editingOrderId.slice(-6)}
+                  </span>
+                ) : (
+                  `Cart (${cartCount})`
+                )}
+              </div>
+              {editingOrderId && (
+                <button
+                  onClick={() => {
+                    setEditingOrderId(null);
+                    setEditingOrderOriginal(null);
+                    setCart([]);
+                    setSelectedCustomer(null);
+                    setSelectedTable(null);
+                    setOrderType('dine-in');
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    background: '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                  title="Cancel edit"
+                >
+                  ✕ Cancel
+                </button>
+              )}
             </div>
-            <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '700', color: darkMode ? '#6366f1' : '#2563eb' }}>
-              ₹{cartTotal.toFixed(2)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* GST Toggle */}
+              <button
+                onClick={() => setGstEnabled(!gstEnabled)}
+                style={{
+                  padding: '4px 8px',
+                  background: gstEnabled ? '#10b981' : '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+                title="Toggle GST"
+              >
+                GST: {gstEnabled ? 'ON' : 'OFF'}
+              </button>
+              {/* Service Charge Toggle */}
+              <button
+                onClick={() => setServiceChargeEnabled(!serviceChargeEnabled)}
+                style={{
+                  padding: '4px 8px',
+                  background: serviceChargeEnabled ? '#f59e0b' : '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+                title="Toggle Service Charge"
+              >
+                Service: {serviceChargeEnabled ? 'ON' : 'OFF'}
+              </button>
+              {/* Numpad Mode Indicator */}
+              <div style={{
+                padding: '4px 10px',
+                background: darkMode ? '#111111' : '#f3f4f6',
+                border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                borderRadius: '6px',
+                fontSize: '11px',
+                fontWeight: '600',
+                color: darkMode ? '#ffffff' : '#0a0a0a',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span style={{ fontSize: '12px' }}>
+                  {numpadMode === 'quantity' ? '🔢' : numpadMode === 'discount' ? '💰' : numpadMode === 'amount' ? '💵' : numpadMode === 'tip' ? '💖' : '📊'}
+                </span>
+                <span style={{ textTransform: 'capitalize' }}>{numpadMode}</span>
+              </div>
+              <div style={{ fontSize: screenSize === 'small' ? '14px' : '15px', fontWeight: '700', color: darkMode ? '#6366f1' : '#2563eb' }}>
+                ₹{cartTotal.toFixed(2)}
+              </div>
             </div>
           </div>
 
@@ -2963,6 +3480,52 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
 
           {/* Cart Items */}
           <div style={{ flex: 1, overflowY: 'auto', padding: screenSize === 'small' ? '8px' : '10px' }}>
+            {/* Combo Deal Suggestions */}
+            {detectComboDeals().length > 0 && (
+              <div style={{
+                background: darkMode ? '#1e1b4b' : '#dbeafe',
+                border: `2px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '12px'
+              }}>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
+                  🎁 Combo Deals Applied
+                </div>
+                {detectComboDeals().map(combo => (
+                  <div key={combo.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px',
+                    background: darkMode ? '#111111' : '#ffffff',
+                    borderRadius: '6px',
+                    marginBottom: '6px'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                        {combo.name}
+                      </div>
+                      <div style={{ fontSize: '10px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                        {combo.items.join(' + ')}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#10b981' }}>
+                      -{combo.discount}%
+                    </div>
+                  </div>
+                ))}
+                <div style={{
+                  fontSize: '11px',
+                  color: darkMode ? '#9ca3af' : '#6b7280',
+                  marginTop: '8px',
+                  fontStyle: 'italic'
+                }}>
+                  Combo discount: ₹{comboDiscount.toFixed(2)}
+                </div>
+              </div>
+            )}
+
             {cart.length === 0 ? (
               <div style={{
                 textAlign: 'center',
@@ -3535,8 +4098,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           <div style={{ padding: screenSize === 'small' ? '6px' : '8px', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, background: darkMode ? '#111111' : '#f9fafb' }}>
             {/* Order Summary */}
             <div style={{ marginBottom: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
-                <span>Subtotal</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', fontWeight: '600', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '4px', paddingBottom: '4px', borderBottom: `1px dashed ${darkMode ? '#333333' : '#e5e7eb'}` }}>
+                <span>Subtotal ({cart.reduce((sum, item) => sum + (item.quantity || 0), 0)} items)</span>
                 <span>₹{cartSubtotal.toFixed(2)}</span>
               </div>
               {discount > 0 && (
@@ -3545,13 +4108,40 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   <span>-₹{discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              {gstRate > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
-                  <span>GST ({gstRate}%)</span>
-                  <span>₹{taxAmount.toFixed(2)}</span>
+              {gstEnabled && taxAmount > 0 && (
+                <>
+                  {gstSplitType === 'sgst_cgst' ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
+                        <span>CGST ({(gstRate / 2).toFixed(1)}%)</span>
+                        <span>₹{(taxAmount / 2).toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
+                        <span>SGST ({(gstRate / 2).toFixed(1)}%)</span>
+                        <span>₹{(taxAmount / 2).toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>
+                      <span>GST ({gstRate}%)</span>
+                      <span>₹{taxAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              {serviceChargeEnabled && serviceChargeAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#f59e0b' : '#d97706', marginBottom: '2px' }}>
+                  <span>Service Charge ({serviceChargeType === 'percentage' ? serviceChargeRate + '%' : '₹' + serviceChargeRate})</span>
+                  <span>₹{serviceChargeAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', paddingTop: '3px', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+              {tipAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#ec4899' : '#db2777', marginBottom: '2px' }}>
+                  <span>Tip</span>
+                  <span>₹{parseFloat(tipAmount).toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', paddingTop: '6px', marginTop: '4px', borderTop: `2px solid ${darkMode ? '#333333' : '#e5e7eb'}` }}>
                 <span>Total</span>
                 <span>₹{cartTotal.toFixed(2)}</span>
               </div>
@@ -3749,7 +4339,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 { id: 'custom',   label: 'Custom',   icon: '✚',  color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: 'rgba(52,211,153,0.25)' },
                 { id: 'history',  label: 'History',  icon: '🕐', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)' },
                 { id: 'customer', label: 'Customer', icon: '👤', color: '#c084fc', bg: 'rgba(192,132,252,0.12)', border: 'rgba(192,132,252,0.25)' },
-                { id: 'split',    label: 'Split',    icon: '⚡',  color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)' },
+                { id: 'tax',      label: 'Tax',      icon: '💰', color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.25)' },
                 { id: 'void',     label: 'Void',     icon: '⊘',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)' },
                 { id: 'held',     label: 'Held',     icon: '📋', color: '#facc15', bg: 'rgba(250,204,21,0.12)',  border: 'rgba(250,204,21,0.25)' },
                 { id: 'table',    label: 'Table',    icon: '🪑', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
@@ -3804,12 +4394,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         setShowHeldOrders(false);
                         setShowTableSelector(false);
                       }
-                      if (action.id === 'split') {
-                        setShowSplitBillModal(!showSplitBillModal);
+                      if (action.id === 'tax') {
+                        setShowGstSettings(true);
                         setShowVoiceOrder(false);
                         setShowCustomOrder(false);
                         setShowOrderHistory(false);
                         setShowCustomerLookup(false);
+                        setShowSplitBillModal(false);
                         setShowHeldOrders(false);
                         setShowTableSelector(false);
                       }
@@ -4094,35 +4685,32 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '4px' : '5px' }}>
-              {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map(key => {
-                const isActionKey = key === '⌫' || key === '.';
-                return (
-                  <button
-                    key={key}
-                    onClick={() => handleNumpadClick(key)}
-                    style={{
-                      padding: screenSize === 'small' ? '12px' : '14px',
-                      background: key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6'),
-                      color: key === '⌫' ? '#dc2626' : (darkMode ? '#ffffff' : '#0a0a0a'),
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontSize: screenSize === 'small' ? '16px' : '18px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.1s ease',
-                      outline: 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = key === '⌫' ? '#fecaca' : (darkMode ? '#222222' : '#e5e7eb');
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6');
-                    }}
-                  >
-                    {key}
-                  </button>
-                );
-              })}
+              {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map(key => (
+                <button
+                  key={key}
+                  onClick={() => handleNumpadClick(key)}
+                  style={{
+                    padding: screenSize === 'small' ? '12px' : '14px',
+                    background: key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6'),
+                    color: key === '⌫' ? '#dc2626' : (darkMode ? '#ffffff' : '#0a0a0a'),
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: screenSize === 'small' ? '16px' : '18px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.1s ease',
+                    outline: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = key === '⌫' ? '#fecaca' : (darkMode ? '#222222' : '#e5e7eb');
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6');
+                  }}
+                >
+                  {key}
+                </button>
+              ))}
             </div>
 
             {isEditingCartItems && (
@@ -4153,6 +4741,142 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 ✓ Apply Changes
               </button>
             )}
+
+            {/* Dashboard - Two Pager */}
+            <div style={{
+              marginTop: screenSize === 'small' ? '6px' : '8px',
+              padding: screenSize === 'small' ? '8px' : '10px',
+              background: darkMode ? '#111111' : '#f9fafb',
+              borderRadius: '8px',
+              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+            }}>
+              {/* Page Navigation */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>
+                <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', fontWeight: '700', color: darkMode ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Dashboard
+                </div>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    onClick={() => setDashboardPage(0)}
+                    style={{
+                      padding: '4px 8px',
+                      background: dashboardPage === 0 ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#222222' : '#e5e7eb'),
+                      color: dashboardPage === 0 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '9px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Page 1
+                  </button>
+                  <button
+                    onClick={() => setDashboardPage(1)}
+                    style={{
+                      padding: '4px 8px',
+                      background: dashboardPage === 1 ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#222222' : '#e5e7eb'),
+                      color: dashboardPage === 1 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '9px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Page 2
+                  </button>
+                </div>
+              </div>
+
+              {/* Page 1: Staff, Orders, Kitchen, Shift */}
+              {dashboardPage === 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '6px' : '8px' }}>
+                  {/* Staff Assignment */}
+                  <div style={{ padding: screenSize === 'small' ? '6px' : '8px', background: darkMode ? '#222222' : '#ffffff', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111' }}>
+                        👤 Staff: {selectedEmployee?.name || 'Not Assigned'}
+                      </div>
+                      <button
+                        onClick={() => {/* TODO: Open staff selector */}}
+                        style={{
+                          padding: '3px 6px',
+                          background: darkMode ? '#333333' : '#e5e7eb',
+                          color: darkMode ? '#ffffff' : '#111111',
+                          border: 'none',
+                          borderRadius: '3px',
+                          fontSize: '8px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Pending Orders */}
+                  <div style={{ padding: screenSize === 'small' ? '6px' : '8px', background: darkMode ? '#222222' : '#ffffff', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111' }}>
+                        📋 Pending Orders
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', fontWeight: '700', color: '#f59e0b' }}>
+                        {orders.filter(o => o.status === 'PENDING').length}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Kitchen Queue */}
+                  <div style={{ padding: screenSize === 'small' ? '6px' : '8px', background: darkMode ? '#222222' : '#ffffff', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111' }}>
+                        🍳 Kitchen Queue
+                      </div>
+                      <div style={{ fontSize: screenSize === 'small' ? '12px' : '14px', fontWeight: '700', color: '#ef4444' }}>
+                        {orders.filter(o => o.status === 'PREPARING').length}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Shift Info */}
+                  <div style={{ padding: screenSize === 'small' ? '6px' : '8px', background: darkMode ? '#222222' : '#ffffff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111', marginBottom: '4px' }}>
+                      ⏰ Shift Info
+                    </div>
+                    <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                      {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} - {new Date().toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Page 2: Inventory, Sales */}
+              {dashboardPage === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: screenSize === 'small' ? '6px' : '8px' }}>
+                  {/* Low Inventory Alerts */}
+                  <div style={{ padding: screenSize === 'small' ? '6px' : '8px', background: darkMode ? '#222222' : '#ffffff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111', marginBottom: '4px' }}>
+                      ⚠️ Low Inventory
+                    </div>
+                    <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                      {inventory.filter(i => i.quantity < i.minQuantity).length} items need restock
+                    </div>
+                  </div>
+
+                  {/* Today's Sales Summary */}
+                  <div style={{ padding: screenSize === 'small' ? '6px' : '8px', background: darkMode ? '#222222' : '#ffffff', borderRadius: '6px' }}>
+                    <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111', marginBottom: '4px' }}>
+                      💰 Today's Sales
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                      <span>Orders: {orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString()).length}</span>
+                      <span>Revenue: ₹{orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString()).reduce((sum, o) => sum + (o.total || 0), 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
 
@@ -5049,7 +5773,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
-                GST Settings
+                Tax & Service Settings
               </h3>
               <button
                 onClick={() => setShowGstSettings(false)}
@@ -5069,49 +5793,238 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 ×
               </button>
             </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
-                GST Rate (%)
-              </label>
-              <input
-                type="number"
-                value={gstRate}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val) && val >= 0 && val <= 100) setGstRate(val);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: darkMode ? '#111111' : '#f9fafb',
-                  color: darkMode ? '#ffffff' : '#0a0a0a',
-                  border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {[0, 5, 12, 18, 28].map(rate => (
+            
+            {/* GST Section */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: darkMode ? '#222222' : '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111', marginBottom: '12px' }}>
+                GST Settings
+              </div>
+              
+              {/* GST On/Off Toggle */}
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '4px' }}>
+                    Enable GST
+                  </div>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                    {gstEnabled ? 'GST will be applied to orders' : 'GST will not be applied'}
+                  </div>
+                </div>
                 <button
-                  key={rate}
-                  onClick={() => setGstRate(rate)}
+                  onClick={() => setGstEnabled(!gstEnabled)}
                   style={{
-                    flex: 1,
-                    padding: '10px',
-                    background: gstRate === rate ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: gstRate === rate ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                    padding: '6px 14px',
+                    background: gstEnabled ? '#10b981' : '#ef4444',
+                    color: '#ffffff',
                     border: 'none',
                     borderRadius: '6px',
-                    fontSize: '13px',
-                    cursor: 'pointer'
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    minWidth: '70px'
                   }}
                 >
-                  {rate}%
+                  {gstEnabled ? 'ON' : 'OFF'}
                 </button>
-              ))}
+              </div>
+              
+              {/* GST Split Type */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px' }}>
+                  GST Type
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setGstSplitType('unified')}
+                    disabled={!gstEnabled}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: gstSplitType === 'unified' && gstEnabled ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: gstSplitType === 'unified' && gstEnabled ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: gstEnabled ? 'pointer' : 'not-allowed',
+                      opacity: gstEnabled ? 1 : 0.5
+                    }}
+                  >
+                    Unified GST
+                  </button>
+                  <button
+                    onClick={() => setGstSplitType('sgst_cgst')}
+                    disabled={!gstEnabled}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: gstSplitType === 'sgst_cgst' && gstEnabled ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: gstSplitType === 'sgst_cgst' && gstEnabled ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: gstEnabled ? 'pointer' : 'not-allowed',
+                      opacity: gstEnabled ? 1 : 0.5
+                    }}
+                  >
+                    SGST + CGST
+                  </button>
+                </div>
+              </div>
+              
+              {/* GST Rate */}
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
+                  GST Rate (%)
+                </label>
+                <input
+                  type="number"
+                  value={gstRate}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= 0 && val <= 100) setGstRate(val);
+                  }}
+                  disabled={!gstEnabled}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: !gstEnabled ? (darkMode ? '#1a1a1a' : '#e5e7eb') : (darkMode ? '#111111' : '#f9fafb'),
+                    color: !gstEnabled ? (darkMode ? '#666666' : '#9ca3af') : (darkMode ? '#ffffff' : '#0a0a0a'),
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    opacity: !gstEnabled ? 0.6 : 1
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                  {[0, 5, 12, 18, 28].map(rate => (
+                    <button
+                      key={rate}
+                      onClick={() => setGstRate(rate)}
+                      disabled={!gstEnabled}
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        background: gstRate === rate && gstEnabled ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                        color: gstRate === rate && gstEnabled ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        cursor: gstEnabled ? 'pointer' : 'not-allowed',
+                        opacity: gstEnabled ? 1 : 0.5
+                      }}
+                    >
+                      {rate}%
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+            
+            {/* Service Charge Section */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: darkMode ? '#222222' : '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#111111', marginBottom: '12px' }}>
+                Service Charge
+              </div>
+              
+              {/* Service Charge On/Off Toggle */}
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '4px' }}>
+                    Enable Service Charge
+                  </div>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                    {serviceChargeEnabled ? 'Service charge will be applied' : 'Service charge disabled'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setServiceChargeEnabled(!serviceChargeEnabled)}
+                  style={{
+                    padding: '6px 14px',
+                    background: serviceChargeEnabled ? '#10b981' : '#ef4444',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    minWidth: '70px'
+                  }}
+                >
+                  {serviceChargeEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+              
+              {/* Service Charge Type */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px' }}>
+                  Charge Type
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setServiceChargeType('percentage')}
+                    disabled={!serviceChargeEnabled}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: serviceChargeType === 'percentage' && serviceChargeEnabled ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: serviceChargeType === 'percentage' && serviceChargeEnabled ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: serviceChargeEnabled ? 'pointer' : 'not-allowed',
+                      opacity: serviceChargeEnabled ? 1 : 0.5
+                    }}
+                  >
+                    Percentage (%)
+                  </button>
+                  <button
+                    onClick={() => setServiceChargeType('fixed')}
+                    disabled={!serviceChargeEnabled}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: serviceChargeType === 'fixed' && serviceChargeEnabled ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
+                      color: serviceChargeType === 'fixed' && serviceChargeEnabled ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: serviceChargeEnabled ? 'pointer' : 'not-allowed',
+                      opacity: serviceChargeEnabled ? 1 : 0.5
+                    }}
+                  >
+                    Fixed (₹)
+                  </button>
+                </div>
+              </div>
+              
+              {/* Service Charge Rate */}
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#ffffff' : '#111111', marginBottom: '8px', display: 'block' }}>
+                  {serviceChargeType === 'percentage' ? 'Service Charge Rate (%)' : 'Service Charge Amount (₹)'}
+                </label>
+                <input
+                  type="number"
+                  value={serviceChargeRate}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= 0) setServiceChargeRate(val);
+                  }}
+                  disabled={!serviceChargeEnabled}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    background: !serviceChargeEnabled ? (darkMode ? '#1a1a1a' : '#e5e7eb') : (darkMode ? '#111111' : '#f9fafb'),
+                    color: !serviceChargeEnabled ? (darkMode ? '#666666' : '#9ca3af') : (darkMode ? '#ffffff' : '#0a0a0a'),
+                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    opacity: !serviceChargeEnabled ? 0.6 : 1
+                  }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => setShowGstSettings(false)}
                 style={{
@@ -5129,7 +6042,15 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
               <button
                 onClick={() => {
-                  setSettings({ ...settings, gstRate });
+                  setSettings({ 
+                    ...settings, 
+                    gstRate,
+                    gstEnabled,
+                    gstSplitType,
+                    serviceChargeEnabled,
+                    serviceChargeRate,
+                    serviceChargeType
+                  });
                   setShowGstSettings(false);
                 }}
                 style={{
@@ -5423,9 +6344,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#888888' }}>
                       Bill Details
                     </h4>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '14px', color: '#888888' }}>Subtotal</span>
-                      <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{cartSubtotal.toFixed(2)}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                      <span style={{ fontSize: '14px', color: '#888888' }}>Subtotal ({cart.reduce((sum, item) => sum + (item.quantity || 0), 0)} items)</span>
+                      <span style={{ fontSize: '15px', fontWeight: '600', color: '#ffffff' }}>₹{cartSubtotal.toFixed(2)}</span>
                     </div>
                     
                     {discount > 0 && (
@@ -5436,13 +6357,44 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     )}
                     
                     {gstEnabled && taxAmount > 0 && (
+                      <>
+                        {gstSplitType === 'sgst_cgst' ? (
+                          <>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '14px', color: '#888888' }}>CGST ({(gstRate / 2).toFixed(1)}%)</span>
+                              <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{(taxAmount / 2).toFixed(2)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '14px', color: '#888888' }}>SGST ({(gstRate / 2).toFixed(1)}%)</span>
+                              <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{(taxAmount / 2).toFixed(2)}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '14px', color: '#888888' }}>GST ({gstRate}%)</span>
+                            <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{taxAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {serviceChargeEnabled && serviceChargeAmount > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '14px', color: '#888888' }}>GST ({gstRate}%)</span>
-                        <span style={{ fontSize: '15px', fontWeight: '500', color: '#ffffff' }}>₹{taxAmount.toFixed(2)}</span>
+                        <span style={{ fontSize: '14px', color: '#888888' }}>
+                          Service Charge ({serviceChargeType === 'percentage' ? serviceChargeRate + '%' : '₹' + serviceChargeRate})
+                        </span>
+                        <span style={{ fontSize: '15px', fontWeight: '500', color: '#f59e0b' }}>₹{serviceChargeAmount.toFixed(2)}</span>
                       </div>
                     )}
                     
-                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px dashed rgba(255, 255, 255, 0.1)', marginTop: '8px' }}>
+                    {tipAmount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '14px', color: '#888888' }}>Tip</span>
+                        <span style={{ fontSize: '15px', fontWeight: '500', color: '#ec4899' }}>₹{parseFloat(tipAmount).toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '12px', borderTop: '2px dashed rgba(255, 255, 255, 0.2)', marginTop: '8px' }}>
                       <span style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff' }}>Grand Total</span>
                       <span style={{ fontSize: '22px', fontWeight: '700', color: '#818cf8' }}>₹{cartTotal.toFixed(2)}</span>
                     </div>
@@ -5471,8 +6423,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     </button>
                     <button
                       onClick={() => {
-                        setShowPaymentModal(true);
-                        setCheckoutNumpadMode('gst');
+                        setGstEnabled(!gstEnabled);
                       }}
                       style={{
                         padding: '12px 10px',
@@ -5487,6 +6438,24 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       }}
                     >
                       🧾 GST: {gstEnabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setServiceChargeEnabled(!serviceChargeEnabled);
+                      }}
+                      style={{
+                        padding: '12px 10px',
+                        background: serviceChargeEnabled ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                        color: serviceChargeEnabled ? '#f59e0b' : '#ffffff',
+                        border: serviceChargeEnabled ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      💰 Service: {serviceChargeEnabled ? 'ON' : 'OFF'}
                     </button>
                     <button
                       onClick={() => {
@@ -7062,6 +8031,20 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           </div>
                         </div>
                         <div>
+                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Type</div>
+                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
+                            {order.tableName ? (
+                              <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#8b5cf6', color: '#ffffff', fontSize: '11px', fontWeight: '600' }}>
+                                🪑 Tabled
+                              </span>
+                            ) : (
+                              <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#6b7280', color: '#ffffff', fontSize: '11px', fontWeight: '600' }}>
+                                🚶 Walk-in
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
                           <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Table</div>
                           <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
                             {order.tableName || 'Counter'}
@@ -7110,6 +8093,41 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
                         >
                           📋 Reorder
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Load order into edit mode
+                            if (order.items && Array.isArray(order.items)) {
+                              setCart(order.items.map(item => ({
+                                ...item,
+                                qty: item.qty || item.quantity || 1
+                              })));
+                              setEditingOrderId(order.id);
+                              setEditingOrderOriginal(order); // Store original order
+                              setSelectedCustomer(order.customerId || null);
+                              setSelectedTable(order.tableName ? { name: order.tableName } : null);
+                              setOrderType(order.tableName ? 'dine-in' : 'takeaway');
+                              setShowOrderHistory(false);
+                            }
+                          }}
+                          style={{
+                            flex: 1,
+                            minWidth: '100px',
+                            padding: '8px 16px',
+                            background: '#10b981',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = '#059669'}
+                          onMouseLeave={(e) => e.target.style.background = '#10b981'}
+                        >
+                          ✏️ Edit Order
                         </button>
                         <button
                           onClick={(e) => {
@@ -7333,9 +8351,29 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             </div>
             <div style={{ padding: '20px', overflowY: 'auto', maxHeight: 'calc(90vh - 80px)' }}>
               <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Order Type</div>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif' }}>
+                  {selectedOrderForView.tableName ? (
+                    <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#8b5cf6', color: '#ffffff', fontSize: '12px', fontWeight: '600' }}>
+                      🪑 Tabled - {selectedOrderForView.tableName}
+                    </span>
+                  ) : (
+                    <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#6b7280', color: '#ffffff', fontSize: '12px', fontWeight: '600' }}>
+                      🚶 Walk-in
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Date</div>
                 <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif' }}>{new Date(selectedOrderForView.createdAt).toLocaleString()}</div>
               </div>
+              {selectedOrderForView.customerName && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Customer</div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif' }}>{selectedOrderForView.customerName}</div>
+                </div>
+              )}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Items</div>
                 {selectedOrderForView.items?.map((item, index) => (

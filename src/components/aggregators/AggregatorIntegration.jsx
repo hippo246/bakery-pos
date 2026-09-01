@@ -1,44 +1,42 @@
 import React, { useState, useEffect } from 'react';
+import { getAggregatorService } from '../../services/aggregators/AggregatorService.js';
 
-export default function AggregatorIntegration({ onNavigate }) {
+export default function AggregatorIntegration({ onNavigate, menuItems = [] }) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [screenSize, setScreenSize] = useState('large');
+  
+  const aggregatorService = getAggregatorService();
 
-  // Aggregator connection status
+  // Aggregator connection status - initialized from service
   const [zomatoStatus, setZomatoStatus] = useState({
-    connected: true,
-    apiKey: 'zomato_live_key_***',
-    lastSync: new Date().toISOString(),
-    ordersToday: 45,
-    revenueToday: 12500
+    connected: false,
+    apiKey: '',
+    lastSync: null,
+    ordersToday: 0,
+    revenueToday: 0
   });
 
   const [swiggyStatus, setSwiggyStatus] = useState({
-    connected: true,
-    apiKey: 'swiggy_live_key_***',
-    lastSync: new Date().toISOString(),
-    ordersToday: 38,
-    revenueToday: 9800
+    connected: false,
+    apiKey: '',
+    lastSync: null,
+    ordersToday: 0,
+    revenueToday: 0
   });
 
-  // Orders from aggregators
-  const [aggregatorOrders, setAggregatorOrders] = useState([
-    { id: 'ZOM-001', platform: 'Zomato', orderId: 'ZOM123456', customer: 'Rahul Sharma', items: 'Butter Chicken x2, Naan x4', total: 850, status: 'preparing', time: '14:30', commission: 85 },
-    { id: 'ZOM-002', platform: 'Zomato', orderId: 'ZOM123457', customer: 'Priya Singh', items: 'Paneer Tikka x1, Rice x2', total: 650, status: 'ready', time: '14:45', commission: 65 },
-    { id: 'SWG-001', platform: 'Swiggy', orderId: 'SWG789012', customer: 'Amit Patel', items: 'Biryani x2', total: 720, status: 'pending', time: '15:00', commission: 72 },
-    { id: 'SWG-002', platform: 'Swiggy', orderId: 'SWG789013', customer: 'Neha Gupta', items: 'Dal Makhani x1, Roti x3', total: 480, status: 'preparing', time: '15:15', commission: 48 }
-  ]);
+  // Orders from aggregators - fetched from service
+  const [aggregatorOrders, setAggregatorOrders] = useState([]);
 
   // Menu sync status
   const [menuSyncStatus, setMenuSyncStatus] = useState({
-    zomato: { lastSync: '2024-01-15 14:00', status: 'synced', items: 125 },
-    swiggy: { lastSync: '2024-01-15 14:05', status: 'synced', items: 120 }
+    zomato: { lastSync: null, status: 'not_synced', items: 0 },
+    swiggy: { lastSync: null, status: 'not_synced', items: 0 }
   });
 
-  // Commission data
+  // Commission data - calculated from service
   const [commissionData, setCommissionData] = useState([
-    { platform: 'Zomato', totalOrders: 45, totalRevenue: 12500, commission: 1250, rate: 10 },
-    { platform: 'Swiggy', totalOrders: 38, totalRevenue: 9800, commission: 980, rate: 10 }
+    { platform: 'Zomato', totalOrders: 0, totalRevenue: 0, commission: 0, rate: 0 },
+    { platform: 'Swiggy', totalOrders: 0, totalRevenue: 0, commission: 0, rate: 0 }
   ]);
 
   // Settings
@@ -51,6 +49,99 @@ export default function AggregatorIntegration({ onNavigate }) {
     autoSyncMenu: true,
     syncInterval: 30
   });
+
+  // Initialize service and load data
+  useEffect(() => {
+    const loadSettings = () => {
+      const savedSettings = localStorage.getItem('aggregator_settings');
+      if (savedSettings) {
+        setSettings(JSON.parse(savedSettings));
+      }
+    };
+
+    const initializeAggregator = async () => {
+      const config = {
+        zomato: {
+          enabled: !!settings.zomatoApiKey,
+          apiKey: settings.zomatoApiKey,
+          restaurantId: settings.zomatoRestaurantId,
+          environment: 'production'
+        },
+        swiggy: {
+          enabled: !!settings.swiggyApiKey,
+          apiKey: settings.swiggyApiKey,
+          restaurantId: settings.swiggyRestaurantId,
+          environment: 'production'
+        },
+        polling: {
+          enabled: true,
+          interval: (settings.syncInterval || 30) * 1000
+        }
+      };
+
+      try {
+        await aggregatorService.initialize(config);
+        await refreshData();
+      } catch (error) {
+        console.error('Failed to initialize aggregator service:', error);
+      }
+    };
+
+    loadSettings();
+    if (settings.zomatoApiKey || settings.swiggyApiKey) {
+      initializeAggregator();
+    }
+  }, []);
+
+  // Refresh data from service
+  const refreshData = async () => {
+    if (!aggregatorService.isInitialized()) return;
+
+    try {
+      const orders = aggregatorService.getOrders();
+      const stats = aggregatorService.getStatistics();
+      
+      setAggregatorOrders(orders);
+      
+      // Update status based on orders
+      const zomatoOrders = orders.filter(o => o.platform === 'Zomato');
+      const swiggyOrders = orders.filter(o => o.platform === 'Swiggy');
+      
+      setZomatoStatus(prev => ({
+        ...prev,
+        connected: !!settings.zomatoApiKey,
+        ordersToday: zomatoOrders.length,
+        revenueToday: zomatoOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+      }));
+      
+      setSwiggyStatus(prev => ({
+        ...prev,
+        connected: !!settings.swiggyApiKey,
+        ordersToday: swiggyOrders.length,
+        revenueToday: swiggyOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+      }));
+
+      // Update commission data
+      setCommissionData([
+        { 
+          platform: 'Zomato', 
+          totalOrders: zomatoOrders.length, 
+          totalRevenue: zomatoOrders.reduce((sum, o) => sum + (o.total || 0), 0), 
+          commission: zomatoOrders.reduce((sum, o) => sum + (o.commission || 0), 0),
+          rate: 10
+        },
+        { 
+          platform: 'Swiggy', 
+          totalOrders: swiggyOrders.length, 
+          totalRevenue: swiggyOrders.reduce((sum, o) => sum + (o.total || 0), 0), 
+          commission: swiggyOrders.reduce((sum, o) => sum + (o.commission || 0), 0),
+          rate: 10
+        }
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh aggregator data:', error);
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -69,37 +160,126 @@ export default function AggregatorIntegration({ onNavigate }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleSyncMenu = (platform) => {
-    // Simulate menu sync
-    if (platform === 'zomato') {
-      setMenuSyncStatus({
-        ...menuSyncStatus,
-        zomato: { ...menuSyncStatus.zomato, status: 'syncing', lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16) }
-      });
-      setTimeout(() => {
-        setMenuSyncStatus({
-          ...menuSyncStatus,
-          zomato: { ...menuSyncStatus.zomato, status: 'synced', lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16) }
-        });
-      }, 2000);
-    } else {
-      setMenuSyncStatus({
-        ...menuSyncStatus,
-        swiggy: { ...menuSyncStatus.swiggy, status: 'syncing', lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16) }
-      });
-      setTimeout(() => {
-        setMenuSyncStatus({
-          ...menuSyncStatus,
-          swiggy: { ...menuSyncStatus.swiggy, status: 'synced', lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16) }
-        });
-      }, 2000);
+  const handleSyncMenu = async (platform) => {
+    if (!aggregatorService.isInitialized()) {
+      alert('Aggregator service not initialized. Please configure API keys first.');
+      return;
+    }
+
+    try {
+      if (platform === 'zomato') {
+        setMenuSyncStatus(prev => ({
+          ...prev,
+          zomato: { ...prev.zomato, status: 'syncing', lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16) }
+        }));
+        
+        const result = await aggregatorService.syncMenu('Zomato', menuItems);
+        
+        setMenuSyncStatus(prev => ({
+          ...prev,
+          zomato: { 
+            ...prev.zomato, 
+            status: 'synced', 
+            lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            items: result.synced || menuItems.length
+          }
+        }));
+      } else {
+        setMenuSyncStatus(prev => ({
+          ...prev,
+          swiggy: { ...prev.swiggy, status: 'syncing', lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16) }
+        }));
+        
+        const result = await aggregatorService.syncMenu('Swiggy', menuItems);
+        
+        setMenuSyncStatus(prev => ({
+          ...prev,
+          swiggy: { 
+            ...prev.swiggy, 
+            status: 'synced', 
+            lastSync: new Date().toISOString().replace('T', ' ').substring(0, 16),
+            items: result.synced || menuItems.length
+          }
+        }));
+      }
+    } catch (error) {
+      console.error(`Failed to sync ${platform} menu:`, error);
+      setMenuSyncStatus(prev => ({
+        ...prev,
+        [platform]: { ...prev[platform], status: 'error' }
+      }));
+      alert(`Failed to sync ${platform} menu: ${error.message}`);
     }
   };
 
-  const handleOrderStatusChange = (orderId, newStatus) => {
-    setAggregatorOrders(orders => orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+  const handleSaveSettings = async () => {
+    // Save to localStorage
+    localStorage.setItem('aggregator_settings', JSON.stringify(settings));
+    
+    // Reinitialize service with new config
+    const config = {
+      zomato: {
+        enabled: !!settings.zomatoApiKey,
+        apiKey: settings.zomatoApiKey,
+        restaurantId: settings.zomatoRestaurantId,
+        environment: 'production'
+      },
+      swiggy: {
+        enabled: !!settings.swiggyApiKey,
+        apiKey: settings.swiggyApiKey,
+        restaurantId: settings.swiggyRestaurantId,
+        environment: 'production'
+      },
+      polling: {
+        enabled: true,
+        interval: (settings.syncInterval || 30) * 1000
+      }
+    };
+
+    try {
+      await aggregatorService.updateConfig(config);
+      await refreshData();
+      alert('Settings saved successfully!');
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert(`Failed to save settings: ${error.message}`);
+    }
+  };
+
+  const handleOrderStatusChange = async (orderId, newStatus) => {
+    try {
+      await aggregatorService.updateOrderStatus(orderId, newStatus);
+      setAggregatorOrders(orders => orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      alert(`Failed to update order status: ${error.message}`);
+    }
+  };
+
+  const handleAcceptOrder = async (orderId) => {
+    try {
+      await aggregatorService.acceptOrder(orderId, 30);
+      setAggregatorOrders(orders => orders.map(order => 
+        order.id === orderId ? { ...order, status: 'preparing' } : order
+      ));
+    } catch (error) {
+      console.error('Failed to accept order:', error);
+      alert(`Failed to accept order: ${error.message}`);
+    }
+  };
+
+  const handleRejectOrder = async (orderId, reason) => {
+    try {
+      await aggregatorService.rejectOrder(orderId, reason);
+      setAggregatorOrders(orders => orders.map(order => 
+        order.id === orderId ? { ...order, status: 'rejected' } : order
+      ));
+    } catch (error) {
+      console.error('Failed to reject order:', error);
+      alert(`Failed to reject order: ${error.message}`);
+    }
   };
 
   const StatCard = ({ label, value, icon, color, screenSize }) => (
@@ -708,59 +888,27 @@ export default function AggregatorIntegration({ onNavigate }) {
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
-                    Auto-Accept Orders
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    Automatically accept incoming orders
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSettings({ ...settings, autoAcceptOrders: !settings.autoAcceptOrders })}
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '8px' }}>
+                  Sync Interval (seconds)
+                </label>
+                <input
+                  type="number"
+                  value={settings.syncInterval}
+                  onChange={(e) => setSettings({ ...settings, syncInterval: parseInt(e.target.value) || 30 })}
+                  placeholder="30"
                   style={{
-                    padding: '6px 16px',
-                    background: settings.autoAcceptOrders ? '#10b981' : '#e5e7eb',
-                    color: settings.autoAcceptOrders ? '#ffffff' : '#64748b',
-                    border: 'none',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px'
                   }}
-                >
-                  {settings.autoAcceptOrders ? 'ON' : 'OFF'}
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0a0a0a', marginBottom: '4px' }}>
-                    Auto-Sync Menu
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    Automatically sync menu changes
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSettings({ ...settings, autoSyncMenu: !settings.autoSyncMenu })}
-                  style={{
-                    padding: '6px 16px',
-                    background: settings.autoSyncMenu ? '#10b981' : '#e5e7eb',
-                    color: settings.autoSyncMenu ? '#ffffff' : '#64748b',
-                    border: 'none',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {settings.autoSyncMenu ? 'ON' : 'OFF'}
-                </button>
+                />
               </div>
 
               <button
+                onClick={handleSaveSettings}
                 style={{
                   padding: '12px 24px',
                   background: '#6366f1',

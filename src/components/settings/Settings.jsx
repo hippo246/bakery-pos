@@ -1266,7 +1266,6 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     { 
       group: 'Tabs',
       items: [
-        { id: 'tab-orders', label: 'Orders', icon: '🛒' },
         { id: 'tab-dashboard', label: 'Dashboard', icon: '📊' },
         { id: 'tab-reports', label: 'Reports', icon: '📈' },
         { id: 'tab-crm', label: 'CRM', icon: '👥' },
@@ -2443,6 +2442,107 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         <option value="advanced">Advanced</option>
                       </select>
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Order Timeout (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.orderTimeout}
+                        onChange={(e) => handleInputChange('orderTimeout', e.target.value)}
+                        placeholder="30"
+                        style={{
+                          width: '100%',
+                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: screenSize === 'small' ? '16px' : '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none',
+                          minHeight: screenSize === 'small' ? '52px' : '48px'
+                        }}
+                      />
+                      <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '8px' }}>
+                        Auto-cancel orders after inactivity (0 = disabled)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order Display & Management */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    📋 Order Display & Management
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      { key: 'showTokensOnOrders', label: 'Show token numbers on orders', desc: 'Display token ID in order list' },
+                      { key: 'groupByTable', label: 'Group orders by table', desc: 'Organize orders by table number' },
+                      { key: 'showOrderTime', label: 'Show order creation time', desc: 'Display when order was placed' },
+                      { key: 'showCustomerName', label: 'Show customer name', desc: 'Display customer on order cards' },
+                      { key: 'autoRefreshOrders', label: 'Auto-refresh order list', desc: 'Automatically update orders' },
+                      { key: 'allowOrderEdit', label: 'Allow order editing', desc: 'Edit orders after creation' },
+                      { key: 'allowOrderSplit', label: 'Allow order splitting', desc: 'Split orders across payments' },
+                      { key: 'showOrderTotal', label: 'Show order total', desc: 'Display total on order cards' }
+                    ].map(({ key, label, desc }) => (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{desc}</div>
+                        </div>
+                        <div
+                          onClick={() => handleInputChange(key, !formData[key])}
+                          style={{
+                            width: '52px',
+                            height: '28px',
+                            borderRadius: '14px',
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          <div style={{
+                            position: 'absolute',
+                            top: '4px',
+                            left: formData[key] ? '28px' : '4px',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            transition: 'left 0.2s',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </div>
+                    ))}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Refresh Interval (seconds)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.orderRefreshInterval || 30}
+                        onChange={(e) => handleInputChange('orderRefreshInterval', parseInt(e.target.value) || 30)}
+                        placeholder="30"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2463,7 +2563,8 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'allowWalkIn', label: 'Allow walk-in orders (no customer/table)' },
                       { key: 'requirePaymentBeforeKOT', label: 'Require payment before sending to kitchen' },
                       { key: 'autoCreateKOT', label: 'Auto-create KOT on order completion' },
-                      { key: 'autoAssignTables', label: 'Auto-assign available tables' }
+                      { key: 'autoAssignTables', label: 'Auto-assign available tables' },
+                      { key: 'requireStaffForOrder', label: 'Require staff assignment for orders' }
                     ].map(({ key, label }) => (
                       <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
                         <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
@@ -2554,40 +2655,50 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         }}
                       />
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Enable split payments</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Allow customers to split payment across methods</div>
-                      </div>
-                      <div
-                        onClick={() => handleInputChange('enableSplitPayment', !formData.enableSplitPayment)}
-                        style={{
-                          width: '52px',
-                          height: '28px',
-                          borderRadius: '14px',
-                          background: formData.enableSplitPayment ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
-                          position: 'relative',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s'
-                        }}
-                      >
-                        <div style={{
-                          position: 'absolute',
-                          top: '4px',
-                          left: formData.enableSplitPayment ? '28px' : '4px',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          background: '#ffffff',
-                          transition: 'left 0.2s',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                        }} />
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[
+                        { key: 'enableSplitPayment', label: 'Enable split payments', desc: 'Allow customers to split payment across methods' },
+                        { key: 'enablePartialPayment', label: 'Enable partial payments', desc: 'Allow paying part of order total' },
+                        { key: 'requireFullPayment', label: 'Require full payment', desc: 'Complete payment before order completion' },
+                        { key: 'showPaymentHistory', label: 'Show payment history', desc: 'Display past payment methods on orders' },
+                        { key: 'enableTip', label: 'Enable tipping', desc: 'Allow customers to add tips' }
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                          <div>
+                            <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
+                            <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>{desc}</div>
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{
+                              width: '52px',
+                              height: '28px',
+                              borderRadius: '14px',
+                              background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                              position: 'relative',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s'
+                            }}
+                          >
+                            <div style={{
+                              position: 'absolute',
+                              top: '4px',
+                              left: formData[key] ? '28px' : '4px',
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              background: '#ffffff',
+                              transition: 'left 0.2s',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                {/* Discount Settings */}
+                {/* Discount & Pricing Settings */}
                 <div style={{
                   padding: '20px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
@@ -2595,7 +2706,7 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    🏷️ Discount Settings
+                    🏷️ Discount & Pricing
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {[
@@ -2603,10 +2714,94 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       { key: 'enableCustomOrders', label: 'Enable custom orders (items not in menu)' },
                       { key: 'enableVoid', label: 'Enable void orders' },
                       { key: 'enableOrderNotes', label: 'Enable order notes' },
-                      { key: 'enableHoldOrders', label: 'Enable hold orders feature' }
-                    ].map(({ key, label }) => (
+                      { key: 'enableHoldOrders', label: 'Enable hold orders feature' },
+                      { key: 'allowPriceOverride', label: 'Allow price override', desc: 'Staff can change item prices' },
+                      { key: 'enableCoupons', label: 'Enable coupon codes', desc: 'Accept discount coupons' },
+                      { key: 'maxDiscountPercent', label: 'Max discount %', desc: 'Maximum discount allowed', type: 'number' }
+                    ].map(({ key, label, desc, type }) => (
+                      type === 'number' ? (
+                        <div key={key}>
+                          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                            {label}
+                          </label>
+                          <input
+                            type="number"
+                            value={formData[key] || 0}
+                            onChange={(e) => handleInputChange(key, parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            style={{
+                              width: '100%',
+                              padding: '12px 16px',
+                              border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                              borderRadius: '12px',
+                              fontSize: '15px',
+                              background: darkMode ? '#000000' : '#ffffff',
+                              color: darkMode ? '#ffffff' : '#0a0a0a',
+                              outline: 'none'
+                            }}
+                          />
+                          <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '8px' }}>{desc}</div>
+                        </div>
+                      ) : (
+                        <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                          <div>
+                            <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
+                            {desc && <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{desc}</div>}
+                          </div>
+                          <div
+                            onClick={() => handleInputChange(key, !formData[key])}
+                            style={{
+                              width: '52px',
+                              height: '28px',
+                              borderRadius: '14px',
+                              background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                              position: 'relative',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s'
+                            }}
+                          >
+                            <div style={{
+                              position: 'absolute',
+                              top: '4px',
+                              left: formData[key] ? '28px' : '4px',
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              background: '#ffffff',
+                              transition: 'left 0.2s',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }} />
+                          </div>
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+
+                {/* Receipt & Printing */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🧾 Receipt & Printing
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      { key: 'autoPrintReceipt', label: 'Auto-print receipts', desc: 'Print receipt on payment' },
+                      { key: 'printKOTOnOrder', label: 'Print KOT on order', desc: 'Send to kitchen printer' },
+                      { key: 'showLogoOnReceipt', label: 'Show logo on receipt', desc: 'Print store logo' },
+                      { key: 'showGstOnReceipt', label: 'Show GST on receipt', desc: 'Display tax breakdown' },
+                      { key: 'showTableOnReceipt', label: 'Show table on receipt', desc: 'Print table number' },
+                      { key: 'showCustomerOnReceipt', label: 'Show customer on receipt', desc: 'Print customer name' }
+                    ].map(({ key, label, desc }) => (
                       <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{desc}</div>
+                        </div>
                         <div
                           onClick={() => handleInputChange(key, !formData[key])}
                           style={{
@@ -4153,60 +4348,107 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               const tabId = activeSection.replace('tab-', '');
               const tabSettings = formData[tabId] || {};
               const tabConfig = {
-                'orders': { icon: '🛒', label: 'Orders', settings: [
-                  { key: 'enabled', label: 'Enable Orders Tab', desc: 'Show/hide the Orders tab in navigation' },
-                  { key: 'autoRefresh', label: 'Auto Refresh', desc: 'Automatically refresh order list' },
-                  { key: 'showTokens', label: 'Show Tokens', desc: 'Display token numbers on orders' }
-                ]},
                 'dashboard': { icon: '📊', label: 'Dashboard', settings: [
                   { key: 'enabled', label: 'Enable Dashboard Tab', desc: 'Show/hide the Dashboard tab' },
-                  { key: 'showStats', label: 'Show Statistics', desc: 'Display key metrics' },
-                  { key: 'showCharts', label: 'Show Charts', desc: 'Display visual charts' }
+                  { key: 'showStats', label: 'Show Statistics', desc: 'Display key metrics', type: 'toggle' },
+                  { key: 'showCharts', label: 'Show Charts', desc: 'Display visual charts', type: 'toggle' },
+                  { key: 'showSalesSummary', label: 'Show Sales Summary', desc: 'Display daily sales summary', type: 'toggle' },
+                  { key: 'showTopItems', label: 'Show Top Items', desc: 'Display best-selling items', type: 'toggle' },
+                  { key: 'showHourlyBreakdown', label: 'Show Hourly Breakdown', desc: 'Display hourly sales chart', type: 'toggle' },
+                  { key: 'refreshInterval', label: 'Refresh Interval (min)', desc: 'Dashboard refresh frequency', type: 'number' },
+                  { key: 'defaultTimeRange', label: 'Default Time Range', desc: 'Default dashboard time range', type: 'text' }
                 ]},
                 'reports': { icon: '📈', label: 'Reports', settings: [
                   { key: 'enabled', label: 'Enable Reports Tab', desc: 'Show/hide the Reports tab' },
-                  { key: 'autoGenerate', label: 'Auto Generate', desc: 'Automatically generate daily reports' },
-                  { key: 'reportTime', label: 'Report Time', desc: 'Time to generate reports', type: 'time' }
+                  { key: 'autoGenerate', label: 'Auto Generate', desc: 'Automatically generate daily reports', type: 'toggle' },
+                  { key: 'reportTime', label: 'Report Time', desc: 'Time to generate reports', type: 'time' },
+                  { key: 'includeTaxBreakdown', label: 'Include Tax Breakdown', desc: 'Show GST/tax details in reports', type: 'toggle' },
+                  { key: 'includeStaffPerformance', label: 'Include Staff Performance', desc: 'Show staff metrics in reports', type: 'toggle' },
+                  { key: 'exportFormat', label: 'Export Format', desc: 'Default export format', type: 'text' },
+                  { key: 'reportRetentionDays', label: 'Report Retention (days)', desc: 'How long to keep reports', type: 'number' }
                 ]},
                 'crm': { icon: '👥', label: 'CRM', settings: [
                   { key: 'enabled', label: 'Enable CRM Tab', desc: 'Show/hide the CRM tab' },
-                  { key: 'showLoyalty', label: 'Show Loyalty', desc: 'Display customer loyalty points' },
-                  { key: 'allowGuestCheckout', label: 'Guest Checkout', desc: 'Allow checkout without registration' }
+                  { key: 'showLoyalty', label: 'Show Loyalty', desc: 'Display customer loyalty points', type: 'toggle' },
+                  { key: 'allowGuestCheckout', label: 'Guest Checkout', desc: 'Allow checkout without registration', type: 'toggle' },
+                  { key: 'requirePhone', label: 'Require Phone', desc: 'Require phone number for customers', type: 'toggle' },
+                  { key: 'enableLoyaltyPoints', label: 'Enable Loyalty Points', desc: 'Activate loyalty point system', type: 'toggle' },
+                  { key: 'pointsPerRupee', label: 'Points per ₹', desc: 'Loyalty points earned per rupee', type: 'number' },
+                  { key: 'redemptionRate', label: 'Redemption Rate', desc: 'Points needed for ₹1 discount', type: 'number' },
+                  { key: 'showOrderHistory', label: 'Show Order History', desc: 'Display customer past orders', type: 'toggle' }
                 ]},
                 'staff': { icon: '👨‍🍳', label: 'Staff', settings: [
                   { key: 'enabled', label: 'Enable Staff Tab', desc: 'Show/hide the Staff tab' },
-                  { key: 'showPerformance', label: 'Show Performance', desc: 'Display staff performance metrics' },
-                  { key: 'allowSchedule', label: 'Allow Scheduling', desc: 'Enable staff scheduling' }
+                  { key: 'showPerformance', label: 'Show Performance', desc: 'Display staff performance metrics', type: 'toggle' },
+                  { key: 'allowSchedule', label: 'Allow Scheduling', desc: 'Enable staff scheduling', type: 'toggle' },
+                  { key: 'requireClockIn', label: 'Require Clock In', desc: 'Staff must clock in to work', type: 'toggle' },
+                  { key: 'trackBreakTime', label: 'Track Break Time', desc: 'Track staff break durations', type: 'toggle' },
+                  { key: 'showSalesPerStaff', label: 'Show Sales per Staff', desc: 'Display individual sales metrics', type: 'toggle' },
+                  { key: 'autoAssignOrders', label: 'Auto Assign Orders', desc: 'Automatically assign orders to staff', type: 'toggle' },
+                  { key: 'maxOrdersPerStaff', label: 'Max Orders per Staff', desc: 'Maximum concurrent orders', type: 'number' }
                 ]},
                 'menu': { icon: '🍽️', label: 'Menu', settings: [
                   { key: 'enabled', label: 'Enable Menu Tab', desc: 'Show/hide the Menu tab' },
-                  { key: 'showImages', label: 'Show Images', desc: 'Display item images' },
-                  { key: 'allowCustomItems', label: 'Custom Items', desc: 'Allow adding custom menu items' }
+                  { key: 'showImages', label: 'Show Images', desc: 'Display item images', type: 'toggle' },
+                  { key: 'allowCustomItems', label: 'Custom Items', desc: 'Allow adding custom menu items', type: 'toggle' },
+                  { key: 'showStockLevel', label: 'Show Stock Level', desc: 'Display inventory on menu items', type: 'toggle' },
+                  { key: 'enableCategories', label: 'Enable Categories', desc: 'Use menu categorization', type: 'toggle' },
+                  { key: 'showModifiers', label: 'Show Modifiers', desc: 'Display item modifiers/add-ons', type: 'toggle' },
+                  { key: 'allowPriceOverride', label: 'Allow Price Override', desc: 'Staff can change item prices', type: 'toggle' },
+                  { key: 'hideOutOfStock', label: 'Hide Out of Stock', desc: 'Auto-hide items with zero stock', type: 'toggle' }
                 ]},
                 'inventory': { icon: '📦', label: 'Inventory', settings: [
                   { key: 'enabled', label: 'Enable Inventory Tab', desc: 'Show/hide the Inventory tab' },
-                  { key: 'lowStockAlert', label: 'Low Stock Alert', desc: 'Alert when stock is low' },
-                  { key: 'autoReorder', label: 'Auto Reorder', desc: 'Suggest reorder quantities' }
+                  { key: 'lowStockAlert', label: 'Low Stock Alert', desc: 'Alert when stock is low', type: 'toggle' },
+                  { key: 'autoReorder', label: 'Auto Reorder', desc: 'Suggest reorder quantities', type: 'toggle' },
+                  { key: 'lowStockThreshold', label: 'Low Stock Threshold', desc: 'Stock level for alerts', type: 'number' },
+                  { key: 'trackWaste', label: 'Track Waste', desc: 'Record waste in inventory', type: 'toggle' },
+                  { key: 'enableStockTransfer', label: 'Enable Stock Transfer', desc: 'Allow stock between locations', type: 'toggle' },
+                  { key: 'showCost', label: 'Show Cost', desc: 'Display item cost prices', type: 'toggle' },
+                  { key: 'autoDeductOnSale', label: 'Auto Deduct on Sale', desc: 'Reduce stock when items sold', type: 'toggle' }
                 ]},
                 'recipes': { icon: '📝', label: 'Recipes', settings: [
                   { key: 'enabled', label: 'Enable Recipes Tab', desc: 'Show/hide the Recipes tab' },
-                  { key: 'showCost', label: 'Show Cost', desc: 'Display recipe cost breakdown' },
-                  { key: 'showYield', label: 'Show Yield', desc: 'Display recipe yield information' }
+                  { key: 'showCost', label: 'Show Cost', desc: 'Display recipe cost breakdown', type: 'toggle' },
+                  { key: 'showYield', label: 'Show Yield', desc: 'Display recipe yield information', type: 'toggle' },
+                  { key: 'enableScaling', label: 'Enable Scaling', desc: 'Allow recipe batch scaling', type: 'toggle' },
+                  { key: 'showAllergens', label: 'Show Allergens', desc: 'Display allergen information', type: 'toggle' },
+                  { key: 'trackPrepTime', label: 'Track Prep Time', desc: 'Record preparation time', type: 'toggle' },
+                  { key: 'linkToInventory', label: 'Link to Inventory', desc: 'Auto-update ingredients', type: 'toggle' },
+                  { key: 'showNutrition', label: 'Show Nutrition', desc: 'Display nutritional info', type: 'toggle' }
                 ]},
                 'waste': { icon: '🗑️', label: 'Waste', settings: [
                   { key: 'enabled', label: 'Enable Waste Tab', desc: 'Show/hide the Waste tab' },
-                  { key: 'requireReason', label: 'Require Reason', desc: 'Mandatory reason for waste entry' },
-                  { key: 'trackCost', label: 'Track Cost', desc: 'Calculate waste cost impact' }
+                  { key: 'requireReason', label: 'Require Reason', desc: 'Mandatory reason for waste entry', type: 'toggle' },
+                  { key: 'trackCost', label: 'Track Cost', desc: 'Calculate waste cost impact', type: 'toggle' },
+                  { key: 'requireStaff', label: 'Require Staff', desc: 'Assign staff to waste entries', type: 'toggle' },
+                  { key: 'enablePhoto', label: 'Enable Photo', desc: 'Attach photos to waste records', type: 'toggle' },
+                  { key: 'showWasteTrend', label: 'Show Waste Trend', desc: 'Display waste over time', type: 'toggle' },
+                  { key: 'autoReport', label: 'Auto Report', desc: 'Generate weekly waste reports', type: 'toggle' },
+                  { key: 'wasteCategories', label: 'Waste Categories', desc: 'Custom waste categories', type: 'text' }
                 ]},
                 'reservations': { icon: '📅', label: 'Reservations', settings: [
                   { key: 'enabled', label: 'Enable Reservations Tab', desc: 'Show/hide the Reservations tab' },
-                  { key: 'autoConfirm', label: 'Auto Confirm', desc: 'Automatically confirm reservations' },
-                  { key: 'maxAdvanceDays', label: 'Max Advance Days', desc: 'Maximum days in advance for booking', type: 'number' }
+                  { key: 'autoConfirm', label: 'Auto Confirm', desc: 'Automatically confirm reservations', type: 'toggle' },
+                  { key: 'maxAdvanceDays', label: 'Max Advance Days', desc: 'Maximum days in advance for booking', type: 'number' },
+                  { key: 'requireDeposit', label: 'Require Deposit', desc: 'Require deposit for reservations', type: 'toggle' },
+                  { key: 'depositAmount', label: 'Deposit Amount (₹)', desc: 'Default deposit amount', type: 'number' },
+                  { key: 'allowCancellation', label: 'Allow Cancellation', desc: 'Customers can cancel online', type: 'toggle' },
+                  { key: 'cancellationHours', label: 'Cancellation Hours', desc: 'Min hours before cancellation', type: 'number' },
+                  { key: 'showNoShow', label: 'Show No-Show', desc: 'Track no-show reservations', type: 'toggle' }
                 ]},
                 'tokens': { icon: '🎫', label: 'Tokens', settings: [
                   { key: 'enabled', label: 'Enable Token System', desc: 'Enable token-based ordering' },
-                  { key: 'prefix', label: 'Token Prefix', desc: 'Prefix for token numbers', type: 'text' },
-                  { key: 'autoReset', label: 'Auto Reset', desc: 'Reset tokens daily' }
+                  { key: 'prefix', label: 'Token Prefix', desc: 'Prefix for token numbers (e.g., T-)', type: 'text' },
+                  { key: 'autoReset', label: 'Auto Reset Daily', desc: 'Reset token counter at midnight' },
+                  { key: 'tvModePin', label: 'TV Mode PIN', desc: 'PIN to enable TV display mode', type: 'text' },
+                  { key: 'refreshInterval', label: 'Refresh Interval (sec)', desc: 'How often to update TV display', type: 'number' },
+                  { key: 'hideReadyTokens', label: 'Hide Ready Tokens', desc: 'Remove tokens from TV when ready' },
+                  { key: 'showTableNumber', label: 'Show Table Number', desc: 'Display table on token cards' },
+                  { key: 'showItemCount', label: 'Show Item Count', desc: 'Display number of items on tokens' },
+                  { key: 'showTotalAmount', label: 'Show Total Amount', desc: 'Display order total on tokens' },
+                  { key: 'autoCompleteReady', label: 'Auto-Complete Ready', desc: 'Mark tokens complete when ready' },
+                  { key: 'tokenStartNumber', label: 'Start Number', desc: 'Starting token number', type: 'number' }
                 ]},
                 'tables': { icon: '🪑', label: 'Tables', settings: [
                   { key: 'enabled', label: 'Enable Tables Tab', desc: 'Show/hide the Tables tab' },
@@ -4232,22 +4474,32 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                 'waiters': { icon: '🛎️', label: 'Waiters', settings: [
                   { key: 'enabled', label: 'Enable Waiters Tab', desc: 'Show/hide the Waiters tab' },
                   { key: 'showAssignedOrders', label: 'Show Assigned Orders', desc: 'Display orders assigned to waiters' },
-                  { key: 'allowCallWaiter', label: 'Allow Call Waiter', desc: 'Enable call waiter feature' }
+                  { key: 'allowCallWaiter', label: 'Allow Call Waiter', desc: 'Enable call waiter feature' },
+                  { key: 'autoAssignTables', label: 'Auto Assign Tables', desc: 'Automatically assign waiters to tables', type: 'toggle' },
+                  { key: 'maxTablesPerWaiter', label: 'Max Tables per Waiter', desc: 'Maximum tables a waiter can handle', type: 'number' },
+                  { key: 'showPerformance', label: 'Show Performance', desc: 'Display waiter performance metrics', type: 'toggle' },
+                  { key: 'enableRating', label: 'Enable Rating', desc: 'Allow customer ratings for waiters', type: 'toggle' },
+                  { key: 'trackResponseTime', label: 'Track Response Time', desc: 'Measure waiter response times', type: 'toggle' }
                 ]},
                 'kitchen': { icon: '👨‍🍳', label: 'Kitchen', settings: [
                   { key: 'enabled', label: 'Enable Kitchen Tab', desc: 'Show/hide the Kitchen tab' },
                   { key: 'showTimers', label: 'Show Timers', desc: 'Display order preparation timers' },
-                  { key: 'autoPrintKOT', label: 'Auto Print KOT', desc: 'Automatically print KOT tickets' }
+                  { key: 'autoPrintKOT', label: 'Auto Print KOT', desc: 'Automatically print KOT tickets' },
+                  { key: 'enableStations', label: 'Enable Stations', desc: 'Use kitchen station system', type: 'toggle' },
+                  { key: 'priorityOrders', label: 'Priority Orders', desc: 'Highlight priority orders', type: 'toggle' },
+                  { key: 'showAllergenAlerts', label: 'Show Allergen Alerts', desc: 'Display allergy warnings', type: 'toggle' },
+                  { key: 'autoRouteItems', label: 'Auto Route Items', desc: 'Send items to correct stations', type: 'toggle' },
+                  { key: 'prepTimeTracking', label: 'Prep Time Tracking', desc: 'Track item preparation times', type: 'toggle' }
                 ]},
                 'onlineOrdering': { icon: '🌐', label: 'Online Ordering', settings: [
                   { key: 'enabled', label: 'Enable Online Ordering', desc: 'Enable online ordering platform' },
                   { key: 'autoAccept', label: 'Auto Accept', desc: 'Automatically accept online orders' },
-                  { key: 'preparationTime', label: 'Preparation Time (min)', desc: 'Default preparation time', type: 'number' }
-                ]},
-                'qrOrdering': { icon: '📱', label: 'QR Ordering', settings: [
-                  { key: 'enabled', label: 'Enable QR Ordering', desc: 'Enable QR-based ordering' },
-                  { key: 'autoAccept', label: 'Auto Accept', desc: 'Automatically accept QR orders' },
-                  { key: 'showMenuImages', label: 'Show Menu Images', desc: 'Display images in QR menu' }
+                  { key: 'preparationTime', label: 'Preparation Time (min)', desc: 'Default preparation time', type: 'number' },
+                  { key: 'enableDelivery', label: 'Enable Delivery', desc: 'Offer delivery option', type: 'toggle' },
+                  { key: 'deliveryRadius', label: 'Delivery Radius (km)', desc: 'Maximum delivery distance', type: 'number' },
+                  { key: 'deliveryFee', label: 'Delivery Fee (₹)', desc: 'Default delivery charge', type: 'number' },
+                  { key: 'minOrderAmount', label: 'Min Order Amount (₹)', desc: 'Minimum order for delivery', type: 'number' },
+                  { key: 'showEstimatedTime', label: 'Show Estimated Time', desc: 'Display prep time to customers', type: 'toggle' }
                 ]}
               };
               const config = tabConfig[tabId];
