@@ -1,58 +1,21 @@
 import { normalizeOrders, normalizeCustomers, normalizeKdsCards } from '../domain/normalize.js';
 import { isDatasetAllowed, getProductionBackendError } from '../utils/runtimeMode.js';
+import { MENU_ITEMS, NAV_MENU_ITEMS } from './mockData/menuData.js';
+import { 
+  LEGACY_INIT_ORDERS, 
+  LEGACY_INIT_CUSTOMERS, 
+  INIT_HIST, 
+  LEGACY_INIT_KDS 
+} from './mockData/orderData.js';
 
-export const MENU_ITEMS = [
-  { id: "m1", code: "ESP", name: "Espresso", price: 80, cat: "Coffee", desc: "Double shot, intense & smooth", emoji: "☕", popular: true, eightySixed: false, active: true },
-  { id: "m2", code: "CAP", name: "Cappuccino", price: 120, cat: "Coffee", desc: "Espresso with steamed milk foam", emoji: "☕", popular: true, eightySixed: false, active: true },
-  { id: "m3", code: "CBR", name: "Cold Brew", price: 150, cat: "Coffee", desc: "12-hour steeped, chilled", emoji: "🧋", popular: false, eightySixed: false, active: true },
-  { id: "m4", code: "MLT", name: "Matcha Latte", price: 160, cat: "Special", desc: "Ceremonial grade, oat milk", emoji: "🍵", popular: true, eightySixed: false, active: true },
-  { id: "m5", code: "CRS", name: "Croissant", price: 90, cat: "Food", desc: "Butter-layered, baked fresh", emoji: "🥐", popular: false, eightySixed: false, active: true },
-  { id: "m6", code: "ATO", name: "Avocado Toast", price: 180, cat: "Food", desc: "Smashed avo, chilli flakes, EVOO", emoji: "🥑", popular: true, eightySixed: false, active: true },
-  { id: "m7", code: "BBD", name: "Banana Bread", price: 100, cat: "Food", desc: "Moist, walnut-studded", emoji: "🍞", popular: false, eightySixed: false, active: true },
-  { id: "m8", code: "FWH", name: "Flat White", price: 130, cat: "Coffee", desc: "Velvety microfoam, smooth", emoji: "☕", popular: false, eightySixed: false, active: true },
-  { id: "m9", code: "LEM", name: "Lemonade", price: 110, cat: "Special", desc: "Fresh-squeezed, mint, sea salt", emoji: "🍋", popular: false, eightySixed: false, active: true },
-  { id: "m10", code: "BLM", name: "Blueberry Muffin", price: 95, cat: "Food", desc: "Jumbo, streusel-topped", emoji: "🫐", popular: false, eightySixed: false, active: true },
-];
-
-// Navigation menu items for the app
-export const NAV_MENU_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: "📊" },
-  { id: "orders", label: "Orders", icon: "📝" },
-  { id: "kitchen", label: "Kitchen", icon: "👨‍🍳" },
-  { id: "crm", label: "CRM", icon: "👥" },
-  { id: "analytics", label: "Analytics", icon: "📈" },
-  { id: "menu", label: "Menu", icon: "🍽️" },
-  { id: "inventory", label: "Inventory", icon: "📦" },
-  { id: "staff", label: "Staff", icon: "👤" },
-  { id: "tables", label: "Tables", icon: "🪑" },
-  { id: "classicpos", label: "Classic POS", icon: "🖥️" },
-  { id: "settings", label: "Settings", icon: "⚙️" },
-  { id: "delivery", label: "Delivery", icon: "🚚" },
-  { id: "expenses", label: "Expenses", icon: "💰" },
-  { id: "qr", label: "QR Ordering", icon: "📱" },
-  { id: "production", label: "Production", icon: "🏭" },
-  { id: "tracking", label: "Tracking", icon: "🗺️" },
-  { id: "purchasing", label: "Purchasing", icon: "🛒" },
-  { id: "documents", label: "Documents", icon: "📄" },
-  { id: "backup", label: "Backup", icon: "💾" },
-  { id: "operations", label: "Operations", icon: "⚡" },
-  { id: "workflows", label: "Workflows", icon: "🔄" },
-  { id: "notifications", label: "Notifications", icon: "🔔" },
-  { id: "intelligence", label: "Intelligence", icon: "🧠" },
-  { id: "health", label: "Health", icon: "🏥" },
-  { id: "security", label: "Security", icon: "🔒" },
-  { id: "activity", label: "Activity", icon: "📋" },
-];
-
-// Legacy order data - will be normalized on import
-export const LEGACY_INIT_ORDERS = [
-  { id: "ORD-001", source: "WALK_IN", customer: "Rohan Mehta", items: "Cappuccino × 2, Croissant", amount: 330, status: "PREPARING", time: 8, payStatus: "PAID" },
-  { id: "ORD-002", source: "SWIGGY", customer: "Priya Sharma", items: "Cold Brew × 1, Banana Bread × 2", amount: 350, status: "NEW", time: 2, payStatus: "PAID" },
-  { id: "ORD-003", source: "ZOMATO", customer: "Ankit Patel", items: "Matcha Latte × 1, Avocado Toast × 1", amount: 340, status: "ACCEPTED", time: 5, payStatus: "PAID" },
-  { id: "ORD-004", source: "DIRECT_DELIVERY", customer: "Sneha Kulkarni", items: "Flat White × 2, Croissant × 1", amount: 350, status: "OUT_FOR_DELIVERY", time: 18, payStatus: "COD" },
-  { id: "ORD-005", source: "WALK_IN", customer: "Vikram Desai", items: "Espresso × 1", amount: 80, status: "COMPLETED", time: 32, payStatus: "PAID" },
-  { id: "ORD-006", source: "SWIGGY", customer: "Meera Singh", items: "Cappuccino × 3, Banana Bread × 1", amount: 460, status: "READY", time: 12, payStatus: "PAID" },
-];
+// Re-export for backwards compatibility
+export { MENU_ITEMS, NAV_MENU_ITEMS };
+export { 
+  LEGACY_INIT_ORDERS, 
+  LEGACY_INIT_CUSTOMERS, 
+  INIT_HIST, 
+  LEGACY_INIT_KDS 
+};
 
 // Normalized orders using new domain model
 // PRODUCTION SAFETY: This is demo data, forbidden in production
@@ -63,15 +26,6 @@ export const INIT_ORDERS = () => {
   return normalizeOrders(LEGACY_INIT_ORDERS);
 };
 
-// Legacy customer data - will be normalized on import
-export const LEGACY_INIT_CUSTOMERS = [
-  { id: "c1", name: "Rohan Mehta", phone: "9876543210", email: "rohan@email.com", visits: 42, spend: 12400, tier: "GOLD", tags: ["Morning Regular", "High Spender"], fav: "Cappuccino", lastVisit: Date.now() - (2 * 24 * 60 * 60 * 1000), notes: "Prefers oat milk. Table by window." },
-  { id: "c2", name: "Sneha Kulkarni", phone: "8765432109", email: "sneha@email.com", visits: 18, spend: 4800, tier: "SILVER", tags: ["Weekend Visitor"], fav: "Matcha Latte", lastVisit: Date.now() - (5 * 24 * 60 * 60 * 1000), notes: "Allergic to nuts." },
-  { id: "c3", name: "Vikram Desai", phone: "7654321098", email: "", visits: 61, spend: 18900, tier: "PLATINUM", tags: ["High Spender", "Morning Regular", "Daily Customer"], fav: "Espresso", lastVisit: Date.now(), notes: "Loyal since Day 1. Always espresso, never sugar." },
-  { id: "c4", name: "Ayesha Khan", phone: "6543210987", email: "ayesha@email.com", visits: 8, spend: 2100, tier: "BRONZE", tags: ["New Customer"], fav: "Cold Brew", lastVisit: Date.now() - (12 * 24 * 60 * 60 * 1000), notes: "" },
-  { id: "c5", name: "Karan Joshi", phone: "9512345678", email: "karan@email.com", visits: 23, spend: 6700, tier: "SILVER", tags: ["Afternoon Regular"], fav: "Flat White", lastVisit: Date.now() - (1 * 24 * 60 * 60 * 1000), notes: "Usually orders for 2." },
-];
-
 // Normalized customers using new domain model
 // PRODUCTION SAFETY: This is demo data, forbidden in production
 export const INIT_CUSTOMERS = () => {
@@ -80,22 +34,6 @@ export const INIT_CUSTOMERS = () => {
   }
   return normalizeCustomers(LEGACY_INIT_CUSTOMERS);
 };
-
-export const INIT_HIST = {
-  c1: [{ date: "May 29", items: "Cappuccino × 2, Croissant", amt: 330 }, { date: "May 27", items: "Cappuccino × 1", amt: 120 }, { date: "May 24", items: "Flat White, Banana Bread", amt: 230 }],
-  c2: [{ date: "May 26", items: "Matcha Latte × 1", amt: 160 }, { date: "May 20", items: "Matcha Latte × 2, Croissant", amt: 410 }],
-  c3: [{ date: "May 31", items: "Espresso × 1", amt: 80 }, { date: "May 30", items: "Espresso × 1", amt: 80 }, { date: "May 29", items: "Espresso × 2", amt: 160 }],
-  c4: [{ date: "May 19", items: "Cold Brew × 1", amt: 150 }, { date: "May 12", items: "Cold Brew, Avocado Toast", amt: 330 }],
-  c5: [{ date: "May 30", items: "Flat White × 2", amt: 260 }, { date: "May 28", items: "Flat White × 2, Croissant × 2", amt: 440 }],
-};
-
-// Legacy KDS data - will be normalized on import
-export const LEGACY_INIT_KDS = [
-  { id: "KDS-001", orderId: "ORD-001", source: "WALK_IN", station: "Bar", status: "PREPARING", items: [{ name: "Cappuccino", qty: 2, mod: "Oat milk" }, { name: "Croissant", qty: 1, mod: "" }], note: "Window table", startedAt: Date.now() - 8 * 60 * 1000, urgency: "soon", tableNumber: 2, createdAt: Date.now() - 8 * 60 * 1000 },
-  { id: "KDS-002", orderId: "ORD-002", source: "SWIGGY", station: "Bar", status: "NEW", items: [{ name: "Cold Brew", qty: 1, mod: "" }, { name: "Banana Bread", qty: 2, mod: "Warmed please" }], note: "", startedAt: Date.now() - 2 * 60 * 1000, urgency: "urgent", tableNumber: null, createdAt: Date.now() - 2 * 60 * 1000 },
-  { id: "KDS-003", orderId: "ORD-003", source: "ZOMATO", station: "Kitchen", status: "ACCEPTED", items: [{ name: "Matcha Latte", qty: 1, mod: "Less sugar" }, { name: "Avocado Toast", qty: 1, mod: "Extra chili" }], note: "", startedAt: Date.now() - 5 * 60 * 1000, urgency: "urgent", tableNumber: null, createdAt: Date.now() - 5 * 60 * 1000 },
-  { id: "KDS-004", orderId: "ORD-006", source: "SWIGGY", station: "Bar", status: "READY", items: [{ name: "Cappuccino", qty: 3, mod: "" }, { name: "Banana Bread", qty: 1, mod: "" }], note: "3 separate cups", startedAt: Date.now() - 12 * 60 * 1000, urgency: "ok", tableNumber: null, createdAt: Date.now() - 12 * 60 * 1000 },
-];
 
 // Normalized KDS cards using new domain model
 // PRODUCTION SAFETY: This is demo data, forbidden in production
@@ -106,7 +44,7 @@ export const INIT_KDS = () => {
   return normalizeKdsCards(LEGACY_INIT_KDS);
 };
 
-export const MENU_CATS = ["ALL", "Coffee", "Special", "Food", "Popular", "Available only"];
+export const MENU_CATS = ["ALL", "Other", "Msgs", "Beers", "Cocktails", "Red Wines", "White Wines", "Breakfast", "Beverages", "Brunch", "Appetizer", "Salads", "Entrees", "Sandwich", "Sides"];
 
 // Modifier categories and options for menu items
 export const MODIFIER_CATEGORIES = {

@@ -733,979 +733,257 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: darkMode ? '#000000' : '#f8fafc',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      background: darkMode ? '#1a1a1a' : '#ffffff',
+      fontFamily: 'Arial, sans-serif',
       overflow: 'hidden'
     }}>
-      <style>
-        {`
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          @keyframes pulse {
-            0%, 100% {
-              opacity: 1;
-            }
-            50% {
-              opacity: 0.5;
-            }
-          }
-        `}
-      </style>
       {/* Content */}
       <div style={{
-        padding: screenSize === 'small' ? '16px' : '28px 32px',
-        background: darkMode ? '#000000' : '#f8fafc',
+        padding: screenSize === 'small' ? '16px' : '24px',
+        background: darkMode ? '#1a1a1a' : '#ffffff',
         flex: 1,
         overflowY: 'auto',
-        overflowX: 'hidden',
-        minHeight: 0,
-        maxHeight: '100%'
+        minHeight: 0
       }}>
-        {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', justifyContent: 'space-between', marginBottom: screenSize === 'small' ? '16px' : '20px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setActiveTab('overview')}
-              style={{
-                padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
-                background: activeTab === 'overview' ? (darkMode ? '#ffffff' : '#18181b') : 'transparent',
-                color: activeTab === 'overview' ? (darkMode ? '#18181b' : '#ffffff') : darkMode ? '#e0e0e0' : '#a1a1aa',
-                border: activeTab === 'overview' ? 'none' : `1px solid ${darkMode ? '#2c2c2c' : '#e2e8f0'}`,
-                borderRadius: '8px',
-                fontSize: screenSize === 'small' ? '13px' : '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                minHeight: screenSize === 'small' ? '40px' : 'auto'
-              }}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('billing')}
-              style={{
-                padding: screenSize === 'small' ? '10px 16px' : '10px 20px',
-                background: activeTab === 'billing' ? (darkMode ? '#ffffff' : '#18181b') : 'transparent',
-                color: activeTab === 'billing' ? (darkMode ? '#18181b' : '#ffffff') : darkMode ? '#e0e0e0' : '#a1a1aa',
-                border: activeTab === 'billing' ? 'none' : `1px solid ${darkMode ? '#2c2c2c' : '#e2e8f0'}`,
-                borderRadius: '8px',
-                fontSize: screenSize === 'small' ? '13px' : '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                minHeight: screenSize === 'small' ? '40px' : 'auto'
-              }}
-            >
-              Billing & Orders
-            </button>
-            <SpeakButton
-              onGenerateText={() => textToSpeechService.generateDashboardSpeechText(metrics)}
-              size={screenSize === 'small' ? 'small' : 'medium'}
-            />
-          </div>
-          <LiveClock />
+        {/* Header */}
+        <div style={{ marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0', color: darkMode ? '#ffffff' : '#000000' }}>
+            Dashboard
+          </h1>
+          <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#666666', margin: 0 }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'overview' ? (
-          <>
-            {/* Stats Grid */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)',
-              gap: screenSize === 'small' ? '12px' : '20px',
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
-            }}>
-              <StatCard
-                label="Revenue"
-                value={`₹${metrics.totalSales.toLocaleString()}`}
-                change="Today"
-                trend="up"
-                color={darkMode ? '#ffffff' : '#18181b'}
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Orders"
-                value={metrics.totalOrders}
-                change={`Total: ${metrics.totalTodayOrders}`}
-                trend="up"
-                color="#10b981"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Active"
-                value={metrics.activeOrders}
-                change="Live"
-                trend="neutral"
-                color="#f59e0b"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Pending"
-                value={metrics.pendingOrders}
-                change="Live"
-                trend="neutral"
-                color="#ef4444"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Cancelled"
-                value={metrics.cancelledOrders}
-                change={`${metrics.cancellationRate}%`}
-                trend="down"
-                color="#dc2626"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Completion Rate"
-                value={`${metrics.orderCompletionRate}%`}
-                change="Today"
-                trend="up"
-                color="#10b981"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Avg Prep Time"
-                value={`${Math.round(metrics.avgPreparationTime)}m`}
-                change="Per order"
-                trend="neutral"
-                color={darkMode ? '#e4e4e7' : '#3f3f46'}
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Avg Order Value"
-                value={`₹${Math.round(metrics.avgOrderValue)}`}
-                change="Today"
-                trend="up"
-                color="#06b6d4"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Low Stock"
-                value={metrics.lowStockItems}
-                change="Alert"
-                trend="down"
-                color="#f97316"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Out of Stock"
-                value={metrics.outOfStockItems}
-                change="Alert"
-                trend="down"
-                color="#dc2626"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Waste Cost"
-                value={`₹${(metrics.totalWasteCost || 0).toLocaleString()}`}
-                change={`${metrics.wasteCount || 0} records`}
-                trend={metrics.totalWasteCost > 0 ? 'down' : 'neutral'}
-                color="#f43f5e"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="Reservations"
-                value={metrics.upcomingReservations || 0}
-                change={`${metrics.totalReservations || 0} total`}
-                trend="up"
-                color={darkMode ? '#ffffff' : '#18181b'}
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-              <StatCard
-                label="QR Orders"
-                value={metrics.qrOrdersCount || 0}
-                change={`₹${(metrics.qrOrdersRevenue || 0).toLocaleString()}`}
-                trend="up"
-                color="#0ea5e9"
-                screenSize={screenSize}
-                darkMode={darkMode}
-              />
-            </div>
-
-            {/* Real-time Clock & Status */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: screenSize === 'small' ? '16px' : '28px',
-              padding: screenSize === 'small' ? '16px' : '20px',
-              background: darkMode ? '#0a0a0a' : '#ffffff',
-              borderRadius: '12px',
-              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-              flexDirection: screenSize === 'small' ? 'column' : 'row',
-              gap: screenSize === 'small' ? '12px' : '0'
-            }}>
-              <div>
-                <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>
-                  Current Time
-                </div>
-                <div style={{ fontSize: screenSize === 'small' ? '24px' : '32px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                  {currentTime.toLocaleTimeString()}
-                </div>
-              </div>
-              <div style={{ textAlign: screenSize === 'small' ? 'left' : 'right' }}>
-                <div style={{ fontSize: screenSize === 'small' ? '11px' : '13px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>
-                  System Status
-                </div>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 14px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: '8px',
-                  fontSize: screenSize === 'small' ? '12px' : '14px',
-                  fontWeight: '600',
-                  color: '#10b981'
-                }}>
-                  <span style={{
-                    width: '7px',
-                    height: '7px',
-                    background: '#10b981',
-                    borderRadius: '50%'
-                  }}></span>
-                  Live
-                </div>
-                <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: darkMode ? '#8a8a8e' : '#94a3b8', marginTop: '4px' }}>
-                  Last updated: {lastRefresh.toLocaleTimeString()}
-                </div>
-              </div>
-            </div>
-
-            {/* Chart Filters */}
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              marginBottom: screenSize === 'small' ? '16px' : '28px',
-              flexWrap: 'wrap'
-            }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <label style={{ fontSize: '12px', fontWeight: '500', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '4px', display: 'block' }}>
-                  Filter by Category
-                </label>
-                <select
-                  value={selectedCategory || ''}
-                  onChange={(e) => setSelectedCategory(e.target.value || null)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    background: darkMode ? '#0a0a0a' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    color: darkMode ? '#f3f4f6' : '#0a0a0a',
-                    fontSize: '13px'
-                  }}
-                >
-                  <option value="">All Categories</option>
-                  {[...new Set(menuItems.map(m => m.category))].map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: 1, minWidth: '200px' }}>
-                <label style={{ fontSize: '12px', fontWeight: '500', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '4px', display: 'block' }}>
-                  Filter by Payment Method
-                </label>
-                <select
-                  value={selectedPaymentMethod || ''}
-                  onChange={(e) => setSelectedPaymentMethod(e.target.value || null)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    background: darkMode ? '#0a0a0a' : '#ffffff',
-                    border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    color: darkMode ? '#f3f4f6' : '#0a0a0a',
-                    fontSize: '13px'
-                  }}
-                >
-                  <option value="">All Payment Methods</option>
-                  <option key="cash" value="CASH">Cash</option>
-                  <option key="card" value="CARD">Card</option>
-                  <option key="upi" value="UPI">UPI</option>
-                  <option key="upi_qr" value="UPI_QR">UPI QR</option>
-                  <option key="split" value="SPLIT">Split</option>
-                </select>
-              </div>
-              <button
-                onClick={() => { setSelectedCategory(null); setSelectedPaymentMethod(null); }}
-                style={{
-                  padding: '8px 16px',
-                  background: darkMode ? '#111111' : '#f3f4f6',
-                  color: darkMode ? '#f3f4f6' : '#111111',
-                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  height: 'fit-content',
-                  marginTop: 'auto'
-                }}
-              >
-                Clear Filters
-              </button>
-            </div>
-
-            {/* Charts Row */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)',
-              gap: screenSize === 'small' ? '16px' : '28px',
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
-            }}>
-              {/* Category Pie Chart */}
-              <div style={{
-                background: darkMode ? '#0a0a0a' : '#ffffff',
-                borderRadius: '10px',
-                padding: screenSize === 'small' ? '16px' : '24px',
-                border: `1px solid ${darkMode ? '#2c2c2c' : '#e5e7eb'}`
-              }}>
-                <div style={{
-                  fontSize: screenSize === 'small' ? '14px' : '18px',
-                  fontWeight: '600',
-                  color: darkMode ? '#ffffff' : '#0a0a0a',
-                  marginBottom: screenSize === 'small' ? '12px' : '24px'
-                }}>
-                  Sales by Category
-                </div>
-                <ResponsiveContainer width="100%" height={screenSize === 'small' ? 150 : 200}>
-                  <PieChart>
-                    <Pie
-                      data={metrics.categoryBreakdown}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={screenSize === 'small' ? false : ({ category, percentage }) => `${category} (${percentage}%)`}
-                      outerRadius={screenSize === 'small' ? 60 : 80}
-                      fill="#6666664d8"
-                      dataKey="sales"
-                      onClick={(data) => setSelectedCategory(selectedCategory === data.category ? null : data.category)}
-                      cursor="pointer"
-                    >
-                      {metrics.categoryBreakdown.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={selectedCategory === entry.category ? (darkMode ? '#ffffff' : '#18181b') : ['#71717a', '#10b981', '#f59e0b', '#ef4444', '#3f3f46'][index % 5]} 
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                {selectedCategory && (
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '8px 12px',
-                    background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    borderRadius: '8px',
-                    fontSize: screenSize === 'small' ? '11px' : '12px',
-                    color: darkMode ? '#ffffff' : '#18181b',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span>Filtering by: {selectedCategory}</span>
-                    <button 
-                      onClick={() => setSelectedCategory(null)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: darkMode ? '#ffffff' : '#18181b',
-                        cursor: 'pointer',
-                        fontSize: screenSize === 'small' ? '11px' : '12px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      ✕ Clear
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Payment Method Bar Chart */}
-              <div style={{
-                background: darkMode ? '#0a0a0a' : '#ffffff',
-                borderRadius: '10px',
-                padding: screenSize === 'small' ? '16px' : '24px',
-                border: `1px solid ${darkMode ? '#2c2c2c' : '#e5e7eb'}`
-              }}>
-                <div style={{
-                  fontSize: screenSize === 'small' ? '14px' : '18px',
-                  fontWeight: '600',
-                  color: darkMode ? '#ffffff' : '#0a0a0a',
-                  marginBottom: screenSize === 'small' ? '12px' : '24px'
-                }}>
-                  Payment Methods
-                </div>
-                <ResponsiveContainer width="100%" height={screenSize === 'small' ? 150 : 200}>
-                  <BarChart data={Object.entries(metrics.paymentMethods).map(([method, amount], index) => ({ method, amount, key: index }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? '#222222' : '#e5e7eb'} />
-                    <XAxis dataKey="method" stroke={darkMode ? '#a1a1aa' : '#a1a1aa'} fontSize={screenSize === 'small' ? 10 : 12} />
-                    <YAxis stroke={darkMode ? '#a1a1aa' : '#a1a1aa'} fontSize={screenSize === 'small' ? 10 : 12} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: darkMode ? '#0a0a0a' : '#ffffff', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, borderRadius: '8px' }}
-                      itemStyle={{ color: darkMode ? '#ffffff' : '#0a0a0a' }}
-                    />
-                    <Bar 
-                      dataKey="amount" 
-                      fill={selectedPaymentMethod ? (darkMode ? '#e4e4e7' : '#3f3f46') : (darkMode ? '#ffffff' : '#18181b')} 
-                      radius={[4, 4, 0, 0]}
-                      onClick={(data) => setSelectedPaymentMethod(selectedPaymentMethod === data.method ? null : data.method)}
-                      cursor="pointer"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-                {selectedPaymentMethod && (
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '8px 12px',
-                    background: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                    borderRadius: '8px',
-                    fontSize: screenSize === 'small' ? '11px' : '12px',
-                    color: darkMode ? '#ffffff' : '#18181b',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span>Filtering by: {selectedPaymentMethod}</span>
-                    <button 
-                      onClick={() => setSelectedPaymentMethod(null)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: darkMode ? '#ffffff' : '#18181b',
-                        cursor: 'pointer',
-                        fontSize: screenSize === 'small' ? '11px' : '12px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      ✕ Clear
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Real-time Hourly Sales Chart */}
-            <div style={{
-              background: darkMode ? '#0a0a0a' : '#ffffff',
-              borderRadius: '10px',
-              padding: screenSize === 'small' ? '16px' : '24px',
-              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-              marginBottom: screenSize === 'small' ? '16px' : '28px',
-              overflowX: 'auto'
-            }}>
-              <div style={{
-                fontSize: screenSize === 'small' ? '14px' : '18px',
-                fontWeight: '600',
-                color: darkMode ? '#ffffff' : '#0a0a0a',
-                marginBottom: screenSize === 'small' ? '16px' : '24px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '8px'
-              }}>
-                <span>Hourly Sales</span>
-                <span style={{ 
-                  fontSize: screenSize === 'small' ? '10px' : '11px', 
-                  color: '#10b981',
-                  padding: '4px 12px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: '12px'
-                }}>
-                  Live
-                </span>
-              </div>
-              
-              <div style={{ 
-                height: screenSize === 'small' ? '150px' : '200px',
-                display: 'flex',
-                alignItems: 'flex-end',
-                gap: screenSize === 'small' ? '2px' : '8px',
-                padding: '20px 0',
-                minWidth: 'max-content'
-              }}>
-                {Object.entries(metrics.hourlySales).map(([hour, data], index) => {
-                  const maxRevenue = Math.max(...Object.values(metrics.hourlySales).map(d => d.revenue), 1);
-                  const height = (data.revenue / maxRevenue) * (screenSize === 'small' ? 120 : 160);
-                  const isCurrentHour = parseInt(hour) === currentTime.getHours();
-                  
-                  return (
-                    <div key={hour} style={{ flex: screenSize === 'small' ? '0 0 auto' : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: screenSize === 'small' ? '4px' : '8px', minWidth: screenSize === 'small' ? '24px' : 'auto' }}>
-                      <div style={{ 
-                        width: screenSize === 'small' ? '20px' : '100%',
-                        height: `${Math.max(height, 4)}px`,
-                        background: isCurrentHour ? (darkMode ? '#ffffff' : '#18181b') : (darkMode ? '#3a3a3a' : '#e2e8f0'),
-                        borderRadius: '4px',
-                        transition: 'all 0.3s ease',
-                        position: 'relative'
-                      }}>
-                        {data.revenue > 0 && screenSize !== 'small' && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '-20px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            fontSize: '10px',
-                            color: darkMode ? '#a1a1aa' : '#64748b',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            ₹{Math.round(data.revenue)}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ 
-                        fontSize: screenSize === 'small' ? '8px' : '10px', 
-                        color: isCurrentHour ? (darkMode ? '#ffffff' : '#18181b') : (darkMode ? '#8a8a8e' : '#64748b'),
-                        fontWeight: isCurrentHour ? '600' : '400'
-                      }}>
-                        {parseInt(hour)}:00
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Recent Orders */}
-            <div style={{
-              background: darkMode ? '#0a0a0a' : '#ffffff',
-              borderRadius: '10px',
-              padding: screenSize === 'small' ? '16px' : '24px',
-              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
-            }}>
-              <div style={{
-                fontSize: screenSize === 'small' ? '14px' : '18px',
-                fontWeight: '600',
-                color: darkMode ? '#ffffff' : '#0a0a0a',
-                marginBottom: screenSize === 'small' ? '16px' : '24px'
-              }}>
-                Recent Orders
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {recentOrders.slice(0, 5).map((order, index) => (
-                  <div key={order.id} style={{
-                    background: darkMode ? '#111111' : '#f8f9fa',
-                    borderRadius: '12px',
-                    padding: screenSize === 'small' ? '12px' : '16px',
-                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    animation: `fadeIn 0.5s ease ${index * 0.1}s both`,
-                    flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
-                    gap: screenSize === 'small' ? '8px' : '0'
-                  }}>
-                    <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
-                        Order #{order.id}
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#a1a1aa' }}>
-                        {formatTimeAgo(order.createdAt)}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right', minWidth: screenSize === 'small' ? '80px' : 'auto' }}>
-                      <div style={{
-                        padding: screenSize === 'small' ? '3px 10px' : '4px 12px',
-                        borderRadius: '6px',
-                        fontSize: screenSize === 'small' ? '11px' : '12px',
-                        fontWeight: '600',
-                        background: order.status === 'COMPLETED' ? '#d1fae5' : 
-                                   order.status === 'PREPARING' ? '#fef3c7' : 
-                                   order.status === 'PENDING' ? '#fee2e2' : '#e5e7eb',
-                        color: order.status === 'COMPLETED' ? '#065f46' : 
-                               order.status === 'PREPARING' ? '#92400e' : 
-                               order.status === 'PENDING' ? '#991b1b' : '#e0e0e0'
-                      }}>
-                        {order.status}
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginTop: '4px' }}>
-                        ₹{order.total?.toFixed(2) || '0.00'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Kitchen Queue */}
-            <div style={{
-              background: darkMode ? '#0a0a0a' : '#ffffff',
-              borderRadius: '10px',
-              padding: screenSize === 'small' ? '16px' : '24px',
-              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-              marginBottom: screenSize === 'small' ? '16px' : '28px'
-            }}>
-              <div style={{
-                fontSize: screenSize === 'small' ? '14px' : '18px',
-                fontWeight: '600',
-                color: darkMode ? '#ffffff' : '#0a0a0a',
-                marginBottom: screenSize === 'small' ? '16px' : '24px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span>Kitchen Queue</span>
-                <span style={{ 
-                  fontSize: '11px', 
-                  color: '#10b981',
-                  padding: '4px 12px',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  borderRadius: '12px'
-                }}>
-                  {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length} Active
-                </span>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').slice(0, 5).map((order, index) => (
-                  <div key={order.id} style={{
-                    background: order.status === 'PENDING' ? (darkMode ? '#141414' : '#fee2e2') : (darkMode ? '#1e2620' : '#d1fae5'),
-                    borderRadius: '12px',
-                    padding: screenSize === 'small' ? '12px' : '16px',
-                    border: `1px solid ${order.status === 'PENDING' ? (darkMode ? '#2c2c2c' : '#fecaca') : '#10b981'}`,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    animation: `fadeIn 0.5s ease ${index * 0.1}s both`,
-                    flexWrap: screenSize === 'small' ? 'wrap' : 'nowrap',
-                    gap: screenSize === 'small' ? '8px' : '0'
-                  }}>
-                    <div style={{ flex: 1, minWidth: screenSize === 'small' ? '120px' : 'auto' }}>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
-                        Order #{order.id}
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#a1a1aa' }}>
-                        {order.items?.map(item => item.name).join(', ') || 'No items'}
-                      </div>
-                      {order.table && (
-                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8a8a8e' : '#a1a1aa', marginTop: '4px' }}>
-                          Table {order.table}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ textAlign: 'right', minWidth: screenSize === 'small' ? '80px' : 'auto' }}>
-                      <div style={{
-                        padding: screenSize === 'small' ? '3px 10px' : '4px 12px',
-                        borderRadius: '6px',
-                        fontSize: screenSize === 'small' ? '11px' : '12px',
-                        fontWeight: '600',
-                        background: order.status === 'PENDING' ? '#fef3c7' : '#d1fae5',
-                        color: order.status === 'PENDING' ? '#92400e' : '#065f46'
-                      }}>
-                        {order.status}
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#a1a1aa', marginTop: '4px' }}>
-                        {formatTimeAgo(order.createdAt)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {orders.filter(o => o.status === 'PENDING' || o.status === 'PREPARING').length === 0 && (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: darkMode ? '#8a8a8e' : '#64748b' }}>
-                    <div style={{ fontSize: '14px' }}>No active orders in kitchen</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Table Management */}
-            <div style={{
-              background: darkMode ? '#0a0a0a' : '#ffffff',
-              borderRadius: '10px',
-              padding: screenSize === 'small' ? '16px' : '24px',
-              border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-              marginBottom: screenSize === 'small' ? '16px' : '28px',
-              overflow: 'visible'
-            }}>
-              <div style={{
-                fontSize: screenSize === 'small' ? '14px' : '18px',
-                fontWeight: '600',
-                color: darkMode ? '#ffffff' : '#0a0a0a',
-                marginBottom: screenSize === 'small' ? '16px' : '24px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span>Table Management</span>
-                <span style={{ 
-                  fontSize: '11px', 
-                  color: darkMode ? '#ffffff' : '#18181b',
-                  padding: '4px 12px',
-                  background: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                  borderRadius: '12px'
-                }}>
-                  {orders.filter(o => o.table && o.status !== 'COMPLETED').length} Occupied
-                </span>
-              </div>
-              
-              <div style={{ 
-                display: 'grid',
-                gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : screenSize === 'medium' ? 'repeat(4, 1fr)' : 'repeat(4, 1fr)',
-                gap: screenSize === 'small' ? '10px' : '12px'
-              }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(tableNum => {
-                  const tableOrder = orders.find(o => o.table === tableNum && o.status !== 'COMPLETED');
-                  const isOccupied = !!tableOrder;
-                  
-                  return (
-                    <div key={tableNum} style={{
-                      background: isOccupied ? (darkMode ? '#1e2620' : '#d1fae5') : (darkMode ? '#141414' : '#f1f5f9'),
-                      borderRadius: '12px',
-                      padding: screenSize === 'small' ? '12px' : '16px',
-                      border: `1px solid ${isOccupied ? '#10b981' : (darkMode ? '#2c2c2c' : '#e2e8f0')}`,
-                      textAlign: 'center',
-                      transition: 'all 0.3s ease'
-                    }}>
-                      <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', marginBottom: '8px' }}>
-                        {isOccupied ? 'Occupied' : 'Open'}
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '14px' : '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
-                        T{tableNum}
-                      </div>
-                      <div style={{ 
-                        fontSize: screenSize === 'small' ? '11px' : '12px', 
-                        color: isOccupied ? '#10b981' : (darkMode ? '#8a8a8e' : '#64748b'),
-                        fontWeight: '500'
-                      }}>
-                        {isOccupied ? 'Occupied' : 'Available'}
-                      </div>
-                      {isOccupied && tableOrder && (
-                        <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#a1a1aa' : '#64748b', marginTop: '4px' }}>
-                          {formatTimeAgo(tableOrder.createdAt)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        ) : activeTab === 'billing' ? (
-          <Billing darkMode={darkMode} />
-        ) : null}
-      </div>
-
-      {/* Order Detail Modal */}
-      {showOrderModal && selectedOrder && (
+        {/* Key Metrics Row */}
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 3000,
-          padding: screenSize === 'small' ? '16px' : '0'
+          display: 'grid',
+          gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+          gap: '16px',
+          marginBottom: '24px'
         }}>
           <div style={{
-            background: darkMode ? '#0a0a0a' : '#ffffff',
-            borderRadius: '10px',
-            padding: screenSize === 'small' ? '16px' : '24px',
-            width: screenSize === 'small' ? '100%' : '600px',
-            maxWidth: '90vw',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            border: `1px solid ${darkMode ? '#2c2c2c' : '#e2e8f0'}`
+            background: darkMode ? '#2a2a2a' : '#f5f5f5',
+            border: `1px solid ${darkMode ? '#333333' : '#dddddd'}`,
+            borderRadius: '4px',
+            padding: '16px'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: screenSize === 'small' ? '16px' : '20px' }}>
-              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
-                Order #{selectedOrder.id}
-              </h3>
-              <button
-                onClick={() => setShowOrderModal(false)}
-                style={{
-                  padding: '8px 12px',
-                  background: darkMode ? '#222222' : '#e2e8f0',
-                  color: darkMode ? '#ffffff' : '#0a0a0a',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: screenSize === 'small' ? '14px' : '16px'
-                }}
-              >
-                ×
-              </button>
+            <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#666666', marginBottom: '8px' }}>Total Revenue</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
+              ₹{metrics.totalSales.toLocaleString()}
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Date</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    {new Date(selectedOrder.createdAt).toLocaleString()}
-                  </div>
-                </div>
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Status</div>
-                  <div style={{ 
-                    fontSize: screenSize === 'small' ? '13px' : '14px', 
-                    color: selectedOrder.status === 'COMPLETED' ? '#10b981' : 
-                           selectedOrder.status === 'PREPARING' ? '#f59e0b' : 
-                           selectedOrder.status === 'PENDING' ? '#ef4444' : '#6b7280',
-                    fontWeight: '500'
-                  }}>
-                    {selectedOrder.status}
-                  </div>
-                </div>
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Payment Method</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    {selectedOrder.paymentMethod || 'CASH'}
-                  </div>
-                </div>
-                {selectedOrder.table && (
-                  <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Table</div>
-                    <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                      {selectedOrder.table}
-                    </div>
-                  </div>
-                )}
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#666666', marginTop: '4px' }}>Today</div>
+          </div>
+          <div style={{
+            background: darkMode ? '#2a2a2a' : '#f5f5f5',
+            border: `1px solid ${darkMode ? '#333333' : '#dddddd'}`,
+            borderRadius: '4px',
+            padding: '16px'
+          }}>
+            <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#666666', marginBottom: '8px' }}>Total Orders</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
+              {metrics.totalOrders}
+            </div>
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#666666', marginTop: '4px' }}>Completed</div>
+          </div>
+          <div style={{
+            background: darkMode ? '#2a2a2a' : '#f5f5f5',
+            border: `1px solid ${darkMode ? '#333333' : '#dddddd'}`,
+            borderRadius: '4px',
+            padding: '16px'
+          }}>
+            <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#666666', marginBottom: '8px' }}>Active Orders</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
+              {metrics.activeOrders}
+            </div>
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#666666', marginTop: '4px' }}>Preparing/Pending</div>
+          </div>
+          <div style={{
+            background: darkMode ? '#2a2a2a' : '#f5f5f5',
+            border: `1px solid ${darkMode ? '#333333' : '#dddddd'}`,
+            borderRadius: '4px',
+            padding: '16px'
+          }}>
+            <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#666666', marginBottom: '8px' }}>Avg Order Value</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>
+              ₹{Math.round(metrics.avgOrderValue)}
+            </div>
+            <div style={{ fontSize: '11px', color: darkMode ? '#888888' : '#666666', marginTop: '4px' }}>Per order</div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div style={{ marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 12px 0', color: darkMode ? '#ffffff' : '#000000' }}>
+            Quick Actions
+          </h2>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => onNavigate && onNavigate('gst')}
+              style={{
+                padding: '10px 20px',
+                background: darkMode ? '#3b82f6' : '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              GST Reports
+            </button>
+            <button
+              onClick={() => onNavigate && onNavigate('reports')}
+              style={{
+                padding: '10px 20px',
+                background: darkMode ? '#10b981' : '#059669',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              View Reports
+            </button>
+            <button
+              onClick={() => onNavigate && onNavigate('orders')}
+              style={{
+                padding: '10px 20px',
+                background: darkMode ? '#f59e0b' : '#d97706',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              Manage Orders
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Orders Table */}
+        <div style={{ marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 12px 0', color: darkMode ? '#ffffff' : '#000000' }}>
+            Recent Orders
+          </h2>
+          <div style={{
+            background: darkMode ? '#2a2a2a' : '#ffffff',
+            border: `1px solid ${darkMode ? '#333333' : '#dddddd'}`,
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: darkMode ? '#333333' : '#f5f5f5', borderBottom: `1px solid ${darkMode ? '#444444' : '#dddddd'}` }}>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>Order ID</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>Time</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>Status</th>
+                  <th style={{ padding: '12px', textAlign: 'right', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#000000' }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.slice(0, 5).map(order => (
+                  <tr key={order.id} style={{ borderBottom: `1px solid ${darkMode ? '#333333' : '#eeeeee'}` }}>
+                    <td style={{ padding: '12px', fontSize: '13px', color: darkMode ? '#cccccc' : '#333333' }}>{order.id}</td>
+                    <td style={{ padding: '12px', fontSize: '13px', color: darkMode ? '#cccccc' : '#333333' }}>{new Date(order.createdAt).toLocaleTimeString()}</td>
+                    <td style={{ padding: '12px', fontSize: '13px', color: darkMode ? '#cccccc' : '#333333' }}>{order.status}</td>
+                    <td style={{ padding: '12px', fontSize: '13px', color: darkMode ? '#cccccc' : '#333333', textAlign: 'right', fontWeight: 'bold' }}>
+                      ₹{(order.total || 0).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Inventory Alerts */}
+        <div>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 12px 0', color: darkMode ? '#ffffff' : '#000000' }}>
+            Inventory Alerts
+          </h2>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: '16px'
+          }}>
+            <div style={{
+              background: darkMode ? '#2a2a2a' : '#fff5f5',
+              border: `1px solid ${darkMode ? '#dc2626' : '#feb2b2'}`,
+              borderRadius: '4px',
+              padding: '16px'
+            }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#ff8888' : '#c53030', marginBottom: '8px' }}>Out of Stock</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#c53030' }}>
+                {metrics.outOfStockItems}
               </div>
-
-              {selectedOrder.customer && (
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Customer</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    {selectedOrder.customer.name}
-                    {selectedOrder.customer.phone && ` (${selectedOrder.customer.phone})`}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: screenSize === 'small' ? '6px' : '8px' }}>Items</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedOrder.items?.map((item, index) => (
-                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                          {item.name} x{item.quantity}
-                        </div>
-                        {item.variant && (
-                          <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#8a8a8e' : '#64748b' }}>
-                            {item.variant}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a', fontWeight: '500' }}>
-                        ₹{(item.price * item.quantity).toFixed(2)}
-                      </div>
-                    </div>
-                  )) || <div style={{ fontSize: '14px', color: '#8a8a8e' }}>No items</div>}
-                </div>
+            </div>
+            <div style={{
+              background: darkMode ? '#2a2a2a' : '#fffaf0',
+              border: `1px solid ${darkMode ? '#ed8936' : '#fbd38d'}`,
+              borderRadius: '4px',
+              padding: '16px'
+            }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#f6ad55' : '#c05621', marginBottom: '8px' }}>Low Stock</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#c05621' }}>
+                {metrics.lowStockItems}
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Subtotal</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    ₹{(selectedOrder._calculated?.subtotal || selectedOrder.subtotal || 0).toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Tax</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    ₹{(selectedOrder._calculated?.tax || selectedOrder.tax || 0).toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ background: darkMode ? '#111111' : '#f8f9fa', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#a1a1aa' : '#64748b', marginBottom: '4px' }}>Discount</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    ₹{(selectedOrder._calculated?.discount || selectedOrder.discount || 0).toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ background: '#10b981', padding: screenSize === 'small' ? '10px' : '12px', borderRadius: '8px' }}>
-                  <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: '#ffffff', marginBottom: '4px' }}>Total</div>
-                  <div style={{ fontSize: screenSize === 'small' ? '16px' : '18px', color: '#ffffff', fontWeight: '700' }}>
-                    ₹{(selectedOrder._calculated?.total || selectedOrder.total || 0).toFixed(2)}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: screenSize === 'small' ? '8px' : '12px', marginTop: screenSize === 'small' ? '8px' : '12px' }}>
-                <button
-                  onClick={() => handlePrintOrder(selectedOrder)}
-                  style={{
-                    flex: 1,
-                    padding: screenSize === 'small' ? '10px' : '12px',
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Print
-                </button>
-                <button
-                  onClick={() => setShowOrderModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: screenSize === 'small' ? '10px' : '12px',
-                    background: darkMode ? '#222222' : '#e5e7eb',
-                    color: darkMode ? '#ffffff' : '#0a0a0a',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: screenSize === 'small' ? '13px' : '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Close
-                </button>
+            </div>
+            <div style={{
+              background: darkMode ? '#2a2a2a' : '#f0fff4',
+              border: `1px solid ${darkMode ? '#48bb78' : '#9ae6b4'}`,
+              borderRadius: '4px',
+              padding: '16px'
+            }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#68d391' : '#2f855a', marginBottom: '8px' }}>Active Menu Items</div>
+              <div style={{ fontSize: '20px', fontWeight: 'bold', color: darkMode ? '#ffffff' : '#2f855a' }}>
+                {metrics.activeMenuItems}
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function StatCard({ label, value, change, trend, color, screenSize, darkMode = true }) {
+function StatCard({ label, value, change, trend, color, screenSize, darkMode, onClick }) {
   return (
-    <div style={{
-      background: darkMode ? '#0a0a0a' : '#ffffff',
-      borderRadius: '10px',
-      padding: screenSize === 'small' ? '16px' : '20px',
-      border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-      borderLeft: `3px solid ${color || (darkMode ? '#2c2c2c' : '#e5e7eb')}`
-    }}>
-      <div style={{ fontSize: screenSize === 'small' ? '12px' : '13px', color: darkMode ? '#a1a1aa' : '#6b7280', marginBottom: '8px' }}>
+    <div
+      onClick={onClick}
+      style={{
+        background: darkMode ? '#1a1a1a' : '#ffffff',
+        border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+        borderRadius: '8px',
+        padding: screenSize === 'small' ? '12px' : '16px',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s'
+      }}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.borderColor = color;
+          e.currentTarget.style.transform = 'translateY(-2px)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.borderColor = darkMode ? '#333333' : '#e5e7eb';
+          e.currentTarget.style.transform = 'translateY(0)';
+        }
+      }}
+    >
+      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: darkMode ? '#9ca3af' : '#64748b', marginBottom: '4px' }}>
         {label}
       </div>
-      <div style={{ fontSize: screenSize === 'small' ? '24px' : '28px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
+      <div style={{ fontSize: screenSize === 'small' ? '20px' : '24px', fontWeight: '700', color: color || (darkMode ? '#ffffff' : '#0a0a0a'), marginBottom: '4px' }}>
         {value}
       </div>
-      <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : (darkMode ? '#a1a1aa' : '#6b7280') }}>
+      <div style={{ fontSize: screenSize === 'small' ? '10px' : '11px', color: darkMode ? '#8a8a8e' : '#94a3b8' }}>
         {change}
       </div>
     </div>

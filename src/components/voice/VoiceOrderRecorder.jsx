@@ -732,7 +732,7 @@ function VoiceOrderRecorder({
     return (
       <div style={{
         backgroundColor: '#ffffff',
-        border: '2px solid #8b5cf6',
+        border: '2px solid #3b82f6',
         borderRadius: '12px',
         padding: '24px',
         position: 'relative',
@@ -741,7 +741,7 @@ function VoiceOrderRecorder({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
           <span style={{ fontSize: '32px', marginRight: '12px' }}>⌨️</span>
-          <h3 style={{ margin: 0, color: '#7c3aed' }}>Type Your Order</h3>
+          <h3 style={{ margin: 0, color: '#3b82f6' }}>Type Your Order</h3>
         </div>
 
         {error && (
@@ -820,8 +820,8 @@ function VoiceOrderRecorder({
                   <div style={{
                     fontSize: '11px',
                     padding: '2px 6px',
-                    backgroundColor: '#ede9fe',
-                    color: '#7c3aed',
+                    backgroundColor: '#dbeafe',
+                    color: '#3b82f6',
                     borderRadius: '4px',
                     fontWeight: '500'
                   }}>

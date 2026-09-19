@@ -8,14 +8,17 @@ import Menu from './menu/Menu';
 import Inventory from './inventory/Inventory';
 import Settings from './settings/Settings';
 import Tables from './tables/Tables';
+import ToastTables from './tables/ToastTables';
 import Waiters from './waiters/Waiters';
 import Kitchen from './kitchen/Kitchen';
 import SimplePOS from './SimplePOS';
+import { ToastOrders } from './orders';
 import RecipeManagement from './recipes/RecipeManagement';
 import WasteManagement from './waste/WasteManagement';
 import Reservations from './reservations/Reservations';
 import OnlineOrdering from './onlineordering/OnlineOrdering';
 import TokenManagement from './tokens/TokenManagement';
+import GSTReports from './analytics/GSTReports';
 
 /* ─── All tab metadata in one place ─────────────────────────────────── */
 const ALL_TABS = [
@@ -33,6 +36,7 @@ const ALL_TABS = [
   { id: 'tables',       label: 'Tables',       icon: '🪑' },
   { id: 'waiters',      label: 'Waiters',      icon: '🛎️' },
   { id: 'kitchen',      label: 'Kitchen',      icon: '👨‍🍳' },
+  { id: 'gst',          label: 'GST Reports',  icon: '🧾' },
   { id: 'settings',     label: 'Settings',     icon: '⚙️' },
 ];
 
@@ -47,11 +51,45 @@ export default function BakeryPOS({
   settings, setSettings,
   tables, setTables,
 }) {
+  /* ── Navigation state ────────────────────────────────────────────── */
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('bakerypos_active_tab') || 'orders');
+  const [showMobileMoreMenu, setShowMobileMoreMenu] = useState(false);
+  const [tabletSidebarOpen, setTabletSidebarOpen] = useState(false);
+
   /* ── Responsive state ────────────────────────────────────────────── */
   const [isMobile,  setIsMobile]  = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768  : false);
   const [isMedium,  setIsMedium]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768  && window.innerWidth < 1024 : false);
   const [isTablet,  setIsTablet]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1280 : false);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1280 : false);
+  const [ordersMode, setOrdersMode] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      return saved.orders?.useToastOrders === true ? 'toast' : 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+
+  const [kitchenMode, setKitchenMode] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      if (saved.kitchen?.useChowbusKDS) return 'chowbus';
+      if (saved.kitchen?.useSplitKDS) return 'split';
+      if (saved.kitchen?.useOracleKDS) return 'oracle';
+      return 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+
+  const [tablesMode, setTablesMode] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      return saved.tables?.useToastTables === true ? 'toast' : 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
 
   useEffect(() => {
     const handle = () => {
@@ -66,14 +104,94 @@ export default function BakeryPOS({
     return () => window.removeEventListener('resize', handle);
   }, []);
 
-  /* ── Navigation state ────────────────────────────────────────────── */
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('bakerypos_active_tab') || 'orders');
-  const [showMobileMoreMenu, setShowMobileMoreMenu] = useState(false);
-  const [tabletSidebarOpen, setTabletSidebarOpen] = useState(false);
+  // Handle orders mode changes and save to localStorage
+  const handleOrdersModeChange = (newMode) => {
+    setOrdersMode(newMode);
+    try {
+      const existingSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      existingSettings.orders = existingSettings.orders || {};
+      existingSettings.orders.useToastOrders = newMode === 'toast';
+      localStorage.setItem('cafeos_settings', JSON.stringify(existingSettings));
+      window.dispatchEvent(new Event('cafeos_settings_changed'));
+    } catch (error) {
+      console.error('Failed to save orders mode:', error);
+    }
+  };
+
+  // Handle tables mode changes and save to localStorage
+  const handleTablesModeChange = (newMode) => {
+    setTablesMode(newMode);
+    try {
+      const existingSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      existingSettings.tables = existingSettings.tables || {};
+      existingSettings.tables.useToastTables = newMode === 'toast';
+      localStorage.setItem('cafeos_settings', JSON.stringify(existingSettings));
+      window.dispatchEvent(new Event('cafeos_settings_changed'));
+    } catch (error) {
+      console.error('Failed to save tables mode:', error);
+    }
+  };
+
+  // Handle kitchen mode changes and save to localStorage
+  const handleKitchenModeChange = (newMode) => {
+    setKitchenMode(newMode);
+    try {
+      const existingSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      existingSettings.kitchen = existingSettings.kitchen || {};
+      existingSettings.kitchen.useOracleKDS = newMode === 'oracle';
+      existingSettings.kitchen.useSplitKDS = newMode === 'split';
+      existingSettings.kitchen.useChowbusKDS = newMode === 'chowbus';
+      existingSettings.kitchen.oracleKDS = { enabled: newMode === 'oracle' };
+      existingSettings.kitchen.splitKDS = { enabled: newMode === 'split' };
+      existingSettings.kitchen.chowbusKDS = { enabled: newMode === 'chowbus' };
+      localStorage.setItem('cafeos_settings', JSON.stringify(existingSettings));
+      window.dispatchEvent(new Event('cafeos_settings_changed'));
+    } catch (error) {
+      console.error('Failed to save kitchen mode:', error);
+    }
+  };
+
+  // Sync orders, tables, and kitchen mode with localStorage changes
+  useEffect(() => {
+    const handleSettingsChange = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+        
+        // Sync orders mode
+        if (saved.orders?.useToastOrders) setOrdersMode('toast');
+        else setOrdersMode('standard');
+        
+        // Sync tables mode
+        if (saved.tables?.useToastTables) setTablesMode('toast');
+        else setTablesMode('standard');
+
+        // Sync kitchen mode
+        if (saved.kitchen?.useChowbusKDS) setKitchenMode('chowbus');
+        else if (saved.kitchen?.useSplitKDS) setKitchenMode('split');
+        else if (saved.kitchen?.useOracleKDS) setKitchenMode('oracle');
+        else setKitchenMode('standard');
+      } catch {
+        setOrdersMode('standard');
+        setTablesMode('standard');
+        setKitchenMode('standard');
+      }
+    };
+
+    window.addEventListener('cafeos_settings_changed', handleSettingsChange);
+    window.addEventListener('storage', handleSettingsChange);
+
+    return () => {
+      window.removeEventListener('cafeos_settings_changed', handleSettingsChange);
+      window.removeEventListener('storage', handleSettingsChange);
+    };
+  }, []);
 
   /* ── Desktop header dropdown state ──────────────────────────────── */
   const [menuDropdownOpen,      setMenuDropdownOpen]      = useState(false);
   const [customersDropdownOpen, setCustomersDropdownOpen] = useState(false);
+  const [ordersDropdownOpen,   setOrdersDropdownOpen]   = useState(false);
+  const [tablesDropdownOpen,   setTablesDropdownOpen]   = useState(false);
+  const [kitchenDropdownOpen,  setKitchenDropdownOpen]  = useState(false);
   const [dropdownCoords,        setDropdownCoords]        = useState({ top: 0, left: 0 });
   const tabsRef = useRef(null);
 
@@ -91,6 +209,14 @@ export default function BakeryPOS({
 
   useEffect(() => { localStorage.setItem('bakerypos_active_tab', activeTab); }, [activeTab]);
 
+  // Force re-render of kitchen when mode changes
+  const [kitchenKey, setKitchenKey] = useState(0);
+  useEffect(() => {
+    if (activeTab === 'kitchen') {
+      setKitchenKey(prev => prev + 1);
+    }
+  }, [kitchenMode, activeTab]);
+
   /* ── Close dropdowns on outside click ───────────────────────────── */
   useEffect(() => {
     const handler = (e) => {
@@ -98,6 +224,9 @@ export default function BakeryPOS({
       if (e.target.closest('[data-dropdown]')) return;
       setMenuDropdownOpen(false);
       setCustomersDropdownOpen(false);
+      setOrdersDropdownOpen(false);
+      setTablesDropdownOpen(false);
+      setKitchenDropdownOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -122,6 +251,9 @@ export default function BakeryPOS({
     setActiveTab(tab);
     setMenuDropdownOpen(false);
     setCustomersDropdownOpen(false);
+    setOrdersDropdownOpen(false);
+    setTablesDropdownOpen(false);
+    setKitchenDropdownOpen(false);
     setShowMobileMoreMenu(false);
     setTabletSidebarOpen(false);
   }, []);
@@ -134,8 +266,13 @@ export default function BakeryPOS({
 
   /* ── Content renderer ────────────────────────────────────────────── */
   const renderContent = () => {
+    // Use state instead of localStorage for reactivity
+    const useToastOrders = ordersMode === 'toast';
+
     switch (activeTab) {
-      case 'orders':       return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
+      case 'orders':       return useToastOrders
+        ? <ToastOrders orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} tables={tables} setTables={setTables} customers={customers} setCustomers={setCustomers} staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('orders')} />
+        : <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
       case 'dashboard':    return <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('dashboard')} />;
       case 'reports':      return <Reports orders={orders} menuItems={menuItems} inventory={inventory} staff={staff} customers={customers} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('reports')} />;
       case 'crm':          return <CRM customers={customers} setCustomers={setCustomers} darkMode={getTabDarkMode('crm')} />;
@@ -145,10 +282,13 @@ export default function BakeryPOS({
       case 'recipes':      return <RecipeManagement menuItems={menuItems} inventory={inventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('recipes')} />;
       case 'waste':        return <WasteManagement inventory={inventory} onNavigate={handleNavigate} darkMode={getTabDarkMode('waste')} />;
       case 'reservations': return <Reservations tables={tables} customers={customers} onNavigate={handleNavigate} darkMode={getTabDarkMode('reservations')} />;
-      case 'tokens':       return <TokenManagement orders={orders} setOrders={setOrders} onNavigate={handleNavigate} darkMode={getTabDarkMode('tokens')} />;
-      case 'tables':       return <Tables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} settings={settings} staff={staff} darkMode={getTabDarkMode('tables')} />;
-      case 'waiters':      return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} darkMode={getTabDarkMode('waiters')} />;
-      case 'kitchen':      return <Kitchen onNavigate={handleNavigate} orders={orders} setOrders={setOrders} menuItems={menuItems} />;
+      case 'tokens':       return <TokenManagement orders={orders} setOrders={setOrders} onNavigate={handleNavigate} tables={tables} setTables={setTables} darkMode={getTabDarkMode('tokens')} />;
+      case 'tables':       return tablesMode === 'toast'
+        ? <ToastTables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} settings={settings} staff={staff} darkMode={getTabDarkMode('tables')} />
+        : <Tables onNavigate={handleNavigate} orders={orders} setOrders={setOrders} tables={tables} setTables={setTables} menuItems={menuItems} settings={settings} staff={staff} darkMode={getTabDarkMode('tables')} />;
+      case 'waiters':      return <Waiters onNavigate={handleNavigate} orders={orders} setOrders={setOrders} staff={staff} tables={tables} darkMode={getTabDarkMode('waiters')} />;
+      case 'kitchen':      return <Kitchen key={kitchenKey} onNavigate={handleNavigate} orders={orders} setOrders={setOrders} menuItems={menuItems} staff={staff} />;
+      case 'gst':          return <GSTReports orders={orders} purchases={[]} business={{ gstin: '27AAPFU0939F1ZV', state: 'MH', name: 'Bakery POS', branchId: 'MAIN' }} branches={[{ id: 'MAIN', name: 'Main Branch', gstin: '27AAPFU0939F1ZV', state: 'MH' }]} vendors={[]} />;
       case 'settings':     return <Settings settings={settings} setSettings={setSettings} onNavigate={handleNavigate} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} orders={orders} setOrders={setOrders} staff={staff} setStaff={setStaff} tables={tables} setTables={setTables} darkMode={getTabDarkMode('settings')} />;
       default:             return <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
     }
@@ -251,16 +391,16 @@ export default function BakeryPOS({
               paddingBottom: '2px', flex: 1, minWidth: 0, whiteSpace: 'nowrap',
             }}>
               {[
-                { id: 'orders', label: 'Orders' },
+                { id: 'orders', label: 'Orders', hasDropdown: true },
                 { id: 'dashboard', label: 'Dashboard' },
                 { id: 'reports', label: 'Reports' },
                 { id: 'crm', label: 'Customers', hasDropdown: true },
                 { id: 'staff', label: 'Staff' },
                 { id: 'menu', label: 'Menu', hasDropdown: true },
                 { id: 'tokens', label: 'Tokens' },
-                { id: 'tables', label: 'Tables' },
+                { id: 'tables', label: 'Tables', hasDropdown: true },
                 { id: 'waiters', label: 'Waiters' },
-                { id: 'kitchen', label: 'Kitchen' },
+                { id: 'kitchen', label: 'Kitchen', hasDropdown: true },
                 { id: 'settings', label: 'Settings' },
               ].map(item => (
                 <button
@@ -271,8 +411,11 @@ export default function BakeryPOS({
                     if (item.hasDropdown) {
                       const rect = e.currentTarget.getBoundingClientRect();
                       setDropdownCoords({ top: rect.bottom + 4, left: rect.left });
-                      if (item.id === 'menu')      { setMenuDropdownOpen(p => !p); setCustomersDropdownOpen(false); }
-                      if (item.id === 'crm')       { setCustomersDropdownOpen(p => !p); setMenuDropdownOpen(false); }
+                      if (item.id === 'menu')      { setMenuDropdownOpen(p => !p); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
+                      if (item.id === 'crm')       { setCustomersDropdownOpen(p => !p); setMenuDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
+                      if (item.id === 'orders')    { setOrdersDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
+                      if (item.id === 'tables')    { setTablesDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setKitchenDropdownOpen(false); }
+                      if (item.id === 'kitchen')   { setKitchenDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); }
                     } else {
                       handleNavigate(item.id);
                     }
@@ -301,6 +444,59 @@ export default function BakeryPOS({
 
           {/* Right controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            {/* Mode Selector Button */}
+            <button
+              onClick={() => {
+                if (activeTab === 'orders') {
+                  handleOrdersModeChange(ordersMode === 'standard' ? 'toast' : 'standard');
+                } else if (activeTab === 'tables') {
+                  handleTablesModeChange(tablesMode === 'standard' ? 'toast' : 'standard');
+                } else if (activeTab === 'kitchen') {
+                  const modes = ['standard', 'oracle', 'split', 'chowbus'];
+                  const currentIndex = modes.indexOf(kitchenMode);
+                  const nextMode = modes[(currentIndex + 1) % modes.length];
+                  handleKitchenModeChange(nextMode);
+                }
+              }}
+              title={
+                activeTab === 'orders' ? `Switch to ${ordersMode === 'standard' ? 'Toast Orders' : 'Standard'} mode` :
+                activeTab === 'tables' ? `Switch to ${tablesMode === 'standard' ? 'Toast Floor Plan' : 'Standard Grid'} mode` :
+                `Switch Kitchen mode (current: ${kitchenMode})`
+              }
+              style={{
+                background: activeTab === 'orders' 
+                  ? (ordersMode === 'toast' ? 'var(--cafe-accent)' : 'var(--cafe-bg-hover)')
+                  : activeTab === 'tables'
+                  ? (tablesMode === 'toast' ? '#f59e0b' : 'var(--cafe-bg-hover)')
+                  : activeTab === 'kitchen'
+                  ? (kitchenMode === 'chowbus' ? '#2563eb' : kitchenMode === 'oracle' ? '#ef4444' : kitchenMode === 'split' ? '#10b981' : 'var(--cafe-bg-hover)')
+                  : 'var(--cafe-bg-hover)',
+                border: activeTab === 'orders' && ordersMode === 'toast' ? '2px solid var(--cafe-accent)' : 
+                         activeTab === 'tables' && tablesMode === 'toast' ? '2px solid #f59e0b' :
+                         activeTab === 'kitchen' && kitchenMode !== 'standard' ? `2px solid ${kitchenMode === 'chowbus' ? '#2563eb' : kitchenMode === 'oracle' ? '#ef4444' : '#10b981'}` :
+                         '1px solid var(--cafe-border)',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: 'var(--cafe-text-primary)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              {activeTab === 'orders' && (ordersMode === 'toast' ? '🍞' : '📋')}
+              {activeTab === 'tables' && (tablesMode === 'toast' ? '🗺️' : '🪑')}
+              {activeTab === 'kitchen' && (kitchenMode === 'chowbus' ? '⚡' : kitchenMode === 'oracle' ? '🔮' : kitchenMode === 'split' ? '🔄' : '📋')}
+              <span style={{ display: activeTab === 'orders' || activeTab === 'tables' || activeTab === 'kitchen' ? 'inline' : 'none' }}>
+                {activeTab === 'orders' ? (ordersMode === 'toast' ? 'Toast' : 'Standard') : 
+                 activeTab === 'tables' ? (tablesMode === 'toast' ? 'Toast Floor' : 'Standard') :
+                 activeTab === 'kitchen' ? (kitchenMode === 'chowbus' ? 'Chowbus' : kitchenMode === 'oracle' ? 'Oracle' : kitchenMode === 'split' ? 'Split' : 'Standard') : ''}
+              </span>
+            </button>
+
             <button
               onClick={() => setDarkMode(p => !p)}
               title={darkMode ? 'Switch to dark mode' : 'Switch to light mode'}
@@ -329,6 +525,58 @@ export default function BakeryPOS({
           { id: 'crm',          label: 'Customers' },
           { id: 'reservations', label: 'Reservations' },
         ]} activeTab={activeTab} onNavigate={(id) => { handleNavigate(id); setCustomersDropdownOpen(false); }} />
+      )}
+      {ordersDropdownOpen && isDesktop && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'orders-standard', label: '📋 Standard', action: () => { 
+            handleOrdersModeChange('standard'); 
+            setOrdersDropdownOpen(false);
+            handleNavigate('orders');
+          }},
+          { id: 'orders-toast', label: '🍞 Toast Orders', action: () => { 
+            handleOrdersModeChange('toast'); 
+            setOrdersDropdownOpen(false);
+            handleNavigate('orders');
+          }},
+        ]} activeTab={activeTab} onNavigate={(id) => {}} customActions={true} />
+      )}
+      {tablesDropdownOpen && isDesktop && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'tables-standard', label: '🪑 Standard Grid', action: () => { 
+            handleTablesModeChange('standard'); 
+            setTablesDropdownOpen(false);
+            handleNavigate('tables');
+          }},
+          { id: 'tables-toast', label: '🗺️ Toast Floor Plan', action: () => { 
+            handleTablesModeChange('toast'); 
+            setTablesDropdownOpen(false);
+            handleNavigate('tables');
+          }},
+        ]} activeTab={activeTab} onNavigate={(id) => {}} customActions={true} />
+      )}
+      {kitchenDropdownOpen && isDesktop && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'kitchen-standard', label: '📋 Standard KDS', action: () => { 
+            handleKitchenModeChange('standard'); 
+            setKitchenDropdownOpen(false);
+            handleNavigate('kitchen');
+          }},
+          { id: 'kitchen-oracle', label: '🔮 Oracle KDS', action: () => { 
+            handleKitchenModeChange('oracle'); 
+            setKitchenDropdownOpen(false);
+            handleNavigate('kitchen');
+          }},
+          { id: 'kitchen-split', label: '🔄 Split KDS', action: () => { 
+            handleKitchenModeChange('split'); 
+            setKitchenDropdownOpen(false);
+            handleNavigate('kitchen');
+          }},
+          { id: 'kitchen-chowbus', label: '⚡ Chowbus KDS', action: () => { 
+            handleKitchenModeChange('chowbus'); 
+            setKitchenDropdownOpen(false);
+            handleNavigate('kitchen');
+          }},
+        ]} activeTab={activeTab} onNavigate={(id) => {}} customActions={true} />
       )}
 
       {/* ══════════════════════════════════════════════════════════════
@@ -461,7 +709,7 @@ const scrollBtnStyle = {
 };
 
 /* ── Desktop dropdown ────────────────────────────────────────────────── */
-function DesktopDropdown({ coords, items, activeTab, onNavigate }) {
+function DesktopDropdown({ coords, items, activeTab, onNavigate, customActions = false }) {
   return (
     <div
       data-dropdown
@@ -483,7 +731,12 @@ function DesktopDropdown({ coords, items, activeTab, onNavigate }) {
           key={item.id}
           data-dropdown-trigger
           type="button"
-          onClick={() => onNavigate(item.id)}
+          onClick={() => {
+            if (customActions && item.action) {
+              item.action();
+            }
+            onNavigate(item.id);
+          }}
           style={{
             width: '100%', textAlign: 'left',
             padding: '10px 16px',
@@ -529,9 +782,9 @@ function MobileHeader({ storeName, activeTab, darkMode: dm, onToggleTheme, navPo
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{
           width: '32px', height: '32px', borderRadius: '10px',
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '16px', boxShadow: '0 0 12px rgba(99,102,241,0.4)',
+          fontSize: '16px', boxShadow: '0 0 12px rgba(59,130,246,0.4)',
         }}>🥐</div>
         <div>
           <div style={{
@@ -918,7 +1171,7 @@ function TabletSidebar({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
           <div style={{
             width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '16px',
           }}>🥐</div>

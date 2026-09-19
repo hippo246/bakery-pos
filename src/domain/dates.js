@@ -213,3 +213,34 @@ export function daysBetween(a, b) {
 export function isValidDateValue(value) {
   return isValidTimestamp(value);
 }
+
+/**
+ * Get start of period timestamp from period string (e.g., "2024-01" for January 2024)
+ * @param {string} period - Period string in format "YYYY-MM"
+ * @returns {number} Start of period timestamp
+ */
+export function getPeriodStart(period) {
+  try {
+    const [year, month] = period.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.getTime();
+  } catch {
+    return getStartOfDay(Date.now());
+  }
+}
+
+/**
+ * Get end of period timestamp from period string (e.g., "2024-01" for January 2024)
+ * @param {string} period - Period string in format "YYYY-MM"
+ * @returns {number} End of period timestamp
+ */
+export function getPeriodEnd(period) {
+  try {
+    const [year, month] = period.split('-').map(Number);
+    const date = new Date(year, month, 0); // Last day of the month
+    date.setHours(23, 59, 59, 999);
+    return date.getTime();
+  } catch {
+    return getEndOfDay(Date.now());
+  }
+}

@@ -54,10 +54,13 @@ export default function Cart({
         <div style={{
           textAlign: 'center',
           padding: '40px 20px',
-          color: darkMode ? '#6b7280' : '#9ca3af',
-          fontSize: '14px'
+          color: darkMode ? '#6b7280' : '#9ca3af'
         }}>
-          Cart is empty
+          <div style={{ fontSize: '28px', marginBottom: '8px', opacity: 0.6 }}>🛒</div>
+          <div style={{ fontSize: '14px', fontWeight: '500' }}>Cart is empty</div>
+          <div style={{ fontSize: '12px', marginTop: '2px', opacity: 0.8 }}>
+            Tap an item from the menu to add it
+          </div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -89,6 +92,16 @@ export default function Cart({
                 gap: '10px',
                 cursor: isEditing ? 'pointer' : 'default',
                 transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (isEditing && !selectedItems.includes(index)) {
+                  e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.06)' : '#f3f4f6';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isEditing && !selectedItems.includes(index)) {
+                  e.currentTarget.style.background = darkMode ? 'rgba(255,255,255,0.03)' : '#f9fafb';
+                }
               }}
             >
               {isEditing && (

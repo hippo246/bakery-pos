@@ -139,7 +139,13 @@ export default function BrewCRM() {
         }
       })());
   const [menuItems, setMenuItems] = useState(() => {
-    const starterMenu = MENU_ITEMS.map(m => ({ ...m, active: true, eightySixed: false }));
+    const starterMenu = MENU_ITEMS.map(m => ({ 
+      ...m, 
+      active: true, 
+      eightySixed: false,
+      category: m.cat, // Map 'cat' to 'category' for Toast POS compatibility
+      description: m.desc // Map 'desc' to 'description'
+    }));
     const raw = isLocalMode ? loadLocalCollection("menuItems", starterMenu) : starterMenu;
     const result = Array.isArray(raw) ? raw : starterMenu;
     console.log('[BrewCRM] Initial menuItems loaded:', result.length, 'items');

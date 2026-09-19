@@ -27,38 +27,99 @@ function toNonNegativeNumber(value, fallback = 0) {
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Format amount as Indian Rupees
+ * Get app settings from localStorage
+ */
+function getAppSettings() {
+  try {
+    const saved = localStorage.getItem('cafeos_settings');
+    return saved ? JSON.parse(saved) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
+ * Format amount as currency based on settings
  * @param {number} amount - The amount to format
+ * @param {string} currencyCode - Currency code (auto-detects from settings if not provided)
+ * @param {string} numberFormat - Number format (auto-detects from settings if not provided)
+ * @param {number} decimalPlaces - Decimal places (auto-detects from settings if not provided)
  * @returns {string} Formatted string like "₹1,234.56"
  */
-export function formatCurrency(amount) {
+export function formatCurrency(amount, currencyCode, numberFormat, decimalPlaces) {
   const safe = toSafeNumber(amount, 0);
+  
+  // Auto-detect settings if not provided
+  const settings = getAppSettings();
+  const finalCurrencyCode = currencyCode || settings.currency || 'INR';
+  const finalNumberFormat = numberFormat || settings.numberFormat || 'indian';
+  const finalDecimalPlaces = decimalPlaces !== undefined ? decimalPlaces : (settings.decimalPlaces || 2);
+  
+  // Currency symbols map
+  const currencySymbols = {
+    'INR': '₹',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'AED': 'د.إ',
+    'SGD': 'S$',
+    'AUD': 'A$',
+    'CAD': 'C$',
+    'JPY': '¥',
+    'CNY': '¥'
+  };
+  
+  // Locale map for number formatting
+  const localeMap = {
+    'indian': 'en-IN',
+    'international': 'en-US',
+    'european': 'de-DE'
+  };
+  
   try {
-    return new Intl.NumberFormat('en-IN', {
+    const locale = localeMap[finalNumberFormat] || 'en-IN';
+    
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'INR',
+      currency: finalCurrencyCode,
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2
+      maximumFractionDigits: finalDecimalPlaces
     }).format(safe);
   } catch {
-    return `₹${safe.toFixed(2)}`;
+    const symbol = currencySymbols[finalCurrencyCode] || finalCurrencyCode;
+    return `${symbol}${safe.toFixed(finalDecimalPlaces)}`;
   }
 }
 
 /**
  * Format amount without currency symbol
  * @param {number} amount - The amount to format
+ * @param {string} numberFormat - Number format (auto-detects from settings if not provided)
+ * @param {number} decimalPlaces - Decimal places (auto-detects from settings if not provided)
  * @returns {string} Formatted string like "1,234.56"
  */
-export function formatAmount(amount) {
+export function formatAmount(amount, numberFormat, decimalPlaces) {
   const safe = toSafeNumber(amount, 0);
+  
+  // Auto-detect settings if not provided
+  const settings = getAppSettings();
+  const finalNumberFormat = numberFormat || settings.numberFormat || 'indian';
+  const finalDecimalPlaces = decimalPlaces !== undefined ? decimalPlaces : (settings.decimalPlaces || 2);
+  
+  const localeMap = {
+    'indian': 'en-IN',
+    'international': 'en-US',
+    'european': 'de-DE'
+  };
+  
   try {
-    return new Intl.NumberFormat('en-IN', {
+    const locale = localeMap[finalNumberFormat] || 'en-IN';
+    return new Intl.NumberFormat(locale, {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2
+      maximumFractionDigits: finalDecimalPlaces
     }).format(safe);
   } catch {
-    return safe.toFixed(2);
+    return safe.toFixed(finalDecimalPlaces);
   }
 }
 
@@ -81,12 +142,17 @@ export function calculateSubtotal(items) {
 /**
  * Calculate tax amount
  * @param {number} subtotal - Subtotal amount
- * @param {number} taxRate - Tax rate as decimal (e.g., 0.18 for 18%)
+ * @param {number} taxRate - Tax rate as decimal (auto-detects from settings if not provided)
  * @returns {number} Tax amount
  */
-export function calculateTax(subtotal, taxRate = 0.18) {
+export function calculateTax(subtotal, taxRate) {
   const safeSub = toNonNegativeNumber(subtotal, 0);
-  const safeRate = toNonNegativeNumber(taxRate, 0);
+  
+  // Auto-detect tax rate from settings if not provided
+  const settings = getAppSettings();
+  const finalTaxRate = taxRate !== undefined ? taxRate : ((settings.taxRate || 18) / 100);
+  
+  const safeRate = toNonNegativeNumber(finalTaxRate, 0);
   return roundCurrency(safeSub * safeRate);
 }
 
@@ -95,14 +161,19 @@ export function calculateTax(subtotal, taxRate = 0.18) {
  * Tax is applied on the post-discount (taxable) amount — correct for Indian GST.
  * @param {number} subtotal - Pre-discount subtotal
  * @param {number} discountAmount - Discount to deduct before tax
- * @param {number} taxRate - GST rate as decimal (default 0.18 = 18%)
+ * @param {number} taxRate - GST rate as decimal (auto-detects from settings if not provided)
  * @returns {{ subtotal, discountAmount, taxableAmount, taxAmount, cgst, sgst, total }}
  */
-export function calculateOrderTotals(subtotal, discountAmount = 0, taxRate = 0.18) {
+export function calculateOrderTotals(subtotal, discountAmount = 0, taxRate) {
   const safeSub = toNonNegativeNumber(subtotal, 0);
   const safeDiscount = Math.min(toNonNegativeNumber(discountAmount, 0), safeSub);
+  
+  // Auto-detect tax rate from settings if not provided
+  const settings = getAppSettings();
+  const finalTaxRate = taxRate !== undefined ? taxRate : ((settings.taxRate || 18) / 100);
+  
   const taxableAmount = roundCurrency(Math.max(0, safeSub - safeDiscount));
-  const taxAmount = calculateTax(taxableAmount, taxRate);
+  const taxAmount = calculateTax(taxableAmount, finalTaxRate);
   // Split evenly for CGST + SGST (standard for intra-state GST)
   const halfTax = roundCurrency(taxAmount / 2);
   // Use difference calculation to avoid rounding errors

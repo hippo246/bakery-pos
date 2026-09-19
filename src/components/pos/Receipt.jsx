@@ -64,11 +64,6 @@ export default function Receipt({
                 <span>{item.name} x{item.quantity}</span>
                 <span>₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>
-              {item.modifiers && item.modifiers.length > 0 && (
-                <div style={{ fontSize: '10px', color: darkMode ? '#9ca3af' : '#6b7280', marginLeft: '8px' }}>
-                  {item.modifiers.map(m => m.name).join(', ')}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -80,7 +75,7 @@ export default function Receipt({
           </div>
           {order.discount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span>Discount:</span>
+              <span>Discount {order.discountPercentage ? `(${order.discountPercentage}%)` : ''}:</span>
               <span>-₹{order.discount?.toFixed(2) || '0.00'}</span>
             </div>
           )}
@@ -96,7 +91,31 @@ export default function Receipt({
 
         <div style={{ textAlign: 'center', marginBottom: '12px', fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
           <div>Payment: {order.paymentMethod}</div>
-          <div>Status: {order.paymentStatus}</div>
+          <div>Status: {order.status}</div>
+          {order.tableNumber && <div>Table: {order.tableNumber}</div>}
+          {order.diningOption && <div>Type: {order.diningOption.replace('_', ' ')}</div>}
+        </div>
+
+        {/* Dynamic Pay-by-QR Code for Table-Side Receipt */}
+        <div style={{
+          margin: '12px 0',
+          padding: '10px',
+          border: `1px solid ${darkMode ? '#333' : '#ddd'}`,
+          borderRadius: '8px',
+          textAlign: 'center',
+          backgroundColor: darkMode ? '#111' : '#f9fafb'
+        }}>
+          <div style={{ fontSize: '10px', fontWeight: '700', color: darkMode ? '#60a5fa' : '#2563eb', marginBottom: '6px' }}>
+            📱 PAY TABLE-SIDE VIA UPI / QR CODE
+          </div>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=upi://pay?pa=bakerypos@upi%26pn=BakeryPOS%26am=${order.total || 0}%26cu=INR`}
+            alt="Pay by QR"
+            style={{ width: '100px', height: '100px', borderRadius: '4px' }}
+          />
+          <div style={{ fontSize: '9px', color: darkMode ? '#9ca3af' : '#6b7280', marginTop: '4px' }}>
+            Scan with GPay / PhonePe / Paytm to Pay ₹{(order.total || 0).toFixed(2)}
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>

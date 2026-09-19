@@ -24,11 +24,18 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
   };
 
   const handleSliderChange = (category, key, value) => {
+    // Validate slider values
+    const numValue = parseInt(value);
+    if (isNaN(numValue) || numValue < 1 || numValue > 60) {
+      console.warn('Invalid slider value:', value);
+      return;
+    }
+    
     const updated = {
       ...localSettings,
       [category]: {
         ...localSettings[category],
-        [key]: value
+        [key]: numValue
       }
     };
     setLocalSettings(updated);
@@ -37,6 +44,12 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
   };
 
   const handleSelectChange = (category, key, value) => {
+    // Validate select values
+    if (!value || value === '') {
+      console.warn('Invalid select value:', value);
+      return;
+    }
+    
     const updated = {
       ...localSettings,
       [category]: {
@@ -153,6 +166,150 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
             onSelectChange={(key, value) => handleSelectChange('display', key, value)}
           />
 
+          {/* Oracle KDS Toggle */}
+          <div style={{
+            marginTop: '20px',
+            padding: '16px',
+            background: '#001100',
+            border: '2px solid #00ff00',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#00ff00',
+              marginBottom: '12px',
+              borderBottom: '1px solid #00ff00',
+              paddingBottom: '8px'
+            }}>
+              ORACLE KDS MODE
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: '#00ff00',
+              marginBottom: '12px',
+              lineHeight: '1.4'
+            }}>
+              Switch to Oracle-style Kitchen Display System - exact replica of professional KDS interface
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  const updated = { ...localSettings, oracleKDS: { ...localSettings.oracleKDS, enabled: false } };
+                  setLocalSettings(updated);
+                  onSettingsChange(updated);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: !localSettings.oracleKDS?.enabled ? '#00ff00' : '#000000',
+                  color: !localSettings.oracleKDS?.enabled ? '#000000' : '#00ff00',
+                  border: '2px solid #00ff00',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontFamily: '"Courier New", monospace'
+                }}
+              >
+                STANDARD KITCHEN
+              </button>
+              <button
+                onClick={() => {
+                  const updated = { ...localSettings, oracleKDS: { ...localSettings.oracleKDS, enabled: true }, splitKDS: { ...localSettings.splitKDS, enabled: false } };
+                  setLocalSettings(updated);
+                  onSettingsChange(updated);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: localSettings.oracleKDS?.enabled ? '#00ff00' : '#000000',
+                  color: localSettings.oracleKDS?.enabled ? '#000000' : '#00ff00',
+                  border: '2px solid #00ff00',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontFamily: '"Courier New", monospace'
+                }}
+              >
+                ORACLE KDS
+              </button>
+            </div>
+          </div>
+
+          {/* Split KDS Toggle */}
+          <div style={{
+            marginTop: '20px',
+            padding: '16px',
+            background: '#001100',
+            border: '2px solid #00ff00',
+            borderRadius: '8px'
+          }}>
+            <div style={{
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#00ff00',
+              marginBottom: '12px',
+              borderBottom: '1px solid #00ff00',
+              paddingBottom: '8px'
+            }}>
+              SPLIT KDS MODE
+            </div>
+            <div style={{
+              fontSize: '11px',
+              color: '#00ff00',
+              marginBottom: '12px',
+              lineHeight: '1.4'
+            }}>
+              SplitAbility-style Kitchen Display System - column-based cache organization
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  const updated = { ...localSettings, splitKDS: { ...localSettings.splitKDS, enabled: false } };
+                  setLocalSettings(updated);
+                  onSettingsChange(updated);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: !localSettings.splitKDS?.enabled ? '#00ff00' : '#000000',
+                  color: !localSettings.splitKDS?.enabled ? '#000000' : '#00ff00',
+                  border: '2px solid #00ff00',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontFamily: '"Courier New", monospace'
+                }}
+              >
+                DISABLE
+              </button>
+              <button
+                onClick={() => {
+                  const updated = { ...localSettings, splitKDS: { ...localSettings.splitKDS, enabled: true }, oracleKDS: { ...localSettings.oracleKDS, enabled: false } };
+                  setLocalSettings(updated);
+                  onSettingsChange(updated);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: localSettings.splitKDS?.enabled ? '#00ff00' : '#000000',
+                  color: localSettings.splitKDS?.enabled ? '#000000' : '#00ff00',
+                  border: '2px solid #00ff00',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontFamily: '"Courier New", monospace'
+                }}
+              >
+                ENABLE
+              </button>
+            </div>
+          </div>
+
           {/* Order Management */}
           <SettingsSection
             title="ORDER MANAGEMENT"
@@ -206,6 +363,17 @@ export default function KitchenSettingsPanel({ onClose, settings, onSettingsChan
             onToggle={(key) => handleToggle('advanced', key)}
             onSliderChange={(key, value) => handleSliderChange('advanced', key, value)}
             onSelectChange={(key, value) => handleSelectChange('advanced', key, value)}
+          />
+
+          {/* Oracle KDS */}
+          <SettingsSection
+            title="ORACLE KDS"
+            icon="[O]"
+            settings={localSettings.oracleKDS}
+            fullSettings={localSettings}
+            onToggle={(key) => handleToggle('oracleKDS', key)}
+            onSliderChange={(key, value) => handleSliderChange('oracleKDS', key, value)}
+            onSelectChange={(key, value) => handleSelectChange('oracleKDS', key, value)}
           />
         </div>
       </div>
@@ -376,6 +544,7 @@ function getDescription(key) {
     condensedView: 'Collapse ticket info into compact view for more tickets on screen',
     darkMode: 'Use dark theme for low-light environments',
     ticketZoom: 'Scale ticket size for better visibility',
+    ticketLayout: 'Choose ticket layout style (modern, professional, minimal, condensed, list, expo)',
     paginationEnabled: 'Enable pagination for large numbers of tickets',
     
     // Order Management
@@ -434,6 +603,14 @@ function getOptions(key) {
       { value: '5', label: '5 seconds' },
       { value: '10', label: '10 seconds' },
       { value: '30', label: '30 seconds' }
+    ],
+    ticketLayout: [
+      { value: 'modern', label: 'Modern (Default)' },
+      { value: 'professional', label: 'Professional KDS' },
+      { value: 'minimal', label: 'Minimal Clean' },
+      { value: 'condensed', label: 'Condensed' },
+      { value: 'list', label: 'List View' },
+      { value: 'expo', label: 'Expo View' }
     ]
   };
   return optionsMap[key] || [];
@@ -445,7 +622,8 @@ export function getDefaultSettings() {
       expoMode: false,
       darkMode: true,
       ticketZoom: 100,
-      ticketLayout: 'grid',
+      ticketLayout: 'professional',
+      useOracleKDS: false,
       sortOrder: 'time'
     },
     orderManagement: {
@@ -487,6 +665,51 @@ export function getDefaultSettings() {
       smartPriority: true,
       fireDelayMinutes: 5,
       itemsPerPage: 12
+    },
+    oracleKDS: {
+      enabled: false,
+      display: {
+        fontSize: 'medium',
+        showTimers: true,
+        showAging: true,
+        compactMode: false,
+        highlightSelected: true
+      },
+      automation: {
+        autoMoveCompleted: true,
+        autoSelectNext: false,
+        soundAlerts: true,
+        averagePrepCalculation: true
+      },
+      buttons: {
+        showDone: true,
+        showRecall: true,
+        showView: true,
+        showMove: true,
+        showCancel: true,
+        prepButtons: ['P1', 'P2', 'P3', 'P4', 'P5'],
+        prepButtonMode: 'timeFilter'
+      },
+      columns: {
+        showOrderNumber: true,
+        showTable: true,
+        showTime: true,
+        showItems: true,
+        showStatus: true,
+        showPrepTime: true,
+        showCustomer: false,
+        showNotes: true,
+        showAge: true
+      }
+    },
+    splitKDS: {
+      enabled: false,
+      display: {
+        columnCount: 4,
+        showTimestamps: true,
+        showItemCount: true,
+        compactMode: false
+      }
     }
   };
 }
@@ -495,7 +718,16 @@ export function loadSettings() {
   try {
     const saved = localStorage.getItem('kitchen_settings');
     if (saved) {
-      return { ...getDefaultSettings(), ...JSON.parse(saved) };
+      const parsed = JSON.parse(saved);
+      // Deep merge with defaults to ensure all required properties exist
+      return {
+        display: { ...getDefaultSettings().display, ...(parsed.display || {}) },
+        orderManagement: { ...getDefaultSettings().orderManagement, ...(parsed.orderManagement || {}) },
+        stations: { ...getDefaultSettings().stations, ...(parsed.stations || {}) },
+        notifications: { ...getDefaultSettings().notifications, ...(parsed.notifications || {}) },
+        performance: { ...getDefaultSettings().performance, ...(parsed.performance || {}) },
+        advanced: { ...getDefaultSettings().advanced, ...(parsed.advanced || {}) }
+      };
     }
   } catch (error) {
     console.error('Error loading settings:', error);

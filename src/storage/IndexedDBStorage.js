@@ -213,10 +213,48 @@ export class IndexedDBStorage {
       const transaction = this.db.transaction([storeName], 'readonly');
       const store = transaction.objectStore(storeName);
       const index = store.index(indexName);
-      const request = index.getAll(value);
+      
+      // IndexedDB key ranges do not support booleans natively in some engines (use 0/1 or direct query with fallback)
+      let queryValue = value;
+      if (typeof value === 'boolean') {
+        queryValue = value ? 1 : 0;
+      }
 
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(new Error(`Query failed for ${storeName}.${indexName}`));
+      let request;
+      try {
+        request = index.getAll(queryValue);
+      } catch (err) {
+        // Fallback to getAll and filter in memory if index key type mismatches
+        const fallbackReq = store.getAll();
+        fallbackReq.onsuccess = () => {
+          const filtered = (fallbackReq.result || []).filter(item => item[indexName] === value);
+          resolve(filtered);
+        };
+        fallbackReq.onerror = () => reject(new Error(`Query failed for ${storeName}.${indexName}`));
+        return;
+      }
+
+      request.onsuccess = () => {
+        // If queryValue was converted from boolean but indexed items store actual boolean or 0/1, fallback check
+        if (typeof value === 'boolean' && request.result.length === 0) {
+          const fallbackReq = store.getAll();
+          fallbackReq.onsuccess = () => {
+            const filtered = (fallbackReq.result || []).filter(item => item[indexName] === value);
+            resolve(filtered);
+          };
+          fallbackReq.onerror = () => reject(new Error(`Query failed for ${storeName}.${indexName}`));
+        } else {
+          resolve(request.result);
+        }
+      };
+      request.onerror = () => {
+        const fallbackReq = store.getAll();
+        fallbackReq.onsuccess = () => {
+          const filtered = (fallbackReq.result || []).filter(item => item[indexName] === value);
+          resolve(filtered);
+        };
+        fallbackReq.onerror = () => reject(new Error(`Query failed for ${storeName}.${indexName}`));
+      };
     });
   }
 
@@ -379,6 +417,33 @@ export class IndexedDBStorage {
     if (this.db) {
       this.db.close();
       this.db = null;
+    }
+  }
+
+  /**
+   * Compatibility wrapper for StorageFailover health checks
+   */
+  async setItem(key, value) {
+    const item = typeof value === 'object' && value !== null ? { id: key, ...value } : { id: key, data: value };
+    await this.batchWrite('orders', [item]);
+    return true;
+  }
+
+  async getItem(key) {
+    try {
+      const res = await this.get('orders', key);
+      return res ? (res.data !== undefined ? res.data : res) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async removeItem(key) {
+    try {
+      await this.delete('orders', key);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 

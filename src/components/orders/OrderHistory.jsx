@@ -178,8 +178,8 @@ export default function OrderHistory({
                     <div style={{
                       fontSize: '20px',
                       fontWeight: '800',
-                      color: darkMode ? '#8b5cf6' : '#7c3aed',
-                      background: darkMode ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)',
+                      color: darkMode ? '#60a5fa' : '#3b82f6',
+                      background: darkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
                       padding: '4px 12px',
                       borderRadius: '8px',
                       lineHeight: 1
@@ -203,7 +203,7 @@ export default function OrderHistory({
                   }}>
                     Table: {order.tableNumber || order.tableName}
                     {order.mergedWith && order.mergedWith.length > 0 && (
-                      <span style={{ color: darkMode ? '#8b5cf6' : '#7c3aed', fontWeight: '600' }}>
+                      <span style={{ color: darkMode ? '#60a5fa' : '#3b82f6', fontWeight: '600' }}>
                         {' '} (Merged: {order.mergedWith.join(', ')})
                       </span>
                     )}

@@ -62,6 +62,382 @@ const REPORT_SECTIONS = [
   { id: 'history',       label: 'History',       icon: '🕰️' },
 ];
 
+// ─── Interactive Line Chart Component ─────────────────────────────────────────
+const InteractiveLineChart = ({ data, height = 200, showTooltip = true, onPointClick }) => {
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  
+  if (!data || data.length === 0) return null;
+  
+  const maxValue = Math.max(...data.map(d => d.value), 1);
+  const minValue = Math.min(...data.map(d => d.value), 0);
+  const range = maxValue - minValue || 1;
+  
+  const points = data.map((d, i) => ({
+    x: (i / (data.length - 1)) * 100,
+    y: 100 - ((d.value - minValue) / range) * 100,
+    ...d
+  }));
+  
+  const createPath = () => {
+    return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x}% ${p.y}%`).join(' ');
+  };
+  
+  const createAreaPath = () => {
+    return `${createPath()} L 100% 100% L 0% 100% Z`;
+  };
+  
+  return (
+    <div style={{ position: 'relative', height, width: '100%' }}>
+      <svg style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+        {/* Grid lines */}
+        {[0, 25, 50, 75, 100].map(pct => (
+          <line
+            key={pct}
+            x1="0%" y1={`${pct}%`}
+            x2="100%" y2={`${pct}%`}
+            stroke="var(--cafe-border-light)"
+            strokeWidth="1"
+            strokeDasharray="4 4"
+          />
+        ))}
+        
+        {/* Area fill */}
+        <path
+          d={createAreaPath()}
+          fill="var(--cafe-accent-bg)"
+          opacity="0.3"
+        />
+        
+        {/* Line */}
+        <path
+          d={createPath()}
+          fill="none"
+          stroke="var(--cafe-accent)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        
+        {/* Data points */}
+        {points.map((p, i) => (
+          <circle
+            key={i}
+            cx={`${p.x}%`}
+            cy={`${p.y}%`}
+            r={hoveredPoint === i ? 6 : 4}
+            fill="var(--cafe-accent)"
+            stroke="var(--cafe-bg-card)"
+            strokeWidth="2"
+            style={{ cursor: 'pointer', transition: 'r 0.2s' }}
+            onMouseEnter={() => setHoveredPoint(i)}
+            onMouseLeave={() => setHoveredPoint(null)}
+            onClick={() => onPointClick && onPointClick(p)}
+          />
+        ))}
+      </svg>
+      
+      {/* Tooltip */}
+      {showTooltip && hoveredPoint !== null && (
+        <div style={{
+          position: 'absolute',
+          left: `${points[hoveredPoint].x}%`,
+          top: `${points[hoveredPoint].y - 10}%`,
+          transform: 'translate(-50%, -100%)',
+          background: 'var(--cafe-bg-card)',
+          border: '1px solid var(--cafe-border)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          fontSize: 12,
+          fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 10,
+          whiteSpace: 'nowrap'
+        }}>
+          <div style={{ color: 'var(--cafe-text-secondary)' }}>{points[hoveredPoint].label}</div>
+          <div style={{ color: 'var(--cafe-accent)', fontSize: 14 }}>{points[hoveredPoint].value}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Interactive Pie Chart Component ─────────────────────────────────────────
+const InteractivePieChart = ({ data, size = 200, showLegend = true, onSliceClick }) => {
+  const [hoveredSlice, setHoveredSlice] = useState(null);
+  
+  if (!data || data.length === 0) return null;
+  
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+  
+  let cumulativePercent = 0;
+  const slices = data.map((d, i) => {
+    const percent = (d.value / total) * 100;
+    const startPercent = cumulativePercent;
+    cumulativePercent += percent;
+    return {
+      ...d,
+      percent,
+      startPercent,
+      endPercent: cumulativePercent,
+      color: d.color || colors[i % colors.length]
+    };
+  });
+  
+  const createSlicePath = (startPercent, endPercent, isHovered) => {
+    const radius = isHovered ? 48 : 45;
+    const innerRadius = 0;
+    
+    const startAngle = (startPercent / 100) * 2 * Math.PI - Math.PI / 2;
+    const endAngle = (endPercent / 100) * 2 * Math.PI - Math.PI / 2;
+    
+    const x1 = 50 + radius * Math.cos(startAngle);
+    const y1 = 50 + radius * Math.sin(startAngle);
+    const x2 = 50 + radius * Math.cos(endAngle);
+    const y2 = 50 + radius * Math.sin(endAngle);
+    
+    const largeArc = endPercent - startPercent > 50 ? 1 : 0;
+    
+    if (endPercent - startPercent >= 100) {
+      return `M 50 50 m -${radius} 0 a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 -${radius * 2} 0`;
+    }
+    
+    return `M 50 50 L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+  };
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <svg width={size} height={size} viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+        {slices.map((slice, i) => (
+          <path
+            key={i}
+            d={createSlicePath(slice.startPercent, slice.endPercent, hoveredSlice === i)}
+            fill={slice.color}
+            stroke="var(--cafe-bg-card)"
+            strokeWidth="1"
+            style={{ 
+              cursor: 'pointer', 
+              transition: 'all 0.2s',
+              transform: hoveredSlice === i ? 'scale(1.05)' : 'scale(1)',
+              transformOrigin: '50% 50%'
+            }}
+            onMouseEnter={() => setHoveredSlice(i)}
+            onMouseLeave={() => setHoveredSlice(null)}
+            onClick={() => onSliceClick && onSliceClick(slice)}
+          />
+        ))}
+        
+        {/* Center text */}
+        <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" style={{
+          fontSize: 14,
+          fontWeight: 700,
+          fill: 'var(--cafe-text-primary)'
+        }}>
+          {total.toLocaleString()}
+        </text>
+      </svg>
+      
+      {/* Legend */}
+      {showLegend && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+          {slices.map((slice, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 8px',
+                borderRadius: 6,
+                background: hoveredSlice === i ? 'var(--cafe-bg-hover)' : 'transparent',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={() => setHoveredSlice(i)}
+              onMouseLeave={() => setHoveredSlice(null)}
+            >
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: slice.color }} />
+              <span style={{ fontSize: 12, color: 'var(--cafe-text-secondary)' }}>{slice.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>{slice.percent.toFixed(1)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Heatmap Component ───────────────────────────────────────────────────────
+const Heatmap = ({ data, xLabels, yLabels, cellSize = 40, showValues = true }) => {
+  const maxValue = Math.max(...data.flat(), 1);
+  const minValue = Math.min(...data.flat(), 0);
+  
+  const getColor = (value) => {
+    if (value === 0) return 'var(--cafe-bg-surface)';
+    const intensity = (value - minValue) / (maxValue - minValue || 1);
+    const hue = 220 - intensity * 60; // Blue to green
+    const lightness = 90 - intensity * 40;
+    return `hsl(${hue}, 70%, ${lightness}%)`;
+  };
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Y labels */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ width: 60 }} />
+        {xLabels.map((label, i) => (
+          <div key={i} style={{ 
+            width: cellSize, 
+            fontSize: 10, 
+            textAlign: 'center', 
+            color: 'var(--cafe-text-tertiary)',
+            fontWeight: 500
+          }}>
+            {label}
+          </div>
+        ))}
+      </div>
+      
+      {data.map((row, i) => (
+        <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <div style={{ 
+            width: 60, 
+            fontSize: 10, 
+            color: 'var(--cafe-text-tertiary)',
+            fontWeight: 500,
+            textAlign: 'right'
+          }}>
+            {yLabels[i]}
+          </div>
+          {row.map((value, j) => (
+            <div
+              key={j}
+              style={{
+                width: cellSize,
+                height: cellSize,
+                background: getColor(value),
+                borderRadius: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: showValues ? 10 : 0,
+                fontWeight: 600,
+                color: value > maxValue * 0.5 ? '#fff' : 'var(--cafe-text-primary)',
+                transition: 'transform 0.2s',
+                cursor: 'pointer'
+              }}
+              title={`${yLabels[i]} ${xLabels[j]}: ${value}`}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              {showValues && value > 0 ? value : ''}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── Drill-down Modal Component ───────────────────────────────────────────────
+const DrillDownModal = ({ isOpen, onClose, metric, data, formatCurrency }) => {
+  if (!isOpen || !metric) return null;
+  
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    }}>
+      <div style={{
+        background: 'var(--cafe-bg-card)',
+        borderRadius: 16,
+        maxWidth: 800,
+        width: '90%',
+        maxHeight: '80vh',
+        overflow: 'auto',
+        padding: 24,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--cafe-text-primary)' }}>
+            {metric.label} - Detailed Breakdown
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: '1px solid var(--cafe-border-light)',
+              background: 'var(--cafe-bg-surface)',
+              color: 'var(--cafe-text-secondary)',
+              cursor: 'pointer',
+              fontSize: 14
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ 
+            padding: 16, 
+            background: 'var(--cafe-bg-hover)', 
+            borderRadius: 12,
+            border: '1px solid var(--cafe-border-light)'
+          }}>
+            <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)', marginBottom: 4 }}>Total Value</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--cafe-accent)', fontFamily: 'monospace' }}>
+              {formatCurrency(metric.value)}
+            </div>
+          </div>
+          
+          {data && data.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {data.map((item, idx) => (
+                <div key={idx} style={{
+                  padding: 12,
+                  background: 'var(--cafe-bg-hover)',
+                  borderRadius: 8,
+                  border: '1px solid var(--cafe-border-light)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--cafe-text-primary)' }}>
+                      {item.label}
+                    </div>
+                    {item.subtitle && (
+                      <div style={{ fontSize: 12, color: 'var(--cafe-text-tertiary)', marginTop: 2 }}>
+                        {item.subtitle}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--cafe-accent)', fontFamily: 'monospace' }}>
+                    {formatCurrency(item.value)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--cafe-text-tertiary)' }}>
+              No detailed data available
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Mini Bar Chart (pure CSS/inline divs) ───────────────────────────────────
 // items: [{ label, value, color? }]  maxValue: number (optional, auto if omitted)
 const MiniBarChart = ({ items, maxValue, height = 48, barColor = "var(--cafe-accent)" }) => {
@@ -109,12 +485,16 @@ const ProgressBar = ({ value, max = 100, color = "var(--cafe-accent)", height = 
 };
 
 // ─── KPI Card with trend indicator ───────────────────────────────────────────
-const KPICard = ({ label, value, change, isPositive, isLoading, isMobile }) => {
+const KPICard = ({ label, value, change, isPositive, isLoading, isMobile, onClick, sparkline }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  
   if (isLoading) {
     return (
       <div style={{
         background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
         borderRadius: 12, padding: isMobile ? 14 : 18, minHeight: isMobile ? 90 : 110,
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.3s ease'
       }}>
         <div style={{ width: 60, height: 12, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 14 }} />
         <div style={{ width: 100, height: 26, background: "var(--cafe-bg-surface)", borderRadius: 4, marginBottom: 10 }} />
@@ -131,35 +511,72 @@ const KPICard = ({ label, value, change, isPositive, isLoading, isMobile }) => {
   const valueColor = isNeutral ? "var(--cafe-text-primary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)";
 
   return (
-    <div style={{
-      background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)",
-      borderRadius: 12, padding: isMobile ? 14 : 18,
-      borderLeft: `4px solid ${  isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"}`,
-      transition: 'all 0.2s ease',
-    }}>
+    <div 
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        background: "var(--cafe-bg-hover)", 
+        border: "1px solid var(--cafe-border-light)",
+        borderRadius: 12, 
+        padding: isMobile ? 14 : 18,
+        borderLeft: `4px solid ${  isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)"}`,
+        transition: 'all 0.3s ease',
+        cursor: onClick ? 'pointer' : 'default',
+        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: isHovered ? '0 8px 24px rgba(0,0,0,0.12)' : '0 2px 8px rgba(0,0,0,0.08)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Subtle gradient overlay */}
       <div style={{
-        fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: "0.08em",
-        textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: isMobile ? 8 : 10,
-      }}>
-        {label}
-      </div>
-      <div style={{
-        fontSize: isMobile ? 18 : 22, fontWeight: 800, fontFamily: "monospace",
-        color: valueColor, lineHeight: 1, marginBottom: isMobile ? 8 : 10,
-        letterSpacing: '-0.02em',
-      }}>
-        {value}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: isMobile ? 12 : 14 }}>{trendEmoji}</span>
-        <span style={{
-          fontSize: isMobile ? 11 : 12, fontWeight: 700, fontFamily: "monospace",
-          color: isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)",
-          background: isNeutral ? "var(--cafe-bg-surface)" : isPositive ? "var(--cafe-success-bg)" : "var(--cafe-danger-bg)",
-          borderRadius: 6, padding: isMobile ? "3px 6px" : "4px 8px",
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: isHovered ? 'linear-gradient(135deg, rgba(59,130,246,0.05) 0%, rgba(139,92,246,0.05) 100%)' : 'transparent',
+        transition: 'background 0.3s ease',
+        pointerEvents: 'none'
+      }} />
+      
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{
+          fontSize: isMobile ? 10 : 11, fontWeight: 700, letterSpacing: "0.08em",
+          textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: isMobile ? 8 : 10,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          {changeDisplay}
-        </span>
+          {label}
+          {onClick && <span style={{ fontSize: 10, opacity: 0.5 }}>→</span>}
+        </div>
+        <div style={{
+          fontSize: isMobile ? 18 : 22, fontWeight: 800, fontFamily: "monospace",
+          color: valueColor, lineHeight: 1, marginBottom: isMobile ? 8 : 10,
+          letterSpacing: '-0.02em',
+        }}>
+          {value}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 6 : 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: isMobile ? 12 : 14 }}>{trendEmoji}</span>
+          <span style={{
+            fontSize: isMobile ? 11 : 12, fontWeight: 700, fontFamily: "monospace",
+            color: isNeutral ? "var(--cafe-text-tertiary)" : isPositive ? "var(--cafe-success)" : "var(--cafe-danger)",
+            background: isNeutral ? "var(--cafe-bg-surface)" : isPositive ? "var(--cafe-success-bg)" : "var(--cafe-danger-bg)",
+            borderRadius: 6, padding: isMobile ? "3px 6px" : "4px 8px",
+          }}>
+            {changeDisplay}
+          </span>
+        </div>
+        
+        {/* Mini sparkline */}
+        {sparkline && sparkline.length > 0 && (
+          <div style={{ marginTop: 8, height: 24 }}>
+            <MiniBarChart items={sparkline} height={24} barColor={isPositive ? "var(--cafe-success)" : isNeutral ? "var(--cafe-text-tertiary)" : "var(--cafe-danger)"} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -202,6 +619,20 @@ function AnalyticsReports({
   const [exportDialog, setExportDialog] = useState({ open: false, format: 'csv' });
   const [alertDialog, setAlertDialog] = useState({ isOpen: false, title: '', message: '', type: 'info' });
   const [isExporting, setIsExporting] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(30);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    channels: [],
+    categories: [],
+    staff: [],
+    tables: [],
+    minAmount: null,
+    maxAmount: null
+  });
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [comparisonMode, setComparisonMode] = useState('none');
+  const [drillDownMetric, setDrillDownMetric] = useState(null);
+  const [showDrillDown, setShowDrillDown] = useState(false);
 
   // Normalize data
   const orders = useMemo(() => Array.isArray(externalOrders) ? externalOrders : [], [externalOrders]);
@@ -217,8 +648,49 @@ function AnalyticsReports({
   const documents = useMemo(() => Array.isArray(externalDocuments) ? externalDocuments : [], [externalDocuments]);
 
   const currentDateRange = useMemo(() => getDateRangeForPreset(datePreset), [datePreset]);
-  const currentPeriodOrders = useMemo(() => filterOrdersByDateRange(orders, currentDateRange), [orders, currentDateRange]);
+  
+  // Apply advanced filters
+  const filteredOrders = useMemo(() => {
+    let result = currentPeriodOrders;
+    
+    if (advancedFilters.channels.length > 0) {
+      result = result.filter(o => advancedFilters.channels.includes(o.source));
+    }
+    if (advancedFilters.categories.length > 0) {
+      result = result.filter(o => 
+        o.items?.some(item => advancedFilters.categories.includes(item.category))
+      );
+    }
+    if (advancedFilters.staff.length > 0) {
+      result = result.filter(o => advancedFilters.staff.includes(o.staffId));
+    }
+    if (advancedFilters.tables.length > 0) {
+      result = result.filter(o => advancedFilters.tables.includes(o.tableName));
+    }
+    if (advancedFilters.minAmount !== null) {
+      result = result.filter(o => (o.total || o.amount || 0) >= advancedFilters.minAmount);
+    }
+    if (advancedFilters.maxAmount !== null) {
+      result = result.filter(o => (o.total || o.amount || 0) <= advancedFilters.maxAmount);
+    }
+    
+    return result;
+  }, [currentPeriodOrders, advancedFilters]);
+  
+  const currentPeriodOrders = filteredOrders;
   const currentKPIs = useMemo(() => calculateKPIs(currentPeriodOrders, currentDateRange), [currentPeriodOrders, currentDateRange]);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      // Trigger re-render by updating date preset (this will recalculate all data)
+      setDatePreset(prev => ({ ...prev }));
+    }, refreshInterval * 1000);
+    
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval]);
 
   const previousDateRange = useMemo(() => {
     const { start, end } = currentDateRange || {};
@@ -398,18 +870,190 @@ function AnalyticsReports({
         currentDateRange={currentDateRange}
       />
 
-      {/* Date Range Display */}
+      {/* Date Range Display & Controls */}
       <div style={{ 
         marginBottom: isMobile ? 16 : 24, padding: isMobile ? "12px 14px" : "14px 18px", background: "var(--cafe-bg-hover)",
         borderRadius: 12, fontSize: isMobile ? 12 : 13, color: "var(--cafe-text-secondary)",
         display: "flex", justifyContent: "space-between", alignItems: "center",
-        border: "1px solid var(--cafe-border-light)", flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 6 : 0,
+        border: "1px solid var(--cafe-border-light)", flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 0,
       }}>
-        <div><strong>Period:</strong> {currentDateRange.label}</div>
-        <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)" }}>
-          {currentPeriodOrders.length} orders in period
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div><strong>Period:</strong> {currentDateRange.label}</div>
+          <div style={{ fontSize: isMobile ? 11 : 12, color: "var(--cafe-text-tertiary)" }}>
+            {currentPeriodOrders.length} orders in period
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Auto-refresh toggle */}
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--cafe-border-light)',
+              background: autoRefresh ? 'var(--cafe-success-bg)' : 'var(--cafe-bg-surface)',
+              color: autoRefresh ? 'var(--cafe-success)' : 'var(--cafe-text-secondary)',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            {autoRefresh ? '🔄' : '⏸️'} Auto-refresh
+          </button>
+          
+          {/* Advanced filters toggle */}
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--cafe-border-light)',
+              background: showAdvancedFilters ? 'var(--cafe-accent-bg)' : 'var(--cafe-bg-surface)',
+              color: showAdvancedFilters ? 'var(--cafe-accent)' : 'var(--cafe-text-secondary)',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            🔍 Filters
+          </button>
+          
+          {/* Comparison mode */}
+          <select
+            value={comparisonMode}
+            onChange={(e) => setComparisonMode(e.target.value)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 6,
+              border: '1px solid var(--cafe-border-light)',
+              background: 'var(--cafe-bg-surface)',
+              color: 'var(--cafe-text-secondary)',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <option value="none">No Comparison</option>
+            <option value="previousPeriod">Previous Period</option>
+            <option value="sameDayLastWeek">Same Day Last Week</option>
+            <option value="sameDayLastYear">Same Day Last Year</option>
+          </select>
         </div>
       </div>
+
+      {/* Advanced Filters Panel */}
+      {showAdvancedFilters && (
+        <div style={{
+          marginBottom: 24,
+          padding: 16,
+          background: 'var(--cafe-bg-hover)',
+          border: '1px solid var(--cafe-border-light)',
+          borderRadius: 12,
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 16
+        }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 11, fontWeight: 600, color: 'var(--cafe-text-tertiary)' }}>Channels</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {['WALK_IN', 'SWIGGY', 'ZOMATO'].map(channel => (
+                <button
+                  key={channel}
+                  onClick={() => {
+                    setAdvancedFilters(prev => ({
+                      ...prev,
+                      channels: prev.channels.includes(channel)
+                        ? prev.channels.filter(c => c !== channel)
+                        : [...prev.channels, channel]
+                    }));
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border: '1px solid var(--cafe-border-light)',
+                    background: advancedFilters.channels.includes(channel) ? 'var(--cafe-accent-bg)' : 'var(--cafe-bg-surface)',
+                    color: advancedFilters.channels.includes(channel) ? 'var(--cafe-accent)' : 'var(--cafe-text-secondary)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {channel}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 11, fontWeight: 600, color: 'var(--cafe-text-tertiary)' }}>Amount Range</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="number"
+                placeholder="Min"
+                value={advancedFilters.minAmount || ''}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, minAmount: e.target.value ? Number(e.target.value) : null }))}
+                style={{
+                  width: '80px',
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  border: '1px solid var(--cafe-border-light)',
+                  background: 'var(--cafe-bg-surface)',
+                  color: 'var(--cafe-text-primary)',
+                  fontSize: 11
+                }}
+              />
+              <span style={{ color: 'var(--cafe-text-tertiary' }}>to</span>
+              <input
+                type="number"
+                placeholder="Max"
+                value={advancedFilters.maxAmount || ''}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, maxAmount: e.target.value ? Number(e.target.value) : null }))}
+                style={{
+                  width: '80px',
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  border: '1px solid var(--cafe-border-light)',
+                  background: 'var(--cafe-bg-surface)',
+                  color: 'var(--cafe-text-primary)',
+                  fontSize: 11
+                }}
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button
+              onClick={() => setAdvancedFilters({
+                channels: [],
+                categories: [],
+                staff: [],
+                tables: [],
+                minAmount: null,
+                maxAmount: null
+              })}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                border: '1px solid var(--cafe-border-light)',
+                background: 'var(--cafe-bg-surface)',
+                color: 'var(--cafe-text-secondary)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Report Navigation */}
       <div style={{ display: "flex", gap: isMobile ? 4 : 6, flexWrap: "wrap", paddingBottom: 6, marginBottom: isMobile ? 16 : 24 }}>
@@ -531,6 +1175,17 @@ function AnalyticsReports({
         </div>
       )}
 
+      {/* Drill-down Modal */}
+      {drillDownMetric && (
+        <DrillDownModal
+          isOpen={!!drillDownMetric}
+          onClose={() => setDrillDownMetric(null)}
+          metric={drillDownMetric}
+          data={null}
+          formatCurrency={formatCurrency}
+        />
+      )}
+
       {/* AlertDialog */}
       <AlertDialog
         isOpen={alertDialog.isOpen}
@@ -580,67 +1235,107 @@ function OverviewSection({ currentKPIs, comparison, channelPerformance, menuPerf
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* KPI Cards */}
+      {/* KPI Cards with drill-down */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(auto-fit,minmax(180px,1fr))", gap: isMobile ? 10 : 14 }}>
-        <KPICard label="Net Sales"       value={formatCurrency(currentKPIs.sales.netSales)}              change={salesComparison.display}  isPositive={salesComparison.isPositive} isMobile={isMobile} />
-        <KPICard label="Orders"          value={currentKPIs.orders.total}                                change={ordersComparison.display} isPositive={ordersComparison.isPositive} isMobile={isMobile} />
-        <KPICard label="Avg Order Value" value={formatCurrency(currentKPIs.sales.averageOrderValue)}     change={aovComparison.display}    isPositive={aovComparison.isPositive} isMobile={isMobile} />
-        <KPICard label="Completion Rate" value={`${currentKPIs.orders.completionRate.toFixed(1)  }%`}      change={formatComparison(comparison?.completionRate).display} isPositive={true} isMobile={isMobile} />
-        <KPICard label="Refunds"         value={formatCurrency(currentKPIs.sales.refunds)}               change="—"                        isPositive={false} isMobile={isMobile} />
-        <KPICard label="Tax Collected"   value={formatCurrency(currentKPIs.sales.taxCollected)}          change="—"                        isPositive={true} isMobile={isMobile} />
+        <KPICard 
+          label="Net Sales" 
+          value={formatCurrency(currentKPIs.sales.netSales)} 
+          change={salesComparison.display}  
+          isPositive={salesComparison.isPositive} 
+          isMobile={isMobile}
+          onClick={() => setDrillDownMetric({ label: 'Net Sales', value: currentKPIs.sales.netSales })}
+        />
+        <KPICard 
+          label="Orders" 
+          value={currentKPIs.orders.total} 
+          change={ordersComparison.display} 
+          isPositive={ordersComparison.isPositive} 
+          isMobile={isMobile}
+          onClick={() => setDrillDownMetric({ label: 'Total Orders', value: currentKPIs.orders.total })}
+        />
+        <KPICard 
+          label="Avg Order Value" 
+          value={formatCurrency(currentKPIs.sales.averageOrderValue)} 
+          change={aovComparison.display}    
+          isPositive={aovComparison.isPositive} 
+          isMobile={isMobile}
+          onClick={() => setDrillDownMetric({ label: 'Average Order Value', value: currentKPIs.sales.averageOrderValue })}
+        />
+        <KPICard 
+          label="Completion Rate" 
+          value={`${currentKPIs.orders.completionRate.toFixed(1)}%`}      
+          change={formatComparison(comparison?.completionRate).display} 
+          isPositive={true} 
+          isMobile={isMobile}
+        />
+        <KPICard 
+          label="Refunds" 
+          value={formatCurrency(currentKPIs.sales.refunds)}               
+          change="—"                        
+          isPositive={false} 
+          isMobile={isMobile}
+          onClick={() => setDrillDownMetric({ label: 'Total Refunds', value: currentKPIs.sales.refunds })}
+        />
+        <KPICard 
+          label="Tax Collected"   
+          value={formatCurrency(currentKPIs.sales.taxCollected)}          
+          change="—"                        
+          isPositive={true} 
+          isMobile={isMobile}
+          onClick={() => setDrillDownMetric({ label: 'Tax Collected', value: currentKPIs.sales.taxCollected })}
+        />
       </div>
 
-      {/* Hourly Revenue Chart */}
+      {/* Hourly Revenue Chart - Interactive Line Chart */}
       <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 14 }}>
-          Hourly Revenue Breakdown
+          Hourly Revenue Trend
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 70 }}>
-          {hourlyRevenue.map((slot) => {
-            const pct = maxHourlyRevenue > 0 ? Math.max(2, (slot.revenue / maxHourlyRevenue) * 100) : 2;
-            const hasData = slot.revenue > 0;
-            return (
-              <div key={slot.hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}
-                title={`${slot.hour}:00 — ₹${Math.round(slot.revenue)} (${slot.count} orders)`}>
-                <div style={{
-                  width: "100%", height: `${pct}%`, minHeight: 2,
-                  background: hasData ? "var(--cafe-accent)" : "var(--cafe-bg-surface)",
-                  borderRadius: "2px 2px 0 0", opacity: hasData ? 0.85 : 0.3,
-                }} />
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-          {[0,6,12,18,23].map(h => (
-            <div key={h} style={{ fontSize: 10, color: "var(--cafe-text-tertiary)", fontWeight: 500 }}>{h}:00</div>
-          ))}
-        </div>
+        <InteractiveLineChart 
+          data={hourlyRevenue.map(s => ({ label: `${s.hour}:00`, value: s.revenue }))}
+          height={180}
+          onPointClick={(point) => console.log('Hour clicked:', point)}
+        />
       </div>
 
-      {/* Channel Breakdown */}
-      <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>
-          Sales by Channel
-        </div>
-        {channelPerformance.length === 0 ? <EmptyState message="No channel data available" /> : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {channelPerformance.map((channel, idx) => (
-              <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
-                <div style={{ width: 14, height: 14, borderRadius: 5, background: channelColor(channel.source), flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
-                  <ProgressBar value={channel.grossSales} max={channelMax} color={channelColor(channel.source)} height={5} />
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
-                  <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{channel.revenueShare.toFixed(1)}% share</div>
-                </div>
-              </div>
-            ))}
+      {/* Channel Breakdown - Interactive Pie Chart */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 24 }}>
+        <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>
+            Sales by Channel
           </div>
-        )}
+          {channelPerformance.length === 0 ? <EmptyState message="No channel data available" /> : (
+            <InteractivePieChart
+              data={channelPerformance.map(c => ({ label: c.name, value: c.grossSales, color: channelColor(c.source) }))}
+              size={200}
+              onSliceClick={(slice) => console.log('Channel clicked:', slice)}
+            />
+          )}
+        </div>
+
+        <div style={{ background: "var(--cafe-bg-hover)", border: "1px solid var(--cafe-border-light)", borderRadius: 12, padding: 22 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--cafe-text-tertiary)", marginBottom: 18 }}>
+            Channel Details
+          </div>
+          {channelPerformance.length === 0 ? <EmptyState message="No channel data available" /> : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {channelPerformance.map((channel, idx) => (
+                <div key={channel.source} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: idx < channelPerformance.length - 1 ? "1px solid var(--cafe-border-light)" : "none" }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 5, background: channelColor(channel.source), flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "var(--cafe-text-primary)" }}>{channel.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--cafe-text-tertiary)", marginTop: 3 }}>{channel.orders} orders · {formatCurrency(channel.averageOrderValue)} avg</div>
+                    <ProgressBar value={channel.grossSales} max={channelMax} color={channelColor(channel.source)} height={5} />
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "monospace", color: "var(--cafe-accent)" }}>{formatCurrency(channel.grossSales)}</div>
+                    <div style={{ fontSize: 11, color: "var(--cafe-text-tertiary)" }}>{channel.revenueShare.toFixed(1)}% share</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Top Items */}

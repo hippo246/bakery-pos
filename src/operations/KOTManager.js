@@ -39,8 +39,21 @@ export class KOTManager {
   createKOT(orderData) {
     try {
       console.log('KOTManager.createKOT called with:', orderData);
+      
+      // Validate required fields
+      if (!orderData || !orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
+        console.error('Invalid order data for KOT creation:', orderData);
+        return { success: false, error: 'Invalid order data: missing or empty items array' };
+      }
+      
       const kot = createKOT(orderData, this.config);
       console.log('KOT created:', kot);
+      
+      // Check for duplicate KOTs
+      if (this.kots.has(kot.kotId)) {
+        console.warn('KOT already exists with ID:', kot.kotId);
+        return { success: false, error: 'KOT already exists', kot: this.kots.get(kot.kotId) };
+      }
       
       this.kots.set(kot.kotId, kot);
       this.saveState();
@@ -137,16 +150,32 @@ export class KOTManager {
       return { success: false, error: 'KOT not found' };
     }
 
+    if (!kotItemId) {
+      console.error('Missing kotItemId for updateItemStatus');
+      return { success: false, error: 'Missing item ID' };
+    }
+
+    if (!status) {
+      console.error('Missing status for updateItemStatus');
+      return { success: false, error: 'Missing status' };
+    }
+
     console.log('Updating item status in KOTManager:', kotId, kotItemId, status);
-    const updatedKOT = updateKOTItemStatus(kot, kotItemId, status);
-    this.kots.set(kotId, updatedKOT);
-    this.saveState();
-    console.log('Item status updated and saved');
+    
+    try {
+      const updatedKOT = updateKOTItemStatus(kot, kotItemId, status);
+      this.kots.set(kotId, updatedKOT);
+      this.saveState();
+      console.log('Item status updated and saved');
 
-    this.emit('kotItemUpdated', { kotId, kotItemId, status, kot: updatedKOT });
-    console.log('kotItemUpdated event emitted');
+      this.emit('kotItemUpdated', { kotId, kotItemId, status, kot: updatedKOT });
+      console.log('kotItemUpdated event emitted');
 
-    return { success: true, kot: updatedKOT };
+      return { success: true, kot: updatedKOT };
+    } catch (error) {
+      console.error('Error updating item status:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -187,26 +216,35 @@ export class KOTManager {
       return { success: false, error: 'KOT not found' };
     }
 
-    kot.status = status ? status.toLowerCase() : status;
-    kot.updatedAt = new Date().toISOString();
-
-    if (kot.items) {
-      kot.items = kot.items.map(item => ({
-        ...item,
-        status: status ? status.toLowerCase() : status
-      }));
+    if (!status) {
+      return { success: false, error: 'Missing status' };
     }
 
-    if (status === KOTStatus.READY && !kot.actualReadyAt) {
-      kot.actualReadyAt = new Date().toISOString();
+    try {
+      kot.status = status ? status.toLowerCase() : status;
+      kot.updatedAt = new Date().toISOString();
+
+      if (kot.items && Array.isArray(kot.items)) {
+        kot.items = kot.items.map(item => ({
+          ...item,
+          status: status ? status.toLowerCase() : status
+        }));
+      }
+
+      if (status === KOTStatus.READY && !kot.actualReadyAt) {
+        kot.actualReadyAt = new Date().toISOString();
+      }
+
+      this.kots.set(kotId, kot);
+      this.saveState();
+
+      this.emit('kotStatusUpdated', { kotId, status, kot });
+
+      return { success: true, kot };
+    } catch (error) {
+      console.error('Error updating KOT status:', error);
+      return { success: false, error: error.message };
     }
-
-    this.kots.set(kotId, kot);
-    this.saveState();
-
-    this.emit('kotStatusUpdated', { kotId, status, kot });
-
-    return { success: true, kot };
   }
 
   /**
@@ -221,14 +259,19 @@ export class KOTManager {
       return { success: false, error: 'KOT not found' };
     }
 
-    kot.priority = KOTPriority.URGENT;
-    kot.updatedAt = new Date().toISOString();
-    this.kots.set(kotId, kot);
-    this.saveState();
+    try {
+      kot.priority = KOTPriority.URGENT;
+      kot.updatedAt = new Date().toISOString();
+      this.kots.set(kotId, kot);
+      this.saveState();
 
-    this.emit('kotPriorityUpdated', { kotId, priority: KOTPriority.URGENT, kot });
+      this.emit('kotPriorityUpdated', { kotId, priority: KOTPriority.URGENT, kot });
 
-    return { success: true, kot };
+      return { success: true, kot };
+    } catch (error) {
+      console.error('Error marking KOT as urgent:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**

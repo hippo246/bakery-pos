@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo, useReducer } from 'react';
 import { KitchenStation } from '../../domain/kotTypes.js';
 import useScreenSize from '../../hooks/useScreenSize';
+import ReceiptStudioPanel from './panels/ReceiptStudioPanel';
+import WorkflowEnginePanel from './panels/WorkflowEnginePanel';
+import RoleSecurityPanel from './panels/RoleSecurityPanel';
 
 /* ─── Table Management Panel Component ─────────────────────────────── */
 function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
@@ -673,7 +676,311 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
   );
 }
 
-export default function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables, darkMode = true }) {
+/* ─── Menu Layout Settings Component ─────────────────────────────── */
+function MenuLayoutSettings({ menuLayout = {}, onMenuLayoutChange, darkMode = true, screenSize = 'large' }) {
+  const currentLayout = {
+    viewMode: 'grid',
+    gridColumns: 'auto',
+    style: 'clean',
+    showImages: true,
+    showDescriptions: true,
+    showCategoryLabels: true,
+    showStockBadges: true,
+    showVegNonVeg: true,
+    spacing: 'medium',
+    borderRadius: 'medium',
+    shadow: 'subtle',
+    ...menuLayout
+  };
+
+  const handleLayoutChange = (key, value) => {
+    onMenuLayoutChange({ ...currentLayout, [key]: value });
+  };
+
+  const t = {
+    bg:       darkMode ? '#000000' : '#f5f7fa',
+    bgCard:   darkMode ? '#111111' : '#ffffff',
+    bgInput:  darkMode ? '#1a1a1a' : '#f9fafb',
+    bgEle:    darkMode ? '#0a0a0a' : '#f9fafb',
+    text:     darkMode ? '#ffffff' : '#0a0a0a',
+    textSub:  darkMode ? '#9ca3af' : '#6b7280',
+    textMute: darkMode ? '#6b7280' : '#9ca3af',
+    border:   darkMode ? '#222222' : '#e5e7eb',
+    accent:   '#6366f1',
+  };
+
+  // Style options per view mode
+  const viewModeStyles = {
+    grid: [
+      { value: 'clean', label: 'Clean', desc: 'Simple cards' },
+      { value: 'card', label: 'Card', desc: 'With shadow' },
+      { value: 'flat', label: 'Flat', desc: 'No shadow' }
+    ],
+    list: [
+      { value: 'row', label: 'Row', desc: 'Horizontal' },
+      { value: 'card', label: 'Card', desc: 'Vertical' },
+      { value: 'minimal', label: 'Minimal', desc: 'Compact' }
+    ],
+    compact: [
+      { value: 'dense', label: 'Dense', desc: 'Small gaps' },
+      { value: 'grid', label: 'Grid', desc: '4 columns' },
+      { value: 'list', label: 'List', desc: 'Compact rows' }
+    ],
+    large: [
+      { value: 'showcase', label: 'Showcase', desc: 'Big images' },
+      { value: 'featured', label: 'Featured', desc: 'Highlighted' },
+      { value: 'simple', label: 'Simple', desc: 'Clean layout' }
+    ]
+  };
+
+  const currentStyles = viewModeStyles[currentLayout.viewMode] || viewModeStyles.grid;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* View Mode */}
+      <div>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+          View Mode
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+          {[
+            { value: 'grid', label: 'Grid' },
+            { value: 'list', label: 'List' },
+            { value: 'compact', label: 'Compact' },
+            { value: 'large', label: 'Large' }
+          ].map(mode => (
+            <button
+              key={mode.value}
+              onClick={() => handleLayoutChange('viewMode', mode.value)}
+              style={{
+                padding: '12px',
+                background: currentLayout.viewMode === mode.value
+                  ? 'rgba(99,102,241,0.2)'
+                  : t.bgCard,
+                border: `1.5px solid ${currentLayout.viewMode === mode.value ? '#6366f1' : t.border}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: currentLayout.viewMode === mode.value ? '#6366f1' : t.text,
+                transition: 'all 0.15s'
+              }}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Style - based on view mode */}
+      <div>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+          {currentLayout.viewMode.charAt(0).toUpperCase() + currentLayout.viewMode.slice(1)} Style
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          {currentStyles.map(style => (
+            <button
+              key={style.value}
+              onClick={() => handleLayoutChange('style', style.value)}
+              style={{
+                padding: '12px 8px',
+                background: currentLayout.style === style.value
+                  ? 'rgba(99,102,241,0.2)'
+                  : t.bgCard,
+                border: `1.5px solid ${currentLayout.style === style.value ? '#6366f1' : t.border}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.15s'
+              }}
+            >
+              <span style={{ fontSize: '12px', fontWeight: '600', color: currentLayout.style === style.value ? '#6366f1' : t.text }}>
+                {style.label}
+              </span>
+              <span style={{ fontSize: '10px', color: t.textMute }}>
+                {style.desc}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid Columns - only for grid view */}
+      {currentLayout.viewMode === 'grid' && (
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+            Columns
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+            {[
+              { value: 'auto', label: 'Auto' },
+              { value: '2', label: '2' },
+              { value: '3', label: '3' },
+              { value: '4', label: '4' }
+            ].map(col => (
+              <button
+                key={col.value}
+                onClick={() => handleLayoutChange('gridColumns', col.value)}
+                style={{
+                  padding: '12px',
+                  background: currentLayout.gridColumns === col.value
+                    ? 'rgba(99,102,241,0.2)'
+                    : t.bgCard,
+                  border: `1.5px solid ${currentLayout.gridColumns === col.value ? '#6366f1' : t.border}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  color: currentLayout.gridColumns === col.value ? '#6366f1' : t.text,
+                  transition: 'all 0.15s'
+                }}
+              >
+                {col.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Spacing */}
+      <div>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+          Spacing
+        </label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          {[
+            { value: 'tight', label: 'Tight' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'loose', label: 'Loose' }
+          ].map(spacing => (
+            <button
+              key={spacing.value}
+              onClick={() => handleLayoutChange('spacing', spacing.value)}
+              style={{
+                padding: '12px',
+                background: currentLayout.spacing === spacing.value
+                  ? 'rgba(99,102,241,0.2)'
+                  : t.bgCard,
+                border: `1.5px solid ${currentLayout.spacing === spacing.value ? '#6366f1' : t.border}`,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: currentLayout.spacing === spacing.value ? '#6366f1' : t.text,
+                transition: 'all 0.15s'
+              }}
+            >
+              {spacing.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Border Radius */}
+      <div>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+          Border Radius
+        </label>
+        <select
+          value={currentLayout.borderRadius}
+          onChange={(e) => handleLayoutChange('borderRadius', e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            background: t.bgInput,
+            border: `1px solid ${t.border}`,
+            borderRadius: '8px',
+            color: t.text,
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}
+        >
+          <option value="none">None</option>
+          <option value="small">Small</option>
+          <option value="medium">Medium</option>
+          <option value="large">Large</option>
+        </select>
+      </div>
+
+      {/* Shadow */}
+      <div>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: t.textSub, marginBottom: '8px' }}>
+          Shadow
+        </label>
+        <select
+          value={currentLayout.shadow}
+          onChange={(e) => handleLayoutChange('shadow', e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            background: t.bgInput,
+            border: `1px solid ${t.border}`,
+            borderRadius: '8px',
+            color: t.text,
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}
+        >
+          <option value="none">None</option>
+          <option value="subtle">Subtle</option>
+          <option value="medium">Medium</option>
+          <option value="strong">Strong</option>
+        </select>
+      </div>
+
+      {/* Content Display Options */}
+      <div style={{ padding: '12px', background: t.bgCard, borderRadius: '8px', border: `1px solid ${t.border}` }}>
+        <div style={{ fontSize: '13px', fontWeight: '600', color: t.text, marginBottom: '12px' }}>
+          Content Display
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {[
+            { key: 'showImages', label: 'Show Item Images' },
+            { key: 'showDescriptions', label: 'Show Descriptions' },
+            { key: 'showCategoryLabels', label: 'Show Category Labels' },
+            { key: 'showStockBadges', label: 'Show Stock Badges' },
+            { key: 'showVegNonVeg', label: 'Show Veg/Non-Veg Icons' }
+          ].map(option => (
+            <div key={option.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '13px', color: t.text }}>{option.label}</span>
+              <div
+                onClick={() => handleLayoutChange(option.key, !currentLayout[option.key])}
+                style={{
+                  width: '40px',
+                  height: '22px',
+                  background: currentLayout[option.key] ? '#10b981' : '#000000',
+                  borderRadius: '11px',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '3px',
+                    left: currentLayout[option.key] ? '21px' : '3px',
+                    width: '16px',
+                    height: '16px',
+                    background: '#ffffff',
+                    borderRadius: '50%',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, orders = [], setOrders, staff = [], setStaff, tables = [], setTables, darkMode = true }) {
   const [activeSection, setActiveSection] = useState('general');
   const screenSize = useScreenSize();
   const [showAlert, setShowAlert] = useState(false);
@@ -681,14 +988,245 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
   const [alertType, setAlertType] = useState('success');
 
   const [formData, setFormData] = useState({
+    // General Settings
     storeName: settings.storeName || '',
     storeAddress: settings.storeAddress || '',
     phone: settings.phone || '',
     email: settings.email || '',
+    gstin: settings.gstin || '',
+    panNumber: settings.panNumber || '',
+    managerName: settings.managerName || '',
+    businessType: settings.businessType || 'restaurant',
+    emergencyContact: settings.emergencyContact || '',
+    website: settings.website || '',
+    totalTables: settings.totalTables || 20,
+    seatingCapacity: settings.seatingCapacity || 80,
+    maxOrderValue: settings.maxOrderValue || 100000,
+    minOrderValue: settings.minOrderValue || 100,
     taxRate: settings.taxRate || '18',
+    taxType: settings.taxType || 'gst',
+    serviceCharge: settings.serviceCharge || 0,
+    serviceChargeType: settings.serviceChargeType || 'optional',
+    roundingMethod: settings.roundingMethod || 'nearest',
+    decimalPlaces: settings.decimalPlaces || '2',
+    openingTime: settings.openingTime || '09:00',
+    closingTime: settings.closingTime || '23:00',
+    timezone: settings.timezone || 'Asia/Kolkata',
+    operatingDays: settings.operatingDays || 'all',
     currency: settings.currency || 'INR',
     language: settings.language || 'en',
+    dateFormat: settings.dateFormat || 'DD/MM/YYYY',
+    timeFormat: settings.timeFormat || '24h',
+    numberFormat: settings.numberFormat || 'indian',
+    colorBlindMode: settings.colorBlindMode || false,
+    
+    // Display Settings
+    screenDensity: settings.screenDensity || 'comfortable',
+    fontSize: settings.fontSize || 'medium',
+    showAnimations: settings.showAnimations !== false,
+    animationSpeed: settings.animationSpeed || 'normal',
+    showBorders: settings.showBorders !== false,
+    borderRadius: settings.borderRadius || 'medium',
+    showShadows: settings.showShadows !== false,
+    
+    // Theme Settings
+    themeMode: settings.themeMode || 'dark',
+    accentColor: settings.accentColor || '#6366f1',
+    primaryColor: settings.primaryColor || '#8b5cf6',
+    backgroundColor: settings.backgroundColor || '#000000',
+    cardColor: settings.cardColor || '#111111',
+    textColor: settings.textColor || '#ffffff',
+    
+    // Notification Settings
+    enableSoundNotifications: settings.enableSoundNotifications !== false,
+    enableDesktopNotifications: settings.enableDesktopNotifications !== false,
+    notificationSound: settings.notificationSound || 'default',
+    notificationVolume: settings.notificationVolume || 70,
+    enableOrderAlerts: settings.enableOrderAlerts !== false,
+    enableLowStockAlerts: settings.enableLowStockAlerts !== false,
+    lowStockThreshold: settings.lowStockThreshold || 10,
+    enablePaymentAlerts: settings.enablePaymentAlerts !== false,
+    
+    // Mobile UI Settings
+    bottomNavStyle: settings.bottomNavStyle || 'icons',
+    showLabelsOnMobile: settings.showLabelsOnMobile !== false,
+    enableHapticFeedback: settings.enableHapticFeedback !== false,
+    mobileFontSize: settings.mobileFontSize || 'medium',
+    enableSwipeGestures: settings.enableSwipeGestures !== false,
+    tabletSidebarMode: settings.tabletSidebarMode || 'auto',
+    
+    // Business Settings
+    businessRegistrationNumber: settings.businessRegistrationNumber || '',
+    businessLicenseNumber: settings.businessLicenseNumber || '',
+    fssaiNumber: settings.fssaiNumber || '',
+    foundedDate: settings.foundedDate || '',
+    socialMediaInstagram: settings.socialMediaInstagram || '',
+    socialMediaFacebook: settings.socialMediaFacebook || '',
+    socialMediaTwitter: settings.socialMediaTwitter || '',
+    
+    // Advanced Tax Settings
+    enableCompoundTax: settings.enableCompoundTax || false,
+    taxInclusivePricing: settings.taxInclusivePricing || false,
+    enableMultiTaxRates: settings.enableMultiTaxRates || false,
+    cgstRate: settings.cgstRate || 9,
+    sgstRate: settings.sgstRate || 9,
+    igstRate: settings.igstRate || 18,
+    cessRate: settings.cessRate || 0,
+    
+    // Dashboard Settings
+    dashboardLayout: settings.dashboardLayout || 'default',
+    showSalesWidget: settings.showSalesWidget !== false,
+    showOrdersWidget: settings.showOrdersWidget !== false,
+    showInventoryWidget: settings.showInventoryWidget !== false,
+    showStaffWidget: settings.showStaffWidget !== false,
+    showRevenueChart: settings.showRevenueChart !== false,
+    showOrderChart: settings.showOrderChart !== false,
+    widgetRefreshInterval: settings.widgetRefreshInterval || 30,
+    
+    // Reports Settings
+    enableAutoReports: settings.enableAutoReports || false,
+    reportSchedule: settings.reportSchedule || 'daily',
+    reportFormat: settings.reportFormat || 'pdf',
+    includeChartsInReports: settings.includeChartsInReports !== false,
+    emailReportsTo: settings.emailReportsTo || '',
+    
+    // CRM Settings
+    enableLoyaltyProgram: settings.enableLoyaltyProgram !== false,
+    loyaltyPointsPerRupee: settings.loyaltyPointsPerRupee || 1,
+    loyaltyPointsRedemptionRate: settings.loyaltyPointsRedemptionRate || 100,
+    enableCustomerNotes: settings.enableCustomerNotes !== false,
+    enableCustomerHistory: settings.enableCustomerHistory !== false,
+    enableCustomerSegmentation: settings.enableCustomerSegmentation || false,
+    
+    // Staff Settings
+    enableStaffTracking: settings.enableStaffTracking !== false,
+    enableStaffPerformance: settings.enableStaffPerformance !== false,
+    staffPerformanceMetric: settings.staffPerformanceMetric || 'orders',
+    enableStaffScheduling: settings.enableStaffScheduling || false,
+    defaultShiftDuration: settings.defaultShiftDuration || 8,
+    
+    // Menu Settings
+    menuLayout: settings.menuLayout || 'grid',
+    showItemImages: settings.showItemImages !== false,
+    showItemDescriptions: settings.showItemDescriptions !== false,
+    showCategoryImages: settings.showCategoryImages || false,
+    enableQuickAdd: settings.enableQuickAdd !== false,
+    menuSortOrder: settings.menuSortOrder || 'name',
+    
+    // Inventory Settings
+    enableLowStockAlerts: settings.enableLowStockAlerts !== false,
+    lowStockThreshold: settings.lowStockThreshold || 10,
+    enableStockOutAlerts: settings.enableStockOutAlerts !== false,
+    enableAutoRestock: settings.enableAutoRestock || false,
+    inventoryTrackingMethod: settings.inventoryTrackingMethod || 'fifo',
+    
+    // Recipe Settings
+    enableRecipeCosting: settings.enableRecipeCosting !== false,
+    enableRecipePrepTime: settings.enableRecipePrepTime !== false,
+    enableRecipeScaling: settings.enableRecipeScaling !== false,
+    
+    // Waste Settings
+    enableWasteTracking: settings.enableWasteTracking !== false,
+    requireWasteReason: settings.requireWasteReason !== false,
+    requireWastePhoto: settings.requireWastePhoto || false,
+    wasteCategories: settings.wasteCategories || ['spoiled', 'burnt', 'dropped', 'expired', 'mistake'],
+    
+    // Reservation Settings
+    enableDeposits: settings.enableDeposits || false,
+    depositAmount: settings.depositAmount || 500,
+    depositType: settings.depositType || 'fixed',
+    enableCancellationPolicy: settings.enableCancellationPolicy || false,
+    cancellationHours: settings.cancellationHours || 24,
+    maxPartySize: settings.maxPartySize || 20,
+    
+    // Token Settings
+    tokenPrefix: settings.tokenPrefix || 'T',
+    tokenStartNumber: settings.tokenStartNumber || 1,
+    enableTokenResetDaily: settings.enableTokenResetDaily || false,
+    tokenDisplayFormat: settings.tokenDisplayFormat || 'prefix_number',
+    
+    // Table Settings
+    enableTableMerge: settings.enableTableMerge !== false,
+    enableTableTransfer: settings.enableTableTransfer !== false,
+    autoAssignTables: settings.autoAssignTables || false,
+    tableCleaningTime: settings.tableCleaningTime || 15,
+    
+    // Waiter Settings
+    enableWaiterCalls: settings.enableWaiterCalls !== false,
+    enableWaiterTracking: settings.enableWaiterTracking || false,
+    waiterCallTimeout: settings.waiterCallTimeout || 60,
+    enableWaiterPerformance: settings.enableWaiterPerformance || false,
+    
+    // Kitchen Settings
+    kitchenMode: settings.kitchenMode || 'standard',
+    enableKitchenTimer: settings.enableKitchenTimer !== false,
+    defaultPrepTime: settings.defaultPrepTime || 15,
+    enableKitchenRouting: settings.enableKitchenRouting !== false,
+    kitchenStationCount: settings.kitchenStationCount || 3,
+    
+    // Online Ordering Settings
+    enableOnlineOrdering: settings.enableOnlineOrdering || false,
+    onlinePlatform: settings.onlinePlatform || 'custom',
+    enableDelivery: settings.enableDelivery || false,
+    deliveryFee: settings.deliveryFee || 50,
+    enablePickup: settings.enablePickup !== false,
+    onlinePaymentMethods: settings.onlinePaymentMethods || ['upi', 'card'],
+    
+    // POS Settings
+    enableQuickCheckout: settings.enableQuickCheckout !== false,
+    enableOrderNotes: settings.enableOrderNotes !== false,
+    enableCustomerSelection: settings.enableCustomerSelection !== false,
+    enableTableSelection: settings.enableTableSelection !== false,
+    defaultOrderType: settings.defaultOrderType || 'dine_in',
+    
+    // Workflow Settings
+    enableOrderApproval: settings.enableOrderApproval || false,
+    enablePaymentConfirmation: settings.enablePaymentConfirmation !== false,
+    enableKOTPrinting: settings.enableKOTPrinting !== false,
+    enableReceiptPrinting: settings.enableReceiptPrinting !== false,
+    
+    // Item Code Settings
+    itemCodeFormat: settings.itemCodeFormat || 'auto',
+    itemCodePrefix: settings.itemCodePrefix || '',
+    enableBarcodeScanning: settings.enableBarcodeScanning || false,
+    
+    // Legacy Receipt Settings
     receiptFooter: settings.receiptFooter || '',
+    receiptHeader: settings.receiptHeader || '',
+    showStoreLogo: settings.showStoreLogo !== false,
+    showCashierName: settings.showCashierName !== false,
+    showPaymentDetails: settings.showPaymentDetails !== false,
+    
+    // QR Ordering Settings
+    enableQRTables: settings.enableQRTables || false,
+    qrExpirationTime: settings.qrExpirationTime || 3600,
+    enableQRPayment: settings.enableQRPayment !== false,
+    
+    // Backup Settings
+    enableAutoBackup: settings.enableAutoBackup || false,
+    backupSchedule: settings.backupSchedule || 'daily',
+    backupRetentionDays: settings.backupRetentionDays || 30,
+    backupLocation: settings.backupLocation || 'local',
+    
+    // Refund Settings
+    enableRefunds: settings.enableRefunds !== false,
+    requireRefundReason: settings.requireRefundReason !== false,
+    refundWindowHours: settings.refundWindowHours || 24,
+    maxRefundAmount: settings.maxRefundAmount || 10000,
+    enablePartialRefunds: settings.enablePartialRefunds !== false,
+    
+    // Security Settings
+    enableRoleBasedAccess: settings.enableRoleBasedAccess !== false,
+    enableTwoFactorAuth: settings.enableTwoFactorAuth || false,
+    sessionTimeout: settings.sessionTimeout || 30,
+    enableAuditLog: settings.enableAuditLog !== false,
+    
+    // Debug Settings
+    enableDebugMode: settings.enableDebugMode || false,
+    logLevel: settings.logLevel || 'error',
+    enablePerformanceMonitoring: settings.enablePerformanceMonitoring || false,
+    
+    // Original settings
     codeType: settings.codeType || 'alphanumeric',
     razorpayKeyId: settings.razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || '',
     razorpayKeySecret: settings.razorpayKeySecret || '',
@@ -697,6 +1235,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     printerType: settings.printerType || 'thermal',
     autoPrintReceipt: settings.autoPrintReceipt !== false,
     kitchenDisplayEnabled: settings.kitchenDisplayEnabled !== false,
+    showTokensOnOrders: settings.showTokensOnOrders !== false,
+    groupByTable: settings.groupByTable !== false,
+    showOrderTime: settings.showOrderTime !== false,
+    showCustomerName: settings.showCustomerName !== false,
+    autoRefreshOrders: settings.autoRefreshOrders !== false,
+    allowOrderEdit: settings.allowOrderEdit !== false,
+    allowOrderSplit: settings.allowOrderSplit !== false,
+    showOrderTotal: settings.showOrderTotal !== false,
     qrOrderingEnabled: settings.qrOrderingEnabled !== false,
     qrRestaurantName: settings.qrRestaurantName || settings.storeName || '',
     qrWelcomeMessage: settings.qrWelcomeMessage || 'Welcome! Scan to order from your table.',
@@ -813,6 +1359,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     customOrderShowCategory:      settings.customOrderShowCategory !== false,
     customOrderShowNotes:         settings.customOrderShowNotes !== false,
     customOrderDefaultCategory:   settings.customOrderDefaultCategory || 'Custom',
+    // Order card column settings
+    orderCardColumn_table:        settings.orderCardColumn_table !== false,
+    orderCardColumn_time:         settings.orderCardColumn_time !== false,
+    orderCardColumn_customer:     settings.orderCardColumn_customer !== false,
+    orderCardColumn_categories:  settings.orderCardColumn_categories !== false,
+    orderCardColumn_items:        settings.orderCardColumn_items !== false,
+    orderCardColumn_total:        settings.orderCardColumn_total !== false,
+    orderCardColumn_status:       settings.orderCardColumn_status !== false,
     customOrderExtraCategories:   settings.customOrderExtraCategories || [],
     customOrderPresets: settings.customOrderPresets || [
       { name: 'Extra Sauce',      price: 10,  icon: '🥫' },
@@ -863,6 +1417,394 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     enableEncryption: settings.enableEncryption !== false,
     enableAuditLog: settings.enableAuditLog !== false,
     sessionTimeout: settings.sessionTimeout || 30,
+    
+    // Receipt Studio Settings
+    receiptLogo: settings.receiptLogo || '',
+    receiptLogoPosition: settings.receiptLogoPosition || 'center',
+    receiptLogoSize: settings.receiptLogoSize || 48,
+    receiptHeader: settings.receiptHeader || '',
+    receiptHeaderStyle: settings.receiptHeaderStyle || 'bold',
+    receiptHeaderBorder: settings.receiptHeaderBorder || 'dashed',
+    receiptFooter: settings.receiptFooter || '',
+    receiptFooterStyle: settings.receiptFooterStyle || 'italic',
+    receiptPaperWidth: settings.receiptPaperWidth || '80mm',
+    receiptMarginTop: settings.receiptMarginTop || 16,
+    receiptMarginBottom: settings.receiptMarginBottom || 16,
+    receiptMarginLeft: settings.receiptMarginLeft || 16,
+    receiptMarginRight: settings.receiptMarginRight || 16,
+    receiptPrinterPort: settings.receiptPrinterPort || '9100',
+    receiptPrintDensity: settings.receiptPrintDensity || '203',
+    receiptCutMode: settings.receiptCutMode || 'full',
+    receiptPrintSpeed: settings.receiptPrintSpeed || 'normal',
+    receiptShowLogo: settings.receiptShowLogo !== false,
+    receiptShowHeader: settings.receiptShowHeader !== false,
+    receiptShowFooter: settings.receiptShowFooter !== false,
+    receiptShowDateTime: settings.receiptShowDateTime !== false,
+    receiptShowBillId: settings.receiptShowBillId !== false,
+    receiptShowOrderId: settings.receiptShowOrderId !== false,
+    receiptShowTable: settings.receiptShowTable !== false,
+    receiptShowServer: settings.receiptShowServer !== false,
+    receiptShowCustomer: settings.receiptShowCustomer !== false,
+    receiptShowItems: settings.receiptShowItems !== false,
+    receiptShowQuantities: settings.receiptShowQuantities !== false,
+    receiptShowPrices: settings.receiptShowPrices !== false,
+    receiptShowSubtotal: settings.receiptShowSubtotal !== false,
+    receiptShowTax: settings.receiptShowTax !== false,
+    receiptShowDiscount: settings.receiptShowDiscount !== false,
+    receiptShowServiceCharge: settings.receiptShowServiceCharge !== false,
+    receiptShowTips: settings.receiptShowTips !== false,
+    receiptShowGrandTotal: settings.receiptShowGrandTotal !== false,
+    receiptShowPaymentMethod: settings.receiptShowPaymentMethod !== false,
+    receiptShowChange: settings.receiptShowChange !== false,
+    receiptShowBarcode: settings.receiptShowBarcode !== false,
+    receiptFontFamily: settings.receiptFontFamily || 'Courier New',
+    receiptFontSize: settings.receiptFontSize || 12,
+    receiptHeaderFontSize: settings.receiptHeaderFontSize || 14,
+    receiptTotalFontSize: settings.receiptTotalFontSize || 16,
+    receiptLineHeight: settings.receiptLineHeight || 1.4,
+    receiptTextAlign: settings.receiptTextAlign || 'left',
+    receiptTextColor: settings.receiptTextColor || '#000000',
+    receiptBorderColor: settings.receiptBorderColor || '#000000',
+    receiptGstin: settings.receiptGstin || '',
+    receiptFssai: settings.receiptFssai || '',
+    receiptPan: settings.receiptPan || '',
+    receiptTariff: settings.receiptTariff || '',
+    receiptShowGst: settings.receiptShowGst !== false,
+    receiptShowGstSeparate: settings.receiptShowGstSeparate !== false,
+    receiptShowFssai: settings.receiptShowFssai !== false,
+    receiptShowPan: settings.receiptShowPan !== false,
+    receiptShowTariff: settings.receiptShowTariff !== false,
+    receiptShowTaxInvoice: settings.receiptShowTaxInvoice !== false,
+    receiptShowReverseCharge: settings.receiptShowReverseCharge !== false,
+    receiptShowQr: settings.receiptShowQr !== false,
+    receiptShowReviewQr: settings.receiptShowReviewQr !== false,
+    receiptGoogleReviewUrl: settings.receiptGoogleReviewUrl || '',
+    receiptShowTerms: settings.receiptShowTerms !== false,
+    receiptShowContact: settings.receiptShowContact !== false,
+    receiptShowSocial: settings.receiptShowSocial !== false,
+    receiptShowWebsite: settings.receiptShowWebsite !== false,
+    receiptShowEmail: settings.receiptShowEmail !== false,
+    receiptShowCashier: settings.receiptShowCashier !== false,
+    receiptAutoPrint: settings.receiptAutoPrint !== false,
+    receiptTemplate: settings.receiptTemplate || 'standard',
+    customReceiptHeader: settings.customReceiptHeader || '',
+    customReceiptFooter: settings.customReceiptFooter || '',
+    brevoApiKey: settings.brevoApiKey || '',
+    storeEmail: settings.storeEmail || '',
+
+    // Toast Orders Settings
+    toastShowPrice: settings.toastShowPrice !== false,
+    toastShowQuantity: settings.toastShowQuantity !== false,
+    toastShowCategory: settings.toastShowCategory !== false,
+    toastAutoSave: settings.toastAutoSave !== false,
+    toastShowModals: settings.toastShowModals !== false,
+    toastEnableDiscount: settings.toastEnableDiscount !== false,
+    toastEnableTips: settings.toastEnableTips !== false,
+    toastDefaultPaymentMethod: settings.toastDefaultPaymentMethod || 'cash',
+    toastDiscountMaxPercent: settings.toastDiscountMaxPercent || 50,
+    toastDiscountRequireReason: settings.toastDiscountRequireReason !== false,
+    toastEnableServiceCharge: settings.toastEnableServiceCharge !== false,
+    toastServiceChargePercent: settings.toastServiceChargePercent || 10,
+    toastEnableTaxExemption: settings.toastEnableTaxExemption !== false,
+    toastDefaultTable: settings.toastDefaultTable || 1,
+    toastAutoAssignTable: settings.toastAutoAssignTable || false,
+    toastEnableSeatSplitting: settings.toastEnableSeatSplitting !== false,
+    toastMaxSeats: settings.toastMaxSeats || 10,
+    toastEnableServerAssignment: settings.toastEnableServerAssignment !== false,
+    toastDefaultServer: settings.toastDefaultServer || '',
+    toastEnableOrderTimer: settings.toastEnableOrderTimer !== false,
+    toastOrderTimerWarning: settings.toastOrderTimerWarning || 30,
+    toastEnableKitchenDelay: settings.toastEnableKitchenDelay !== false,
+    toastDefaultKitchenDelay: settings.toastDefaultKitchenDelay || 0,
+    toastEnableItemSplitting: settings.toastEnableItemSplitting !== false,
+    toastEnableItemTransfer: settings.toastEnableItemTransfer !== false,
+    toastEnableVoid: settings.toastEnableVoid !== false,
+    toastVoidRequireReason: settings.toastVoidRequireReason !== false,
+    toastVoidRequireManager: settings.toastVoidRequireManager || false,
+    toastEnableDuplication: settings.toastEnableDuplication !== false,
+    toastEnableCashDrawer: settings.toastEnableCashDrawer !== false,
+    toastCashDrawerAutoOpen: settings.toastCashDrawerAutoOpen !== false,
+    toastEnablePrint: settings.toastEnablePrint !== false,
+    toastPrintOnPayment: settings.toastPrintOnPayment !== false,
+    toastPrintOnKOT: settings.toastPrintOnKOT !== false,
+    toastEnableLoyalty: settings.toastEnableLoyalty !== false,
+    toastLoyaltyPointsPerRupee: settings.toastLoyaltyPointsPerRupee || 1,
+    toastEnableOrderNotes: settings.toastEnableOrderNotes !== false,
+    toastEnableCustomerNotes: settings.toastEnableCustomerNotes !== false,
+    toastDefaultOrderType: settings.toastDefaultOrderType || 'dine-in',
+    toastEnableTakeout: settings.toastEnableTakeout !== false,
+    toastEnableDelivery: settings.toastEnableDelivery !== false,
+    toastDeliveryFee: settings.toastDeliveryFee || 50,
+    toastDeliveryFeeType: settings.toastDeliveryFeeType || 'fixed',
+    toastMinimumOrderValue: settings.toastMinimumOrderValue || 0,
+    toastMaximumOrderValue: settings.toastMaximumOrderValue || 100000,
+    toastOrderValidation: settings.toastOrderValidation !== false,
+    toastAutoCompleteOrders: settings.toastAutoCompleteOrders || false,
+    toastCompleteOnPayment: settings.toastCompleteOnPayment !== false,
+    toastAllowOrderModification: settings.toastAllowOrderModification !== false,
+    toastModificationTimeout: settings.toastModificationTimeout || 5,
+    toastEnableHoldOrders: settings.toastEnableHoldOrders !== false,
+    toastMaxHoldOrders: settings.toastMaxHoldOrders || 10,
+    toastHoldOrderTimeout: settings.toastHoldOrderTimeout || 60,
+    toastEnableOrderHistory: settings.toastEnableOrderHistory !== false,
+    toastHistoryRetentionDays: settings.toastHistoryRetentionDays || 30,
+    toastEnableQuickActions: settings.toastEnableQuickActions !== false,
+    toastQuickActionButtons: settings.toastQuickActionButtons || ['Pay', 'Print', 'Hold', 'Void'],
+    toastEnableShortcuts: settings.toastEnableShortcuts !== false,
+    toastShortcutMode: settings.toastShortcutMode || 'numeric',
+    toastCartLayout: settings.toastCartLayout || 'list',
+    toastCartGrouping: settings.toastCartGrouping || 'category',
+    toastCartSorting: settings.toastCartSorting || 'time',
+    toastShowItemImages: settings.toastShowItemImages !== false,
+    toastItemImageSize: settings.toastItemImageSize || 'medium',
+    toastEnableItemSearch: settings.toastEnableItemSearch !== false,
+    toastSearchMode: settings.toastSearchMode || 'fuzzy',
+    toastEnableFavorites: settings.toastEnableFavorites !== false,
+    toastMaxFavorites: settings.toastMaxFavorites || 20,
+    toastEnableRecentItems: settings.toastEnableRecentItems !== false,
+    toastRecentItemsCount: settings.toastRecentItemsCount || 10,
+    toastEnableQuantityButtons: settings.toastEnableQuantityButtons !== false,
+    toastQuantityButtonValues: settings.toastQuantityButtonValues || [1, 2, 3, 4, 5],
+    toastEnableModifierPrompt: settings.toastEnableModifierPrompt !== false,
+    toastModifierSelectionMode: settings.toastModifierSelectionMode || 'multi',
+    toastEnableVariantSelection: settings.toastEnableVariantSelection !== false,
+    toastVariantSelectionMode: settings.toastVariantSelectionMode || 'single',
+    toastEnableComboMeals: settings.toastEnableComboMeals !== false,
+    toastComboDiscountPercent: settings.toastComboDiscountPercent || 10,
+    toastEnableHappyHour: settings.toastEnableHappyHour || false,
+    toastHappyHourStart: settings.toastHappyHourStart || '15:00',
+    toastHappyHourEnd: settings.toastHappyHourEnd || '18:00',
+    toastHappyHourDiscount: settings.toastHappyHourDiscount || 20,
+    toastEnablePromotions: settings.toastEnablePromotions !== false,
+    toastPromotionAutoApply: settings.toastPromotionAutoApply || false,
+    toastEnableCoupons: settings.toastEnableCoupons !== false,
+    toastCouponValidation: settings.toastCouponValidation !== false,
+    toastEnableGiftCards: settings.toastEnableGiftCards !== false,
+    toastGiftCardValidation: settings.toastGiftCardValidation !== false,
+    toastEnableRefunds: settings.toastEnableRefunds !== false,
+    toastRefundRequireReason: settings.toastRefundRequireReason !== false,
+    toastRefundTimeout: settings.toastRefundTimeout || 24,
+    toastRefundApprovalRequired: settings.toastRefundApprovalRequired || false,
+    toastEnableExchange: settings.toastEnableExchange !== false,
+    toastExchangePolicy: settings.toastExchangePolicy || 'same-day',
+    toastEnableSplitsPayment: settings.toastEnableSplitsPayment !== false,
+    toastMaxSplits: settings.toastMaxSplits || 5,
+    toastSplitValidation: settings.toastSplitValidation !== false,
+    toastTipOptions: settings.toastTipOptions || [10, 15, 20, 25],
+    toastTipCalculation: settings.toastTipCalculation || 'pre-tax',
+    toastServiceChargeTaxable: settings.toastServiceChargeTaxable !== false,
+    toastEnableGratuity: settings.toastEnableGratuity !== false,
+    toastGratuityPercent: settings.toastGratuityPercent || 5,
+    toastGratuityAutoApply: settings.toastGratuityAutoApply || false,
+    toastGratuityGroupSize: settings.toastGratuityGroupSize || 8,
+    
+    // Oracle KDS Settings
+    oracleKdsAutoAssign: settings.oracleKdsAutoAssign || false,
+    oracleKdsShowTimer: settings.oracleKdsShowTimer !== false,
+    oracleKdsColorCode: settings.oracleKdsColorCode || 'red',
+    oracleKdsSortBy: settings.oracleKdsSortBy || 'time',
+    oracleKdsShowIngredients: settings.oracleKdsShowIngredients !== false,
+    oracleKdsStationCount: settings.oracleKdsStationCount || 5,
+    oracleKdsStations: settings.oracleKdsStations || ['Hot', 'Cold', 'Grill', 'Fry', 'Prep'],
+    oracleKdsDefaultPrepTime: settings.oracleKdsDefaultPrepTime || 15,
+    oracleKdsPriorityEnabled: settings.oracleKdsPriorityEnabled !== false,
+    oracleKdsShowPriority: settings.oracleKdsShowPriority !== false,
+    oracleKdsAutoRefresh: settings.oracleKdsAutoRefresh !== false,
+    oracleKdsRefreshInterval: settings.oracleKdsRefreshInterval || 30,
+    oracleKdsShowTableNumber: settings.oracleKdsShowTableNumber !== false,
+    oracleKdsShowServerName: settings.oracleKdsShowServerName !== false,
+    oracleKdsShowCustomerName: settings.oracleKdsShowCustomerName !== false,
+    oracleKdsGroupByStation: settings.oracleKdsGroupByStation !== false,
+    oracleKdsColorByTime: settings.oracleKdsColorByTime !== false,
+    oracleKdsTimeThresholds: settings.oracleKdsTimeThresholds || { green: 10, yellow: 20, red: 30 },
+    oracleKdsShowAllergens: settings.oracleKdsShowAllergens !== false,
+    oracleKdsShowModifiers: settings.oracleKdsShowModifiers !== false,
+    oracleKdsShowNotes: settings.oracleKdsShowNotes !== false,
+    oracleKdsAutoPrint: settings.oracleKdsAutoPrint !== false,
+    oracleKdsSoundAlerts: settings.oracleKdsSoundAlerts !== false,
+    oracleKdsSoundType: settings.oracleKdsSoundType || 'chime',
+    oracleKdsVolume: settings.oracleKdsVolume || 70,
+    oracleKdsEnableFire: settings.oracleKdsEnableFire !== false,
+    oracleKdsAutoFire: settings.oracleKdsAutoFire || false,
+    oracleKdsFireDelay: settings.oracleKdsFireDelay || 5,
+    oracleKdsFireConfirmation: settings.oracleKdsFireConfirmation !== false,
+    oracleKdsEnableRush: settings.oracleKdsEnableRush !== false,
+    oracleKdsRushMode: settings.oracleKdsRushMode || 'auto',
+    oracleKdsRushThreshold: settings.oracleKdsRushThreshold || 10,
+    oracleKdsShowRushIndicator: settings.oracleKdsShowRushIndicator !== false,
+    oracleKdsEnableDelay: settings.oracleKdsEnableDelay !== false,
+    oracleKdsDelayReasons: settings.oracleKdsDelayReasons || ['Busy', 'Missing Item', 'Equipment'],
+    oracleKdsDelayRequireReason: settings.oracleKdsDelayRequireReason !== false,
+    oracleKdsShowDelayIndicator: settings.oracleKdsShowDelayIndicator !== false,
+    oracleKdsEnableHold: settings.oracleKdsEnableHold !== false,
+    oracleKdsHoldTimeout: settings.oracleKdsHoldTimeout || 30,
+    oracleKdsAutoResumeHold: settings.oracleKdsAutoResumeHold || false,
+    oracleKdsShowHoldIndicator: settings.oracleKdsShowHoldIndicator !== false,
+    oracleKdsEnableCancel: settings.oracleKdsEnableCancel !== false,
+    oracleKdsCancelRequireReason: settings.oracleKdsCancelRequireReason !== false,
+    oracleKdsCancelRequireManager: settings.oracleKdsCancelRequireManager || false,
+    oracleKdsShowCanceledOrders: settings.oracleKdsShowCanceledOrders !== false,
+    oracleKdsCanceledRetention: settings.oracleKdsCanceledRetention || 24,
+    oracleKdsEnableComplete: settings.oracleKdsEnableComplete !== false,
+    oracleKdsCompleteConfirmation: settings.oracleKdsCompleteConfirmation !== false,
+    oracleKdsCompleteSound: settings.oracleKdsCompleteSound !== false,
+    oracleKdsShowCompletedOrders: settings.oracleKdsShowCompletedOrders !== false,
+    oracleKdsCompletedRetention: settings.oracleKdsCompletedRetention || 60,
+    oracleKdsEnableBatch: settings.oracleKdsEnableBatch !== false,
+    oracleKdsBatchSize: settings.oracleKdsBatchSize || 5,
+    oracleKdsBatchComplete: settings.oracleKdsBatchComplete !== false,
+    oracleKdsShowBatchIndicator: settings.oracleKdsShowBatchIndicator !== false,
+    oracleKdsEnableRouting: settings.oracleKdsEnableRouting !== false,
+    oracleKdsRoutingRules: settings.oracleKdsRoutingRules || 'category',
+    oracleKdsAutoRoute: settings.oracleKdsAutoRoute !== false,
+    oracleKdsShowRouting: settings.oracleKdsShowRouting !== false,
+    oracleKdsEnableFiltering: settings.oracleKdsEnableFiltering !== false,
+    oracleKdsFilterOptions: settings.oracleKdsFilterOptions || ['all', 'active', 'completed', 'delayed'],
+    oracleKdsDefaultFilter: settings.oracleKdsDefaultFilter || 'all',
+    oracleKdsEnableSearch: settings.oracleKdsEnableSearch !== false,
+    oracleKdsSearchFields: settings.oracleKdsSearchFields || ['table', 'order', 'item'],
+    oracleKdsShowItemCount: settings.oracleKdsShowItemCount !== false,
+    oracleKdsItemCountBadge: settings.oracleKdsItemCountBadge !== false,
+    oracleKdsShowTotalValue: settings.oracleKdsShowTotalValue !== false,
+    oracleKdsShowDuration: settings.oracleKdsShowDuration !== false,
+    oracleKdsShowElapsed: settings.oracleKdsShowElapsed !== false,
+    oracleKdsShowRemaining: settings.oracleKdsShowRemaining !== false,
+    oracleKdsTimeFormat: settings.oracleKdsTimeFormat || 'mm:ss',
+    oracleKdsEnableFullscreen: settings.oracleKdsEnableFullscreen !== false,
+    oracleKdsAutoFullscreen: settings.oracleKdsAutoFullscreen || false,
+    oracleKdsShowStatusHeader: settings.oracleKdsShowStatusHeader !== false,
+    oracleKdsHeaderCustomization: settings.oracleKdsHeaderCustomization || false,
+    oracleKdsEnableKeyboardShortcuts: settings.oracleKdsEnableKeyboardShortcuts !== false,
+    oracleKdsShortcutMode: settings.oracleKdsShortcutMode || 'numeric',
+    oracleKdsEnableTouchMode: settings.oracleKdsEnableTouchMode !== false,
+    oracleKdsTouchButtonSize: settings.oracleKdsTouchButtonSize || 'large',
+    oracleKdsEnableVoiceCommands: settings.oracleKdsEnableVoiceCommands !== false,
+    oracleKdsVoiceLanguage: settings.oracleKdsVoiceLanguage || 'en',
+    
+    // Split KDS Settings
+    splitKdsEnableSplitting: settings.splitKdsEnableSplitting !== false,
+    splitKdsAutoSplit: settings.splitKdsAutoSplit || false,
+    splitKdsMaxSplits: settings.splitKdsMaxSplits || 4,
+    splitKdsShowProgress: settings.splitKdsShowProgress !== false,
+    splitKdsSplitByCategory: settings.splitKdsSplitByCategory !== false,
+    splitKdsSplitByStation: settings.splitKdsSplitByStation !== false,
+    splitKdsAutoMerge: settings.splitKdsAutoMerge || false,
+    splitKdsMergeThreshold: settings.splitKdsMergeThreshold || 2,
+    splitKdsShowSplitOrigin: settings.splitKdsShowSplitOrigin !== false,
+    splitKdsEnableManualSplit: settings.splitKdsEnableManualSplit !== false,
+    splitKdsSplitRules: settings.splitKdsSplitRules || 'quantity',
+    splitKdsMinSplitQuantity: settings.splitKdsMinSplitQuantity || 2,
+    splitKdsShowSplitIndicator: settings.splitKdsShowSplitIndicator !== false,
+    splitKdsSplitIndicatorColor: settings.splitKdsSplitIndicatorColor || 'orange',
+    splitKdsEnableCrossStation: settings.splitKdsEnableCrossStation !== false,
+    splitKdsSyncAcrossStations: settings.splitKdsSyncAcrossStations !== false,
+    splitKdsSyncInterval: settings.splitKdsSyncInterval || 5,
+    splitKdsShowSyncStatus: settings.splitKdsShowSyncStatus !== false,
+    splitKdsEnableSplitReorder: settings.splitKdsEnableSplitReorder !== false,
+    splitKdsReorderMode: settings.splitKdsReorderMode || 'drag',
+    splitKdsShowSplitQueue: settings.splitKdsShowSplitQueue !== false,
+    splitKdsQueuePosition: settings.splitKdsQueuePosition || 'bottom',
+    splitKdsEnableSplitHistory: settings.splitKdsEnableSplitHistory !== false,
+    splitKdsHistoryRetention: settings.splitKdsHistoryRetention || 24,
+    splitKdsShowSplitTimestamp: settings.splitKdsShowSplitTimestamp !== false,
+    splitKdsTimestampFormat: settings.splitKdsTimestampFormat || 'HH:mm',
+    splitKdsEnableSplitNotes: settings.splitKdsEnableSplitNotes !== false,
+    splitKdsSplitNotesRequired: settings.splitKdsSplitNotesRequired !== false,
+    splitKdsEnableSplitPriority: settings.splitKdsEnableSplitPriority !== false,
+    splitKdsPriorityInheritance: settings.splitKdsPriorityInheritance !== false,
+    splitKdsEnableSplitTiming: settings.splitKdsEnableSplitTiming !== false,
+    splitKdsTimingTracking: settings.splitKdsTimingTracking || 'individual',
+    splitKdsShowSplitTimer: settings.splitKdsShowSplitTimer !== false,
+    splitKdsTimerFormat: settings.splitKdsTimerFormat || 'mm:ss',
+    splitKdsEnableSplitCompletion: settings.splitKdsEnableSplitCompletion !== false,
+    splitKdsCompletionMode: settings.splitKdsCompletionMode || 'any',
+    splitKdsAutoCompleteAll: settings.splitKdsAutoCompleteAll || false,
+    splitKdsShowSplitStatus: settings.splitKdsShowSplitStatus !== false,
+    splitKdsStatusDisplay: settings.splitKdsStatusDisplay || 'progress-bar',
+    splitKdsEnableSplitReassignment: settings.splitKdsEnableSplitReassignment !== false,
+    splitKdsReassignmentRules: settings.splitKdsReassignmentRules || 'load-balancing',
+    splitKdsShowReassignmentHistory: settings.splitKdsShowReassignmentHistory !== false,
+    splitKdsEnableSplitCancellation: settings.splitKdsEnableSplitCancellation !== false,
+    splitKdsCancelCascade: settings.splitKdsCancelCascade || false,
+    splitKdsCancelRequireReason: settings.splitKdsCancelRequireReason !== false,
+    splitKdsShowCancelledSplits: settings.splitKdsShowCancelledSplits !== false,
+    splitKdsCancelledRetention: settings.splitKdsCancelledRetention || 12,
+    
+    // Chowbus KDS Settings
+    chowbusKdsEnableBusManagement: settings.chowbusKdsEnableBusManagement || false,
+    chowbusKdsBusCount: settings.chowbusKdsBusCount || 5,
+    chowbusKdsAutoAssign: settings.chowbusKdsAutoAssign || false,
+    chowbusKdsShowRoute: settings.chowbusKdsShowRoute !== false,
+    chowbusKdsMaxOrdersPerBus: settings.chowbusKdsMaxOrdersPerBus || 20,
+    chowbusKdsBusCapacity: settings.chowbusKdsBusCapacity || 50,
+    chowbusKdsAutoOptimize: settings.chowbusKdsAutoOptimize || false,
+    chowbusKdsShowBusStatus: settings.chowbusKdsShowBusStatus !== false,
+    chowbusKdsShowETA: settings.chowbusKdsShowETA !== false,
+    chowbusKdsDefaultETA: settings.chowbusKdsDefaultETA || 30,
+    chowbusKdsTrackDriver: settings.chowbusKdsTrackDriver !== false,
+    chowbusKdsShowDriverLocation: settings.chowbusKdsShowDriverLocation !== false,
+    chowbusKdsEnableDriverNotes: settings.chowbusKdsEnableDriverNotes !== false,
+    chowbusKdsShowDeliveryMap: settings.chowbusKdsShowDeliveryMap !== false,
+    chowbusKdsRouteOptimization: settings.chowbusKdsRouteOptimization || 'nearest',
+    chowbusKdsAutoReassign: settings.chowbusKdsAutoReassign || false,
+    chowbusKdsDelayThreshold: settings.chowbusKdsDelayThreshold || 15,
+    chowbusKdsNotifyOnDelay: settings.chowbusKdsNotifyOnDelay !== false,
+    chowbusKdsBusColors: settings.chowbusKdsBusColors || ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'],
+    chowbusKdsBusNaming: settings.chowbusKdsBusNaming || 'number',
+    chowbusKdsShowBusIcon: settings.chowbusKdsShowBusIcon !== false,
+    chowbusKdsBusIconType: settings.chowbusKdsBusIconType || 'default',
+    chowbusKdsEnableBusCapacity: settings.chowbusKdsEnableBusCapacity !== false,
+    chowbusKdsCapacityWarning: settings.chowbusKdsCapacityWarning || 80,
+    chowbusKdsCapacityCritical: settings.chowbusKdsCapacityCritical || 95,
+    chowbusKdsShowCapacityIndicator: settings.chowbusKdsShowCapacityIndicator !== false,
+    chowbusKdsEnableBusSchedule: settings.chowbusKdsEnableBusSchedule !== false,
+    chowbusKdsScheduleStart: settings.chowbusKdsScheduleStart || '09:00',
+    chowbusKdsScheduleEnd: settings.chowbusKdsScheduleEnd || '22:00',
+    chowbusKdsShowSchedule: settings.chowbusKdsShowSchedule !== false,
+    chowbusKdsEnableBusMaintenance: settings.chowbusKdsEnableBusMaintenance !== false,
+    chowbusKdsMaintenanceSchedule: settings.chowbusKdsMaintenanceSchedule || [],
+    chowbusKdsShowMaintenanceStatus: settings.chowbusKdsShowMaintenanceStatus !== false,
+    chowbusKdsEnableDriverManagement: settings.chowbusKdsEnableDriverManagement !== false,
+    chowbusKdsDriverCapacity: settings.chowbusKdsDriverCapacity || 1,
+    chowbusKdsDriverShifts: settings.chowbusKdsDriverShifts || ['morning', 'afternoon', 'evening'],
+    chowbusKdsShowDriverInfo: settings.chowbusKdsShowDriverInfo !== false,
+    chowbusKdsDriverInfoFields: settings.chowbusKdsDriverInfoFields || ['name', 'phone', 'rating'],
+    chowbusKdsEnableDriverRating: settings.chowbusKdsEnableDriverRating !== false,
+    chowbusKdsRatingScale: settings.chowbusKdsRatingScale || 5,
+    chowbusKdsShowDriverRating: settings.chowbusKdsShowDriverRating !== false,
+    chowbusKdsEnableDriverFeedback: settings.chowbusKdsEnableDriverFeedback !== false,
+    chowbusKdsFeedbackRequired: settings.chowbusKdsFeedbackRequired !== false,
+    chowbusKdsEnableOrderTracking: settings.chowbusKdsEnableOrderTracking !== false,
+    chowbusKdsTrackingUpdateInterval: settings.chowbusKdsTrackingUpdateInterval || 10,
+    chowbusKdsShowOrderStatus: settings.chowbusKdsShowOrderStatus !== false,
+    chowbusKdsStatusStages: settings.chowbusKdsStatusStages || ['assigned', 'picked', 'in-transit', 'delivered'],
+    chowbusKdsEnableProofOfDelivery: settings.chowbusKdsEnableProofOfDelivery !== false,
+    chowbusKdsProofTypes: settings.chowbusKdsProofTypes || ['photo', 'signature'],
+    chowbusKdsProofRequired: settings.chowbusKdsProofRequired !== false,
+    chowbusKdsEnableDeliveryNotes: settings.chowbusKdsEnableDeliveryNotes !== false,
+    chowbusKdsDeliveryNotesRequired: settings.chowbusKdsDeliveryNotesRequired !== false,
+    chowbusKdsEnableCustomerContact: settings.chowbusKdsEnableCustomerContact !== false,
+    chowbusKdsContactOnDelay: settings.chowbusKdsContactOnDelay !== false,
+    chowbusKdsContactMethods: settings.chowbusKdsContactMethods || ['call', 'sms'],
+    chowbusKdsEnableSmsNotifications: settings.chowbusKdsEnableSmsNotifications !== false,
+    chowbusKdsSmsTemplate: settings.chowbusKdsSmsTemplate || 'Your order is on the way!',
+    chowbusKdsEnableEmailNotifications: settings.chowbusKdsEnableEmailNotifications !== false,
+    chowbusKdsEmailTemplate: settings.chowbusKdsEmailTemplate || 'Order status update',
+    chowbusKdsEnablePushNotifications: settings.chowbusKdsEnablePushNotifications !== false,
+    chowbusKdsNotificationTriggers: settings.chowbusKdsNotificationTriggers || ['assigned', 'picked', 'delivered'],
+    chowbusKdsEnableReporting: settings.chowbusKdsEnableReporting !== false,
+    chowbusKdsReportMetrics: settings.chowbusKdsReportMetrics || ['on-time', 'delivery-time', 'customer-rating'],
+    chowbusKdsReportSchedule: settings.chowbusKdsReportSchedule || 'daily',
+    chowbusKdsEnableAnalytics: settings.chowbusKdsEnableAnalytics !== false,
+    chowbusKdsAnalyticsRetention: settings.chowbusKdsAnalyticsRetention || 90,
+    chowbusKdsShowAnalyticsDashboard: settings.chowbusKdsShowAnalyticsDashboard !== false,
+    // Error Tracking & Logging
+    enableErrorTracking: settings.enableErrorTracking !== false,
+    autoSaveLogs: settings.autoSaveLogs !== false,
+    logRetentionDays: settings.logRetentionDays || 30,
+    enableCrashDetection: settings.enableCrashDetection !== false,
+    crashReportEmail: settings.crashReportEmail || '',
+    logLevel: settings.logLevel || 'error',
     // Tab-specific settings
     orders: settings.orders || { enabled: true, autoRefresh: true, showTokens: true },
     dashboard: settings.dashboard || { enabled: true, showStats: true, showCharts: true },
@@ -870,6 +1812,20 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     crm: settings.crm || { enabled: true, showLoyalty: true, allowGuestCheckout: true },
     staff: settings.staff || { enabled: true, showPerformance: true, allowSchedule: true },
     menu: settings.menu || { enabled: true, showImages: true, allowCustomItems: true },
+    // Menu layout settings
+    menuLayout: settings.menuLayout || {
+      viewMode: 'grid',
+      gridColumns: 'auto',
+      style: 'clean',
+      showImages: true,
+      showDescriptions: true,
+      showCategoryLabels: true,
+      showStockBadges: true,
+      showVegNonVeg: true,
+      spacing: 'medium',
+      borderRadius: 'medium',
+      shadow: 'subtle'
+    },
     inventory: settings.inventory || { enabled: true, lowStockAlert: true, autoReorder: false },
     recipes: settings.recipes || { enabled: true, showCost: true, showYield: true },
     waste: settings.waste || { enabled: true, requireReason: true, trackCost: true },
@@ -1088,10 +2044,27 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
           enableThermalPrinter: formData.qrEnableThermalPrinter,
           printerPort: formData.qrPrinterPort,
           printerPaperWidth: formData.qrPrinterPaperWidth,
+          // Email settings for receipts
+          brevoApiKey: formData.brevoApiKey || '',
+          storeEmail: formData.storeEmail || ''
         };
         localStorage.setItem('qr_settings', JSON.stringify(qrConfig));
       } catch (e) { console.error('Failed to sync QR settings', e); }
     }
+
+    // Save menu layout settings to localStorage
+    try {
+      if (formData.menuLayout) {
+        localStorage.setItem('menu_layout_settings', JSON.stringify(formData.menuLayout));
+      }
+    } catch (e) { console.error('Failed to save menu layout settings', e); }
+
+    // Save kitchen Oracle KDS and Split KDS setting to localStorage
+    try {
+      const existingSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      existingSettings.kitchen = existingSettings.kitchen || {};
+      localStorage.setItem('cafeos_settings', JSON.stringify(existingSettings));
+    } catch (e) { console.error('Failed to save kitchen settings', e); }
 
     setHasChanges(false);
     setAlertMessage('Settings saved successfully!');
@@ -1158,6 +2131,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       storeAddress: settings.storeAddress || '',
       autoPrintReceipt: settings.autoPrintReceipt !== false,
       kitchenDisplayEnabled: settings.kitchenDisplayEnabled !== false,
+      showTokensOnOrders: settings.showTokensOnOrders !== false,
+      groupByTable: settings.groupByTable !== false,
+      showOrderTime: settings.showOrderTime !== false,
+      showCustomerName: settings.showCustomerName !== false,
+      autoRefreshOrders: settings.autoRefreshOrders !== false,
+      allowOrderEdit: settings.allowOrderEdit !== false,
+      allowOrderSplit: settings.allowOrderSplit !== false,
+      showOrderTotal: settings.showOrderTotal !== false,
       qrOrderingEnabled: settings.qrOrderingEnabled !== false,
       // QR Receipt controls
       qrReceiptFooter: settings.qrReceiptFooter || '',
@@ -1213,6 +2194,14 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       enableTokenSystem: settings.enableTokenSystem !== false,
       tokenPrefix: settings.tokenPrefix || 'T',
       autoAssignTables: settings.autoAssignTables || false,
+      // Order card column settings
+      orderCardColumn_table:        settings.orderCardColumn_table !== false,
+      orderCardColumn_time:         settings.orderCardColumn_time !== false,
+      orderCardColumn_customer:     settings.orderCardColumn_customer !== false,
+      orderCardColumn_categories:  settings.orderCardColumn_categories !== false,
+      orderCardColumn_items:        settings.orderCardColumn_items !== false,
+      orderCardColumn_total:        settings.orderCardColumn_total !== false,
+      orderCardColumn_status:       settings.orderCardColumn_status !== false,
       // Receipt additional fields
       storeLogo: settings.storeLogo || '',
       cashierName: settings.cashierName || '',
@@ -1235,7 +2224,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       // Security Settings
       enableEncryption: settings.enableEncryption !== false,
       enableAuditLog: settings.enableAuditLog !== false,
-      sessionTimeout: settings.sessionTimeout || 30
+      sessionTimeout: settings.sessionTimeout || 30,
+      brevoApiKey: settings.brevoApiKey || '',
+      storeEmail: settings.storeEmail || ''
     });
     setHasChanges(false);
   };
@@ -1244,71 +2235,81 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     { 
       group: 'General',
       items: [
-        { id: 'general', label: 'General', icon: '⚙️' },
-        { id: 'display', label: 'Display', icon: '🖥️' },
-        { id: 'themes', label: 'Themes', icon: '🎨' },
-        { id: 'notifications', label: 'Notifications', icon: '🔔' }
+        { id: 'general', label: 'General', icon: '⚙️', description: 'Store info, business hours, tax, regional settings' },
+        { id: 'display', label: 'Display', icon: '🖥️', description: 'Screen layout, density, animations' },
+        { id: 'themes', label: 'Themes', icon: '🎨', description: 'Color schemes, dark mode, custom colors' },
+        { id: 'notifications', label: 'Notifications', icon: '🔔', description: 'Alerts, sounds, notification preferences' }
       ]
     },
     { 
       group: 'Devices',
       items: [
-        { id: 'mobileui', label: 'Mobile & Tablet UI', icon: '📱' }
+        { id: 'mobileui', label: 'Mobile & Tablet UI', icon: '📱', description: 'Bottom bar, nav style, icons, tablet sidebar' }
       ]
     },
     { 
       group: 'Business',
       items: [
-        { id: 'business', label: 'Business', icon: '🏪' },
-        { id: 'tax', label: 'Tax & Pricing', icon: '💰' }
+        { id: 'business', label: 'Business', icon: '🏪', description: 'Business info, hours, contact details' },
+        { id: 'tax', label: 'Tax & Pricing', icon: '💰', description: 'Tax rates, service charges, pricing rules' }
       ]
     },
     { 
       group: 'Tabs',
       items: [
-        { id: 'tab-dashboard', label: 'Dashboard', icon: '📊' },
-        { id: 'tab-reports', label: 'Reports', icon: '📈' },
-        { id: 'tab-crm', label: 'CRM', icon: '👥' },
-        { id: 'tab-staff', label: 'Staff', icon: '👨‍🍳' },
-        { id: 'tab-menu', label: 'Menu', icon: '🍽️' },
-        { id: 'tab-inventory', label: 'Inventory', icon: '📦' },
-        { id: 'tab-recipes', label: 'Recipes', icon: '📝' },
-        { id: 'tab-waste', label: 'Waste', icon: '🗑️' },
-        { id: 'tab-reservations', label: 'Reservations', icon: '📅' },
-        { id: 'tab-tokens', label: 'Tokens', icon: '🎫' },
-        { id: 'tab-tables', label: 'Tables', icon: '🪑' },
-        { id: 'tab-waiters', label: 'Waiters', icon: '🛎️' },
-        { id: 'tab-kitchen', label: 'Kitchen', icon: '👨‍🍳' },
-        { id: 'tab-online', label: 'Online Ordering', icon: '🌐' }
+        { id: 'tab-dashboard', label: 'Dashboard', icon: '📊', description: 'Dashboard visibility, widgets, metrics' },
+        { id: 'tab-reports', label: 'Reports', icon: '📈', description: 'Report generation, export, scheduling' },
+        { id: 'tab-crm', label: 'CRM', icon: '👥', description: 'Customer management, loyalty, history' },
+        { id: 'tab-staff', label: 'Staff', icon: '👨‍🍳', description: 'Staff roles, permissions, scheduling' },
+        { id: 'tab-menu', label: 'Menu', icon: '🍽️', description: 'Menu layout, categories, display' },
+        { id: 'tab-inventory', label: 'Inventory', icon: '📦', description: 'Stock tracking, alerts, restocking' },
+        { id: 'tab-recipes', label: 'Recipes', icon: '📝', description: 'Recipe management, costing, prep time' },
+        { id: 'tab-waste', label: 'Waste', icon: '🗑️', description: 'Waste tracking, reasons, reporting' },
+        { id: 'tab-reservations', label: 'Reservations', icon: '📅', description: 'Booking system, deposits, cancellations' },
+        { id: 'tab-tokens', label: 'Tokens', icon: '🎫', description: 'Token system, numbering, display' },
+        { id: 'tab-tables', label: 'Tables', icon: '🪑', description: 'Table management, reservations, layout' },
+        { id: 'tab-waiters', label: 'Waiters', icon: '🛎️', description: 'Waiter calls, notifications, response' },
+        { id: 'tab-kitchen', label: 'Kitchen', icon: '👨‍🍳', description: 'KDS, stations, routing, timers' },
+        { id: 'tab-online', label: 'Online Ordering', icon: '🌐', description: 'Online platform, delivery, integration' }
       ]
     },
     { 
-      group: 'POS',
+      group: 'Toast & KDS',
       items: [
-        { id: 'pos', label: 'POS Settings', icon: '🛒' },
-        { id: 'itemcodes', label: 'Item Codes', icon: '🔢' }
+        { id: 'toast-orders', label: 'Toast Orders', icon: '🍞', description: 'Toast POS configuration, workflow, display' },
+        { id: 'oracle-kds', label: 'Oracle KDS', icon: '🔮', description: 'Oracle KDS settings, layout, routing' },
+        { id: 'split-kds', label: 'Split KDS', icon: '🔀', description: 'Split KDS configuration, item splitting' },
+        { id: 'chowbus-kds', label: 'Chowbus KDS', icon: '🚌', description: 'Chowbus KDS settings, bus management' }
       ]
     },
     { 
-      group: 'Receipts',
+      group: 'POS & Workflows',
       items: [
-        { id: 'receipt', label: 'Receipts', icon: '🧾' }
+        { id: 'pos', label: 'POS Settings', icon: '🛒', description: 'Order workflow, checkout, printing' },
+        { id: 'workflow', label: 'Workflow Rules', icon: '⚡', description: 'Automation, approvals, routing' },
+        { id: 'itemcodes', label: 'Item Codes', icon: '🔢', description: 'Code generation, formats, scanning' }
+      ]
+    },
+    { 
+      group: 'Receipts & Design',
+      items: [
+        { id: 'receipt_studio', label: 'Receipt Studio', icon: '🎨', description: 'Custom receipt design, preview, templates' }
       ]
     },
     { 
       group: 'Operations',
       items: [
-        { id: 'kitchen', label: 'Kitchen Ops', icon: '👨‍🍳' },
-        { id: 'qr', label: 'QR Ordering', icon: '📱' }
+        { id: 'kitchen', label: 'Kitchen Ops', icon: '👨‍🍳', description: 'Kitchen display, KDS auto-print, timing' },
+        { id: 'qr', label: 'QR Ordering', icon: '📱', description: 'QR code setup, mobile ordering, payment' }
       ]
     },
     { 
       group: 'System',
       items: [
-        { id: 'backup', label: 'Backup & Restore', icon: '💾' },
-        { id: 'refunds', label: 'Refunds', icon: '💸' },
-        { id: 'compliance', label: 'Compliance', icon: '🔒' },
-        { id: 'debug', label: 'Debug & Logs', icon: '🐛' }
+        { id: 'backup', label: 'Backup & Restore', icon: '💾', description: 'Data backup, restore, scheduling' },
+        { id: 'refunds', label: 'Refunds', icon: '💸', description: 'Refund policies, processing, limits' },
+        { id: 'compliance', label: 'Roles & Security', icon: '🔒', description: 'User roles, permissions, security' },
+        { id: 'debug', label: 'Debug & Logs', icon: '🐛', description: 'System logs, debugging, diagnostics' }
       ]
     }
   ];
@@ -1322,23 +2323,27 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     if (activeSection.startsWith('tab-')) {
       const tabId = activeSection.replace('tab-', '');
       const tabConfig = {
-        'orders': { icon: '🛒', label: 'Orders' },
-        'dashboard': { icon: '📊', label: 'Dashboard' },
-        'reports': { icon: '📈', label: 'Reports' },
-        'crm': { icon: '👥', label: 'CRM' },
-        'staff': { icon: '👨‍🍳', label: 'Staff' },
-        'menu': { icon: '🍽️', label: 'Menu' },
-        'inventory': { icon: '📦', label: 'Inventory' },
-        'recipes': { icon: '📝', label: 'Recipes' },
-        'waste': { icon: '🗑️', label: 'Waste' },
-        'reservations': { icon: '📅', label: 'Reservations' },
-        'tokens': { icon: '🎫', label: 'Tokens' },
-        'tables': { icon: '🪑', label: 'Tables' },
-        'waiters': { icon: '🛎️', label: 'Waiters' },
-        'kitchen': { icon: '👨‍🍳', label: 'Kitchen' },
-        'online': { icon: '🌐', label: 'Online Ordering' }
+        'orders': { icon: '🛒', label: 'Orders', description: 'Order management, history, workflows' },
+        'dashboard': { icon: '📊', label: 'Dashboard', description: 'Dashboard visibility, widgets, metrics' },
+        'reports': { icon: '📈', label: 'Reports', description: 'Report generation, export, scheduling' },
+        'crm': { icon: '👥', label: 'CRM', description: 'Customer management, loyalty, history' },
+        'staff': { icon: '👨‍🍳', label: 'Staff', description: 'Staff roles, permissions, scheduling' },
+        'menu': { icon: '🍽️', label: 'Menu', description: 'Menu layout, categories, display' },
+        'inventory': { icon: '📦', label: 'Inventory', description: 'Stock tracking, alerts, restocking' },
+        'recipes': { icon: '📝', label: 'Recipes', description: 'Recipe management, costing, prep time' },
+        'waste': { icon: '🗑️', label: 'Waste', description: 'Waste tracking, reasons, reporting' },
+        'reservations': { icon: '📅', label: 'Reservations', description: 'Booking system, deposits, cancellations' },
+        'tokens': { icon: '🎫', label: 'Tokens', description: 'Token system, numbering, display' },
+        'tables': { icon: '🪑', label: 'Tables', description: 'Table management, reservations, layout' },
+        'waiters': { icon: '🛎️', label: 'Waiters', description: 'Waiter calls, notifications, response' },
+        'kitchen': { icon: '👨‍🍳', label: 'Kitchen', description: 'KDS, stations, routing, timers' },
+        'online': { icon: '🌐', label: 'Online Ordering', description: 'Online platform, delivery, integration' },
+        'toast-orders': { icon: '🍞', label: 'Toast Orders', description: 'Toast POS configuration, workflow' },
+        'oracle-kds': { icon: '🔮', label: 'Oracle KDS', description: 'Oracle KDS settings, layout' },
+        'split-kds': { icon: '🔀', label: 'Split KDS', description: 'Split KDS configuration' },
+        'chowbus-kds': { icon: '🚌', label: 'Chowbus KDS', description: 'Chowbus KDS settings' }
       };
-      return tabConfig[tabId] || { icon: '⚙️', label: 'Settings' };
+      return tabConfig[tabId] || { icon: '⚙️', label: 'Settings', description: 'System configuration' };
     }
     return { icon: '⚙️', label: 'Settings' };
   }, [activeSection]);
@@ -1556,8 +2561,604 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
 
   const renderSectionContent = () => (
     <>
+      {activeSection === 'receipt_studio' && (
+        <ReceiptStudioPanel
+          formData={formData}
+          handleInputChange={handleInputChange}
+          darkMode={darkMode}
+          screenSize={screenSize}
+        />
+      )}
+      {activeSection === 'workflow' && (
+        <WorkflowEnginePanel
+          formData={formData}
+          handleInputChange={handleInputChange}
+          darkMode={darkMode}
+        />
+      )}
+      {activeSection === 'compliance' && (
+        <RoleSecurityPanel
+          formData={formData}
+          handleInputChange={handleInputChange}
+          darkMode={darkMode}
+        />
+      )}
       {activeSection === 'general' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Store Information */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🏪 Store Information
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Store Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.storeName}
+                        onChange={(e) => handleInputChange('storeName', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Business Type
+                      </label>
+                      <select
+                        value={formData.businessType || 'restaurant'}
+                        onChange={(e) => handleInputChange('businessType', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="restaurant">Restaurant</option>
+                        <option value="cafe">Cafe</option>
+                        <option value="bakery">Bakery</option>
+                        <option value="fast_food">Fast Food</option>
+                        <option value="fine_dining">Fine Dining</option>
+                        <option value="bar">Bar/Pub</option>
+                        <option value="food_truck">Food Truck</option>
+                        <option value="catering">Catering Service</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Phone Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Emergency Contact
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.emergencyContact || ''}
+                        onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Website URL
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.website || ''}
+                        onChange={(e) => handleInputChange('website', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        GSTIN
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.gstin || ''}
+                        onChange={(e) => handleInputChange('gstin', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        PAN Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.panNumber || ''}
+                        onChange={(e) => handleInputChange('panNumber', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: screenSize === 'small' ? '1' : '1 / -1' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Store Address
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.storeAddress}
+                        onChange={(e) => handleInputChange('storeAddress', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: screenSize === 'small' ? '1' : '1 / -1' }}>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Manager Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.managerName || ''}
+                        onChange={(e) => handleInputChange('managerName', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Business Configuration */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🏢 Business Configuration
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Total Tables
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.totalTables || 20}
+                        onChange={(e) => handleInputChange('totalTables', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Seating Capacity
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.seatingCapacity || 80}
+                        onChange={(e) => handleInputChange('seatingCapacity', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Maximum Order Value
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.maxOrderValue || 100000}
+                        onChange={(e) => handleInputChange('maxOrderValue', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Minimum Order Value
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.minOrderValue || 100}
+                        onChange={(e) => handleInputChange('minOrderValue', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advanced Business Hours */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🕐 Business Hours
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Default Opening Time
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.openingTime || '09:00'}
+                        onChange={(e) => handleInputChange('openingTime', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Default Closing Time
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.closingTime || '23:00'}
+                        onChange={(e) => handleInputChange('closingTime', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Timezone
+                      </label>
+                      <select
+                        value={formData.timezone || 'Asia/Kolkata'}
+                        onChange={(e) => handleInputChange('timezone', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="Asia/Kolkata">India (IST)</option>
+                        <option value="America/New_York">New York (EST)</option>
+                        <option value="America/Los_Angeles">Los Angeles (PST)</option>
+                        <option value="Europe/London">London (GMT)</option>
+                        <option value="Europe/Paris">Paris (CET)</option>
+                        <option value="Asia/Dubai">Dubai (GST)</option>
+                        <option value="Asia/Singapore">Singapore (SGT)</option>
+                        <option value="Australia/Sydney">Sydney (AEST)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Operating Days
+                      </label>
+                      <select
+                        value={formData.operatingDays || 'all'}
+                        onChange={(e) => handleInputChange('operatingDays', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="all">All Days</option>
+                        <option value="weekdays">Weekdays Only</option>
+                        <option value="weekends">Weekends Only</option>
+                        <option value="custom">Custom Schedule</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advanced Tax & Pricing */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    💰 Tax & Pricing
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Tax Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.taxRate}
+                        onChange={(e) => handleInputChange('taxRate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Tax Type
+                      </label>
+                      <select
+                        value={formData.taxType || 'gst'}
+                        onChange={(e) => handleInputChange('taxType', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="gst">GST</option>
+                        <option value="vat">VAT</option>
+                        <option value="sales_tax">Sales Tax</option>
+                        <option value="service_tax">Service Tax</option>
+                        <option value="none">No Tax</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Service Charge (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.serviceCharge || 0}
+                        onChange={(e) => handleInputChange('serviceCharge', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Service Charge Type
+                      </label>
+                      <select
+                        value={formData.serviceChargeType || 'optional'}
+                        onChange={(e) => handleInputChange('serviceChargeType', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="optional">Optional</option>
+                        <option value="mandatory">Mandatory</option>
+                        <option value="dine_in_only">Dine-in Only</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Rounding Method
+                      </label>
+                      <select
+                        value={formData.roundingMethod || 'nearest'}
+                        onChange={(e) => handleInputChange('roundingMethod', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="nearest">Nearest</option>
+                        <option value="up">Round Up</option>
+                        <option value="down">Round Down</option>
+                        <option value="none">No Rounding</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Decimal Places
+                      </label>
+                      <select
+                        value={formData.decimalPlaces || '2'}
+                        onChange={(e) => handleInputChange('decimalPlaces', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="0">0 (No decimals)</option>
+                        <option value="1">1 (₹100.0)</option>
+                        <option value="2">2 (₹100.00)</option>
+                        <option value="3">3 (₹100.000)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regional Settings */}
                 <div style={{
                   padding: '20px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
@@ -1591,6 +3192,12 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
                         <option value="GBP">GBP (£)</option>
+                        <option value="AED">AED (د.إ)</option>
+                        <option value="SGD">SGD (S$)</option>
+                        <option value="AUD">AUD (A$)</option>
+                        <option value="CAD">CAD (C$)</option>
+                        <option value="JPY">JPY (¥)</option>
+                        <option value="CNY">CNY (¥)</option>
                       </select>
                     </div>
                     <div>
@@ -1614,6 +3221,83 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                       >
                         <option value="en">English</option>
                         <option value="hi">Hindi</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ar">Arabic</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ja">Japanese</option>
+                        <option value="ko">Korean</option>
+                        <option value="pt">Portuguese</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Date Format
+                      </label>
+                      <select
+                        value={formData.dateFormat || 'DD/MM/YYYY'}
+                        onChange={(e) => handleInputChange('dateFormat', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        <option value="DD-MM-YYYY">DD-MM-YYYY</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Time Format
+                      </label>
+                      <select
+                        value={formData.timeFormat || '24h'}
+                        onChange={(e) => handleInputChange('timeFormat', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="24h">24 Hour (14:30)</option>
+                        <option value="12h">12 Hour (2:30 PM)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Number Format
+                      </label>
+                      <select
+                        value={formData.numberFormat || 'indian'}
+                        onChange={(e) => handleInputChange('numberFormat', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="indian">Indian (1,00,000.00)</option>
+                        <option value="international">International (100,000.00)</option>
+                        <option value="european">European (100.000,00)</option>
                       </select>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, marginTop: '12px' }}>
@@ -1680,6 +3364,702 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   </div>
                   <span style={{ fontSize: '18px', color: darkMode ? '#222222' : '#9ca3af' }}>›</span>
                 </button>
+              </div>
+            )}
+
+            {/* Display Settings */}
+            {activeSection === 'display' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🖥️ Screen Layout
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Screen Density
+                      </label>
+                      <select
+                        value={formData.screenDensity || 'comfortable'}
+                        onChange={(e) => handleInputChange('screenDensity', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="compact">Compact</option>
+                        <option value="comfortable">Comfortable</option>
+                        <option value="spacious">Spacious</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Font Size
+                      </label>
+                      <select
+                        value={formData.fontSize || 'medium'}
+                        onChange={(e) => handleInputChange('fontSize', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                        <option value="extra-large">Extra Large</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    ✨ Animations & Effects
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Show Animations</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Enable smooth transitions and animations</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('showAnimations', !formData.showAnimations)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.showAnimations ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.showAnimations ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Animation Speed
+                      </label>
+                      <select
+                        value={formData.animationSpeed || 'normal'}
+                        onChange={(e) => handleInputChange('animationSpeed', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="slow">Slow</option>
+                        <option value="normal">Normal</option>
+                        <option value="fast">Fast</option>
+                        <option value="instant">Instant</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🎨 Visual Style
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Border Radius
+                      </label>
+                      <select
+                        value={formData.borderRadius || 'medium'}
+                        onChange={(e) => handleInputChange('borderRadius', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="none">None (Sharp)</option>
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                        <option value="round">Round</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Show Borders
+                      </label>
+                      <select
+                        value={formData.showBorders !== false ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('showBorders', e.target.value === 'yes')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, marginTop: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Show Shadows</div>
+                      <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Add depth with drop shadows</div>
+                    </div>
+                    <button
+                      onClick={() => handleInputChange('showShadows', !formData.showShadows)}
+                      style={{
+                        width: '48px',
+                        height: '28px',
+                        borderRadius: '14px',
+                        background: formData.showShadows ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                        border: 'none',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'background 0.2s'
+                      }}
+                    >
+                      <div style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '50%',
+                        background: '#fff',
+                        position: 'absolute',
+                        top: '3px',
+                        left: formData.showShadows ? '23px' : '3px',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Themes Settings */}
+            {activeSection === 'themes' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🌓 Theme Mode
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                      Theme Mode
+                    </label>
+                    <select
+                      value={formData.themeMode || 'dark'}
+                      onChange={(e) => handleInputChange('themeMode', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                        borderRadius: '12px',
+                        fontSize: '15px',
+                        background: darkMode ? '#000000' : '#ffffff',
+                        color: darkMode ? '#ffffff' : '#0a0a0a',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="dark">Dark Mode</option>
+                      <option value="light">Light Mode</option>
+                      <option value="auto">Auto (System)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🎨 Custom Colors
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Accent Color
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={formData.accentColor || '#6366f1'}
+                          onChange={(e) => handleInputChange('accentColor', e.target.value)}
+                          style={{
+                            width: '50px',
+                            height: '40px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            padding: '2px'
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={formData.accentColor || '#6366f1'}
+                          onChange={(e) => handleInputChange('accentColor', e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '12px 16px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '12px',
+                            fontSize: '15px',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Primary Color
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={formData.primaryColor || '#8b5cf6'}
+                          onChange={(e) => handleInputChange('primaryColor', e.target.value)}
+                          style={{
+                            width: '50px',
+                            height: '40px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            padding: '2px'
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={formData.primaryColor || '#8b5cf6'}
+                          onChange={(e) => handleInputChange('primaryColor', e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '12px 16px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '12px',
+                            fontSize: '15px',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Background Color
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={formData.backgroundColor || '#000000'}
+                          onChange={(e) => handleInputChange('backgroundColor', e.target.value)}
+                          style={{
+                            width: '50px',
+                            height: '40px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            padding: '2px'
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={formData.backgroundColor || '#000000'}
+                          onChange={(e) => handleInputChange('backgroundColor', e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '12px 16px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '12px',
+                            fontSize: '15px',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Card Color
+                      </label>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input
+                          type="color"
+                          value={formData.cardColor || '#111111'}
+                          onChange={(e) => handleInputChange('cardColor', e.target.value)}
+                          style={{
+                            width: '50px',
+                            height: '40px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            padding: '2px'
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={formData.cardColor || '#111111'}
+                          onChange={(e) => handleInputChange('cardColor', e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '12px 16px',
+                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            borderRadius: '12px',
+                            fontSize: '15px',
+                            background: darkMode ? '#000000' : '#ffffff',
+                            color: darkMode ? '#ffffff' : '#0a0a0a',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🔄 Reset Theme
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleInputChange('accentColor', '#6366f1');
+                      handleInputChange('primaryColor', '#8b5cf6');
+                      handleInputChange('backgroundColor', '#000000');
+                      handleInputChange('cardColor', '#111111');
+                      handleInputChange('textColor', '#ffffff');
+                    }}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#dc2626'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#ef4444'}
+                  >
+                    Reset to Default Colors
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Notifications Settings */}
+            {activeSection === 'notifications' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🔔 Notification Preferences
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Sound Notifications</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Play sounds for important events</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('enableSoundNotifications', !formData.enableSoundNotifications)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.enableSoundNotifications ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.enableSoundNotifications ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Desktop Notifications</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Show browser notifications</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('enableDesktopNotifications', !formData.enableDesktopNotifications)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.enableDesktopNotifications ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.enableDesktopNotifications ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🔊 Sound Settings
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Notification Sound
+                      </label>
+                      <select
+                        value={formData.notificationSound || 'default'}
+                        onChange={(e) => handleInputChange('notificationSound', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="default">Default</option>
+                        <option value="chime">Chime</option>
+                        <option value="bell">Bell</option>
+                        <option value="alert">Alert</option>
+                        <option value="gentle">Gentle</option>
+                        <option value="none">None</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Volume ({formData.notificationVolume || 70}%)
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={formData.notificationVolume || 70}
+                        onChange={(e) => handleInputChange('notificationVolume', parseInt(e.target.value))}
+                        style={{
+                          width: '100%',
+                          height: '8px',
+                          borderRadius: '4px',
+                          background: darkMode ? '#222222' : '#d1d5db',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    ⚡ Alert Types
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Order Alerts</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Notify on new orders</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('enableOrderAlerts', !formData.enableOrderAlerts)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.enableOrderAlerts ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.enableOrderAlerts ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Low Stock Alerts</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Notify when items are low</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('enableLowStockAlerts', !formData.enableLowStockAlerts)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.enableLowStockAlerts ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.enableLowStockAlerts ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>Payment Alerts</div>
+                        <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>Notify on payments</div>
+                      </div>
+                      <button
+                        onClick={() => handleInputChange('enablePaymentAlerts', !formData.enablePaymentAlerts)}
+                        style={{
+                          width: '48px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.enablePaymentAlerts ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          border: 'none',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#fff',
+                          position: 'absolute',
+                          top: '3px',
+                          left: formData.enablePaymentAlerts ? '23px' : '3px',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1997,98 +4377,164 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    🏪 Store Information
+                    🏪 Business Registration
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Store Name
+                        Business Registration Number
                       </label>
                       <input
                         type="text"
-                        value={formData.storeName}
-                        onChange={(e) => handleInputChange('storeName', e.target.value)}
-                        placeholder="My Bakery"
+                        value={formData.businessRegistrationNumber || ''}
+                        onChange={(e) => handleInputChange('businessRegistrationNumber', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
+                          padding: '12px 16px',
                           border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
+                          fontSize: '15px',
                           background: darkMode ? '#000000' : '#ffffff',
                           color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
+                          outline: 'none'
                         }}
                       />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Store Address
+                        Business License Number
                       </label>
                       <input
                         type="text"
-                        value={formData.storeAddress}
-                        onChange={(e) => handleInputChange('storeAddress', e.target.value)}
-                        placeholder="123 Main Street"
+                        value={formData.businessLicenseNumber || ''}
+                        onChange={(e) => handleInputChange('businessLicenseNumber', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
+                          padding: '12px 16px',
                           border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
+                          fontSize: '15px',
                           background: darkMode ? '#000000' : '#ffffff',
                           color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
+                          outline: 'none'
                         }}
                       />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : '1fr 1fr', gap: '16px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                          Phone
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                          placeholder="+91 9876543210"
-                          style={{
-                            width: '100%',
-                            padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                            borderRadius: '12px',
-                            fontSize: screenSize === 'small' ? '16px' : '15px',
-                            background: darkMode ? '#000000' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#0a0a0a',
-                            outline: 'none',
-                            minHeight: screenSize === 'small' ? '52px' : '48px'
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                          Email
-                        </label>
-                        <input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          placeholder="contact@example.com"
-                          style={{
-                            width: '100%',
-                            padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                            borderRadius: '12px',
-                            fontSize: screenSize === 'small' ? '16px' : '15px',
-                            background: darkMode ? '#000000' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#0a0a0a',
-                            outline: 'none',
-                            minHeight: screenSize === 'small' ? '52px' : '48px'
-                          }}
-                        />
-                      </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        FSSAI Number
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.fssaiNumber || ''}
+                        onChange={(e) => handleInputChange('fssaiNumber', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Founded Date
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.foundedDate || ''}
+                        onChange={(e) => handleInputChange('foundedDate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    📱 Social Media
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Instagram
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.socialMediaInstagram || ''}
+                        onChange={(e) => handleInputChange('socialMediaInstagram', e.target.value)}
+                        placeholder="@yourbusiness"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Facebook
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.socialMediaFacebook || ''}
+                        onChange={(e) => handleInputChange('socialMediaFacebook', e.target.value)}
+                        placeholder="facebook.com/yourbusiness"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Twitter/X
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.socialMediaTwitter || ''}
+                        onChange={(e) => handleInputChange('socialMediaTwitter', e.target.value)}
+                        placeholder="@yourbusiness"
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -2104,28 +4550,165 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    💰 Tax Configuration
+                    💰 Advanced Tax Configuration
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Tax Rate (%)
+                        Enable Compound Tax
+                      </label>
+                      <select
+                        value={formData.enableCompoundTax ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('enableCompoundTax', e.target.value === 'yes')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Tax-Inclusive Pricing
+                      </label>
+                      <select
+                        value={formData.taxInclusivePricing ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('taxInclusivePricing', e.target.value === 'yes')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="no">No (Tax Added)</option>
+                        <option value="yes">Yes (Tax Included)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Enable Multi-Tax Rates
+                      </label>
+                      <select
+                        value={formData.enableMultiTaxRates ? 'yes' : 'no'}
+                        onChange={(e) => handleInputChange('enableMultiTaxRates', e.target.value === 'yes')}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    🇮🇳 GST Configuration
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        CGST Rate (%)
                       </label>
                       <input
                         type="number"
-                        value={formData.taxRate}
-                        onChange={(e) => handleInputChange('taxRate', e.target.value)}
-                        placeholder="18"
+                        value={formData.cgstRate || 9}
+                        onChange={(e) => handleInputChange('cgstRate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
+                          padding: '12px 16px',
                           border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
+                          fontSize: '15px',
                           background: darkMode ? '#000000' : '#ffffff',
                           color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        SGST Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.sgstRate || 9}
+                        onChange={(e) => handleInputChange('sgstRate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        IGST Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.igstRate || 18}
+                        onChange={(e) => handleInputChange('igstRate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        CESS Rate (%)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.cessRate || 0}
+                        onChange={(e) => handleInputChange('cessRate', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
                         }}
                       />
                     </div>
@@ -2134,10 +4717,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               </div>
             )}
 
-
-            {activeSection === 'receipt' && (
+            {/* Dashboard Settings */}
+            {activeSection === 'tab-dashboard' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Legal Compliance */}
                 <div style={{
                   padding: '20px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
@@ -2145,213 +4727,56 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    📋 Legal Compliance
+                    📊 Dashboard Layout
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        GSTIN
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.gstin}
-                        onChange={(e) => handleInputChange('gstin', e.target.value)}
-                        placeholder="29ABCDE1234F1Z5"
-                        style={{
-                          width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        FSSAI License
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.fssaiLicense}
-                        onChange={(e) => handleInputChange('fssaiLicense', e.target.value)}
-                        placeholder="10012345678987"
-                        style={{
-                          width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Tariff Code
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.tariffCode}
-                        onChange={(e) => handleInputChange('tariffCode', e.target.value)}
-                        placeholder="996311"
-                        style={{
-                          width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Google Review URL
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.googleReviewUrl}
-                        onChange={(e) => handleInputChange('googleReviewUrl', e.target.value)}
-                        placeholder="https://g.page/r/..."
-                        style={{
-                          width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Receipt Settings */}
-                <div style={{
-                  padding: '20px',
-                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
-                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
-                }}>
-                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    🧾 Receipt Settings
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Store Logo URL
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.storeLogo}
-                        onChange={(e) => handleInputChange('storeLogo', e.target.value)}
-                        placeholder="https://example.com/logo.png"
-                        style={{
-                          width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Receipt Footer
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.receiptFooter}
-                        onChange={(e) => handleInputChange('receiptFooter', e.target.value)}
-                        placeholder="Thank you for your order!"
-                        style={{
-                          width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
-                        Receipt Font Size
+                        Dashboard Layout
                       </label>
                       <select
-                        value={formData.receiptFontSize}
-                        onChange={(e) => handleInputChange('receiptFontSize', e.target.value)}
+                        value={formData.dashboardLayout || 'default'}
+                        onChange={(e) => handleInputChange('dashboardLayout', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
+                          padding: '12px 16px',
                           border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
                           borderRadius: '12px',
-                          fontSize: screenSize === 'small' ? '16px' : '15px',
+                          fontSize: '15px',
                           background: darkMode ? '#000000' : '#ffffff',
                           color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none',
-                          minHeight: screenSize === 'small' ? '52px' : '48px'
+                          outline: 'none'
                         }}
                       >
-                        <option value="10">10px (Small)</option>
-                        <option value="12">12px (Medium)</option>
-                        <option value="14">14px (Large)</option>
+                        <option value="default">Default</option>
+                        <option value="compact">Compact</option>
+                        <option value="detailed">Detailed</option>
+                        <option value="custom">Custom</option>
                       </select>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Auto-print Receipt</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Automatically print receipt after payment</div>
-                      </div>
-                      <div
-                        onClick={() => handleInputChange('autoPrintReceipt', !formData.autoPrintReceipt)}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>
+                        Widget Refresh Interval (seconds)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.widgetRefreshInterval || 30}
+                        onChange={(e) => handleInputChange('widgetRefreshInterval', e.target.value)}
                         style={{
-                          width: '52px',
-                          height: '28px',
-                          borderRadius: '14px',
-                          background: formData.autoPrintReceipt ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
-                          position: 'relative',
-                          cursor: 'pointer',
-                          transition: 'background 0.2s'
+                          width: '100%',
+                          padding: '12px 16px',
+                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                          borderRadius: '12px',
+                          fontSize: '15px',
+                          background: darkMode ? '#000000' : '#ffffff',
+                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          outline: 'none'
                         }}
-                      >
-                        <div style={{
-                          position: 'absolute',
-                          top: '4px',
-                          left: formData.autoPrintReceipt ? '28px' : '4px',
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          background: '#ffffff',
-                          transition: 'left 0.2s',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                        }} />
-                      </div>
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Display Options */}
                 <div style={{
                   padding: '20px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
@@ -2359,45 +4784,47 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    👁️ Display Options
+                    📈 Widgets
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {[
-                      { key: 'showLogoOnReceipt', label: 'Show Store Logo' },
-                      { key: 'showGstOnReceipt', label: 'Show GST on Receipt' },
-                      { key: 'showTableOnReceipt', label: 'Show Table on Receipt' },
-                      { key: 'showCustomerOnReceipt', label: 'Show Customer on Receipt' },
-                      { key: 'showCashierOnReceipt', label: 'Show Cashier/Staff on Receipt' },
-                      { key: 'showEmailOnReceipt', label: 'Show Email on Receipt' },
-                      { key: 'showPaymentDetailsOnReceipt', label: 'Show Payment Details' },
-                      { key: 'showBillIdOnReceipt', label: 'Show Bill ID on Receipt' }
-                    ].map(({ key, label }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
-                        <div style={{ fontSize: '15px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
-                        <div
-                          onClick={() => handleInputChange(key, !formData[key])}
+                      { key: 'showSalesWidget', label: 'Sales Widget', desc: 'Show sales statistics' },
+                      { key: 'showOrdersWidget', label: 'Orders Widget', desc: 'Show order statistics' },
+                      { key: 'showInventoryWidget', label: 'Inventory Widget', desc: 'Show inventory status' },
+                      { key: 'showStaffWidget', label: 'Staff Widget', desc: 'Show staff performance' },
+                      { key: 'showRevenueChart', label: 'Revenue Chart', desc: 'Show revenue trends' },
+                      { key: 'showOrderChart', label: 'Order Chart', desc: 'Show order trends' }
+                    ].map(widget => (
+                      <div key={widget.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{widget.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{widget.desc}</div>
+                        </div>
+                        <button
+                          onClick={() => handleInputChange(widget.key, !formData[widget.key])}
                           style={{
-                            width: '52px',
+                            width: '48px',
                             height: '28px',
                             borderRadius: '14px',
-                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
-                            position: 'relative',
+                            background: formData[widget.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                            border: 'none',
                             cursor: 'pointer',
+                            position: 'relative',
                             transition: 'background 0.2s'
                           }}
                         >
                           <div style={{
-                            position: 'absolute',
-                            top: '4px',
-                            left: formData[key] ? '28px' : '4px',
-                            width: '20px',
-                            height: '20px',
+                            width: '22px',
+                            height: '22px',
                             borderRadius: '50%',
-                            background: '#ffffff',
+                            background: '#fff',
+                            position: 'absolute',
+                            top: '3px',
+                            left: formData[widget.key] ? '23px' : '3px',
                             transition: 'left 0.2s',
                             boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                           }} />
-                        </div>
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -2405,6 +4832,750 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               </div>
             )}
 
+            {/* Reports Settings */}
+            {activeSection === 'tab-reports' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>📑 Auto Reports</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Enable Auto Reports</label>
+                      <select value={formData.enableAutoReports ? 'yes' : 'no'} onChange={(e) => handleInputChange('enableAutoReports', e.target.value === 'yes')} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Report Schedule</label>
+                      <select value={formData.reportSchedule || 'daily'} onChange={(e) => handleInputChange('reportSchedule', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* CRM Settings */}
+            {activeSection === 'tab-crm' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>⭐ Loyalty Program</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Points per ₹10</label>
+                      <input type="number" value={formData.loyaltyPointsPerRupee || 1} onChange={(e) => handleInputChange('loyaltyPointsPerRupee', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Staff Settings */}
+            {activeSection === 'tab-staff' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>👨‍🍳 Staff Management</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Shift Duration (hours)</label>
+                      <input type="number" value={formData.defaultShiftDuration || 8} onChange={(e) => handleInputChange('defaultShiftDuration', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Menu Settings */}
+            {activeSection === 'tab-menu' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🍽️ Menu Display</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Menu Layout</label>
+                      <select value={formData.menuLayout || 'grid'} onChange={(e) => handleInputChange('menuLayout', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="grid">Grid</option>
+                        <option value="list">List</option>
+                        <option value="compact">Compact</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Inventory Settings */}
+            {activeSection === 'tab-inventory' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>📦 Inventory Management</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Low Stock Threshold</label>
+                      <input type="number" value={formData.lowStockThreshold || 10} onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Toast Orders Settings */}
+            {activeSection === 'toast-orders' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🍞 Toast POS Display</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'toastShowPrice', label: 'Show Price', desc: 'Display item prices in cart' },
+                      { key: 'toastShowQuantity', label: 'Show Quantity', desc: 'Display item quantities' },
+                      { key: 'toastShowCategory', label: 'Show Category', desc: 'Display item categories' },
+                      { key: 'toastShowModals', label: 'Show Modals', desc: 'Use GUI modals instead of alerts' },
+                      { key: 'toastShowTableNumber', label: 'Show Table Number', desc: 'Display table on order' },
+                      { key: 'toastShowServerName', label: 'Show Server Name', desc: 'Display assigned server' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>💰 Pricing & Payments</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Payment Method</label>
+                      <select value={formData.toastDefaultPaymentMethod || 'cash'} onChange={(e) => handleInputChange('toastDefaultPaymentMethod', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="upi">UPI</option>
+                        <option value="wallet">Wallet</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Delivery Fee</label>
+                      <input type="number" value={formData.toastDeliveryFee || 50} onChange={(e) => handleInputChange('toastDeliveryFee', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Min Order Value</label>
+                      <input type="number" value={formData.toastMinimumOrderValue || 0} onChange={(e) => handleInputChange('toastMinimumOrderValue', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Max Order Value</label>
+                      <input type="number" value={formData.toastMaximumOrderValue || 100000} onChange={(e) => handleInputChange('toastMaximumOrderValue', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastEnableDiscount', label: 'Enable Discounts', desc: 'Allow discount functionality' },
+                      { key: 'toastEnableTips', label: 'Enable Tips', desc: 'Allow tip functionality' },
+                      { key: 'toastEnableServiceCharge', label: 'Enable Service Charge', desc: 'Add service charge to orders' },
+                      { key: 'toastEnableTaxExemption', label: 'Enable Tax Exemption', desc: 'Allow tax-exempt orders' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🪑 Table & Seat Management</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Table</label>
+                      <input type="number" value={formData.toastDefaultTable || 1} onChange={(e) => handleInputChange('toastDefaultTable', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Max Seats</label>
+                      <input type="number" value={formData.toastMaxSeats || 10} onChange={(e) => handleInputChange('toastMaxSeats', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Server</label>
+                      <input type="text" value={formData.toastDefaultServer || ''} onChange={(e) => handleInputChange('toastDefaultServer', e.target.value)} placeholder="Server name" style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastAutoAssignTable', label: 'Auto Assign Table', desc: 'Automatically assign table to order' },
+                      { key: 'toastEnableSeatSplitting', label: 'Enable Seat Splitting', desc: 'Allow splitting by seats' },
+                      { key: 'toastEnableServerAssignment', label: 'Enable Server Assignment', desc: 'Assign servers to orders' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>⏱️ Timing & Workflow</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Order Timer Warning (min)</label>
+                      <input type="number" value={formData.toastOrderTimerWarning || 30} onChange={(e) => handleInputChange('toastOrderTimerWarning', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Kitchen Delay (min)</label>
+                      <input type="number" value={formData.toastDefaultKitchenDelay || 0} onChange={(e) => handleInputChange('toastDefaultKitchenDelay', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastEnableOrderTimer', label: 'Enable Order Timer', desc: 'Track order preparation time' },
+                      { key: 'toastEnableKitchenDelay', label: 'Enable Kitchen Delay', desc: 'Allow setting kitchen delays' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🔧 Item Operations</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'toastEnableItemSplitting', label: 'Enable Item Splitting', desc: 'Split items between seats' },
+                      { key: 'toastEnableItemTransfer', label: 'Enable Item Transfer', desc: 'Transfer items between orders' },
+                      { key: 'toastEnableVoid', label: 'Enable Void', desc: 'Allow voiding items' },
+                      { key: 'toastEnableDuplication', label: 'Enable Duplication', desc: 'Duplicate items in cart' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🖨️ Printing & Hardware</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'toastEnablePrint', label: 'Enable Printing', desc: 'Enable receipt printing' },
+                      { key: 'toastPrintOnPayment', label: 'Print on Payment', desc: 'Auto-print on payment completion' },
+                      { key: 'toastPrintOnKOT', label: 'Print on KOT', desc: 'Auto-print KOT to kitchen' },
+                      { key: 'toastEnableCashDrawer', label: 'Enable Cash Drawer', desc: 'Control cash drawer' },
+                      { key: 'toastCashDrawerAutoOpen', label: 'Auto Open Cash Drawer', desc: 'Open drawer on cash payment' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>📝 Notes & Loyalty</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Loyalty Points per ₹10</label>
+                      <input type="number" value={formData.toastLoyaltyPointsPerRupee || 1} onChange={(e) => handleInputChange('toastLoyaltyPointsPerRupee', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastEnableOrderNotes', label: 'Enable Order Notes', desc: 'Add notes to orders' },
+                      { key: 'toastEnableCustomerNotes', label: 'Enable Customer Notes', desc: 'Add notes to customers' },
+                      { key: 'toastEnableLoyalty', label: 'Enable Loyalty', desc: 'Track customer loyalty points' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🛒 Order Types</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Order Type</label>
+                      <select value={formData.toastDefaultOrderType || 'dine-in'} onChange={(e) => handleInputChange('toastDefaultOrderType', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="dine-in">Dine In</option>
+                        <option value="takeout">Takeout</option>
+                        <option value="delivery">Delivery</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Delivery Fee Type</label>
+                      <select value={formData.toastDeliveryFeeType || 'fixed'} onChange={(e) => handleInputChange('toastDeliveryFeeType', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="fixed">Fixed Amount</option>
+                        <option value="percentage">Percentage</option>
+                        <option value="distance">Distance-based</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastEnableTakeout', label: 'Enable Takeout', desc: 'Allow takeout orders' },
+                      { key: 'toastEnableDelivery', label: 'Enable Delivery', desc: 'Allow delivery orders' },
+                      { key: 'toastOrderValidation', label: 'Order Validation', desc: 'Validate orders before submission' },
+                      { key: 'toastAutoCompleteOrders', label: 'Auto Complete Orders', desc: 'Auto-complete on payment' },
+                      { key: 'toastAllowOrderModification', label: 'Allow Modification', desc: 'Allow modifying active orders' },
+                      { key: 'toastEnableHoldOrders', label: 'Enable Hold Orders', desc: 'Hold orders for later' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🎨 Cart & Display</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Cart Layout</label>
+                      <select value={formData.toastCartLayout || 'list'} onChange={(e) => handleInputChange('toastCartLayout', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="list">List</option>
+                        <option value="grid">Grid</option>
+                        <option value="compact">Compact</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Cart Grouping</label>
+                      <select value={formData.toastCartGrouping || 'category'} onChange={(e) => handleInputChange('toastCartGrouping', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="category">By Category</option>
+                        <option value="time">By Time</option>
+                        <option value="seat">By Seat</option>
+                        <option value="none">No Grouping</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastShowItemImages', label: 'Show Item Images', desc: 'Display images in cart' },
+                      { key: 'toastEnableItemSearch', label: 'Enable Item Search', desc: 'Search items in menu' },
+                      { key: 'toastEnableFavorites', label: 'Enable Favorites', desc: 'Mark favorite items' },
+                      { key: 'toastEnableRecentItems', label: 'Show Recent Items', desc: 'Show recently ordered items' },
+                      { key: 'toastEnableQuantityButtons', label: 'Quantity Buttons', desc: 'Quick quantity selection buttons' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🎁 Promotions & Discounts</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Happy Hour Start</label>
+                      <input type="time" value={formData.toastHappyHourStart || '15:00'} onChange={(e) => handleInputChange('toastHappyHourStart', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Happy Hour End</label>
+                      <input type="time" value={formData.toastHappyHourEnd || '18:00'} onChange={(e) => handleInputChange('toastHappyHourEnd', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastEnableHappyHour', label: 'Enable Happy Hour', desc: 'Special happy hour pricing' },
+                      { key: 'toastEnablePromotions', label: 'Enable Promotions', desc: 'Run promotional campaigns' },
+                      { key: 'toastPromotionAutoApply', label: 'Auto Apply Promotions', desc: 'Automatically apply eligible promotions' },
+                      { key: 'toastEnableCoupons', label: 'Enable Coupons', desc: 'Accept coupon codes' },
+                      { key: 'toastEnableGiftCards', label: 'Enable Gift Cards', desc: 'Accept gift card payments' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>💳 Payment & Refunds</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Max Splits</label>
+                      <input type="number" value={formData.toastMaxSplits || 5} onChange={(e) => handleInputChange('toastMaxSplits', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Refund Timeout (hours)</label>
+                      <input type="number" value={formData.toastRefundTimeout || 24} onChange={(e) => handleInputChange('toastRefundTimeout', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    {[
+                      { key: 'toastEnableSplitsPayment', label: 'Enable Split Payments', desc: 'Allow splitting payments' },
+                      { key: 'toastSplitValidation', label: 'Split Validation', desc: 'Validate split payments' },
+                      { key: 'toastEnableRefunds', label: 'Enable Refunds', desc: 'Process refunds' },
+                      { key: 'toastRefundRequireReason', label: 'Refund Require Reason', desc: 'Require reason for refund' },
+                      { key: 'toastRefundApprovalRequired', label: 'Refund Approval Required', desc: 'Manager approval for refunds' },
+                      { key: 'toastEnableExchange', label: 'Enable Exchange', desc: 'Allow item exchanges' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Oracle KDS Settings */}
+            {activeSection === 'oracle-kds' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🔮 Oracle KDS Configuration</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Color Code</label>
+                      <select value={formData.oracleKdsColorCode || 'red'} onChange={(e) => handleInputChange('oracleKdsColorCode', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="red">Red</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="orange">Orange</option>
+                        <option value="purple">Purple</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Sort By</label>
+                      <select value={formData.oracleKdsSortBy || 'time'} onChange={(e) => handleInputChange('oracleKdsSortBy', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="time">Time</option>
+                        <option value="priority">Priority</option>
+                        <option value="table">Table</option>
+                        <option value="category">Category</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Station Count</label>
+                      <input type="number" value={formData.oracleKdsStationCount || 5} onChange={(e) => handleInputChange('oracleKdsStationCount', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Prep Time (min)</label>
+                      <input type="number" value={formData.oracleKdsDefaultPrepTime || 15} onChange={(e) => handleInputChange('oracleKdsDefaultPrepTime', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Refresh Interval (sec)</label>
+                      <input type="number" value={formData.oracleKdsRefreshInterval || 30} onChange={(e) => handleInputChange('oracleKdsRefreshInterval', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Sound Type</label>
+                      <select value={formData.oracleKdsSoundType || 'chime'} onChange={(e) => handleInputChange('oracleKdsSoundType', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="chime">Chime</option>
+                        <option value="bell">Bell</option>
+                        <option value="alert">Alert</option>
+                        <option value="gentle">Gentle</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>⚡ Oracle KDS Features</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'oracleKdsAutoAssign', label: 'Auto Assign Orders', desc: 'Automatically assign orders to stations' },
+                      { key: 'oracleKdsShowTimer', label: 'Show Timer', desc: 'Display preparation timers' },
+                      { key: 'oracleKdsShowIngredients', label: 'Show Ingredients', desc: 'Display item ingredients' },
+                      { key: 'oracleKdsPriorityEnabled', label: 'Enable Priority', desc: 'Use priority system' },
+                      { key: 'oracleKdsShowPriority', label: 'Show Priority', desc: 'Display priority badges' },
+                      { key: 'oracleKdsAutoRefresh', label: 'Auto Refresh', desc: 'Automatically refresh orders' },
+                      { key: 'oracleKdsShowTableNumber', label: 'Show Table Number', desc: 'Display table on orders' },
+                      { key: 'oracleKdsShowServerName', label: 'Show Server Name', desc: 'Display server on orders' },
+                      { key: 'oracleKdsShowCustomerName', label: 'Show Customer Name', desc: 'Display customer on orders' },
+                      { key: 'oracleKdsGroupByStation', label: 'Group by Station', desc: 'Group orders by station' },
+                      { key: 'oracleKdsColorByTime', label: 'Color by Time', desc: 'Color orders by time elapsed' },
+                      { key: 'oracleKdsShowAllergens', label: 'Show Allergens', desc: 'Display allergen warnings' },
+                      { key: 'oracleKdsShowModifiers', label: 'Show Modifiers', desc: 'Display item modifiers' },
+                      { key: 'oracleKdsShowNotes', label: 'Show Notes', desc: 'Display order notes' },
+                      { key: 'oracleKdsAutoPrint', label: 'Auto Print', desc: 'Auto-print orders' },
+                      { key: 'oracleKdsSoundAlerts', label: 'Sound Alerts', desc: 'Play sound on new orders' },
+                      { key: 'oracleKdsEnableFire', label: 'Enable Fire', desc: 'Enable fire button' },
+                      { key: 'oracleKdsAutoFire', label: 'Auto Fire', desc: 'Auto-fire orders after delay' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🔊 Sound Settings</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Volume ({formData.oracleKdsVolume || 70}%)</label>
+                      <input type="range" min="0" max="100" value={formData.oracleKdsVolume || 70} onChange={(e) => handleInputChange('oracleKdsVolume', parseInt(e.target.value))} style={{ width: '100%', height: '8px', borderRadius: '4px', background: darkMode ? '#222222' : '#d1d5db', outline: 'none', cursor: 'pointer' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Fire Delay (min)</label>
+                      <input type="number" value={formData.oracleKdsFireDelay || 5} onChange={(e) => handleInputChange('oracleKdsFireDelay', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Split KDS Settings */}
+            {activeSection === 'split-kds' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🔀 Split KDS Configuration</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Max Splits Per Order</label>
+                      <input type="number" value={formData.splitKdsMaxSplits || 4} onChange={(e) => handleInputChange('splitKdsMaxSplits', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Min Split Quantity</label>
+                      <input type="number" value={formData.splitKdsMinSplitQuantity || 2} onChange={(e) => handleInputChange('splitKdsMinSplitQuantity', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Merge Threshold</label>
+                      <input type="number" value={formData.splitKdsMergeThreshold || 2} onChange={(e) => handleInputChange('splitKdsMergeThreshold', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Split Rules</label>
+                      <select value={formData.splitKdsSplitRules || 'quantity'} onChange={(e) => handleInputChange('splitKdsSplitRules', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="quantity">By Quantity</option>
+                        <option value="category">By Category</option>
+                        <option value="station">By Station</option>
+                        <option value="time">By Time</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Split Indicator Color</label>
+                      <select value={formData.splitKdsSplitIndicatorColor || 'orange'} onChange={(e) => handleInputChange('splitKdsSplitIndicatorColor', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="orange">Orange</option>
+                        <option value="blue">Blue</option>
+                        <option value="green">Green</option>
+                        <option value="red">Red</option>
+                        <option value="purple">Purple</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>⚡ Split KDS Features</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'splitKdsEnableSplitting', label: 'Enable Splitting', desc: 'Allow splitting orders across stations' },
+                      { key: 'splitKdsAutoSplit', label: 'Auto Split', desc: 'Automatically split large orders' },
+                      { key: 'splitKdsShowProgress', label: 'Show Progress', desc: 'Display split progress indicator' },
+                      { key: 'splitKdsSplitByCategory', label: 'Split by Category', desc: 'Group splits by category' },
+                      { key: 'splitKdsSplitByStation', label: 'Split by Station', desc: 'Group splits by station' },
+                      { key: 'splitKdsAutoMerge', label: 'Auto Merge', desc: 'Automatically merge completed splits' },
+                      { key: 'splitKdsShowSplitOrigin', label: 'Show Split Origin', desc: 'Display original order on splits' },
+                      { key: 'splitKdsEnableManualSplit', label: 'Enable Manual Split', desc: 'Allow manual splitting' },
+                      { key: 'splitKdsShowSplitIndicator', label: 'Show Split Indicator', desc: 'Visual indicator for split orders' },
+                      { key: 'splitKdsEnableCrossStation', label: 'Enable Cross Station', desc: 'Allow splits across stations' },
+                      { key: 'splitKdsSyncAcrossStations', label: 'Sync Across Stations', desc: 'Sync split status across stations' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Chowbus KDS Settings */}
+            {activeSection === 'chowbus-kds' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🚌 Chowbus KDS Configuration</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Bus Count</label>
+                      <input type="number" value={formData.chowbusKdsBusCount || 5} onChange={(e) => handleInputChange('chowbusKdsBusCount', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Max Orders Per Bus</label>
+                      <input type="number" value={formData.chowbusKdsMaxOrdersPerBus || 20} onChange={(e) => handleInputChange('chowbusKdsMaxOrdersPerBus', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Bus Capacity</label>
+                      <input type="number" value={formData.chowbusKdsBusCapacity || 50} onChange={(e) => handleInputChange('chowbusKdsBusCapacity', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default ETA (min)</label>
+                      <input type="number" value={formData.chowbusKdsDefaultETA || 30} onChange={(e) => handleInputChange('chowbusKdsDefaultETA', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Delay Threshold (min)</label>
+                      <input type="number" value={formData.chowbusKdsDelayThreshold || 15} onChange={(e) => handleInputChange('chowbusKdsDelayThreshold', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Route Optimization</label>
+                      <select value={formData.chowbusKdsRouteOptimization || 'nearest'} onChange={(e) => handleInputChange('chowbusKdsRouteOptimization', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }}>
+                        <option value="nearest">Nearest</option>
+                        <option value="fastest">Fastest</option>
+                        <option value="shortest">Shortest</option>
+                        <option value="balanced">Balanced</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>🚌 Bus Management</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'chowbusKdsEnableBusManagement', label: 'Enable Bus Management', desc: 'Manage delivery buses' },
+                      { key: 'chowbusKdsAutoAssign', label: 'Auto Assign Orders', desc: 'Automatically assign to buses' },
+                      { key: 'chowbusKdsAutoOptimize', label: 'Auto Optimize Routes', desc: 'Automatically optimize bus routes' },
+                      { key: 'chowbusKdsAutoReassign', label: 'Auto Reassign', desc: 'Reassign orders on delays' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>📍 Tracking & Display</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'chowbusKdsShowRoute', label: 'Show Route', desc: 'Display delivery route on map' },
+                      { key: 'chowbusKdsShowBusStatus', label: 'Show Bus Status', desc: 'Display bus status indicators' },
+                      { key: 'chowbusKdsShowETA', label: 'Show ETA', desc: 'Display estimated arrival time' },
+                      { key: 'chowbusKdsTrackDriver', label: 'Track Driver', desc: 'Track driver location' },
+                      { key: 'chowbusKdsShowDriverLocation', label: 'Show Driver Location', desc: 'Display driver on map' },
+                      { key: 'chowbusKdsShowDeliveryMap', label: 'Show Delivery Map', desc: 'Display delivery route map' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>📝 Communication</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'chowbusKdsEnableDriverNotes', label: 'Enable Driver Notes', desc: 'Allow driver to add notes' },
+                      { key: 'chowbusKdsNotifyOnDelay', label: 'Notify on Delay', desc: 'Send notifications on delays' }
+                    ].map(feature => (
+                      <div key={feature.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111' }}>{feature.label}</div>
+                          <div style={{ fontSize: '12px', color: darkMode ? '#888888' : '#6b7280', marginTop: '2px' }}>{feature.desc}</div>
+                        </div>
+                        <button onClick={() => handleInputChange(feature.key, !formData[feature.key])} style={{ width: '48px', height: '28px', borderRadius: '14px', background: formData[feature.key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'), border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#fff', position: 'absolute', top: '3px', left: formData[feature.key] ? '23px' : '3px', transition: 'left 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Kitchen Settings */}
+            {activeSection === 'tab-kitchen' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ padding: '20px', background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'), borderRadius: '16px', border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>👨‍🍳 Kitchen Configuration</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: screenSize === 'small' ? '1fr' : 'repeat(2, 1fr)', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: darkMode ? '#e0e0e0' : '#111111', marginBottom: '8px' }}>Default Prep Time (minutes)</label>
+                      <input type="number" value={formData.defaultPrepTime || 15} onChange={(e) => handleInputChange('defaultPrepTime', e.target.value)} style={{ width: '100%', padding: '12px 16px', border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`, borderRadius: '12px', fontSize: '15px', background: darkMode ? '#000000' : '#ffffff', color: darkMode ? '#ffffff' : '#0a0a0a', outline: 'none' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {activeSection === 'pos' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -2594,6 +5765,63 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Order Card Column Settings */}
+                <div style={{
+                  padding: '20px',
+                  background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
+                  borderRadius: '16px',
+                  border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
+                    📊 Order Card Columns
+                  </div>
+                  <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '16px' }}>
+                    Configure which columns to display on order cards in Order History
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                    {[
+                      { key: 'orderCardColumn_table', label: 'Table Number' },
+                      { key: 'orderCardColumn_time', label: 'Time & Age' },
+                      { key: 'orderCardColumn_customer', label: 'Customer Info' },
+                      { key: 'orderCardColumn_categories', label: 'Category Breakdown' },
+                      { key: 'orderCardColumn_items', label: 'Item Count' },
+                      { key: 'orderCardColumn_total', label: 'Total Amount' },
+                      { key: 'orderCardColumn_status', label: 'Order Status' }
+                    ].map(({ key, label }) => (
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>{label}</div>
+                        <div
+                          onClick={() => handleInputChange(key, !formData[key])}
+                          style={{
+                            width: '48px',
+                            height: '26px',
+                            borderRadius: '13px',
+                            background: formData[key] ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          <div style={{
+                            position: 'absolute',
+                            top: '3px',
+                            left: formData[key] ? '25px' : '3px',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            transition: 'left 0.2s',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: '16px', padding: '12px', background: darkMode ? '#0a0a0a' : '#f0f9ff', borderRadius: '8px', fontSize: '12px', color: darkMode ? '#9ca3af' : '#0c4a6e' }}>
+                    💡 Tip: Click the "🔧 Columns" button in Order History to reorder columns or reset to defaults
                   </div>
                 </div>
 
@@ -3104,6 +6332,36 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           position: 'absolute',
                           top: '4px',
                           left: formData.kitchenDisplayEnabled ? '28px' : '4px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: '#ffffff',
+                          transition: 'left 0.2s',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: darkMode ? '#000000' : '#ffffff', borderRadius: '12px', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>Auto-Print KOT</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '4px' }}>Automatically print Kitchen Order Tickets when orders are placed</div>
+                      </div>
+                      <div
+                        onClick={() => handleInputChange('autoPrintKOT', !formData.autoPrintKOT)}
+                        style={{
+                          width: '52px',
+                          height: '28px',
+                          borderRadius: '14px',
+                          background: formData.autoPrintKOT ? '#10b981' : (darkMode ? '#222222' : '#d1d5db'),
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{
+                          position: 'absolute',
+                          top: '4px',
+                          left: formData.autoPrintKOT ? '28px' : '4px',
                           width: '20px',
                           height: '20px',
                           borderRadius: '50%',
@@ -4340,6 +7598,166 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     <div><strong>Screen:</strong> {window.screen.width}x{window.screen.height}</div>
                   </div>
                 </div>
+
+                <div style={{
+                  padding: '16px',
+                  background: t.bgEle,
+                  borderRadius: '8px',
+                  border: `1px solid ${t.border}`
+                }}>
+                  <div style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                    📊 Error Tracking & Logging
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { key: 'enableErrorTracking', label: 'Enable Error Tracking', desc: 'Track and log application errors automatically' },
+                      { key: 'autoSaveLogs', label: 'Auto Save Logs', desc: 'Automatically save logs to local storage' },
+                      { key: 'enableCrashDetection', label: 'Enable Crash Detection', desc: 'Detect and report application crashes' }
+                    ].map(setting => (
+                      <div key={setting.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', color: t.text, marginBottom: '2px' }}>{setting.label}</div>
+                          <div style={{ fontSize: '11px', color: t.textSub }}>{setting.desc}</div>
+                        </div>
+                        <button
+                          onClick={() => handleInputChange(setting.key, !formData[setting.key])}
+                          style={{
+                            width: '44px',
+                            height: '24px',
+                            borderRadius: '12px',
+                            background: formData[setting.key] ? '#10b981' : '#374151',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            border: 'none',
+                            transition: 'background 0.2s'
+                          }}
+                        >
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            position: 'absolute',
+                            top: '2px',
+                            left: formData[setting.key] ? '22px' : '2px',
+                            transition: 'left 0.2s'
+                          }} />
+                        </button>
+                      </div>
+                    ))}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '13px', color: t.text }}>Log Retention (days)</label>
+                      <input
+                        type="number"
+                        value={formData.logRetentionDays}
+                        onChange={(e) => handleInputChange('logRetentionDays', parseInt(e.target.value) || 30)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${t.border}`,
+                          background: t.bg,
+                          color: t.text,
+                          fontSize: '13px'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '13px', color: t.text }}>Crash Report Email</label>
+                      <input
+                        type="email"
+                        value={formData.crashReportEmail}
+                        onChange={(e) => handleInputChange('crashReportEmail', e.target.value)}
+                        placeholder="admin@example.com"
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${t.border}`,
+                          background: t.bg,
+                          color: t.text,
+                          fontSize: '13px'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <label style={{ fontSize: '13px', color: t.text }}>Log Level</label>
+                      <select
+                        value={formData.logLevel}
+                        onChange={(e) => handleInputChange('logLevel', e.target.value)}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: `1px solid ${t.border}`,
+                          background: t.bg,
+                          color: t.text,
+                          fontSize: '13px'
+                        }}
+                      >
+                        <option value="error">Error Only</option>
+                        <option value="warn">Warning & Above</option>
+                        <option value="info">Info & Above</option>
+                        <option value="debug">Debug & Above</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                      <button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            const logs = localStorage.getItem('error_logs');
+                            if (logs) {
+                              const blob = new Blob([logs], { type: 'application/json' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `error-logs-${new Date().toISOString().split('T')[0]}.json`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            } else {
+                              alert('No logs found');
+                            }
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '10px 16px',
+                          background: '#3b82f6',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Download Logs
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (typeof window !== 'undefined' && confirm('Clear all saved logs?')) {
+                            localStorage.removeItem('error_logs');
+                            alert('Logs cleared');
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '10px 16px',
+                          background: '#ef4444',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Clear Logs
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -4396,7 +7814,9 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   { key: 'showModifiers', label: 'Show Modifiers', desc: 'Display item modifiers/add-ons', type: 'toggle' },
                   { key: 'allowPriceOverride', label: 'Allow Price Override', desc: 'Staff can change item prices', type: 'toggle' },
                   { key: 'hideOutOfStock', label: 'Hide Out of Stock', desc: 'Auto-hide items with zero stock', type: 'toggle' }
-                ]},
+                ],
+                hasLayoutSettings: true,
+                layoutLabel: 'Menu Layout' },
                 'inventory': { icon: '📦', label: 'Inventory', settings: [
                   { key: 'enabled', label: 'Enable Inventory Tab', desc: 'Show/hide the Inventory tab' },
                   { key: 'lowStockAlert', label: 'Low Stock Alert', desc: 'Alert when stock is low', type: 'toggle' },
@@ -4527,26 +7947,34 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                             <input
                               type="time"
                               value={tabSettings[setting.key] || '23:00'}
-                              onChange={(e) => handleInputChange(tabId, { ...tabSettings, [setting.key]: e.target.value })}
+                              onChange={(e) => {
+                                handleInputChange(tabId, { ...tabSettings, [setting.key]: e.target.value });
+                              }}
                               style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, background: t.bgInput, color: t.text, fontSize: '13px' }}
                             />
                           ) : setting.type === 'number' ? (
                             <input
                               type="number"
                               value={tabSettings[setting.key] || 0}
-                              onChange={(e) => handleInputChange(tabId, { ...tabSettings, [setting.key]: parseInt(e.target.value) || 0 })}
+                              onChange={(e) => {
+                                handleInputChange(tabId, { ...tabSettings, [setting.key]: parseInt(e.target.value) || 0 });
+                              }}
                               style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, background: t.bgInput, color: t.text, fontSize: '13px', width: '80px' }}
                             />
                           ) : setting.type === 'text' ? (
                             <input
                               type="text"
                               value={tabSettings[setting.key] || ''}
-                              onChange={(e) => handleInputChange(tabId, { ...tabSettings, [setting.key]: e.target.value })}
+                              onChange={(e) => {
+                                handleInputChange(tabId, { ...tabSettings, [setting.key]: e.target.value });
+                              }}
                               style={{ padding: '6px 10px', borderRadius: '6px', border: `1px solid ${t.border}`, background: t.bgInput, color: t.text, fontSize: '13px', width: '100px' }}
                             />
                           ) : (
                             <div
-                              onClick={() => handleInputChange(tabId, { ...tabSettings, [setting.key]: !tabSettings[setting.key] })}
+                              onClick={() => {
+                                handleInputChange(tabId, { ...tabSettings, [setting.key]: !tabSettings[setting.key] });
+                              }}
                               style={{
                                 width: '40px', height: '22px', flexShrink: 0,
                                 background: tabSettings[setting.key] ? '#10b981' : '#000000',
@@ -4581,6 +8009,26 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                         🪑 {config.managementLabel}
                       </div>
                       <TableManagementPanel tables={tables} setTables={setTables} darkMode={darkMode} />
+                    </div>
+                  )}
+
+                  {/* Menu Layout Settings Section */}
+                  {config.hasLayoutSettings && tabId === 'menu' && (
+                    <div style={{
+                      padding: '16px',
+                      background: t.bgEle,
+                      borderRadius: '8px',
+                      border: `1px solid ${t.border}`
+                    }}>
+                      <div style={{ margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: t.text }}>
+                        🎨 {config.layoutLabel}
+                      </div>
+                      <MenuLayoutSettings 
+                        menuLayout={formData.menuLayout || {}}
+                        onMenuLayoutChange={(newLayout) => handleInputChange('menuLayout', newLayout)}
+                        darkMode={darkMode}
+                        screenSize={screenSize}
+                      />
                     </div>
                   )}
                 </div>
@@ -4694,9 +8142,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                   {/* Group label */}
                   <div style={{
                     fontSize: '12px', fontWeight: '700',
-                    color: darkMode ? '#222222' : '#8e8e93',
+                    color: darkMode ? '#6366f1' : '#6366f1',
                     textTransform: 'uppercase', letterSpacing: '0.07em',
                     paddingLeft: '4px', marginBottom: '8px',
+                    padding: '4px 8px',
+                    background: darkMode ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.1)',
+                    borderRadius: '4px',
+                    display: 'inline-block'
                   }}>
                     {group.group}
                   </div>
@@ -4748,6 +8200,13 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                           }}>
                             {section.label}
                           </div>
+                          <div style={{
+                            fontSize: '12px',
+                            color: darkMode ? '#9ca3af' : '#6b7280',
+                            marginTop: '2px'
+                          }}>
+                            {section.description || 'Configure settings'}
+                          </div>
                         </div>
 
                         {/* Chevron */}
@@ -4771,6 +8230,20 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
               padding: '0 0 100px',
               WebkitOverflowScrolling: 'touch',
             }}>
+              {/* Mobile section header */}
+              <div style={{
+                padding: '16px',
+                background: darkMode ? '#0a0a0a' : '#ffffff',
+                borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+              }}>
+                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
+                  {activeSectionMeta?.icon} {activeSectionMeta?.label}
+                </div>
+                <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                  {activeSectionMeta?.description || 'Configure these settings'}
+                </div>
+              </div>
+
               {/* Mobile section content */}
               <div style={{ padding: '16px' }}>
                 {renderSectionContent()}
@@ -4837,27 +8310,63 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Sidebar */}
         <div style={{
-          width: '280px',
+          width: screenSize === 'small' ? '0' : (screenSize === 'medium' ? '260px' : '320px'),
           background: darkMode ? '#0a0a0a' : '#ffffff',
-          borderRight: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-          padding: '20px',
+          borderRight: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+          padding: screenSize === 'small' ? '0' : '20px',
           overflowY: 'auto',
-          flexShrink: 0
+          flexShrink: 0,
+          display: screenSize === 'small' ? 'none' : 'block'
         }}>
           <div style={{ margin: '0 0 24px' }}>
             <div style={{ fontSize: '24px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '4px' }}>
-              Settings
+              ⚙️ Settings Studio
             </div>
-            <div style={{ fontSize: '14px', color: darkMode ? '#888888' : '#6b7280' }}>
-              Configure your bakery
+            <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginBottom: '14px' }}>
+              Complete Configuration Management System
+            </div>
+
+            {/* Global Settings Filter Search Bar */}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="🔍 Search settings..."
+                onChange={(e) => {
+                  const q = e.target.value.toLowerCase();
+                  if (!q) return;
+                  for (const g of sections) {
+                    const found = g.items.find(i => i.label.toLowerCase().includes(q) || i.id.includes(q));
+                    if (found) {
+                      setActiveSection(found.id);
+                      break;
+                    }
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
             </div>
           </div>
           {sections.map(group => (
             <div key={group.group} style={{ marginBottom: '20px' }}>
               <div style={{
-                margin: '0 0 10px',
+                margin: '0 0 12px',
                 fontSize: '11px', fontWeight: '700',
-                color: '#9ca3af', letterSpacing: '0.05em', textTransform: 'uppercase'
+                color: darkMode ? '#6366f1' : '#6366f1',
+                letterSpacing: '0.05em', textTransform: 'uppercase',
+                padding: '4px 8px',
+                background: darkMode ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.1)',
+                borderRadius: '4px',
+                display: 'inline-block'
               }}>
                 {group.group}
               </div>
@@ -4868,19 +8377,28 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
                     onClick={() => setActiveSection(section.id)}
                     style={{
                       padding: '12px 16px',
-                      background: activeSection === section.id ? (darkMode ? '#6366f1' : '#eff6ff') : 'transparent',
+                      background: activeSection === section.id 
+                        ? (darkMode ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)')
+                        : 'transparent',
                       color: activeSection === section.id ? '#ffffff' : (darkMode ? '#e0e0e0' : '#111111'),
-                      border: activeSection === section.id ? 'none' : '1px solid transparent',
+                      border: activeSection === section.id ? 'none' : `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
                       borderRadius: '10px',
-                      fontSize: '14px', fontWeight: '500',
+                      fontSize: '14px',
+                      fontWeight: '500',
                       cursor: 'pointer', whiteSpace: 'nowrap',
                       textAlign: 'left', width: '100%',
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      transition: 'all 0.2s ease'
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      transition: 'all 0.2s ease',
+                      boxShadow: activeSection === section.id ? '0 4px 12px rgba(99,102,241,0.3)' : 'none'
                     }}
                   >
-                    <span style={{ fontSize: '18px' }}>{section.icon}</span>
-                    {section.label}
+                    <span style={{ fontSize: '18px', flexShrink: 0 }}>{section.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: '500' }}>{section.label}</div>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginTop: '2px' }}>
+                        {section.description || 'Configure settings'}
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -4891,28 +8409,33 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
         {/* Desktop main content */}
         <div style={{
           flex: 1,
-          padding: '24px',
+          padding: screenSize === 'small' ? '16px' : '24px',
           overflow: 'auto',
           background: darkMode ? '#000000' : '#f5f7fa',
           minHeight: 0
         }}>
           <div style={{
             background: darkMode ? '#0a0a0a' : '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: activeSection === 'qr' ? '1100px' : '700px',
+            borderRadius: screenSize === 'small' ? '12px' : '16px',
+            padding: screenSize === 'small' ? '20px' : '28px',
+            width: '100%',
+            maxWidth: '100%',
             border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
             margin: '0 auto',
-            transition: 'max-width 0.2s ease-in-out',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           }}>
             <div style={{
               margin: '0 0 24px',
-              fontSize: '18px', fontWeight: '700',
-              color: darkMode ? '#ffffff' : '#0a0a0a',
-              paddingBottom: '16px',
-              borderBottom: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+              paddingBottom: '20px',
+              borderBottom: `2px solid ${darkMode ? '#6366f1' : '#e5e7eb'}`
             }}>
-              {activeSectionMeta?.label}
+              <div style={{ fontSize: screenSize === 'small' ? '20px' : '22px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
+                {activeSectionMeta?.icon} {activeSectionMeta?.label}
+              </div>
+              <div style={{ fontSize: screenSize === 'small' ? '13px' : '14px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
+                {activeSectionMeta?.description || 'Configure these settings to customize your experience'}
+              </div>
             </div>
 
             {renderSectionContent()}
@@ -4992,4 +8515,6 @@ export default function SimpleSettings({ settings = {}, setSettings, onNavigate,
     </>
   );
 }
+
+export default SimpleSettings;
 

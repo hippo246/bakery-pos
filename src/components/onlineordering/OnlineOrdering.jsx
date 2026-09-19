@@ -114,6 +114,15 @@ export default function OnlineOrdering({ menuItems, onNavigate }) {
       console.error('Failed to save order:', e);
     }
 
+    // Dispatch event to ToastTables for real-time QR pairing
+    window.dispatchEvent(new CustomEvent('toast_qr_order_submitted', {
+      detail: {
+        tableNumber: '14',
+        customerName: customerInfo.name || 'Guest',
+        items: cart
+      }
+    }));
+
     // Clear cart
     saveCart([]);
     setCustomerInfo({ name: '', phone: '', email: '', address: '', notes: '' });

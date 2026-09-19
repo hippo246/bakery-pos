@@ -2,19 +2,11 @@
 // Configure and manage kitchen stations for KOT routing
 
 import React, { useState, useEffect } from 'react';
+import { DEFAULT_STATION_PRINTER, DEFAULT_KITCHEN_STATIONS } from '../../data/mockData/kitchenData';
 import { KitchenStation } from '../../domain/kotTypes.js';
 
 export default function KitchenStationManager() {
-  const [stations, setStations] = useState([
-    { id: KitchenStation.BAKERY, name: 'Bakery', enabled: true, printer: null },
-    { id: KitchenStation.KITCHEN, name: 'Kitchen', enabled: true, printer: null },
-    { id: KitchenStation.BEVERAGE, name: 'Beverage', enabled: true, printer: null },
-    { id: KitchenStation.DESSERT, name: 'Dessert', enabled: true, printer: null },
-    { id: KitchenStation.GRILL, name: 'Grill', enabled: false, printer: null },
-    { id: KitchenStation.FRYER, name: 'Fryer', enabled: false, printer: null },
-    { id: KitchenStation.COLD, name: 'Cold', enabled: false, printer: null },
-    { id: KitchenStation.GENERAL, name: 'General', enabled: true, printer: null }
-  ]);
+  const [stations, setStations] = useState(DEFAULT_KITCHEN_STATIONS);
 
   const [editingStation, setEditingStation] = useState(null);
 
@@ -141,7 +133,7 @@ export default function KitchenStationManager() {
 }
 
 function StationCard({ station, onToggle, onUpdatePrinter }) {
-  const [printerInput, setPrinterInput] = useState(station.printer || '');
+  const [printerInput, setPrinterInput] = useState(station.printer || DEFAULT_STATION_PRINTER);
 
   const handlePrinterChange = (e) => {
     setPrinterInput(e.target.value);

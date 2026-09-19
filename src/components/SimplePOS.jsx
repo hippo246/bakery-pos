@@ -9,6 +9,122 @@ import { getPrinterService } from '../utils/thermalPrinter.js';
 import POSTopbar from './POSTopbar';
 import SpeakButton from './voice/SpeakButton';
 import VoiceOrderRecorder from './voice/VoiceOrderRecorder';
+import OrderHistoryModal from './orders/OrderHistoryModal';
+
+// Helper functions for menu layout
+function getMenuGridColumns(menuLayout = {}, screenSize = 'large') {
+  const layout = menuLayout || {};
+  const gridColumns = layout.gridColumns || 'auto';
+  const viewMode = layout.viewMode || 'grid';
+  
+  // List view layout
+  if (viewMode === 'list') {
+    return '1fr';
+  }
+  
+  // Compact grid view
+  if (viewMode === 'compact') {
+    if (screenSize === 'small') {
+      return 'repeat(3, 1fr)';
+    }
+    return 'repeat(4, 1fr)';
+  }
+  
+  // Large card view
+  if (viewMode === 'large') {
+    if (screenSize === 'small') {
+      return 'repeat(2, 1fr)';
+    }
+    return 'repeat(2, 1fr)';
+  }
+  
+  if (gridColumns !== 'auto') {
+    return `repeat(${gridColumns}, 1fr)`;
+  }
+
+  // Responsive defaults
+  if (screenSize === 'small') {
+    return 'repeat(2, 1fr)';
+  }
+
+  return 'repeat(auto-fill, minmax(140px, 1fr))';
+}
+
+function getMenuGridGap(menuLayout = {}) {
+  const layout = menuLayout || {};
+  const spacing = layout.spacing || 'medium';
+  const viewMode = layout.viewMode || 'grid';
+  
+  // Tighter spacing for compact view
+  if (viewMode === 'compact') {
+    return '8px';
+  }
+  
+  // Tighter spacing for list view
+  if (viewMode === 'list') {
+    return '4px';
+  }
+  
+  const spacingMap = {
+    'tight': '8px',
+    'medium': '16px',
+    'loose': '24px'
+  };
+  
+  return spacingMap[spacing] || '16px';
+}
+
+function getCategoryFilterStyle(menuLayout = {}, darkMode = true, isSelected = false, isSpecial = false) {
+  const layout = menuLayout || {};
+  const borderRadius = layout.borderRadius || 'medium';
+  const accentColor = isSpecial ? '#10b981' : '#6366f1';
+
+  const radiusMap = {
+    'none': '0px',
+    'small': '4px',
+    'medium': '8px',
+    'large': '12px'
+  };
+
+  return {
+    padding: '6px 12px',
+    borderRadius: radiusMap[borderRadius],
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    background: isSelected ? accentColor : (darkMode ? '#111111' : '#f3f4f6'),
+    color: isSelected ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+    border: isSelected ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+  };
+}
+
+function getMenuCardStyle(menuLayout = {}, darkMode = true) {
+  const layout = menuLayout || {};
+  const borderRadius = layout.borderRadius || 'medium';
+  const shadow = layout.shadow || 'subtle';
+
+  const radiusMap = {
+    'none': '0px',
+    'small': '4px',
+    'medium': '12px',
+    'large': '16px'
+  };
+
+  const shadowMap = {
+    'none': 'none',
+    'subtle': '0 1px 2px rgba(0,0,0,0.05)',
+    'medium': '0 4px 6px rgba(0,0,0,0.1)',
+    'strong': '0 10px 15px rgba(0,0,0,0.15)'
+  };
+
+  return {
+    borderRadius: radiusMap[borderRadius],
+    boxShadow: shadowMap[shadow],
+    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+    background: darkMode ? '#111111' : '#ffffff'
+  };
+}
 
 export default function SimplePOS({ orders = [], setOrders, menuItems = [], setMenuItems, inventory = [], setInventory, customers = [], setCustomers, settings = {}, setSettings, staff = [], tables = [], setTables, darkMode = true }) {
   const { currentTerminal } = useTerminal();
@@ -63,6 +179,110 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [kdsSyncStatus, setKdsSyncStatus] = useState('connected'); // 'connected', 'syncing', 'disconnected'
   const [printerStatus, setPrinterStatus] = useState('online'); // 'online', 'offline', 'error'
   const [orderHandoffStatus, setOrderHandoffStatus] = useState('idle'); // 'idle', 'kitchen', 'ready', 'served'
+
+  // Order card column layout settings
+  const [orderCardColumns, setOrderCardColumns] = useState(() => {
+    // First try to load from settings (main settings control)
+    if (settings && settings.orderCardColumn_table !== undefined) {
+      return [
+        { id: 'table', label: 'Table', enabled: settings.orderCardColumn_table, position: 1 },
+        { id: 'time', label: 'Time', enabled: settings.orderCardColumn_time, position: 2 },
+        { id: 'customer', label: 'Customer', enabled: settings.orderCardColumn_customer, position: 3 },
+        { id: 'categories', label: 'Categories', enabled: settings.orderCardColumn_categories, position: 4 },
+        { id: 'items', label: 'Items', enabled: settings.orderCardColumn_items, position: 5 },
+        { id: 'total', label: 'Total', enabled: settings.orderCardColumn_total, position: 6 },
+        { id: 'status', label: 'Status', enabled: settings.orderCardColumn_status, position: 7 },
+      ];
+    }
+    // Fallback to localStorage
+    const saved = localStorage.getItem('order_card_columns');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return [
+      { id: 'table', label: 'Table', enabled: true, position: 1 },
+      { id: 'time', label: 'Time', enabled: true, position: 2 },
+      { id: 'customer', label: 'Customer', enabled: true, position: 3 },
+      { id: 'categories', label: 'Categories', enabled: true, position: 4 },
+      { id: 'items', label: 'Items', enabled: true, position: 5 },
+      { id: 'total', label: 'Total', enabled: true, position: 6 },
+      { id: 'status', label: 'Status', enabled: true, position: 7 },
+    ];
+  });
+
+  // Column layout settings
+  const [showMenuColumn, setShowMenuColumn] = useState(true);
+  const [showCartColumn, setShowCartColumn] = useState(true);
+  const [showNumpadColumn, setShowNumpadColumn] = useState(true);
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
+
+  // Load column settings from localStorage
+  useEffect(() => {
+    try {
+      const savedColumnSettings = localStorage.getItem('pos_column_settings');
+      if (savedColumnSettings) {
+        const parsed = JSON.parse(savedColumnSettings);
+        setShowMenuColumn(parsed.showMenuColumn !== false);
+        setShowCartColumn(parsed.showCartColumn !== false);
+        setShowNumpadColumn(parsed.showNumpadColumn !== false);
+      }
+
+      // Load menu layout settings
+      const savedMenuLayout = localStorage.getItem('menu_layout_settings');
+      if (savedMenuLayout && settings.menuLayout === undefined) {
+        const parsedLayout = JSON.parse(savedMenuLayout);
+        setSettings(prev => ({ ...prev, menuLayout: parsedLayout }));
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  }, []);
+
+  // Save column settings to localStorage
+  const saveColumnSettings = () => {
+    try {
+      localStorage.setItem('pos_column_settings', JSON.stringify({
+        showMenuColumn,
+        showCartColumn,
+        showNumpadColumn
+      }));
+    } catch (error) {
+      console.error('Failed to save column settings:', error);
+    }
+  };
+
+  // Save column settings whenever they change
+  useEffect(() => {
+    saveColumnSettings();
+  }, [showMenuColumn, showCartColumn, showNumpadColumn]);
+
+  // Save menu layout settings to localStorage
+  const saveMenuLayoutSettings = () => {
+    try {
+      if (settings.menuLayout) {
+        localStorage.setItem('menu_layout_settings', JSON.stringify(settings.menuLayout));
+      }
+    } catch (error) {
+      console.error('Failed to save menu layout settings:', error);
+    }
+  };
+
+  // Save order card column settings to localStorage and sync with main settings
+  useEffect(() => {
+    localStorage.setItem('order_card_columns', JSON.stringify(orderCardColumns));
+    
+    // Also sync with main settings
+    setSettings(prev => ({
+      ...prev,
+      orderCardColumn_table: orderCardColumns.find(c => c.id === 'table')?.enabled !== false,
+      orderCardColumn_time: orderCardColumns.find(c => c.id === 'time')?.enabled !== false,
+      orderCardColumn_customer: orderCardColumns.find(c => c.id === 'customer')?.enabled !== false,
+      orderCardColumn_categories: orderCardColumns.find(c => c.id === 'categories')?.enabled !== false,
+      orderCardColumn_items: orderCardColumns.find(c => c.id === 'items')?.enabled !== false,
+      orderCardColumn_total: orderCardColumns.find(c => c.id === 'total')?.enabled !== false,
+      orderCardColumn_status: orderCardColumns.find(c => c.id === 'status')?.enabled !== false,
+    }));
+  }, [orderCardColumns]);
   
   // Load happy hour and combo settings from localStorage
   useEffect(() => {
@@ -267,6 +487,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [dashboardPage, setDashboardPage] = useState(0); // 0 or 1 for two-pager
   const [paymentAmount, setPaymentAmount] = useState('');
   const [showPrintSettings, setShowPrintSettings] = useState(false);
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
   const [printCopies, setPrintCopies] = useState(1);
   const [printKot, setPrintKot] = useState(true);
   const [printReceiptEnabled, setPrintReceiptEnabled] = useState(true);
@@ -277,9 +498,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [numpadSearch, setNumpadSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOrderHistory, setShowOrderHistory] = useState(false);
-  const [orderHistorySearch, setOrderHistorySearch] = useState('');
-  const [orderHistoryFilter, setOrderHistoryFilter] = useState('all');
-  const [orderHistorySort, setOrderHistorySort] = useState('date-desc');
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [orderType, setOrderType] = useState('dine-in'); // 'dine-in' or 'takeaway'
   const [cartSearchQuery, setCartSearchQuery] = useState('');
@@ -288,10 +506,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
   const [showCartRestore, setShowCartRestore] = useState(false);
   const [cartRestoreReason, setCartRestoreReason] = useState('');
   const [restoredCart, setRestoredCart] = useState(null);
-  
+
   // Voice ordering state
   const [showVoiceOrder, setShowVoiceOrder] = useState(false);
-  
+
+  // Quick actions pagination
+  const [quickActionsPage, setQuickActionsPage] = useState(1);
+
   // Cart item selection state
   const [selectedCartItems, setSelectedCartItems] = useState([]);
   const [showItemActions, setShowItemActions] = useState(false);
@@ -533,50 +754,6 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
     
     return combinedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [orders]);
-
-  // Filter and sort orders for order history
-  const filteredOrders = useMemo(() => {
-    let filtered = [...allOrders];
-    
-    // Apply search filter
-    if (orderHistorySearch) {
-      const searchLower = orderHistorySearch.toLowerCase();
-      filtered = filtered.filter(order => 
-        (order.customerName || '').toLowerCase().includes(searchLower) ||
-        (order.tableName || '').toLowerCase().includes(searchLower) ||
-        (order.id || '').toLowerCase().includes(searchLower) ||
-        (order.invoiceNumber || '').toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Apply status filter
-    if (orderHistoryFilter !== 'all') {
-      filtered = filtered.filter(order => {
-        const status = (order.status || 'PENDING').toLowerCase();
-        return status === orderHistoryFilter.toLowerCase();
-      });
-    }
-    
-    // Apply sorting
-    switch (orderHistorySort) {
-      case 'date-desc':
-        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-      case 'date-asc':
-        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        break;
-      case 'amount-desc':
-        filtered.sort((a, b) => (b.total || 0) - (a.total || 0));
-        break;
-      case 'amount-asc':
-        filtered.sort((a, b) => (a.total || 0) - (b.total || 0));
-        break;
-      default:
-        break;
-    }
-    
-    return filtered;
-  }, [allOrders, orderHistorySearch, orderHistoryFilter, orderHistorySort]);
 
   // Common modifiers - could be made configurable in settings in the future
   const commonModifiers = settings.commonModifiers || [
@@ -915,6 +1092,14 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       return prev.filter((_, i) => i !== index);
     });
     setSelectedCartItems(prev => prev.filter(i => i !== index));
+  };
+
+  const updateCartItemQuantity = (index, newQuantity) => {
+    if (newQuantity < 1) return;
+    setCart(prev => {
+      if (!prev || !Array.isArray(prev)) return [];
+      return prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item);
+    });
   };
 
   const toggleCartItemSelection = (index) => {
@@ -1493,11 +1678,13 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       // Generate receipt HTML
       const receiptHTML = generateReceiptHTML(order);
 
-      const apiKey = settings.brevoApiKey || process.env.VITE_BREVO_API_KEY || '';
+      // Read API key from main settings
+      const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      const apiKey = mainSettings.brevoApiKey || settings.brevoApiKey || process.env.VITE_BREVO_API_KEY || '';
 
       if (!apiKey) {
         console.error('Brevo API key not configured');
-        setAlertMessage('Email service not configured');
+        setAlertMessage('Email service not configured. Please add Brevo API key in Settings > Receipt Studio');
         setShowAlert(true);
         return false;
       }
@@ -1510,8 +1697,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         },
         body: JSON.stringify({
           sender: {
-            name: settings.storeName || 'BakeryPOS',
-            email: settings.storeEmail || 'noreply@bakerypos.com'
+            name: mainSettings.storeName || settings.storeName || 'BakeryPOS',
+            email: mainSettings.storeEmail || settings.storeEmail || 'noreply@bakerypos.com'
           },
           to: [{
             email: email,
@@ -1960,8 +2147,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       console.log('KOT auto-creation disabled in settings');
     }
 
-    // Auto-print receipt
-    if (settings.autoPrintReceipt) {
+    // Auto-print receipt using Receipt Studio settings
+    const receiptAutoPrint = settings.receiptAutoPrint !== false;
+    if (receiptAutoPrint) {
       setTimeout(() => {
         window.print();
       }, 500);
@@ -2934,6 +3122,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         kdsSyncStatus={kdsSyncStatus}
         printerStatus={printerStatus}
         orderHandoffStatus={orderHandoffStatus}
+        setShowColumnSettings={setShowColumnSettings}
       />
 
 
@@ -2947,17 +3136,19 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
         minHeight: 0,
         maxWidth: '100%',
         flexDirection: screenSize === 'small' ? 'column' : screenSize === 'medium' ? 'row' : 'row',
-        background: screenSize === 'small' ? (darkMode ? '#111111' : '#f3f4f6') : 'transparent'
+        background: screenSize === 'small' ? (darkMode ? '#111111' : '#f3f4f6') : 'transparent',
+        position: 'relative'
       }}>
         {/* Left Column - Menu */}
-        {(screenSize !== 'small' || activeView === 'menu') && (
+        {showMenuColumn && (screenSize !== 'small' || activeView === 'menu') && (
           <div style={{
             flex: screenSize === 'small' ? 1 : screenSize === 'medium' ? 1 : 1,
             display: 'flex',
             flexDirection: 'column',
             background: darkMode ? '#0a0a0a' : '#ffffff',
-            borderRadius: '12px',
-            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+            borderRadius: screenSize === 'small' ? '12px' : '12px 0 0 12px',
+            border: screenSize === 'small' ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+            borderRight: screenSize === 'small' ? 'none' : `2px solid ${darkMode ? '#333333' : '#d1d5db'}`,
             overflow: 'hidden',
             minHeight: screenSize === 'small' ? '300px' : 'auto',
             minWidth: screenSize === 'small' ? '0' : screenSize === 'medium' ? '200px' : '280px',
@@ -2969,40 +3160,25 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               {selectedCustomer && customerOrderHistory[selectedCustomer.id]?.length > 0 && (
                 <button
                   onClick={() => setShowRecentlyOrdered(!showRecentlyOrdered)}
-                  style={{
-                    padding: '6px 12px',
-                    background: showRecentlyOrdered ? '#10b981' : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: showRecentlyOrdered ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
-                    border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
+                  style={getCategoryFilterStyle(settings.menuLayout, darkMode, showRecentlyOrdered, true)}
                 >
                   ⭐ Recently Ordered
                 </button>
               )}
-              {categories.map(category => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  style={{
-                    padding: '6px 12px',
-                    background: selectedCategory === category ? '#6366f1' : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: selectedCategory === category ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
-                    border: selectedCategory === category ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  {category}
-                </button>
-              ))}
+              {categories.map(category => {
+                const menuLayout = settings.menuLayout || {};
+                const filterStyle = getCategoryFilterStyle(menuLayout, darkMode, selectedCategory === category);
+                
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    style={filterStyle}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
             </div>
             
             {/* Recently Ordered Items */}
@@ -3112,78 +3288,134 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           </div>
 
           {/* Menu Grid */}
-          <div style={{ 
+          <div style={{
             flex: 1,
             overflowY: 'auto',
             padding: screenSize === 'small' ? '12px' : '16px'
           }}>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: screenSize === 'small' ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(140px, 1fr))', 
-              gap: screenSize === 'small' ? '10px' : '12px'
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: getMenuGridColumns(settings.menuLayout, screenSize),
+              gap: getMenuGridGap(settings.menuLayout),
+              border: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`
             }}>
-              {filteredItems.map(item => {
-                const inventoryItem = inventory.find(inv => inv.name === item.name);
-                const stockQuantity = inventoryItem ? inventoryItem.quantity : null;
-                const isLowStock = stockQuantity !== null && stockQuantity < 10;
-                const isOutOfStock = stockQuantity !== null && stockQuantity <= 0;
-                const happyHourPrice = getHappyHourPrice(item);
-                const isHappyHourItem = happyHourPrice < item.price;
+              {(() => {
+                const menuLayout = settings.menuLayout || {};
+                const cardStyle = getMenuCardStyle(menuLayout, darkMode);
+                const showImages = menuLayout.showImages !== false;
+                const showDescriptions = menuLayout.showDescriptions !== false;
+                const showStockBadges = menuLayout.showStockBadges !== false;
+                const showVegNonVeg = menuLayout.showVegNonVeg !== false;
+                const showCategoryLabels = menuLayout.showCategoryLabels !== false;
+                const viewMode = menuLayout.viewMode || 'grid';
                 
-                // Check if item is part of a combo deal
-                const applicableCombo = comboDeals.find(combo => 
-                  combo.items.some(ci => item.name.toLowerCase().includes(ci.toLowerCase()))
-                );
-                const comboPrice = applicableCombo ? item.price * (1 - applicableCombo.discount / 100) : null;
-                
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => {
-                      if (isOutOfStock) {
-                        setAlertMessage(`${item.name} is out of stock!`);
-                        setShowAlert(true);
-                        return;
-                      }
-                      if (isLowStock) {
-                        setAlertMessage(`Only ${stockQuantity} ${item.name}(s) left!`);
-                        setShowAlert(true);
-                      }
-                      addToCart(item, quantityInput);
-                    }}
-                    style={{
-                      background: darkMode ? '#111111' : '#ffffff',
-                      padding: screenSize === 'small' ? '12px' : '16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px',
+                return filteredItems.map(item => {
+                  const inventoryItem = inventory.find(inv => inv.name === item.name);
+                  const stockQuantity = inventoryItem ? inventoryItem.quantity : null;
+                  const isLowStock = stockQuantity !== null && stockQuantity < 10;
+                  const isOutOfStock = stockQuantity !== null && stockQuantity <= 0;
+                  const happyHourPrice = getHappyHourPrice(item);
+                  const isHappyHourItem = happyHourPrice < item.price;
+                  
+                  // Check if item is part of a combo deal
+                  const applicableCombo = comboDeals.find(combo => 
+                    combo.items.some(ci => item.name.toLowerCase().includes(ci.toLowerCase()))
+                  );
+                  const comboPrice = applicableCombo ? item.price * (1 - applicableCombo.discount / 100) : null;
+                  
+                  // Get card style based on view mode
+                  const getCardStyle = () => {
+                    const baseStyle = {
+                      ...cardStyle,
                       opacity: (item.active && !item.eightySixed && !isOutOfStock) ? 1 : 0.5,
-                      border: (item.active && !item.eightySixed && !isOutOfStock) ? 
-                            (isLowStock ? '2px solid #f59e0b' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`) : 
-                            (isOutOfStock ? '2px solid #ef4444' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`),
                       cursor: (item.active && !item.eightySixed && !isOutOfStock) ? 'pointer' : 'not-allowed',
                       transition: 'all 0.15s ease',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                      minHeight: screenSize === 'small' ? '100px' : '120px',
                       position: 'relative'
-                    }}
+                    };
+                    
+                    if (viewMode === 'list') {
+                      return {
+                        ...baseStyle,
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        gap: '12px',
+                        minHeight: '60px',
+                        borderRight: 'none',
+                        borderBottom: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`
+                      };
+                    } else if (viewMode === 'compact') {
+                      return {
+                        ...baseStyle,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '8px',
+                        gap: '4px',
+                        minHeight: '80px',
+                        borderRight: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                        borderBottom: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`
+                      };
+                    } else if (viewMode === 'large') {
+                      return {
+                        ...baseStyle,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '20px',
+                        gap: '12px',
+                        minHeight: '180px',
+                        borderRight: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                        borderBottom: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`
+                      };
+                    } else {
+                      return {
+                        ...baseStyle,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: screenSize === 'small' ? '12px' : '16px',
+                        gap: '8px',
+                        minHeight: screenSize === 'small' ? '100px' : '120px',
+                        borderRight: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                        borderBottom: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`
+                      };
+                    }
+                  };
+                  
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        if (isOutOfStock) {
+                          setAlertMessage(`${item.name} is out of stock!`);
+                          setShowAlert(true);
+                          return;
+                        }
+                        if (isLowStock) {
+                          setAlertMessage(`Only ${stockQuantity} ${item.name}(s) left!`);
+                          setShowAlert(true);
+                        }
+                        addToCart(item, quantityInput);
+                      }}
+                      style={getCardStyle()}
                     onMouseEnter={(e) => {
                       if (item.active && !item.eightySixed && !isOutOfStock) {
-                        e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.15)';
+                        e.target.style.boxShadow = '0 4px 12px rgba(99, 102, 1, 0.15)';
                         e.target.style.borderColor = darkMode ? '#6366f1' : '#2563eb';
                         e.target.style.transform = 'translateY(-2px)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (item.active && !item.eightySixed && !isOutOfStock) {
-                        e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                        e.target.style.boxShadow = cardStyle.boxShadow;
                         e.target.style.borderColor = isLowStock ? '#f59e0b' : (darkMode ? '#222222' : '#e5e7eb');
                         e.target.style.transform = 'translateY(0)';
                       }
                     }}
                   >
-                    {stockQuantity !== null && (
+                    {showStockBadges && stockQuantity !== null && (
                       <div style={{
                         position: 'absolute',
                         top: '8px',
@@ -3198,22 +3430,47 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         {isOutOfStock ? 'Out of Stock' : `${stockQuantity} left`}
                       </div>
                     )}
-                    {isHappyHourItem && (
+                    
+                    {showVegNonVeg && typeof item.isVeg === 'boolean' && (
                       <div style={{
                         position: 'absolute',
                         top: '8px',
                         left: '8px',
-                        background: '#8b5cf6',
+                        width: '14px',
+                        height: '14px',
+                        border: `1.5px solid ${item.isVeg ? '#10b981' : '#ef4444'}`,
+                        borderRadius: '2px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1
+                      }}>
+                        <div style={{
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background: item.isVeg ? '#10b981' : '#ef4444'
+                        }} />
+                      </div>
+                    )}
+                    {isHappyHourItem && (
+                      <div style={{
+                        position: 'absolute',
+                        top: showVegNonVeg ? '28px' : '8px',
+                        left: showVegNonVeg ? '28px' : '8px',
+                        background: '#10b981',
                         color: '#ffffff',
                         padding: '2px 6px',
                         borderRadius: '4px',
                         fontSize: '10px',
-                        fontWeight: '600'
+                        fontWeight: '600',
+                        zIndex: 1
                       }}>
                         -{happyHourConfig.discount}%
                       </div>
                     )}
-                    {item.image ? (
+                    
+                    {showImages && item.image ? (
                       <img
                         src={item.image}
                         alt={item.name}
@@ -3230,7 +3487,8 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                         }}
                       />
                     ) : null}
-                    <span style={{ fontSize: screenSize === 'small' ? '32px' : '36px', display: item.image ? 'none' : 'block', marginBottom: item.image ? '0' : '8px' }}>{item.emoji || '🥐'}</span>
+                    <span style={{ fontSize: screenSize === 'small' ? '32px' : '36px', display: (showImages && item.image) ? 'none' : 'block', marginBottom: (showImages && item.image) ? '0' : '8px' }}>{item.emoji || '🥐'}</span>
+                    
                     <span style={{ 
                       fontSize: screenSize === 'small' ? '11px' : '12px', 
                       fontWeight: '500', 
@@ -3240,6 +3498,34 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     }}>
                       {item.name}
                     </span>
+                    
+                    {showCategoryLabels && selectedCategory === 'All' && item.category && (
+                      <span style={{ 
+                        fontSize: '9px', 
+                        fontWeight: '600', 
+                        letterSpacing: '0.3px', 
+                        textTransform: 'uppercase', 
+                        color: darkMode ? '#6b7280' : '#9ca3af',
+                        marginTop: '2px'
+                      }}>
+                        {item.category}
+                      </span>
+                    )}
+                    
+                    {showDescriptions && item.description && (
+                      <span style={{ 
+                        fontSize: '10px', 
+                        color: darkMode ? '#6b7280' : '#9ca3af', 
+                        marginTop: '4px',
+                        textAlign: 'center',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {item.description}
+                      </span>
+                    )}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                       {isHappyHourItem ? (
                         <>
@@ -3254,7 +3540,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                           <span style={{ 
                             fontSize: screenSize === 'small' ? '13px' : '14px', 
                             fontWeight: '600', 
-                            color: '#8b5cf6'
+                            color: '#10b981'
                           }}>
                             ₹{happyHourPrice.toFixed(2)}
                           </span>
@@ -3295,15 +3581,16 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       )}
                     </div>
                   </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>
       )}
 
         {/* Middle Column - Cart */}
-        {(screenSize !== 'small' || activeView === 'cart') && (
+        {showCartColumn && (screenSize !== 'small' || activeView === 'cart') && (
           <div style={{
             width: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '280px' : '340px',
             minWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '240px' : '320px',
@@ -3311,8 +3598,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             display: 'flex',
             flexDirection: 'column',
             background: darkMode ? '#0a0a0a' : '#ffffff',
-            borderRadius: '12px',
-            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+            borderRadius: '0',
+            border: screenSize === 'small' ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : 'none',
+            borderRight: screenSize === 'small' ? 'none' : `2px solid ${darkMode ? '#333333' : '#d1d5db'}`,
             overflow: 'hidden',
             flexShrink: 0,
             minHeight: screenSize === 'small' ? '400px' : 'auto'
@@ -3537,109 +3825,252 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div>Cart is empty</div>
               </div>
             ) : (
-              cart
-                .map((item, index) => ({ item, index }))
-                .filter(({ item }) => !cartSearchQuery || item.name.toLowerCase().includes(cartSearchQuery.toLowerCase()))
-                .map(({ item, index }) => (
-                <div 
-                  key={`${item.id}-${index}`} 
-                  onClick={() => toggleCartItemSelection(index)}
-                  style={{
-                    background: selectedCartItems.includes(index) ? (darkMode ? '#1e1b4b' : '#dbeafe') : (darkMode ? '#111111' : '#f9fafb'),
-                    borderRadius: '6px',
-                    padding: screenSize === 'small' ? '6px' : '8px',
-                    marginBottom: screenSize === 'small' ? '4px' : '6px',
-                    border: selectedCartItems.includes(index) ? `2px solid ${darkMode ? '#6366f1' : '#3b82f6'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: screenSize === 'small' ? '4px' : '6px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '500', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                          {selectedCartItems.includes(index) && <span style={{ marginRight: '4px' }}>✓</span>}
-                          {item.name}
-                          {item.isCustom && (
-                            <span style={{ 
-                              marginLeft: '4px', 
-                              fontSize: '10px', 
-                              padding: '1px 4px', 
-                              borderRadius: '3px',
-                              background: darkMode ? '#4c1d95' : '#fef3c7',
-                              color: darkMode ? '#a78bfa' : '#92400e',
-                              border: `1px solid ${darkMode ? '#fbbf24' : '#f59e0b'}`,
-                              fontWeight: '600'
-                            }}>
-                              Custom
-                            </span>
-                          )}
-                          {item.notes && (
-                            <span style={{ 
-                              marginLeft: '4px', 
-                              fontSize: '10px', 
-                              padding: '1px 4px', 
-                              borderRadius: '3px',
-                              background: item.noteType === 'allergy' ? '#fef2f2' : '#dbeafe',
-                              color: item.noteType === 'allergy' ? '#dc2626' : (darkMode ? '#6366f1' : '#2563eb'),
-                              border: item.noteType === 'allergy' ? '1px solid #ef4444' : `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
-                              fontWeight: '600'
-                            }}>
-                              {item.noteType === 'allergy' ? '⚠️' : '📝'}
-                            </span>
-                          )}
-                        </div>
-                        <SpeakButton
-                          text={`${item.quantity} ${item.name} at ₹${item.price.toFixed(2)}`}
-                          size="small"
-                        />
-                      </div>
-                      <div style={{ fontSize: screenSize === 'small' ? '9px' : '10px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
-                        ₹{item.price.toFixed(2)} × {item.quantity}
-                      </div>
-                      {item.baseItemName && (
-                        <div style={{ fontSize: screenSize === 'small' ? '8px' : '9px', color: darkMode ? '#a78bfa' : '#92400e', fontStyle: 'italic' }}>
-                          Base: {item.baseItemName}
-                        </div>
-                      )}
-                      {item.notes && (
-                        <div style={{ 
-                          fontSize: screenSize === 'small' ? '9px' : '10px', 
-                          color: item.noteType === 'allergy' ? (darkMode ? '#ef4444' : '#dc2626') : (darkMode ? '#9ca3af' : '#6b7280'),
-                          fontStyle: 'italic',
-                          marginTop: '2px',
-                          maxWidth: '100%',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {item.noteType === 'allergy' ? '⚠️ ' : '📝 '}{item.notes}
-                        </div>
-                      )}
+              (() => {
+                // Group cart items by category
+                const groupedCart = cart.reduce((acc, item, index) => {
+                  const category = item.category || 'Other';
+                  if (!acc[category]) acc[category] = [];
+                  acc[category].push({ item, index });
+                  return acc;
+                }, {});
+
+                return Object.entries(groupedCart).map(([category, items]) => (
+                  <div key={category} style={{ marginBottom: '12px' }}>
+                    {/* Category Header */}
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      color: darkMode ? '#9ca3af' : '#6b7280',
+                      marginBottom: '6px',
+                      padding: '4px 8px',
+                      background: darkMode ? '#1a1a1a' : '#f3f4f6',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span>{category}</span>
+                      <span>{items.length} item{items.length > 1 ? 's' : ''}</span>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFromCart(index);
-                      }}
-                      style={{
-                        padding: screenSize === 'small' ? '2px 5px' : '3px 6px',
-                        background: darkMode ? '#4c1d95' : '#fee2e2',
-                        color: darkMode ? '#a78bfa' : '#dc2626',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: screenSize === 'small' ? '11px' : '12px',
-                        cursor: 'pointer',
-                        fontWeight: '600'
-                      }}
-                    >
-                      ✕
-                    </button>
+
+                    {/* Items in this category */}
+                    {items
+                      .filter(({ item }) => !cartSearchQuery || item.name.toLowerCase().includes(cartSearchQuery.toLowerCase()))
+                      .map(({ item, index }) => (
+                      <div
+                        key={`${item.id}-${index}`}
+                        onClick={() => toggleCartItemSelection(index)}
+                        style={{
+                          background: selectedCartItems.includes(index)
+                            ? (darkMode ? '#1e1b4b' : '#dbeafe')
+                            : (darkMode ? '#111111' : '#ffffff'),
+                          borderRadius: '8px',
+                          padding: screenSize === 'small' ? '8px' : '10px',
+                          marginBottom: '6px',
+                          border: selectedCartItems.includes(index)
+                            ? `2px solid ${darkMode ? '#6366f1' : '#3b82f6'}`
+                            : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          gap: '10px',
+                          alignItems: 'center',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {/* Item Image (if available) */}
+                        {item.image && (
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '6px',
+                            background: darkMode ? '#1a1a1a' : '#f3f4f6',
+                            backgroundImage: `url(${item.image})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            flexShrink: 0
+                          }} />
+                        )}
+
+                        {/* Item Details */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                            <div style={{
+                              fontSize: screenSize === 'small' ? '11px' : '12px',
+                              fontWeight: '600',
+                              color: darkMode ? '#ffffff' : '#0a0a0a',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {selectedCartItems.includes(index) && <span style={{ marginRight: '4px', color: '#6366f1' }}>✓</span>}
+                              {item.name}
+                            </div>
+                            {/* Badges */}
+                            {item.isCustom && (
+                              <span style={{
+                                fontSize: '9px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: darkMode ? '#4c1d95' : '#fef3c7',
+                                color: darkMode ? '#a78bfa' : '#92400e',
+                                border: `1px solid ${darkMode ? '#fbbf24' : '#f59e0b'}`,
+                                fontWeight: '600',
+                                flexShrink: 0
+                              }}>
+                                Custom
+                              </span>
+                            )}
+                            {item.notes && (
+                              <span style={{
+                                fontSize: '9px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: item.noteType === 'allergy' ? '#fef2f2' : '#dbeafe',
+                                color: item.noteType === 'allergy' ? '#dc2626' : (darkMode ? '#6366f1' : '#2563eb'),
+                                border: item.noteType === 'allergy' ? '1px solid #ef4444' : `1px solid ${darkMode ? '#6366f1' : '#3b82f6'}`,
+                                fontWeight: '600',
+                                flexShrink: 0
+                              }}>
+                                {item.noteType === 'allergy' ? '⚠️' : '📝'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Notes */}
+                          {item.notes && (
+                            <div style={{
+                              fontSize: '10px',
+                              color: item.noteType === 'allergy' ? (darkMode ? '#ef4444' : '#dc2626') : (darkMode ? '#9ca3af' : '#6b7280'),
+                              fontStyle: 'italic',
+                              marginBottom: '4px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {item.noteType === 'allergy' ? '⚠️ ' : '📝 '}{item.notes}
+                            </div>
+                          )}
+
+                          {/* Price row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              fontSize: screenSize === 'small' ? '10px' : '11px',
+                              color: darkMode ? '#9ca3af' : '#6b7280'
+                            }}>
+                              ₹{item.price.toFixed(2)}
+                            </span>
+                            <SpeakButton
+                              text={`${item.quantity} ${item.name} at ₹${item.price.toFixed(2)}`}
+                              size="small"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-end',
+                          gap: '4px'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: darkMode ? '#1a1a1a' : '#f3f4f6',
+                            borderRadius: '6px',
+                            padding: '2px'
+                          }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (item.quantity > 1) {
+                                  updateCartItemQuantity(index, item.quantity - 1);
+                                }
+                              }}
+                              disabled={item.quantity <= 1}
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: darkMode ? '#222222' : '#ffffff',
+                                border: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                                borderRadius: '4px',
+                                color: darkMode ? '#ffffff' : '#0a0a0a',
+                                fontSize: '14px',
+                                cursor: item.quantity > 1 ? 'pointer' : 'not-allowed',
+                                opacity: item.quantity > 1 ? 1 : 0.4
+                              }}
+                            >
+                              −
+                            </button>
+                            <span style={{
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              color: darkMode ? '#ffffff' : '#0a0a0a',
+                              minWidth: '20px',
+                              textAlign: 'center'
+                            }}>
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateCartItemQuantity(index, item.quantity + 1);
+                              }}
+                              style={{
+                                width: '24px',
+                                height: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: darkMode ? '#222222' : '#ffffff',
+                                border: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                                borderRadius: '4px',
+                                color: darkMode ? '#ffffff' : '#0a0a0a',
+                                fontSize: '14px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Total price */}
+                          <div style={{
+                            fontSize: screenSize === 'small' ? '11px' : '12px',
+                            fontWeight: '700',
+                            color: darkMode ? '#6366f1' : '#2563eb'
+                          }}>
+                            ₹{(item.price * item.quantity).toFixed(2)}
+                          </div>
+
+                          {/* Remove button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFromCart(index);
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: darkMode ? '#4c1d95' : '#fee2e2',
+                              color: darkMode ? '#a78bfa' : '#dc2626',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontWeight: '600'
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: screenSize === 'small' ? '11px' : '12px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
-                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                </div>
-              ))
+                ));
+              })()
             )}
 
             {/* Item Actions Panel */}
@@ -4150,28 +4581,28 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '6px',
-              marginBottom: '8px',
-              marginTop: '4px'
+              gap: '8px',
+              marginBottom: '10px',
+              marginTop: '6px'
             }}>
-              {/* Row 1: Customer Type Pill */}
-              <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` }}>
+              {/* Customer Type Selection */}
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   onClick={() => { setSelectedCustomer(null); setCustomerPhone(''); }}
                   style={{
                     flex: 1,
-                    padding: '5px 0',
-                    fontSize: '10px',
-                    fontWeight: '700',
-                    background: !selectedCustomer ? (darkMode ? '#6366f1' : '#1e40af') : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: !selectedCustomer ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
-                    border: 'none',
+                    padding: '8px 10px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    background: !selectedCustomer ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: !selectedCustomer ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
+                    border: !selectedCustomer ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '3px',
-                    transition: 'all 0.15s'
+                    gap: '4px'
                   }}
                 >
                   🚶 Walk-in
@@ -4180,18 +4611,18 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   onClick={() => setShowCustomerLookup(true)}
                   style={{
                     flex: 1,
-                    padding: '5px 0',
-                    fontSize: '10px',
-                    fontWeight: '700',
-                    background: selectedCustomer ? (darkMode ? '#6366f1' : '#1e40af') : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: selectedCustomer ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
-                    border: 'none',
+                    padding: '8px 10px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    background: selectedCustomer ? (darkMode ? '#6366f1' : '#3b82f6') : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: selectedCustomer ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
+                    border: selectedCustomer ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '3px',
-                    transition: 'all 0.15s',
+                    gap: '4px',
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
                     textOverflow: 'ellipsis'
@@ -4201,81 +4632,86 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 </button>
               </div>
 
-              {/* Row 2: Dining Type Pill & Table Chip */}
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                {/* Dining Type toggle */}
-                <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`, flex: 1.2 }}>
-                  <button
-                    onClick={() => { setOrderType('dine-in'); }}
-                    style={{
-                      flex: 1,
-                      padding: '5px 0',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      background: orderType === 'dine-in' ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
-                      color: orderType === 'dine-in' ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '3px',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    🍽️ Dine-in
-                  </button>
-                  <button
-                    onClick={() => { setOrderType('takeaway'); setSelectedTable(null); }}
-                    style={{
-                      flex: 1,
-                      padding: '5px 0',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      background: orderType === 'takeaway' ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#f3f4f6'),
-                      color: orderType === 'takeaway' ? '#ffffff' : (darkMode ? '#9ca3af' : '#9ca3af'),
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '3px',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    🛍️ Takeaway
-                  </button>
-                </div>
-
-                {/* Table assignment chip */}
+              {/* Order Type Selection */}
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button
-                  onClick={() => {
-                    setShowTableSelector(true);
-                  }}
+                  onClick={() => { setOrderType('dine-in'); }}
                   style={{
                     flex: 1,
-                    padding: '5px 8px',
-                    background: orderType === 'takeaway' ? (darkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)') : selectedTable ? (darkMode ? '#4c1d95' : '#ede9fe') : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: orderType === 'takeaway' ? (darkMode ? '#6b7280' : '#cbd5e1') : selectedTable ? '#a78bfa' : (darkMode ? '#9ca3af' : '#475569'),
-                    border: orderType === 'takeaway' ? `1px dashed ${darkMode ? '#4b5563' : '#cbd5e1'}` : selectedTable ? `1px solid ${darkMode ? '#6d28d9' : '#c4b5fd'}` : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    padding: '8px 10px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    background: orderType === 'dine-in' ? (darkMode ? '#10b981' : '#059669') : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: orderType === 'dine-in' ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
+                    border: orderType === 'dine-in' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '6px',
-                    fontSize: '10px',
-                    fontWeight: '700',
-                    cursor: orderType === 'takeaway' ? 'not-allowed' : 'pointer',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '4px',
-                    transition: 'all 0.15s',
-                    minWidth: '70px',
-                    opacity: orderType === 'takeaway' ? 0.5 : 1
+                    gap: '4px'
                   }}
-                  disabled={orderType === 'takeaway'}
-                  title={orderType === 'takeaway' ? 'Table only available for dine-in' : selectedTable ? `Table ${selectedTable.name}` : 'Assign table'}
                 >
-                  🪑 {selectedTable ? `T${selectedTable.name}` : 'Select'}
+                  🍽️ Dine-in
+                </button>
+                <button
+                  onClick={() => { setOrderType('takeaway'); setSelectedTable(null); }}
+                  style={{
+                    flex: 1,
+                    padding: '8px 10px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    background: orderType === 'takeaway' ? (darkMode ? '#f59e0b' : '#ea580c') : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: orderType === 'takeaway' ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
+                    border: orderType === 'takeaway' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  🛍️ Takeaway
                 </button>
               </div>
+
+              {/* Table Selection */}
+              <button
+                onClick={() => setShowTableSelector(true)}
+                disabled={orderType === 'takeaway'}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  background: orderType === 'takeaway'
+                    ? (darkMode ? '#1a1a1a' : '#f3f4f6')
+                    : selectedTable
+                    ? (darkMode ? '#8b5cf6' : '#7c3aed')
+                    : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                  color: orderType === 'takeaway'
+                    ? (darkMode ? '#6b7280' : '#9ca3af')
+                    : selectedTable
+                    ? '#ffffff'
+                    : (darkMode ? '#9ca3af' : '#6b7280'),
+                  border: orderType === 'takeaway'
+                    ? `1px dashed ${darkMode ? '#4b5563' : '#cbd5e1'}`
+                    : selectedTable
+                    ? 'none'
+                    : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  cursor: orderType === 'takeaway' ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  opacity: orderType === 'takeaway' ? 0.5 : 1
+                }}
+                title={orderType === 'takeaway' ? 'Table only available for dine-in' : selectedTable ? `Table ${selectedTable.name}` : 'Assign table'}
+              >
+                🪑 {selectedTable ? `Table ${selectedTable.name}` : 'Select Table'}
+              </button>
             </div>
 
             <button
@@ -4283,11 +4719,11 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               disabled={cart.length === 0}
               style={{
                 width: '100%',
-                padding: '8px',
-                background: cart.length > 0 ? '#2563eb' : '#9ca3af',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
+                padding: '10px',
+                background: cart.length > 0 ? (darkMode ? '#10b981' : '#059669') : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                color: cart.length > 0 ? '#ffffff' : (darkMode ? '#6b7280' : '#9ca3af'),
+                border: cart.length > 0 ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: '600',
                 cursor: cart.length > 0 ? 'pointer' : 'not-allowed'
@@ -4300,7 +4736,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       )}
 
         {/* Right Column - Numpad & Actions */}
-        {(screenSize !== 'small' || activeView === 'keypad') && (
+        {showNumpadColumn && (screenSize !== 'small' || activeView === 'keypad') && (
           <div style={{
             width: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '240px' : '280px',
             minWidth: screenSize === 'small' ? '100%' : screenSize === 'medium' ? '200px' : '260px',
@@ -4315,11 +4751,10 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
           }}>
           {/* Quick Actions */}
           <div style={{
-            background: screenSize === 'small' ? (darkMode ? '#111111' : '#ffffff') : (darkMode ? 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)' : 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)'),
-            borderRadius: '14px',
-            border: screenSize === 'small' ? `1px solid ${darkMode ? '#222222' : '#e5e7eb'}` : `1px solid ${darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.07)'}`,
-            padding: screenSize === 'small' ? '10px' : '12px',
-            backdropFilter: screenSize === 'small' ? 'none' : 'blur(8px)'
+            background: darkMode ? '#111111' : '#ffffff',
+            borderRadius: '8px',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+            padding: screenSize === 'small' ? '10px' : '12px'
           }}>
             <div style={{
               fontSize: '10px',
@@ -4332,177 +4767,322 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
             }}>
               Quick Actions
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '6px' : '8px' }}>
-              {[
-                { id: 'hold',     label: 'Hold',     icon: '⏸',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.25)' },
-                { id: 'voice',    label: 'Voice',    icon: '🎤', color: '#818cf8', bg: 'rgba(129,140,248,0.12)', border: 'rgba(129,140,248,0.25)' },
-                { id: 'custom',   label: 'Custom',   icon: '✚',  color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: 'rgba(52,211,153,0.25)' },
-                { id: 'history',  label: 'History',  icon: '🕐', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)' },
-                { id: 'customer', label: 'Customer', icon: '👤', color: '#c084fc', bg: 'rgba(192,132,252,0.12)', border: 'rgba(192,132,252,0.25)' },
-                { id: 'tax',      label: 'Tax',      icon: '💰', color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.25)' },
-                { id: 'void',     label: 'Void',     icon: '⊘',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)' },
-                { id: 'held',     label: 'Held',     icon: '📋', color: '#facc15', bg: 'rgba(250,204,21,0.12)',  border: 'rgba(250,204,21,0.25)' },
-                { id: 'table',    label: 'Table',    icon: '🪑', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
-              ].map(action => {
-                // Show active state for relevant toggleable actions
-                const isActive =
-                  (action.id === 'customer' && selectedCustomer) ||
-                  (action.id === 'held' && heldOrders.length > 0) ||
-                  (action.id === 'split' && showSplitBillModal) ||
-                  (action.id === 'table' && selectedTable);
-                const activeBg = isActive ? action.bg.replace('0.12', '0.28') : action.bg;
-                const activeBorder = isActive ? action.color : action.border;
 
-                return (
-                  <button
-                    key={action.id}
-                    onClick={() => {
-                      if (action.id === 'hold') handleHoldOrder();
-                      if (action.id === 'voice') {
-                        setShowVoiceOrder(!showVoiceOrder);
-                        setShowCustomOrder(false);
-                        setShowOrderHistory(false);
-                        setShowCustomerLookup(false);
-                        setShowSplitBillModal(false);
-                        setShowHeldOrders(false);
-                        setShowTableSelector(false);
-                      }
-                      if (action.id === 'custom') {
-                        setShowCustomOrder(!showCustomOrder);
-                        setShowVoiceOrder(false);
-                        setShowOrderHistory(false);
-                        setShowCustomerLookup(false);
-                        setShowSplitBillModal(false);
-                        setShowHeldOrders(false);
-                        setShowTableSelector(false);
-                      }
-                      if (action.id === 'history') {
-                        setShowOrderHistory(!showOrderHistory);
-                        setShowVoiceOrder(false);
-                        setShowCustomOrder(false);
-                        setShowCustomerLookup(false);
-                        setShowSplitBillModal(false);
-                        setShowHeldOrders(false);
-                        setShowTableSelector(false);
-                      }
-                      if (action.id === 'customer') {
-                        setShowCustomerLookup(!showCustomerLookup);
-                        setShowVoiceOrder(false);
-                        setShowCustomOrder(false);
-                        setShowOrderHistory(false);
-                        setShowSplitBillModal(false);
-                        setShowHeldOrders(false);
-                        setShowTableSelector(false);
-                      }
-                      if (action.id === 'tax') {
-                        setShowGstSettings(true);
-                        setShowVoiceOrder(false);
-                        setShowCustomOrder(false);
-                        setShowOrderHistory(false);
-                        setShowCustomerLookup(false);
-                        setShowSplitBillModal(false);
-                        setShowHeldOrders(false);
-                        setShowTableSelector(false);
-                      }
-                      if (action.id === 'void') handleVoidLastItem();
-                      if (action.id === 'held') {
-                        setShowHeldOrders(!showHeldOrders);
-                        setShowVoiceOrder(false);
-                        setShowCustomOrder(false);
-                        setShowOrderHistory(false);
-                        setShowCustomerLookup(false);
-                        setShowSplitBillModal(false);
-                        setShowTableSelector(false);
-                      }
-                      if (action.id === 'table') {
-                        setShowTableSelector(!showTableSelector);
-                        setShowVoiceOrder(false);
-                        setShowCustomOrder(false);
-                        setShowOrderHistory(false);
-                        setShowCustomerLookup(false);
-                        setShowSplitBillModal(false);
-                        setShowHeldOrders(false);
-                      }
-                    }}
-                    style={{
-                      padding: screenSize === 'small' ? '10px 4px' : '12px 4px',
-                      background: activeBg,
-                      color: action.color,
-                      border: `1px solid ${activeBorder}`,
-                      borderRadius: '10px',
-                      fontSize: screenSize === 'small' ? '9px' : '10px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '5px',
-                      transition: 'all 0.15s ease',
-                      outline: 'none',
-                      letterSpacing: '0.02em',
-                      WebkitTapHighlightColor: 'transparent',
-                      position: 'relative'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = action.bg.replace('0.12', '0.22');
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = `0 4px 12px ${action.bg.replace('0.12', '0.3')}`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = activeBg;
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                    onMouseDown={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0) scale(0.95)';
-                    }}
-                    onMouseUp={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px) scale(1)';
-                    }}
-                  >
-                    {/* Badge for held orders count */}
-                    {action.id === 'held' && heldOrders.length > 0 && (
-                      <span style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: action.color,
-                        color: '#000',
-                        fontSize: '8px',
-                        fontWeight: '900',
-                        borderRadius: '50%',
-                        width: '14px',
-                        height: '14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        lineHeight: 1
-                      }}>
-                        {heldOrders.length}
-                      </span>
-                    )}
-                    {/* Badge for assigned table */}
-                    {action.id === 'table' && selectedTable && (
-                      <span style={{
-                        position: 'absolute',
-                        top: '3px',
-                        right: '3px',
-                        background: action.color,
-                        color: '#000',
-                        fontSize: '7px',
-                        fontWeight: '900',
-                        borderRadius: '4px',
-                        padding: '1px 4px',
-                        lineHeight: 1.4
-                      }}>
-                        {selectedTable.name}
-                      </span>
-                    )}
-                    <span style={{ fontSize: screenSize === 'small' ? '16px' : '18px', lineHeight: 1 }}>{action.icon}</span>
-                    {action.id === 'table' && selectedTable ? `T${selectedTable.name}` : action.label}
-                  </button>
-                );
-              })}
+            {/* Quick Actions with Pagination */}
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '6px' : '8px' }}>
+                {(() => {
+                  const actionsPage1 = [
+                    { id: 'hold',     label: 'Hold',     icon: '⏸',  color: '#f59e0b' },
+                    { id: 'voice',    label: 'Voice',    icon: '🎤', color: '#818cf8' },
+                    { id: 'custom',   label: 'Custom',   icon: '✚',  color: '#34d399' },
+                    { id: 'history',  label: 'History',  icon: '🕐', color: '#60a5fa' },
+                    { id: 'customer', label: 'Customer', icon: '👤', color: '#c084fc' },
+                    { id: 'tax',      label: 'Tax',      icon: '💰', color: '#10b981' },
+                  ];
+
+                  const actionsPage2 = [
+                    { id: 'void',     label: 'Void',     icon: '⊘',  color: '#ef4444' },
+                    { id: 'held',     label: 'Held',     icon: '📋', color: '#facc15' },
+                    { id: 'table',    label: 'Table',    icon: '🪑', color: '#a78bfa' },
+                    { id: 'split',    label: 'Split',    icon: '✂',  color: '#fb923c' },
+                    { id: 'discount', label: 'Discount', icon: '🏷',  color: '#f472b6' },
+                    { id: 'notes',    label: 'Notes',    icon: '📝', color: '#94a3b8' },
+                  ];
+
+                  const actionsPage3 = [
+                    { id: 'print',    label: 'Print',    icon: '🖨',  color: '#ec4899' },
+                    { id: 'kitchen',  label: 'Kitchen',  icon: '👨‍🍳', color: '#f97316' },
+                    { id: 'clear',    label: 'Clear',    icon: '🗑',  color: '#64748b' },
+                    { id: 'refund',   label: 'Refund',   icon: '↩',  color: '#14b8a6' },
+                    { id: 'exchange', label: 'Exchange', icon: '🔄', color: '#8b5cf6' },
+                    { id: 'search',   label: 'Search',   icon: '🔍', color: '#0ea5e9' },
+                  ];
+
+                  const currentActions = quickActionsPage === 1 ? actionsPage1 : quickActionsPage === 2 ? actionsPage2 : actionsPage3;
+
+                  return currentActions.map(action => {
+                    const isActive =
+                      (action.id === 'customer' && selectedCustomer) ||
+                      (action.id === 'held' && heldOrders.length > 0) ||
+                      (action.id === 'split' && showSplitBillModal) ||
+                      (action.id === 'table' && selectedTable);
+
+                    return (
+                      <button
+                        key={action.id}
+                        onClick={() => {
+                          if (action.id === 'hold') handleHoldOrder();
+                          if (action.id === 'voice') {
+                            setShowVoiceOrder(!showVoiceOrder);
+                            setShowCustomOrder(false);
+                            setShowOrderHistory(false);
+                            setShowCustomerLookup(false);
+                            setShowSplitBillModal(false);
+                            setShowHeldOrders(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'custom') {
+                            setShowCustomOrder(!showCustomOrder);
+                            setShowVoiceOrder(false);
+                            setShowOrderHistory(false);
+                            setShowCustomerLookup(false);
+                            setShowSplitBillModal(false);
+                            setShowHeldOrders(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'history') {
+                            setShowOrderHistory(!showOrderHistory);
+                            setShowVoiceOrder(false);
+                            setShowCustomOrder(false);
+                            setShowCustomerLookup(false);
+                            setShowSplitBillModal(false);
+                            setShowHeldOrders(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'customer') {
+                            setShowCustomerLookup(!showCustomerLookup);
+                            setShowVoiceOrder(false);
+                            setShowCustomOrder(false);
+                            setShowOrderHistory(false);
+                            setShowSplitBillModal(false);
+                            setShowHeldOrders(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'tax') {
+                            setShowGstSettings(true);
+                            setShowVoiceOrder(false);
+                            setShowCustomOrder(false);
+                            setShowOrderHistory(false);
+                            setShowCustomerLookup(false);
+                            setShowSplitBillModal(false);
+                            setShowHeldOrders(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'void') handleVoidLastItem();
+                          if (action.id === 'held') {
+                            setShowHeldOrders(!showHeldOrders);
+                            setShowVoiceOrder(false);
+                            setShowCustomOrder(false);
+                            setShowOrderHistory(false);
+                            setShowCustomerLookup(false);
+                            setShowSplitBillModal(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'table') {
+                            setShowTableSelector(!showTableSelector);
+                            setShowVoiceOrder(false);
+                            setShowCustomOrder(false);
+                            setShowOrderHistory(false);
+                            setShowCustomerLookup(false);
+                            setShowSplitBillModal(false);
+                            setShowHeldOrders(false);
+                          }
+                          if (action.id === 'split') {
+                            setShowSplitBillModal(!showSplitBillModal);
+                            setShowVoiceOrder(false);
+                            setShowCustomOrder(false);
+                            setShowOrderHistory(false);
+                            setShowCustomerLookup(false);
+                            setShowHeldOrders(false);
+                            setShowTableSelector(false);
+                          }
+                          if (action.id === 'discount') {
+                            // Toggle 10% discount shortcut
+                            setDiscount(discount === 0 ? 10 : 0);
+                          }
+                          if (action.id === 'notes') {
+                            // Toggle notes input with focus
+                            setShowNotesInput(!showNotesInput);
+                            // If opening, focus the textarea after a small delay
+                            if (!showNotesInput) {
+                              setTimeout(() => {
+                                const notesTextarea = document.querySelector('textarea[placeholder="e.g. eggless, double cream, write Happy Birthday..."]');
+                                if (notesTextarea) notesTextarea.focus();
+                              }, 100);
+                            }
+                          }
+                          if (action.id === 'print') {
+                            setShowPrintOptions(true);
+                          }
+                          if (action.id === 'kitchen') {
+                            // Send to kitchen
+                            if (cart.length > 0) {
+                              alert(`Sending ${cart.length} items to kitchen...`);
+                            } else {
+                              alert('Cart is empty. Add items before sending to kitchen.');
+                            }
+                          }
+                          if (action.id === 'clear') {
+                            if (cart.length > 0 && window.confirm('Clear entire cart?')) {
+                              setCart([]);
+                              setSelectedCartItems([]);
+                              setDiscount(0);
+                              setTipAmount(0);
+                              setOrderNotes('');
+                            }
+                          }
+                          if (action.id === 'refund') {
+                            alert('Refund functionality:\n\nSelect an order from Order History to process a refund.');
+                            setShowOrderHistory(true);
+                          }
+                          if (action.id === 'exchange') {
+                            alert('Exchange functionality:\n\nSelect items in cart to exchange for different variants.');
+                          }
+                          if (action.id === 'search') {
+                            // Focus on menu search input
+                            const searchInput = document.querySelector('input[placeholder="Search menu..."]') || 
+                                                 document.querySelector('input[placeholder*="Search"]') ||
+                                                 document.querySelector('input[type="text"]');
+                            if (searchInput) {
+                              searchInput.focus();
+                              searchInput.select();
+                            } else {
+                              alert('Use the search box above the menu to find items.');
+                            }
+                          }
+                        }}
+                        style={{
+                          padding: screenSize === 'small' ? '14px 8px' : '16px 10px',
+                          background: isActive ? action.color : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                          color: isActive ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                          border: isActive ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                          borderRadius: '6px',
+                          fontSize: screenSize === 'small' ? '11px' : '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'background 0.15s',
+                          outline: 'none',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = darkMode ? '#222222' : '#e5e7eb';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = darkMode ? '#1a1a1a' : '#f3f4f6';
+                          }
+                        }}
+                      >
+                        {/* Badge for held orders count */}
+                        {action.id === 'held' && heldOrders.length > 0 && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            background: action.color,
+                            color: '#ffffff',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            borderRadius: '10px',
+                            padding: '2px 6px',
+                            minWidth: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {heldOrders.length}
+                          </span>
+                        )}
+                        {/* Badge for assigned table */}
+                        {action.id === 'table' && selectedTable && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '4px',
+                            right: '4px',
+                            background: action.color,
+                            color: '#ffffff',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            borderRadius: '10px',
+                            padding: '2px 6px',
+                            minWidth: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            ✓
+                          </span>
+                        )}
+                        <span style={{ fontSize: screenSize === 'small' ? '18px' : '20px' }}>{action.icon}</span>
+                        <span>{action.label}</span>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Page Navigation */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '8px',
+                marginTop: '8px'
+              }}>
+                <button
+                  onClick={() => setQuickActionsPage(1)}
+                  style={{
+                    padding: '8px 16px',
+                    background: quickActionsPage === 1
+                      ? (darkMode ? '#6366f1' : '#3b82f6')
+                      : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: quickActionsPage === 1 ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                    border: quickActionsPage === 1
+                      ? 'none'
+                      : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  1
+                </button>
+                <button
+                  onClick={() => setQuickActionsPage(2)}
+                  style={{
+                    padding: '8px 16px',
+                    background: quickActionsPage === 2
+                      ? (darkMode ? '#6366f1' : '#3b82f6')
+                      : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: quickActionsPage === 2 ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                    border: quickActionsPage === 2
+                      ? 'none'
+                      : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  2
+                </button>
+                <button
+                  onClick={() => setQuickActionsPage(3)}
+                  style={{
+                    padding: '8px 16px',
+                    background: quickActionsPage === 3
+                      ? (darkMode ? '#6366f1' : '#3b82f6')
+                      : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: quickActionsPage === 3 ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
+                    border: quickActionsPage === 3
+                      ? 'none'
+                      : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  3
+                </button>
+              </div>
             </div>
           </div>
 
@@ -4684,28 +5264,35 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
               </button>
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '4px' : '5px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: screenSize === 'small' ? '6px' : '8px' }}>
               {['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map(key => (
                 <button
                   key={key}
                   onClick={() => handleNumpadClick(key)}
                   style={{
-                    padding: screenSize === 'small' ? '12px' : '14px',
-                    background: key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: key === '⌫' ? '#dc2626' : (darkMode ? '#ffffff' : '#0a0a0a'),
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: screenSize === 'small' ? '16px' : '18px',
+                    padding: screenSize === 'small' ? '16px' : '18px',
+                    background: key === '⌫' ? (darkMode ? '#7f1d1d' : '#fee2e2') : (darkMode ? '#1a1a1a' : '#f3f4f6'),
+                    color: key === '⌫' ? '#ef4444' : (darkMode ? '#ffffff' : '#111111'),
+                    border: key === '⌫' ? `1px solid ${darkMode ? '#991b1b' : '#fecaca'}` : `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                    borderRadius: '4px',
+                    fontSize: screenSize === 'small' ? '18px' : '20px',
                     fontWeight: '700',
                     cursor: 'pointer',
-                    transition: 'all 0.1s ease',
-                    outline: 'none'
+                    transition: 'background 0.1s',
+                    outline: 'none',
+                    boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = key === '⌫' ? '#fecaca' : (darkMode ? '#222222' : '#e5e7eb');
+                    e.currentTarget.style.background = key === '⌫' ? (darkMode ? '#991b1b' : '#fecaca') : (darkMode ? '#222222' : '#e5e7eb');
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = key === '⌫' ? '#fee2e2' : (darkMode ? '#111111' : '#f3f4f6');
+                    e.currentTarget.style.background = key === '⌫' ? (darkMode ? '#7f1d1d' : '#fee2e2') : (darkMode ? '#1a1a1a' : '#f3f4f6');
+                  }}
+                  onMouseDown={(e) => {
+                    e.currentTarget.style.transform = 'scale(0.95)';
+                  }}
+                  onMouseUp={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
                   }}
                 >
                   {key}
@@ -5266,31 +5853,31 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   }}
                   style={{
                     padding: '16px 12px',
-                    background: showMergeMode 
-                      ? isSelectedForMerge 
-                        ? '#8b5cf6' 
+                    background: showMergeMode
+                      ? isSelectedForMerge
+                        ? '#3b82f6'
                         : (darkMode ? '#111111' : '#f3f4f6')
-                      : selectedTable?.id === table.id 
+                      : selectedTable?.id === table.id
                         ? (darkMode ? '#6366f1' : '#2563eb')
-                        : table.status === 'occupied' 
-                          ? '#fee2e2' 
+                        : table.status === 'occupied'
+                          ? '#fee2e2'
                           : (darkMode ? '#111111' : '#f3f4f6'),
-                    color: showMergeMode 
-                      ? isSelectedForMerge 
-                        ? '#ffffff' 
+                    color: showMergeMode
+                      ? isSelectedForMerge
+                        ? '#ffffff'
                         : (darkMode ? '#ffffff' : '#111111')
-                      : selectedTable?.id === table.id 
-                        ? '#ffffff' 
-                        : table.status === 'occupied' 
-                          ? '#dc2626' 
+                      : selectedTable?.id === table.id
+                        ? '#ffffff'
+                        : table.status === 'occupied'
+                          ? '#dc2626'
                           : (darkMode ? '#ffffff' : '#111111'),
-                    border: isMerged 
-                      ? '3px solid #8b5cf6'
+                    border: isMerged
+                      ? '3px solid #3b82f6'
                       : showMergeMode && isSelectedForMerge
-                        ? '3px solid #8b5cf6'
-                        : selectedTable?.id === table.id 
-                          ? '2px solid #2563eb' 
-                          : table.status === 'occupied' 
+                        ? '3px solid #3b82f6'
+                        : selectedTable?.id === table.id
+                          ? '2px solid #2563eb'
+                          : table.status === 'occupied'
                             ? '2px solid #f59e0b' 
                             : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                     borderRadius: '12px',
@@ -5302,7 +5889,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     alignItems: 'center',
                     gap: '6px',
                     position: 'relative',
-                    boxShadow: isMerged || (showMergeMode && isSelectedForMerge) ? '0 4px 12px rgba(139, 92, 246, 0.3)' : 'none'
+                    boxShadow: isMerged || (showMergeMode && isSelectedForMerge) ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
                   }}
                 >
                   {isPrimaryInMerge && (
@@ -5310,7 +5897,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       position: 'absolute',
                       top: '-8px',
                       right: '-8px',
-                      background: '#8b5cf6',
+                      background: '#3b82f6',
                       color: '#fff',
                       padding: '2px 8px',
                       borderRadius: '6px',
@@ -5327,7 +5914,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                       top: '-8px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      background: '#8b5cf6',
+                      background: '#3b82f6',
                       color: '#fff',
                       padding: '2px 8px',
                       borderRadius: '8px',
@@ -5344,7 +5931,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                     👥 {table.capacity} seats
                   </span>
                   {isMerged && !showMergeMode && (
-                    <span style={{ fontSize: '10px', color: darkMode ? '#a78bfa' : '#8b5cf6', fontWeight: '600' }}>
+                    <span style={{ fontSize: '10px', color: darkMode ? '#60a5fa' : '#3b82f6', fontWeight: '600' }}>
                       + {mergedWith.join(', ')}
                     </span>
                   )}
@@ -5402,9 +5989,9 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 style={{
                   flex: 1,
                   padding: '12px',
-                  background: showMergeMode ? '#8b5cf6' : (darkMode ? '#111111' : '#f3f4f6'),
+                  background: showMergeMode ? '#3b82f6' : (darkMode ? '#111111' : '#f3f4f6'),
                   color: showMergeMode ? '#ffffff' : (darkMode ? '#ffffff' : '#111111'),
-                  border: showMergeMode ? '2px solid #8b5cf6' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
+                  border: showMergeMode ? '2px solid #3b82f6' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                   borderRadius: '8px',
                   fontSize: '14px',
                   cursor: 'pointer',
@@ -5417,7 +6004,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <button
                   onClick={() => {
                     // Check for conflicting tokens
-                    const tablesWithTokens = selectedTablesUnique.filter(t => t.currentToken);
+                    const tablesWithTokens = selectedTablesForMerge.filter(t => t.currentToken);
                     const uniqueTokens = [...new Set(tablesWithTokens.map(t => t.currentToken))];
                     
                     if (uniqueTokens.length > 1) {
@@ -6067,6 +6654,191 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 Save
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Options Modal */}
+      {showPrintOptions && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 5000
+        }}>
+          <div style={{
+            background: darkMode ? '#111111' : '#ffffff',
+            borderRadius: '12px',
+            padding: screenSize === 'small' ? '16px' : '24px',
+            width: screenSize === 'small' ? '95vw' : '400px',
+            maxWidth: screenSize === 'small' ? '95vw' : '90vw',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: screenSize === 'small' ? '16px' : '18px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', margin: 0 }}>
+                🖨 Print Options
+              </h3>
+              <button
+                onClick={() => setShowPrintOptions(false)}
+                style={{
+                  padding: screenSize === 'small' ? '12px 16px' : '8px 12px',
+                  background: darkMode ? '#111111' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#111111',
+                  border: 'none',
+                  borderRadius: screenSize === 'small' ? '8px' : '6px',
+                  cursor: 'pointer',
+                  fontSize: screenSize === 'small' ? '24px' : '18px',
+                  fontWeight: '700',
+                  minWidth: screenSize === 'small' ? '48px' : 'auto',
+                  minHeight: screenSize === 'small' ? '48px' : 'auto'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Print Options */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+              {/* Print Receipt */}
+              <button
+                onClick={() => {
+                  window.print();
+                  setShowPrintOptions(false);
+                }}
+                style={{
+                  padding: '14px',
+                  background: darkMode ? '#222222' : '#f9fafb',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#333333' : '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.background = darkMode ? '#222222' : '#f9fafb'}
+              >
+                <span style={{ fontSize: '20px' }}>🧾</span>
+                <span>Print Receipt</span>
+              </button>
+
+              {/* Print KOT */}
+              {cart.length > 0 && (
+                <button
+                  onClick={() => {
+                    alert('Sending KOT to kitchen...');
+                    setShowPrintOptions(false);
+                  }}
+                  style={{
+                    padding: '14px',
+                    background: darkMode ? '#222222' : '#f9fafb',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#333333' : '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = darkMode ? '#222222' : '#f9fafb'}
+                >
+                  <span style={{ fontSize: '20px' }}>👨‍🍳</span>
+                  <span>Print Kitchen Order Ticket</span>
+                </button>
+              )}
+
+              {/* Print Settings */}
+              <button
+                onClick={() => {
+                  setShowPrintOptions(false);
+                  setShowPrintSettings(true);
+                }}
+                style={{
+                  padding: '14px',
+                  background: darkMode ? '#222222' : '#f9fafb',
+                  color: darkMode ? '#ffffff' : '#0a0a0a',
+                  border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = darkMode ? '#333333' : '#f3f4f6'}
+                onMouseLeave={(e) => e.currentTarget.style.background = darkMode ? '#222222' : '#f9fafb'}
+              >
+                <span style={{ fontSize: '20px' }}>⚙️</span>
+                <span>Printer Settings</span>
+              </button>
+
+              {/* Number of Copies */}
+              <div style={{
+                padding: '12px',
+                background: darkMode ? '#222222' : '#f9fafb',
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#ffffff' : '#0a0a0a', marginBottom: '8px' }}>
+                  Copies
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[1, 2, 3].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => setPrintCopies(num)}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        background: printCopies === num ? (darkMode ? '#6366f1' : '#2563eb') : (darkMode ? '#111111' : '#ffffff'),
+                        color: printCopies === num ? '#ffffff' : (darkMode ? '#ffffff' : '#0a0a0a'),
+                        border: printCopies === num ? 'none' : `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPrintOptions(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: darkMode ? '#222222' : '#f3f4f6',
+                color: darkMode ? '#ffffff' : '#111111',
+                border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
@@ -7828,472 +8600,54 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
       )}
 
       {/* Order History Modal */}
-      {showOrderHistory && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 5000
-        }}>
-          <div style={{
-            background: darkMode ? '#0a0a0a' : '#ffffff',
-            borderRadius: '16px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            maxWidth: '900px',
-            width: '95%',
-            maxHeight: '90vh',
-            overflow: 'hidden',
-            border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`
-          }}>
-            {/* Header */}
-            <div style={{
-              background: darkMode ? '#0a0a0a' : '#f9fafb',
-              padding: '20px 24px',
-              borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div>
-                <div style={{ fontSize: '20px', fontWeight: '700', color: darkMode ? '#f3f4f6' : '#0a0a0a', marginBottom: '4px' }}>
-                  📋 Order History
-                </div>
-                <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
-                  {allOrders.length} orders total
-                </div>
-              </div>
-              <button
-                onClick={() => setShowOrderHistory(false)}
-                style={{
-                  background: darkMode ? '#111111' : '#f3f4f6',
-                  border: 'none',
-                  color: darkMode ? '#f3f4f6' : '#6b7280',
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.target.style.background = darkMode ? '#222222' : '#e5e7eb'}
-                onMouseLeave={(e) => e.target.style.background = darkMode ? '#111111' : '#f3f4f6'}
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Filters and Search */}
-            <div style={{
-              padding: '16px 24px',
-              borderBottom: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
-              display: 'flex',
-              gap: '12px',
-              flexWrap: 'wrap'
-            }}>
-              <input
-                type="text"
-                placeholder="Search orders..."
-                value={orderHistorySearch}
-                onChange={(e) => setOrderHistorySearch(e.target.value)}
-                style={{
-                  flex: 1,
-                  minWidth: '200px',
-                  padding: '10px 14px',
-                  background: darkMode ? '#111111' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
-                  fontSize: '14px'
-                }}
-              />
-              <select
-                value={orderHistoryFilter}
-                onChange={(e) => setOrderHistoryFilter(e.target.value)}
-                style={{
-                  padding: '10px 14px',
-                  background: darkMode ? '#111111' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="all">All Status</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="refunded">Refunded</option>
-              </select>
-              <select
-                value={orderHistorySort}
-                onChange={(e) => setOrderHistorySort(e.target.value)}
-                style={{
-                  padding: '10px 14px',
-                  background: darkMode ? '#111111' : '#f9fafb',
-                  border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                  borderRadius: '8px',
-                  color: darkMode ? '#f3f4f6' : '#0a0a0a',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="date-desc">Newest First</option>
-                <option value="date-asc">Oldest First</option>
-                <option value="amount-desc">Highest Amount</option>
-                <option value="amount-asc">Lowest Amount</option>
-              </select>
-            </div>
-
-            {/* Orders List */}
-            <div style={{ padding: '16px 24px', overflowY: 'auto', maxHeight: 'calc(90vh - 180px)' }}>
-              {filteredOrders.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>No orders found</div>
-                  <div style={{ fontSize: '13px' }}>Try adjusting your search or filters</div>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {filteredOrders.map(order => (
-                    <div
-                      key={order.id}
-                      style={{
-                        background: darkMode ? '#111111' : '#f9fafb',
-                        border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                        borderRadius: '12px',
-                        padding: '16px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        borderLeft: order.isQROrder ? '4px solid #8b5cf6' : '4px solid transparent'
-                      }}
-                      onMouseEnter={(e) => e.target.style.borderColor = darkMode ? '#6b7280' : '#d1d5db'}
-                      onMouseLeave={(e) => e.target.style.borderColor = darkMode ? '#222222' : '#e5e7eb'}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            background: darkMode ? '#0a0a0a' : '#e5e7eb',
-                            fontWeight: '600',
-                            fontSize: '14px',
-                            color: darkMode ? '#f3f4f6' : '#0a0a0a'
-                          }}>
-                            #{order.id.split('-')[1] || order.id.slice(-6)}
-                          </div>
-                          {order.isQROrder && (
-                            <span style={{
-                              padding: '4px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              background: '#8b5cf6',
-                              color: '#ffffff'
-                            }}>
-                              📱 QR
-                            </span>
-                          )}
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            background: order.status === 'completed' ? '#10b981' : 
-                                     order.status === 'CANCELLED' ? '#ef4444' :
-                                     order.status === 'REFUNDED' ? '#f59e0b' :
-                                     '#3b82f6',
-                            color: '#ffffff'
-                          }}>
-                            {order.status || 'PENDING'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
-                          {new Date(order.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Customer</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
-                            {order.customerName || 'Walk-in'}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Type</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
-                            {order.tableName ? (
-                              <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#8b5cf6', color: '#ffffff', fontSize: '11px', fontWeight: '600' }}>
-                                🪑 Tabled
-                              </span>
-                            ) : (
-                              <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#6b7280', color: '#ffffff', fontSize: '11px', fontWeight: '600' }}>
-                                🚶 Walk-in
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Table</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
-                            {order.tableName || 'Counter'}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Items</div>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: darkMode ? '#f3f4f6' : '#0a0a0a' }}>
-                            {order.items?.length || 0}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#9ca3af' : '#6b7280', marginBottom: '2px' }}>Total</div>
-                          <div style={{ fontSize: '15px', fontWeight: '700', color: darkMode ? '#10b981' : '#059669' }}>
-                            ₹{order.total?.toFixed(2) || '0.00'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (order.items && Array.isArray(order.items)) {
-                              setCart(order.items.map(item => ({
-                                ...item,
-                                qty: item.qty || item.quantity || 1
-                              })));
-                              setShowOrderHistory(false);
-                            }
-                          }}
-                          style={{
-                            flex: 1,
-                            minWidth: '100px',
-                            padding: '8px 16px',
-                            background: '#3b82f6',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = '#2563eb'}
-                          onMouseLeave={(e) => e.target.style.background = '#3b82f6'}
-                        >
-                          📋 Reorder
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Load order into edit mode
-                            if (order.items && Array.isArray(order.items)) {
-                              setCart(order.items.map(item => ({
-                                ...item,
-                                qty: item.qty || item.quantity || 1
-                              })));
-                              setEditingOrderId(order.id);
-                              setEditingOrderOriginal(order); // Store original order
-                              setSelectedCustomer(order.customerId || null);
-                              setSelectedTable(order.tableName ? { name: order.tableName } : null);
-                              setOrderType(order.tableName ? 'dine-in' : 'takeaway');
-                              setShowOrderHistory(false);
-                            }
-                          }}
-                          style={{
-                            flex: 1,
-                            minWidth: '100px',
-                            padding: '8px 16px',
-                            background: '#10b981',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = '#059669'}
-                          onMouseLeave={(e) => e.target.style.background = '#10b981'}
-                        >
-                          ✏️ Edit Order
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrderForView(order);
-                          }}
-                          style={{
-                            flex: 1,
-                            minWidth: '100px',
-                            padding: '8px 16px',
-                            background: darkMode ? '#222222' : '#e5e7eb',
-                            color: darkMode ? '#f3f4f6' : '#111111',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = darkMode ? '#6b7280' : '#d1d5db'}
-                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#222222' : '#e5e7eb'}
-                        >
-                          👁️ View
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (order.items) {
-                              const receiptData = {
-                                items: order.items,
-                                total: order.total,
-                                customerName: order.customerName,
-                                tableName: order.tableName,
-                                invoiceNumber: order.invoiceNumber || order.id,
-                                createdAt: order.createdAt
-                              };
-                              console.log('Printing receipt for order:', order.id);
-                              // TODO: Implement actual print functionality
-                            }
-                          }}
-                          style={{
-                            flex: 1,
-                            minWidth: '100px',
-                            padding: '8px 16px',
-                            background: darkMode ? '#222222' : '#e5e7eb',
-                            color: darkMode ? '#f3f4f6' : '#111111',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.target.style.background = darkMode ? '#6b7280' : '#d1d5db'}
-                          onMouseLeave={(e) => e.target.style.background = darkMode ? '#222222' : '#e5e7eb'}
-                        >
-                          🖨️ Print
-                        </button>
-                        {order.status !== 'CANCELLED' && order.status !== 'REFUNDED' && (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Refund order #${order.id.slice(-6)}?`)) {
-                                  const updatedOrders = orders.map(o => 
-                                    o.id === order.id 
-                                      ? { ...o, status: 'REFUNDED', refundedAt: new Date().toISOString() }
-                                      : o
-                                  );
-                                  setOrders(updatedOrders);
-                                }
-                              }}
-                              style={{
-                                flex: 1,
-                                minWidth: '100px',
-                                padding: '8px 16px',
-                                background: darkMode ? '#b45309' : '#f59e0b',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                translation: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => e.target.style.background = darkMode ? '#92400e' : '#d97706'}
-                              onMouseLeave={(e) => e.target.style.background = darkMode ? '#b45309' : '#f59e0b'}
-                            >
-                              💰 Refund
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (confirm(`Cancel order #${order.id.slice(-6)}?`)) {
-                                  const updatedOrders = orders.map(o => 
-                                    o.id === order.id 
-                                      ? { ...o, status: 'CANCELLED', cancelledAt: new Date().toISOString() }
-                                      : o
-                                  );
-                                  setOrders(updatedOrders);
-                                }
-                              }}
-                              style={{
-                                flex: 1,
-                                minWidth: '100px',
-                                padding: '8px 16px',
-                                background: '#ef4444',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                              }}
-                              onMouseEnter={(e) => e.target.style.background = '#dc2626'}
-                              onMouseLeave={(e) => e.target.style.background = '#ef4444'}
-                            >
-                              ❌ Cancel
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div style={{
-              padding: '16px 24px',
-              borderTop: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: darkMode ? '#0a0a0a' : '#f9fafb'
-            }}>
-              <div style={{ fontSize: '13px', color: darkMode ? '#9ca3af' : '#6b7280' }}>
-                Showing {filteredOrders.length} of {allOrders.length} orders
-              </div>
-              <button
-                onClick={() => {
-                  // TODO: Implement export functionality
-                  console.log('Export orders');
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: '#10b981',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => e.target.style.background = '#059669'}
-                onMouseLeave={(e) => e.target.style.background = '#10b981'}
-              >
-                📥 Export
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <OrderHistoryModal
+        show={showOrderHistory}
+        onClose={() => setShowOrderHistory(false)}
+        orders={allOrders}
+        orderCardColumns={orderCardColumns}
+        setOrderCardColumns={setOrderCardColumns}
+        onEditOrder={(order) => {
+          if (order.items && Array.isArray(order.items)) {
+            setCart(order.items.map(item => ({
+              ...item,
+              qty: item.qty || item.quantity || 1
+            })));
+            setEditingOrderId(order.id);
+            setEditingOrderOriginal(order);
+            setSelectedCustomer(order.customerId || null);
+            setSelectedTable(order.tableName ? { name: order.tableName } : null);
+            setOrderType(order.tableName ? 'dine-in' : 'takeaway');
+            setShowOrderHistory(false);
+          }
+        }}
+        onViewOrder={(order) => {
+          setSelectedOrderForView(order);
+        }}
+        onPrintOrder={(order) => {
+          if (order.items) {
+            const receiptData = {
+              items: order.items,
+              total: order.total,
+              customerName: order.customerName,
+              tableName: order.tableName,
+              invoiceNumber: order.invoiceNumber || order.id,
+              createdAt: order.createdAt
+            };
+            console.log('Printing receipt for order:', order.id);
+          }
+        }}
+        onCancelOrder={(order) => {
+          if (confirm(`Cancel order #${order.id.slice(-6)}?`)) {
+            const updatedOrders = orders.map(o => 
+              o.id === order.id 
+                ? { ...o, status: 'CANCELLED', cancelledAt: new Date().toISOString() }
+                : o
+            );
+            setOrders(updatedOrders);
+          }
+        }}
+        darkMode={darkMode}
+      />
 
       {/* Order Detail Modal */}
       {selectedOrderForView && (
@@ -8354,7 +8708,7 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                 <div style={{ fontSize: '13px', color: '#8b7355', marginBottom: '4px', fontFamily: 'Georgia, serif' }}>Order Type</div>
                 <div style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#ffffff' : '#000000', fontFamily: 'Georgia, serif' }}>
                   {selectedOrderForView.tableName ? (
-                    <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#8b5cf6', color: '#ffffff', fontSize: '12px', fontWeight: '600' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#3b82f6', color: '#ffffff', fontSize: '12px', fontWeight: '600' }}>
                       🪑 Tabled - {selectedOrderForView.tableName}
                     </span>
                   ) : (
@@ -9232,6 +9586,237 @@ export default function SimplePOS({ orders = [], setOrders, menuItems = [], setM
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Column Settings Modal */}
+      {showColumnSettings && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 5000
+        }}>
+          <div style={{
+            background: darkMode ? '#111111' : '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '90%',
+            maxWidth: '400px',
+            border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '700',
+                color: darkMode ? '#ffffff' : '#0a0a0a'
+              }}>
+                ⚙️ Layout Settings
+              </h3>
+              <button
+                onClick={() => setShowColumnSettings(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  color: darkMode ? '#9ca3af' : '#6b7280',
+                  padding: '4px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              marginBottom: '20px'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px',
+                background: darkMode ? '#222222' : '#f9fafb',
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    marginBottom: '4px'
+                  }}>
+                    📋 Menu Column
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: darkMode ? '#9ca3af' : '#6b7280'
+                  }}>
+                    Show product categories and items
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowMenuColumn(!showMenuColumn)}
+                  style={{
+                    padding: '8px 16px',
+                    background: showMenuColumn ? '#10b981' : '#6b7280',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    minWidth: '60px'
+                  }}
+                >
+                  {showMenuColumn ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px',
+                background: darkMode ? '#222222' : '#f9fafb',
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    marginBottom: '4px'
+                  }}>
+                    🛒 Cart Column
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: darkMode ? '#9ca3af' : '#6b7280'
+                  }}>
+                    Show order cart and totals
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCartColumn(!showCartColumn)}
+                  style={{
+                    padding: '8px 16px',
+                    background: showCartColumn ? '#10b981' : '#6b7280',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    minWidth: '60px'
+                  }}
+                >
+                  {showCartColumn ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px',
+                background: darkMode ? '#222222' : '#f9fafb',
+                borderRadius: '8px',
+                border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`
+              }}>
+                <div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: darkMode ? '#ffffff' : '#0a0a0a',
+                    marginBottom: '4px'
+                  }}>
+                    🔢 Numpad Column
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: darkMode ? '#9ca3af' : '#6b7280'
+                  }}>
+                    Show numeric keypad and actions
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowNumpadColumn(!showNumpadColumn)}
+                  style={{
+                    padding: '8px 16px',
+                    background: showNumpadColumn ? '#10b981' : '#6b7280',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    minWidth: '60px'
+                  }}
+                >
+                  {showNumpadColumn ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => {
+                  setShowMenuColumn(true);
+                  setShowCartColumn(true);
+                  setShowNumpadColumn(true);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  background: darkMode ? '#222222' : '#f3f4f6',
+                  color: darkMode ? '#ffffff' : '#6b7280',
+                  border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Reset All
+              </button>
+              <button
+                onClick={() => setShowColumnSettings(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: '#3b82f6',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>

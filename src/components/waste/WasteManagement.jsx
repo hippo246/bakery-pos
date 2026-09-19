@@ -412,7 +412,7 @@ function WasteRecordCard({ record, onEdit, onDelete, darkMode = true }) {
     damaged: '#d97706',
     overprepared: '#059669',
     quality: '#0891b2',
-    mistake: '#7c3aed',
+    mistake: '#3b82f6',
     other: '#888888'
   };
 

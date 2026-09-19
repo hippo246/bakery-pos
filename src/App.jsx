@@ -260,7 +260,7 @@ export default function App() {
           <button id="refresh-btn" style="flex: 1; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
             🔄 Refresh Page
           </button>
-          <button id="cache-btn" style="flex: 1; padding: 12px 24px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          <button id="cache-btn" style="flex: 1; padding: 12px 24px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
             🗑️ Clear Cache
           </button>
           <button id="dismiss-btn" style="flex: 1; padding: 12px 24px; background: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">

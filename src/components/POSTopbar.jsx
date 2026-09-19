@@ -22,7 +22,8 @@ export default function POSTopbar({
   setShowSearchResults,
   kdsSyncStatus = 'connected',
   printerStatus = 'online',
-  orderHandoffStatus = 'idle'
+  orderHandoffStatus = 'idle',
+  setShowColumnSettings
 }) {
   const aggregatorDropdownRef = useRef(null);
 
@@ -286,7 +287,7 @@ export default function POSTopbar({
               onClick={() => setShowHeldOrders(true)}
               style={{
                 padding: screenSize === 'small' ? '10px 14px' : '6px 12px',
-                background: (heldOrders || []).length > 0 ? '#8b5cf6' : (darkMode ? '#222222' : '#f3f4f6'),
+                background: (heldOrders || []).length > 0 ? '#3b82f6' : (darkMode ? '#222222' : '#f3f4f6'),
                 color: (heldOrders || []).length > 0 ? '#ffffff' : (darkMode ? '#9ca3af' : '#6b7280'),
                 border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
                 borderRadius: screenSize === 'small' ? '8px' : '4px',
@@ -303,7 +304,7 @@ export default function POSTopbar({
               {(heldOrders || []).length > 0 && (
                 <span style={{
                   background: '#ffffff',
-                  color: '#8b5cf6',
+                  color: '#3b82f6',
                   padding: '1px 6px',
                   borderRadius: '10px',
                   fontSize: '10px',
@@ -332,7 +333,7 @@ export default function POSTopbar({
               <span>{kdsSyncStatus === 'connected' ? '📺' : (kdsSyncStatus === 'syncing' ? '🔄' : '❌')}</span>
               {screenSize !== 'small' && <span>KDS</span>}
             </div>
-            
+
             {/* Printer Status */}
             <div style={{
               display: 'flex',
@@ -348,14 +349,14 @@ export default function POSTopbar({
               <span>{printerStatus === 'online' ? '🖨️' : (printerStatus === 'error' ? '⚠️' : '❌')}</span>
               {screenSize !== 'small' && <span>Printer</span>}
             </div>
-            
+
             {/* Order Handoff Status */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
               padding: '4px 8px',
-              background: orderHandoffStatus === 'idle' ? '#6b7280' : (orderHandoffStatus === 'kitchen' ? '#f59e0b' : (orderHandoffStatus === 'ready' ? '#10b981' : '#8b5cf6')),
+              background: orderHandoffStatus === 'idle' ? '#6b7280' : (orderHandoffStatus === 'kitchen' ? '#f59e0b' : (orderHandoffStatus === 'ready' ? '#10b981' : '#3b82f6')),
               borderRadius: '6px',
               fontSize: '10px',
               fontWeight: '600',
@@ -364,6 +365,29 @@ export default function POSTopbar({
               <span>{orderHandoffStatus === 'idle' ? '🔄' : (orderHandoffStatus === 'kitchen' ? '👨‍🍳' : (orderHandoffStatus === 'ready' ? '✅' : '🧾'))}</span>
               {screenSize !== 'small' && <span>{orderHandoffStatus === 'idle' ? 'Idle' : (orderHandoffStatus === 'kitchen' ? 'Kitchen' : (orderHandoffStatus === 'ready' ? 'Ready' : 'Served'))}</span>}
             </div>
+
+            {/* Layout Settings Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColumnSettings && setShowColumnSettings(true);
+              }}
+              style={{
+                padding: '4px 6px',
+                background: darkMode ? '#222222' : '#f3f4f6',
+                color: darkMode ? '#9ca3af' : '#6b7280',
+                border: `1px solid ${darkMode ? '#333333' : '#e5e7eb'}`,
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Layout Settings"
+            >
+              ⚙️
+            </button>
           </div>
 
           {posMode === 'advanced' && (

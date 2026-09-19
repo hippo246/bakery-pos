@@ -146,6 +146,7 @@ function generateKOTItemId() {
  * @returns {string} Kitchen station
  */
 function determineStation(category) {
+  const cat = (category || '').toLowerCase();
   const stationMap = {
     'bakery': KitchenStation.BAKERY,
     'bread': KitchenStation.BAKERY,
@@ -155,15 +156,19 @@ function determineStation(category) {
     'tea': KitchenStation.BEVERAGE,
     'juice': KitchenStation.BEVERAGE,
     'beverage': KitchenStation.BEVERAGE,
+    'cocktails': KitchenStation.BEVERAGE,
+    'drinks': KitchenStation.BEVERAGE,
     'dessert': KitchenStation.DESSERT,
     'ice cream': KitchenStation.DESSERT,
     'grill': KitchenStation.GRILL,
+    'steak': KitchenStation.GRILL,
+    'steaks': KitchenStation.GRILL,
     'fry': KitchenStation.FRYER,
     'cold': KitchenStation.COLD,
     'salad': KitchenStation.COLD
   };
   
-  return stationMap[category?.toLowerCase()] || KitchenStation.GENERAL;
+  return stationMap[cat] || KitchenStation.GENERAL;
 }
 
 /**

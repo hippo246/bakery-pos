@@ -563,22 +563,22 @@ export default function SimpleCRM({ customers = [], setCustomers, orders = [], o
                       onClick={() => handleViewHistory(customer)}
                       style={{
                         padding: screenSize === 'small' ? '8px 12px' : '10px 16px',
-                        background: '#8b5cf6',
+                        background: '#3b82f6',
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         fontSize: screenSize === 'small' ? '12px' : '13px',
                         fontWeight: '500',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        boxShadow: '0 2px 4px rgba(139, 92, 246, 0.2)'
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                       }}
                       onMouseEnter={(e) => {
-                        e.target.style.background = '#7c3aed';
+                        e.target.style.background = '#2563eb';
                         e.target.style.transform = 'translateY(-1px)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.background = '#8b5cf6';
+                        e.target.style.background = '#3b82f6';
                         e.target.style.transform = 'translateY(0)';
                       }}
                     >
