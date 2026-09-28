@@ -4,6 +4,10 @@ import useScreenSize from '../../hooks/useScreenSize';
 import ReceiptStudioPanel from './panels/ReceiptStudioPanel';
 import WorkflowEnginePanel from './panels/WorkflowEnginePanel';
 import RoleSecurityPanel from './panels/RoleSecurityPanel';
+import RoleAccessPanel from './panels/RoleAccessPanel';
+import EmailReceiptConfigPanel from './panels/EmailReceiptConfigPanel';
+import DataManagementPanel from './panels/DataManagementPanel';
+import UpdateTracker from './UpdateTracker';
 
 /* ─── Table Management Panel Component ─────────────────────────────── */
 function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
@@ -24,6 +28,15 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
             location: '',
             shape: 'rectangular',
             tableType: 'indoor',
+            positionX: 0,
+            positionY: 0,
+            rotation: 0,
+            width: 100,
+            height: 100,
+            canCombine: false,
+            adjacentTables: [],
+            wallNearby: false,
+            windowNearby: false,
             minPartySize: 1,
             maxPartySize: 20,
             notes: '',
@@ -43,6 +56,15 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
             location: action.payload.table.location || '',
             shape: action.payload.table.shape || 'rectangular',
             tableType: action.payload.table.tableType || 'indoor',
+            positionX: action.payload.table.positionX || 0,
+            positionY: action.payload.table.positionY || 0,
+            rotation: action.payload.table.rotation || 0,
+            width: action.payload.table.width || 100,
+            height: action.payload.table.height || 100,
+            canCombine: action.payload.table.canCombine || false,
+            adjacentTables: action.payload.table.adjacentTables || [],
+            wallNearby: action.payload.table.wallNearby || false,
+            windowNearby: action.payload.table.windowNearby || false,
             minPartySize: action.payload.table.minPartySize || 1,
             maxPartySize: action.payload.table.maxPartySize || 20,
             notes: action.payload.table.notes || '',
@@ -62,6 +84,15 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
             location: '',
             shape: 'rectangular',
             tableType: 'indoor',
+            positionX: 0,
+            positionY: 0,
+            rotation: 0,
+            width: 100,
+            height: 100,
+            canCombine: false,
+            adjacentTables: [],
+            wallNearby: false,
+            windowNearby: false,
             minPartySize: 1,
             maxPartySize: 20,
             notes: '',
@@ -160,6 +191,15 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
                 location: state.formData.location,
                 shape: state.formData.shape,
                 tableType: state.formData.tableType,
+                positionX: state.formData.positionX,
+                positionY: state.formData.positionY,
+                rotation: state.formData.rotation,
+                width: state.formData.width,
+                height: state.formData.height,
+                canCombine: state.formData.canCombine,
+                adjacentTables: state.formData.adjacentTables,
+                wallNearby: state.formData.wallNearby,
+                windowNearby: state.formData.windowNearby,
                 minPartySize: state.formData.minPartySize,
                 maxPartySize: state.formData.maxPartySize,
                 notes: state.formData.notes,
@@ -178,6 +218,15 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
           location: state.formData.location,
           shape: state.formData.shape,
           tableType: state.formData.tableType,
+          positionX: state.formData.positionX,
+          positionY: state.formData.positionY,
+          rotation: state.formData.rotation,
+          width: state.formData.width,
+          height: state.formData.height,
+          canCombine: state.formData.canCombine,
+          adjacentTables: state.formData.adjacentTables,
+          wallNearby: state.formData.wallNearby,
+          windowNearby: state.formData.windowNearby,
           minPartySize: state.formData.minPartySize,
           maxPartySize: state.formData.maxPartySize,
           notes: state.formData.notes,
@@ -238,7 +287,19 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
   };
 
   const getShapeIcon = (shape) => {
-    const icons = { rectangular: '▭', round: '⭕', square: '⬜', oval: '⬭' };
+    const icons = { 
+      rectangular: '▭', 
+      round: '⭕', 
+      square: '⬜', 
+      oval: '⬭',
+      circle: '⚪',
+      booth: '🛋️',
+      high_top: '🍸',
+      community: '🔲',
+      l_shaped: '└',
+      u_shaped: '┌',
+      t_shaped: '├'
+    };
     return icons[shape] || '▭';
   };
 
@@ -528,6 +589,13 @@ function TableManagementPanel({ tables, setTables, darkMode, staff = [] }) {
                   <option value="round">Round</option>
                   <option value="square">Square</option>
                   <option value="oval">Oval</option>
+                  <option value="circle">Circle</option>
+                  <option value="booth">Booth</option>
+                  <option value="high_top">High Top</option>
+                  <option value="community">Community</option>
+                  <option value="l_shaped">L-Shaped</option>
+                  <option value="u_shaped">U-Shaped</option>
+                  <option value="t_shaped">T-Shaped</option>
                 </select>
               </div>
               <div>
@@ -2283,6 +2351,12 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
       ]
     },
     { 
+      group: 'Project',
+      items: [
+        { id: 'update-tracker', label: 'Update Tracker', icon: '📋', description: 'Track project changes, version history, agent activity' }
+      ]
+    },
+    { 
       group: 'POS & Workflows',
       items: [
         { id: 'pos', label: 'POS Settings', icon: '🛒', description: 'Order workflow, checkout, printing' },
@@ -2290,17 +2364,19 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
         { id: 'itemcodes', label: 'Item Codes', icon: '🔢', description: 'Code generation, formats, scanning' }
       ]
     },
-    { 
+    {
       group: 'Receipts & Design',
       items: [
-        { id: 'receipt_studio', label: 'Receipt Studio', icon: '🎨', description: 'Custom receipt design, preview, templates' }
+        { id: 'receipt_studio', label: 'Receipt Studio', icon: '🎨', description: 'Custom receipt design, preview, templates' },
+        { id: 'email_receipts', label: 'Email Receipts', icon: '📧', description: 'Email configuration, templates, testing' }
       ]
     },
-    { 
+    {
       group: 'Operations',
       items: [
         { id: 'kitchen', label: 'Kitchen Ops', icon: '👨‍🍳', description: 'Kitchen display, KDS auto-print, timing' },
-        { id: 'qr', label: 'QR Ordering', icon: '📱', description: 'QR code setup, mobile ordering, payment' }
+        { id: 'qr', label: 'QR Ordering', icon: '📱', description: 'QR code setup, mobile ordering, payment' },
+        { id: 'data', label: 'Data Management', icon: '💾', description: 'Backup, restore, export, import' }
       ]
     },
     { 
@@ -2309,6 +2385,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
         { id: 'backup', label: 'Backup & Restore', icon: '💾', description: 'Data backup, restore, scheduling' },
         { id: 'refunds', label: 'Refunds', icon: '💸', description: 'Refund policies, processing, limits' },
         { id: 'compliance', label: 'Roles & Security', icon: '🔒', description: 'User roles, permissions, security' },
+        { id: 'role_access', label: 'Role Access', icon: '👥', description: 'User management, role permissions' },
         { id: 'debug', label: 'Debug & Logs', icon: '🐛', description: 'System logs, debugging, diagnostics' }
       ]
     }
@@ -2583,13 +2660,31 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
           darkMode={darkMode}
         />
       )}
+      {activeSection === 'role_access' && (
+        <RoleAccessPanel />
+      )}
+      {activeSection === 'email_receipts' && (
+        <EmailReceiptConfigPanel
+          formData={formData}
+          handleInputChange={handleInputChange}
+          darkMode={darkMode}
+        />
+      )}
+      {activeSection === 'data' && (
+        <DataManagementPanel
+          darkMode={darkMode}
+        />
+      )}
+      {activeSection === 'update-tracker' && (
+        <UpdateTracker darkMode={darkMode} />
+      )}
       {activeSection === 'general' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Store Information */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -2606,13 +2701,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('storeName', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          padding: '10px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2625,13 +2721,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('businessType', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
-                          fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          padding: '10px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#d1d5db'}`,
+                          borderRadius: '8px',
+                          fontSize: '14px',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="restaurant">Restaurant</option>
@@ -2654,13 +2751,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('phone', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2674,13 +2772,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2694,13 +2793,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('email', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2714,13 +2814,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('website', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2734,13 +2835,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('gstin', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2754,13 +2856,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('panNumber', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2774,13 +2877,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('storeAddress', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2794,13 +2898,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('managerName', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2809,9 +2914,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Business Configuration */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -2828,13 +2933,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('totalTables', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2848,13 +2954,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('seatingCapacity', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2868,13 +2975,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('maxOrderValue', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2888,13 +2996,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('minOrderValue', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2903,9 +3012,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Advanced Business Hours */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -2922,13 +3031,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('openingTime', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2942,13 +3052,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('closingTime', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -2961,13 +3072,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('timezone', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="Asia/Kolkata">India (IST)</option>
@@ -2989,13 +3101,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('operatingDays', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="all">All Days</option>
@@ -3009,9 +3122,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Advanced Tax & Pricing */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3028,13 +3141,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('taxRate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -3047,13 +3161,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('taxType', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="gst">GST</option>
@@ -3073,13 +3188,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('serviceCharge', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -3092,13 +3208,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('serviceChargeType', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="optional">Optional</option>
@@ -3116,13 +3233,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('roundingMethod', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="nearest">Nearest</option>
@@ -3140,13 +3258,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('decimalPlaces', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="0">0 (No decimals)</option>
@@ -3160,9 +3279,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Regional Settings */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3179,12 +3298,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       >
@@ -3210,12 +3330,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       >
@@ -3240,13 +3361,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('dateFormat', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="DD/MM/YYYY">DD/MM/YYYY</option>
@@ -3264,13 +3386,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('timeFormat', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="24h">24 Hour (14:30)</option>
@@ -3286,13 +3409,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('numberFormat', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="indian">Indian (1,00,000.00)</option>
@@ -3341,7 +3465,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                     padding: '16px 20px',
                     background: darkMode ? '#111111' : '#f9fafb',
                     border: `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`,
-                    borderRadius: '16px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -3371,9 +3495,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'display' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3389,13 +3513,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('screenDensity', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="compact">Compact</option>
@@ -3412,13 +3537,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('fontSize', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="small">Small</option>
@@ -3431,9 +3557,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3480,13 +3606,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('animationSpeed', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="slow">Slow</option>
@@ -3499,9 +3626,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3517,13 +3644,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('borderRadius', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="none">None (Sharp)</option>
@@ -3542,13 +3670,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('showBorders', e.target.value === 'yes')}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="yes">Yes</option>
@@ -3595,9 +3724,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'themes' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3629,9 +3758,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3650,7 +3779,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           style={{
                             width: '50px',
                             height: '40px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
                             borderRadius: '8px',
                             cursor: 'pointer',
                             padding: '2px'
@@ -3662,13 +3791,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           onChange={(e) => handleInputChange('accentColor', e.target.value)}
                           style={{
                             flex: 1,
-                            padding: '12px 16px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                            borderRadius: '8px',
                             fontSize: '15px',
-                            background: darkMode ? '#000000' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#0a0a0a',
-                            outline: 'none'
+                            background: darkMode ? '#0a0a0a' : '#ffffff',
+                            color: darkMode ? '#f1f5f9' : '#1e293b',
+                            outline: 'none',
+                          boxSizing: 'border-box'
                           }}
                         />
                       </div>
@@ -3685,7 +3815,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           style={{
                             width: '50px',
                             height: '40px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
                             borderRadius: '8px',
                             cursor: 'pointer',
                             padding: '2px'
@@ -3697,13 +3827,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           onChange={(e) => handleInputChange('primaryColor', e.target.value)}
                           style={{
                             flex: 1,
-                            padding: '12px 16px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                            borderRadius: '8px',
                             fontSize: '15px',
-                            background: darkMode ? '#000000' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#0a0a0a',
-                            outline: 'none'
+                            background: darkMode ? '#0a0a0a' : '#ffffff',
+                            color: darkMode ? '#f1f5f9' : '#1e293b',
+                            outline: 'none',
+                          boxSizing: 'border-box'
                           }}
                         />
                       </div>
@@ -3720,7 +3851,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           style={{
                             width: '50px',
                             height: '40px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
                             borderRadius: '8px',
                             cursor: 'pointer',
                             padding: '2px'
@@ -3732,13 +3863,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           onChange={(e) => handleInputChange('backgroundColor', e.target.value)}
                           style={{
                             flex: 1,
-                            padding: '12px 16px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                            borderRadius: '8px',
                             fontSize: '15px',
-                            background: darkMode ? '#000000' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#0a0a0a',
-                            outline: 'none'
+                            background: darkMode ? '#0a0a0a' : '#ffffff',
+                            color: darkMode ? '#f1f5f9' : '#1e293b',
+                            outline: 'none',
+                          boxSizing: 'border-box'
                           }}
                         />
                       </div>
@@ -3755,7 +3887,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           style={{
                             width: '50px',
                             height: '40px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
                             borderRadius: '8px',
                             cursor: 'pointer',
                             padding: '2px'
@@ -3767,13 +3899,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           onChange={(e) => handleInputChange('cardColor', e.target.value)}
                           style={{
                             flex: 1,
-                            padding: '12px 16px',
-                            border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                            borderRadius: '12px',
+                            padding: '8px 12px',
+                            border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                            borderRadius: '8px',
                             fontSize: '15px',
-                            background: darkMode ? '#000000' : '#ffffff',
-                            color: darkMode ? '#ffffff' : '#0a0a0a',
-                            outline: 'none'
+                            background: darkMode ? '#0a0a0a' : '#ffffff',
+                            color: darkMode ? '#f1f5f9' : '#1e293b',
+                            outline: 'none',
+                          boxSizing: 'border-box'
                           }}
                         />
                       </div>
@@ -3782,9 +3915,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3822,9 +3955,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'notifications' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3897,9 +4030,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -3915,13 +4048,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('notificationSound', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="default">Default</option>
@@ -3948,6 +4082,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           borderRadius: '4px',
                           background: darkMode ? '#222222' : '#d1d5db',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           cursor: 'pointer'
                         }}
                       />
@@ -3956,9 +4091,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -4191,7 +4326,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                                   ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
                                   : (dm ? '#000000' : '#ffffff'),
                                 border: `1.5px solid ${formData.mobileNavStyle === opt.value ? '#6366f1' : (dm ? '#222222' : '#e5e7eb')}`,
-                                borderRadius: '12px',
+                                borderRadius: '8px',
                                 cursor: 'pointer',
                                 display: 'flex', flexDirection: 'column',
                                 alignItems: 'center', gap: '4px',
@@ -4224,7 +4359,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                                   ? (dm ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)')
                                   : (dm ? '#000000' : '#ffffff'),
                                 border: `1.5px solid ${formData.mobileIconSize === opt.value ? '#6366f1' : (dm ? '#222222' : '#e5e7eb')}`,
-                                borderRadius: '12px',
+                                borderRadius: '8px',
                                 cursor: 'pointer',
                                 display: 'flex', flexDirection: 'column',
                                 alignItems: 'center', gap: '6px',
@@ -4344,7 +4479,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           padding: '14px 16px',
                           background: dm ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.05)',
                           border: '1.5px solid #6366f1',
-                          borderRadius: '12px',
+                          borderRadius: '8px',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '12px'
@@ -4371,9 +4506,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'business' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -4390,13 +4525,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('businessRegistrationNumber', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4410,13 +4546,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('businessLicenseNumber', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4430,13 +4567,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('fssaiNumber', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4450,13 +4588,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('foundedDate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4464,9 +4603,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -4484,13 +4623,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         placeholder="@yourbusiness"
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4505,13 +4645,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         placeholder="facebook.com/yourbusiness"
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4526,13 +4667,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         placeholder="@yourbusiness"
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4544,9 +4686,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'tax' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -4562,13 +4704,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('enableCompoundTax', e.target.value === 'yes')}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="no">No</option>
@@ -4584,13 +4727,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('taxInclusivePricing', e.target.value === 'yes')}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="no">No (Tax Added)</option>
@@ -4606,13 +4750,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('enableMultiTaxRates', e.target.value === 'yes')}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
                         <option value="no">No</option>
@@ -4623,9 +4768,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -4642,13 +4787,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('cgstRate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4662,13 +4808,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('sgstRate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4682,13 +4829,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('igstRate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4702,13 +4850,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('cessRate', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4721,9 +4870,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'tab-dashboard' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -4739,16 +4888,18 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('dashboardLayout', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       >
-                        <option value="default">Default</option>
+                        <option value="default">Default (Standard)</option>
+                        <option value="new">New Layout</option>
                         <option value="compact">Compact</option>
                         <option value="detailed">Detailed</option>
                         <option value="custom">Custom</option>
@@ -4764,13 +4915,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         onChange={(e) => handleInputChange('widgetRefreshInterval', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -4778,9 +4930,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5581,9 +5733,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* POS Mode */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5600,12 +5752,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       >
@@ -5625,12 +5778,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
@@ -5643,9 +5797,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Order Display & Management */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5704,13 +5858,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         placeholder="30"
                         style={{
                           width: '100%',
-                          padding: '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          padding: '8px 12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
-                          outline: 'none'
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
+                          outline: 'none',
+                          boxSizing: 'border-box'
                         }}
                       />
                     </div>
@@ -5719,9 +5874,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Order Requirements */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5770,9 +5925,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Order Card Column Settings */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5827,9 +5982,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Payment Settings */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5848,12 +6003,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
@@ -5873,12 +6029,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
@@ -5928,9 +6085,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Discount & Pricing Settings */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -5959,13 +6116,14 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                             placeholder="0"
                             style={{
                               width: '100%',
-                              padding: '12px 16px',
-                              border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                              borderRadius: '12px',
+                              padding: '8px 12px',
+                              border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                              borderRadius: '8px',
                               fontSize: '15px',
-                              background: darkMode ? '#000000' : '#ffffff',
-                              color: darkMode ? '#ffffff' : '#0a0a0a',
-                              outline: 'none'
+                              background: darkMode ? '#0a0a0a' : '#ffffff',
+                              color: darkMode ? '#f1f5f9' : '#1e293b',
+                              outline: 'none',
+                          boxSizing: 'border-box'
                             }}
                           />
                           <div style={{ fontSize: '13px', color: darkMode ? '#888888' : '#6b7280', marginTop: '8px' }}>{desc}</div>
@@ -6008,9 +6166,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
 
                 {/* Receipt & Printing */}
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -6261,9 +6419,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'itemcodes' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -6280,12 +6438,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       >
@@ -6302,9 +6461,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'kitchen' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7084,7 +7243,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 {/* Global Toggle */}
                 <div style={{
                   background: 'linear-gradient(135deg, #0a0a0a 0%, #111111 100%)',
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: `1px solid ${t.border}`,
                   padding: '28px',
                   display: 'flex',
@@ -7147,7 +7306,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 {/* Per-Tab Toggle Switches */}
                 <div style={{
                   background: t.bgEle,
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: `1px solid ${t.border}`,
                   padding: '24px'
                 }}>
@@ -7185,7 +7344,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                             justifyContent: 'space-between',
                             padding: '14px 16px',
                             background: t.bgInput,
-                            borderRadius: '12px',
+                            borderRadius: '8px',
                             border: `1px solid ${isDark ? '#6366f1' : '#222222'}`,
                             transition: 'border-color 0.2s'
                           }}>
@@ -7204,7 +7363,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                               style={{
                                 width: '44px',
                                 height: '24px',
-                                borderRadius: '12px',
+                                borderRadius: '8px',
                                 background: isDark ? '#6366f1' : '#111111',
                                 position: 'relative',
                                 cursor: 'pointer',
@@ -7258,9 +7417,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'notifications' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7305,9 +7464,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'display' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7352,9 +7511,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'backup' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7389,12 +7548,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
@@ -7407,9 +7567,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'refunds' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7455,9 +7615,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
             {activeSection === 'compliance' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7513,12 +7673,13 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                         style={{
                           width: '100%',
                           padding: screenSize === 'small' ? '14px 16px' : '12px 16px',
-                          border: `1px solid ${darkMode ? '#222222' : '#d1d5db'}`,
-                          borderRadius: '12px',
+                          border: `1px solid ${darkMode ? '#333333' : '#e2e8f0'}`,
+                          borderRadius: '8px',
                           fontSize: screenSize === 'small' ? '16px' : '15px',
-                          background: darkMode ? '#000000' : '#ffffff',
-                          color: darkMode ? '#ffffff' : '#0a0a0a',
+                          background: darkMode ? '#0a0a0a' : '#ffffff',
+                          color: darkMode ? '#f1f5f9' : '#1e293b',
                           outline: 'none',
+                          boxSizing: 'border-box',
                           minHeight: screenSize === 'small' ? '52px' : '48px'
                         }}
                       />
@@ -7530,9 +7691,9 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                 </div>
 
                 <div style={{
-                  padding: '20px',
+                  padding: '16px',
                   background: screenSize === 'small' ? '#f9fafb' : (darkMode ? '#111111' : '#f9fafb'),
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   border: screenSize === 'small' ? 'none' : `1px solid ${darkMode ? '#222222' : '#e5e7eb'}`
                 }}>
                   <div style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: darkMode ? '#ffffff' : '#0a0a0a' }}>
@@ -7624,7 +7785,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                           style={{
                             width: '44px',
                             height: '24px',
-                            borderRadius: '12px',
+                            borderRadius: '8px',
                             background: formData[setting.key] ? '#10b981' : '#374151',
                             position: 'relative',
                             cursor: 'pointer',
@@ -8261,7 +8422,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                   backdropFilter: 'blur(16px)',
                   WebkitBackdropFilter: 'blur(16px)',
                   border: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
-                  borderRadius: '16px',
+                  borderRadius: '8px',
                   padding: '12px 16px',
                   display: 'flex', gap: '10px',
                   boxShadow: '0 8px 32px rgba(0,0,0,0.2)',

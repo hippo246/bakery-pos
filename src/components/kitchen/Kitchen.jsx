@@ -7,6 +7,8 @@ import KitchenSettingsPanel from './KitchenSettingsPanel';
 import OracleKDSSettingsPanel from './OracleKDSSettingsPanel';
 import { loadSettings } from './KitchenSettingsPanel';
 import useScreenSize from '../../hooks/useScreenSize';
+import orderEventManager from '../../services/OrderEventManager.js';
+import orderWorkflowService from '../../services/OrderWorkflowService.js';
 
 export default function Kitchen({ onNavigate, orders = [], setOrders, menuItems = [], staff = [] }) {
   const screenSize = useScreenSize();
@@ -128,6 +130,44 @@ export default function Kitchen({ onNavigate, orders = [], setOrders, menuItems 
     const interval = setInterval(loadQROrders, 15000); // Reduced to 15s for better responsiveness
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Real-time order event synchronization
+  useEffect(() => {
+    // Subscribe to KOT received events
+    const unsubscribeKOTReceived = orderEventManager.on('kitchen:kot:received', (kotData) => {
+      console.log('[Kitchen] KOT received:', kotData.id);
+      // KOT is already handled by orderWorkflowService, just log for now
+      // The actual KOT display will be updated via the workflow service
+    });
+
+    // Subscribe to kitchen item status changes
+    const unsubscribeItemStarted = orderEventManager.on('kitchen:item:started', ({ kotId, itemId }) => {
+      console.log('[Kitchen] Item started:', kotId, itemId);
+      // Update item status in UI
+    });
+
+    const unsubscribeItemCompleted = orderEventManager.on('kitchen:item:completed', ({ kotId, itemId }) => {
+      console.log('[Kitchen] Item completed:', kotId, itemId);
+      // Update item status in UI
+    });
+
+    // Subscribe to order fired events
+    const unsubscribeOrderFired = orderEventManager.on('order:fired', ({ order, kotData }) => {
+      console.log('[Kitchen] Order fired:', order.id);
+      // Force refresh of orders to show new KOT
+      if (setOrders) {
+        setOrders(prev => [...prev, order]);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeKOTReceived();
+      unsubscribeItemStarted();
+      unsubscribeItemCompleted();
+      unsubscribeOrderFired();
+    };
   }, []);
 
   // Combine regular orders with QR orders, with deduplication

@@ -3,6 +3,9 @@ import { getKOTManager } from '../../operations/KOTManager.js';
 import PaymentModal from '../pos/PaymentModal';
 import Receipt from '../pos/Receipt';
 import toastHardware from '../../services/ToastHardwareService.js';
+import orderEventManager from '../../services/OrderEventManager.js';
+import orderWorkflowService from '../../services/OrderWorkflowService.js';
+import ORDER_CONFIG from '../../config/orderConfig.js';
 
 // Mobile responsive hook
 function useScreenSize() {
@@ -47,16 +50,16 @@ export default function ToastOrders({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastCompletedOrder, setLastCompletedOrder] = useState(null);
-  const [orderType, setOrderType] = useState('dine_in');
+  const [orderType, setOrderType] = useState(ORDER_CONFIG.ORDER_TYPES.DINE_IN);
   const [customerName, setCustomerName] = useState('');
   const [specialRequest, setSpecialRequest] = useState('');
   const [discount, setDiscount] = useState(0);
   const [discountReason, setDiscountReason] = useState('');
-  const [tableNumber, setTableNumber] = useState('1');
-  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [tableNumber, setTableNumber] = useState(ORDER_CONFIG.DEFAULT_TABLE_NUMBER);
+  const [paymentMethod, setPaymentMethod] = useState(ORDER_CONFIG.PAYMENT_METHODS.CASH);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [tipAmount, setTipAmount] = useState(0);
-  const [gstRate, setGstRate] = useState(19);
+  const [gstRate, setGstRate] = useState(ORDER_CONFIG.DEFAULT_GST_RATE);
 
   // CFD Broadcast side effect
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function ToastOrders({
   
   // Category and course
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedCourse, setSelectedCourse] = useState(1);
+  const [selectedCourse, setSelectedCourse] = useState(ORDER_CONFIG.DEFAULT_COURSE);
 
   // Mobile panel switching state
   const [mobileActivePanel, setMobileActivePanel] = useState('order'); // 'order', 'categories', 'menu'
@@ -109,7 +112,7 @@ export default function ToastOrders({
     showServer: true,
     showTimestamp: true
   });
-  const [courseSequence, setCourseSequence] = useState([1, 2, 3]);
+  const [courseSequence, setCourseSequence] = useState(ORDER_CONFIG.DEFAULT_COURSE_SEQUENCE);
   const [showTableModal, setShowTableModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
@@ -155,6 +158,48 @@ export default function ToastOrders({
   const [showOrderTimingModal, setShowOrderTimingModal] = useState(false);
   const [showTaxExemptionModal, setShowTaxExemptionModal] = useState(false);
   const [taxExempt, setTaxExempt] = useState(false);
+
+  // Real-time order event synchronization
+  useEffect(() => {
+    // Subscribe to order completed events
+    const unsubscribeOrderCompleted = orderEventManager.on('order:completed', (order) => {
+      console.log('[ToastOrders] Order completed:', order.id);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === order.id ? { ...o, status: 'COMPLETED' } : o
+        ));
+      }
+    });
+
+    // Subscribe to order paid events
+    const unsubscribeOrderPaid = orderEventManager.on('order:paid', ({ order, paymentData }) => {
+      console.log('[ToastOrders] Order paid:', order.id);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === order.id ? { ...o, status: 'PAID', payment: paymentData } : o
+        ));
+      }
+    });
+
+    // Subscribe to table status changes
+    const unsubscribeTableStatus = orderEventManager.on('table:status', ({ tableId, newStatus, tableData }) => {
+      console.log('[ToastOrders] Table status changed:', tableId, newStatus);
+      if (setTables) {
+        setTables(prev => prev.map(t => 
+          t.id === tableId || t.number === parseInt(tableId)
+            ? { ...t, status: newStatus, ...tableData }
+            : t
+        ));
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeOrderCompleted();
+      unsubscribeOrderPaid();
+      unsubscribeTableStatus();
+    };
+  }, [setOrders, setTables]);
   const [taxExemptReason, setTaxExemptReason] = useState('');
   const [kitchenDelay, setKitchenDelay] = useState(false);
   const [kitchenDelayReason, setKitchenDelayReason] = useState('');
@@ -341,7 +386,7 @@ export default function ToastOrders({
     if (propTables && propTables.length > 0) return propTables;
     const existingTables = [];
     for (let i = 1; i <= 20; i++) {
-      existingTables.push({ id: i, number: i, status: 'available', orderId: null });
+      existingTables.push({ id: i, number: i, status: ORDER_CONFIG.TABLE_STATUS.AVAILABLE, orderId: null });
     }
     return existingTables;
   });
@@ -371,7 +416,7 @@ export default function ToastOrders({
   const getSubtotal = () => cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const getDiscountedSubtotal = () => getSubtotal() * (1 - discount / 100);
   const getServiceCharge = () => getDiscountedSubtotal() * (serviceCharge / 100);
-  const getTax = () => taxExempt ? 0 : (getDiscountedSubtotal() + getServiceCharge()) * 0.19; // Changed to 19% as per Toast POS image
+  const getTax = () => taxExempt ? 0 : (getDiscountedSubtotal() + getServiceCharge()) * (ORDER_CONFIG.DEFAULT_GST_RATE / 100);
   const getTotal = () => getDiscountedSubtotal() + getServiceCharge() + getTax() + tipAmount;
 
   const addToCart = (item) => {
@@ -789,8 +834,73 @@ export default function ToastOrders({
       orderTiming,
       kitchenDelay,
       kitchenDelayReason,
+      specialRequest: specialRequest,
+      orderType: orderType,
+      customerName: customerName,
       createdAt: new Date().toISOString()
     };
+
+    // Create order using workflow service
+    let workflowOrder;
+    try {
+      workflowOrder = orderWorkflowService.createOrder({
+        id: order.id,
+        tableId: tables?.find(t => t.number === parseInt(tableNumber))?.id || tableNumber,
+        tableNumber: order.tableNumber,
+        items: order.items,
+        specialRequest: order.specialRequest,
+        waiterId: assignedServer,
+        orderType: order.orderType,
+        customerName: order.customerName,
+        guestCount: order.guestCount
+      });
+    } catch (error) {
+      console.error('[ToastOrders] Failed to create order in workflow service:', error);
+      alert('Failed to create order. Please try again.');
+      return;
+    }
+
+    // Fire order to kitchen (with delay if configured)
+    let kot;
+    try {
+      const fireOrder = () => {
+        kot = orderWorkflowService.fireOrderToKitchen(
+          workflowOrder,
+          order.items.map(item => ({
+            ...item,
+            id: item.id,
+            modifiers: item.modifiers || [],
+            course: item.course,
+            seatId: item.seatId
+          })),
+          tables?.find(t => t.number === parseInt(tableNumber))?.id || tableNumber,
+          assignedServer
+        );
+      };
+
+      if (kitchenDelay) {
+        // Delay firing if kitchen delay is enabled
+        setTimeout(fireOrder, ORDER_CONFIG.KITCHEN_DELAY_MINUTES * 60 * 1000);
+        console.log('[ToastOrders] Order delayed by', ORDER_CONFIG.KITCHEN_DELAY_MINUTES, 'minutes due to:', kitchenDelayReason);
+        alert(`Order delayed by ${ORDER_CONFIG.KITCHEN_DELAY_MINUTES} minutes. Reason: ${kitchenDelayReason}`);
+      } else {
+        fireOrder();
+      }
+    } catch (error) {
+      console.error('[ToastOrders] Failed to fire order to kitchen:', error);
+      alert('Failed to send order to kitchen. Please try again.');
+      return;
+    }
+
+    // Generate token if configured
+    const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+    if (mainSettings.enableTokens) {
+      try {
+        orderWorkflowService.generateToken(workflowOrder.id);
+      } catch (error) {
+        console.error('[ToastOrders] Failed to generate token:', error);
+      }
+    }
 
     // Create KOT
     try {
@@ -816,7 +926,6 @@ export default function ToastOrders({
     }
 
     // Auto-print KOT if enabled in settings
-    const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
     if (mainSettings.autoPrintKOT !== false) {
       setTimeout(() => {
         window.print();
@@ -843,7 +952,7 @@ export default function ToastOrders({
       }));
     }
 
-    setOrders([...orders, order]);
+    setOrders(prev => [...prev, order]);
     setCartItems([]);
     setSpecialRequest('');
     // Order sent successfully
@@ -887,7 +996,9 @@ export default function ToastOrders({
       total: getTotal(),
       heldAt: new Date().toISOString()
     };
-    localStorage.setItem('held_order', JSON.stringify(heldOrder));
+    const existingHeldOrders = JSON.parse(localStorage.getItem('held_orders') || '[]');
+    existingHeldOrders.push(heldOrder);
+    localStorage.setItem('held_orders', JSON.stringify(existingHeldOrders));
     setCartItems([]);
     setSpecialRequest('');
     // Order held successfully
@@ -991,16 +1102,34 @@ export default function ToastOrders({
   };
 
   const handlePaymentComplete = async () => {
-    // Update inventory
-    cartItems.forEach(item => {
-      updateInventory(item.id, item.quantity);
-    });
+    // Validate payment
+    const paymentAmountNum = parseFloat(paymentAmount) || getTotal();
+    if (paymentAmountNum < getTotal()) {
+      alert('Payment amount is insufficient. Please enter a valid amount.');
+      return;
+    }
 
-    // Add loyalty points (1 point per ₹10 spent)
+    if (cartItems.length === 0) {
+      alert('No items in cart to pay for.');
+      return;
+    }
+
+    // Update inventory atomically
+    try {
+      cartItems.forEach(item => {
+        updateInventory(item.id, item.quantity);
+      });
+    } catch (error) {
+      console.error('[ToastOrders] Failed to update inventory:', error);
+      alert('Failed to update inventory. Please try again.');
+      return;
+    }
+
+    // Add loyalty points
     if (customerName) {
       const customer = customers.find(c => c.name === customerName);
       if (customer) {
-        const pointsEarned = Math.floor(getTotal() / 10);
+        const pointsEarned = Math.floor(getTotal() * ORDER_CONFIG.LOYALTY_POINTS_PER_RUPEE);
         addLoyaltyPoints(customer.id, pointsEarned);
       }
     }
@@ -1032,11 +1161,32 @@ export default function ToastOrders({
       orderTiming,
       kitchenDelay,
       kitchenDelayReason,
-      loyaltyPointsEarned: customerName ? Math.floor(getTotal() / 10) : 0,
+      loyaltyPointsEarned: customerName ? Math.floor(getTotal() * ORDER_CONFIG.LOYALTY_POINTS_PER_RUPEE) : 0,
       createdAt: new Date().toISOString()
     };
 
-    setOrders([...orders, newOrder]);
+    // Process payment using workflow service
+    try {
+      orderWorkflowService.processPayment(newOrder.id, {
+        method: paymentMethod,
+        amount: parseFloat(paymentAmount) || getTotal(),
+        tip: tipAmount,
+        discount: discount > 0 ? getSubtotal() * discount / 100 : 0
+      });
+    } catch (error) {
+      console.error('[ToastOrders] Failed to process payment:', error);
+      alert('Failed to process payment. Please try again.');
+      return;
+    }
+
+    // Mark order as completed
+    try {
+      orderWorkflowService.markOrderAsCompleted(newOrder.id);
+    } catch (error) {
+      console.error('[ToastOrders] Failed to mark order as completed:', error);
+    }
+
+    setOrders(prev => [...prev, newOrder]);
     setLastCompletedOrder(newOrder);
     setShowPaymentModal(false);
     setShowReceipt(true);
@@ -1102,16 +1252,19 @@ export default function ToastOrders({
         });
         if (response.ok) {
           console.log('Email receipt sent to:', customer.email);
+        } else {
+          console.error('Failed to send email receipt:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('Failed to send email receipt:', error);
+        alert('Failed to send email receipt. Receipt is available in the app.');
       }
     }
 
     // Save to order history
     const orderHistory = JSON.parse(localStorage.getItem('order_history') || '[]');
     orderHistory.push(newOrder);
-    localStorage.setItem('order_history', JSON.stringify(orderHistory.slice(-50))); // Keep last 50 orders
+    localStorage.setItem('order_history', JSON.stringify(orderHistory));
 
     // Update cash drawer if cash payment
     if (paymentMethod === 'CASH') {
@@ -1130,34 +1283,11 @@ export default function ToastOrders({
       localStorage.setItem('cash_drawer', JSON.stringify(updatedCashDrawer));
     }
 
-    // Create KOT
-    try {
-      const kotManager = getKOTManager();
-      kotManager.createKOT({
-        orderId: newOrder.id,
-        customerName: newOrder.customerName,
-        diningOption: newOrder.diningOption,
-        tableNumber: newOrder.tableNumber,
-        items: newOrder.items.map(item => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          modifiers: item.modifiers || [],
-          price: item.price
-        })),
-        notes: newOrder.notes,
-        createdAt: newOrder.createdAt,
-        server: assignedServer
-      });
-    } catch (error) {
-      console.error('Failed to create KOT:', error);
-    }
-
-    // Update table status to occupied
+    // Update table status to cleaning after payment
     if (tables && setTables) {
       setTables(prevTables => prevTables.map(table => {
         if (table.number === parseInt(tableNumber) || table.id === parseInt(tableNumber)) {
-          return { ...table, status: 'occupied', orderId: newOrder.id, currentOrder: newOrder };
+          return { ...table, status: 'cleaning', orderId: null, currentOrder: null };
         }
         return table;
       }));
@@ -1181,25 +1311,6 @@ export default function ToastOrders({
     setTableNumber('');
     setTipAmount(0);
     setShowPaymentModal(false);
-
-    // Generate token for dine-in orders
-    if (orderType === 'dine_in') {
-      const tokenNumber = `T-${Math.floor(Math.random() * 1000) + 1}`;
-      const tokenOrder = {
-        ...newOrder,
-        token: tokenNumber,
-        tokenStatus: 'PENDING'
-      };
-      // Update the order with token
-      setOrders(prevOrders => prevOrders.map(order => 
-        order.id === newOrder.id ? tokenOrder : order
-      ));
-      
-      // Save to localStorage for Tokens tab
-      const existingTokens = JSON.parse(localStorage.getItem('tokens') || '[]');
-      existingTokens.push(tokenOrder);
-      localStorage.setItem('tokens', JSON.stringify(existingTokens.slice(-100)));
-    }
   };
 
   return (
@@ -2823,13 +2934,12 @@ export default function ToastOrders({
           }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1a1a1a' }}>Held Orders</h3>
             {(() => {
-              const heldOrder = localStorage.getItem('held_order');
-              if (!heldOrder) {
+              const heldOrders = JSON.parse(localStorage.getItem('held_orders') || '[]');
+              if (heldOrders.length === 0) {
                 return <p style={{ color: '#6b7280' }}>No held orders</p>;
               }
-              const order = JSON.parse(heldOrder);
-              return (
-                <div style={{ marginBottom: '16px' }}>
+              return heldOrders.map((order, index) => (
+                <div key={order.id} style={{ marginBottom: '16px' }}>
                   <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '4px', marginBottom: '8px' }}>
                     <div style={{ fontSize: '14px', fontWeight: '600' }}>Table {order.tableNumber}</div>
                     <div style={{ fontSize: '12px', color: '#6b7280' }}>
@@ -2839,28 +2949,47 @@ export default function ToastOrders({
                       Held at: {new Date(order.heldAt).toLocaleTimeString()}
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setCartItems(order.cartItems);
-                      setTableNumber(order.tableNumber);
-                      setSpecialRequest(order.specialRequest);
-                      localStorage.removeItem('held_order');
-                      setShowHeldOrders(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      background: '#2563eb',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Resume Order
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setCartItems(order.cartItems);
+                        setTableNumber(order.tableNumber);
+                        setSpecialRequest(order.specialRequest);
+                        const updatedHeldOrders = heldOrders.filter((_, i) => i !== index);
+                        localStorage.setItem('held_orders', JSON.stringify(updatedHeldOrders));
+                        setShowHeldOrders(false);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '8px',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Resume Order
+                    </button>
+                    <button
+                      onClick={() => {
+                        const updatedHeldOrders = heldOrders.filter((_, i) => i !== index);
+                        localStorage.setItem('held_orders', JSON.stringify(updatedHeldOrders));
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              );
+              ));
             })()}
             <button
               onClick={() => setShowHeldOrders(false)}

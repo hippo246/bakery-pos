@@ -3,6 +3,51 @@ import { QRCodeCanvas } from 'qrcode.react';
 import PaymentModal from '../pos/PaymentModal';
 import Receipt from '../pos/Receipt';
 import { getKOTManager } from '../../operations/KOTManager.js';
+import orderEventManager from '../../services/OrderEventManager.js';
+import orderWorkflowService from '../../services/OrderWorkflowService.js';
+
+// Helper functions for element preview
+const getElementColor = (type) => {
+  const colors = {
+    table: '#6366f1',
+    wall: '#64748b',
+    door: '#a855f7',
+    window: '#06b6d4',
+    pillar: '#854d0e',
+    bar_counter: '#d97706',
+    entrance: '#10b981',
+    stage: '#ec4899'
+  };
+  return colors[type] || '#6366f1';
+};
+
+const getElementIcon = (type) => {
+  const icons = {
+    table: '🪑',
+    wall: '🧱',
+    door: '🚪',
+    window: '🪟',
+    pillar: '🏛️',
+    bar_counter: '🍸',
+    entrance: '🚶',
+    stage: '🎭'
+  };
+  return icons[type] || '●';
+};
+
+const getBorderStyle = (type, wallType) => {
+  if (type === 'wall' || type === 'door' || type === 'window') {
+    const styles = {
+      solid: '2px solid #94a3b8',
+      glass: '2px solid #06b6d4',
+      curtain: '2px dashed #94a3b8',
+      railing: '2px dotted #94a3b8',
+      plant: '2px solid #22c55e'
+    };
+    return styles[wallType] || '2px solid #94a3b8';
+  }
+  return '2px solid #6366f1';
+};
 
 let chequeSeq = 300;
 const generateChequeId = () => {
@@ -49,6 +94,26 @@ export default function ToastTables({
   const screenSize = useScreenSize();
   const isMobile = screenSize === 'mobile';
   const isTablet = screenSize === 'tablet';
+
+  // Theme colors based on dark mode (matching Settings theme)
+  const theme = {
+    bg: darkMode ? '#0f0f0f' : '#f8fafc',
+    bgEle: darkMode ? '#1a1a1a' : '#ffffff',
+    bgCard: darkMode ? '#1e1e1e' : '#ffffff',
+    bgInput: darkMode ? '#2a2a2a' : '#f1f5f9',
+    bgSecondary: darkMode ? '#1a1a1a' : '#f1f5f9',
+    bgTertiary: darkMode ? '#333333' : '#e2e8f0',
+    text: darkMode ? '#f1f5f9' : '#1e293b',
+    textSecondary: darkMode ? '#cbd5e1' : '#475569',
+    textMuted: darkMode ? '#94a3b8' : '#64748b',
+    border: darkMode ? '#334155' : '#cbd5e1',
+    borderLight: darkMode ? '#475569' : '#e2e8f0',
+    accent: '#6366f1',
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    shadow: darkMode ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.08)'
+  };
 
   // Section Sidebar filter
   const [selectedSection, setSelectedSection] = useState('Main');
@@ -251,7 +316,7 @@ export default function ToastTables({
     { id: 12, number: '12', name: '12', shape: 'rect', x: 32, y: 60, wPct: 10, hPct: 12, status: 'available', section: 'Main' },
     { id: 13, number: '13', name: '13', shape: 'rect', x: 45, y: 60, wPct: 10, hPct: 12, status: 'available', section: 'Main' },
     { id: 18, number: '18', name: '18', shape: 'rect', x: 58, y: 60, wPct: 10, hPct: 12, status: 'occupied', guests: 2, seatedAt: Date.now() - 10 * 60 * 1000, section: 'Main' },
-    { id: 17, number: '17', name: '17', shape: 'rect', x: 71, y: 60, wPct: 10, hPct: 12, status: 'available', section: 'Main' },
+    { id: 17, number: '17', name: '17', shape: 'rect', x: 71, y: 60, wPct: 10, hPct: 12, status: 'cleaning', section: 'Main' },
     { id: 10, number: '10', name: '10', shape: 'circle', x: 84, y: 58, wPct: 12, hPct: 14, status: 'occupied', guests: 3, seatedAt: Date.now() - 55 * 60 * 1000, section: 'Main' },
 
     // Patio & Outside
@@ -311,7 +376,7 @@ export default function ToastTables({
     const isExempt = currentBadges.includes('VIP') || currentBadges.includes('Do Not Rush');
 
     if (isExempt) {
-      return { label: `${timeStr} ⭐`, color: '#8b5cf6', stage: 'exempt' }; // Purple exempt for VIP / Do Not Rush
+      return { label: `${timeStr} ⭐`, color: '#64748b', stage: 'exempt' }; // Gray exempt for VIP / Do Not Rush
     }
 
     const freshThreshold = settings?.turnTimeFresh || 30;
@@ -477,8 +542,8 @@ export default function ToastTables({
         {
           id: '#C201',
           items: [
-            { id: 'item-6', name: 'Grilled Ribeye Steak', qty: 2, price: 850.00, tag: 'MN', seat: 1, currency: '₹' },
-            { id: 'item-7', name: 'Red Wine Pinot Noir', qty: 1, price: 450.00, tag: 'WN', seat: 2, currency: '₹' }
+            { id: 'item-6', name: 'Roast Herb Chicken', qty: 2, price: 520.00, tag: 'MN', seat: 1, currency: '₹' },
+            { id: 'item-7', name: 'Mango Alphonso Lassi', qty: 1, price: 220.00, tag: 'BV', seat: 2, currency: '₹' }
           ],
           discount: 100.00,
           notes: 'VIP customer table'
@@ -514,6 +579,110 @@ export default function ToastTables({
       console.error('Failed to persist floor plan:', e);
     }
   }, [floorTables]);
+
+  // Real-time order event synchronization
+  useEffect(() => {
+    // Subscribe to order events
+    const unsubscribeOrderCreated = orderEventManager.on('order:created', (order) => {
+      console.log('[ToastTables] Order created:', order.id);
+      if (order.tableId) {
+        // Update table with new order
+        setFloorTables(prev => prev.map(t => 
+          t.id === order.tableId || matchTableCanonical(t, order.tableId)
+            ? { ...t, status: 'occupied', hasOrder: true }
+            : t
+        ));
+        
+        // Add log entry
+        addLog(order.tableId, `Order ${order.id} created`);
+      }
+    });
+
+    const unsubscribeOrderUpdated = orderEventManager.on('order:updated', ({ order, changes }) => {
+      console.log('[ToastTables] Order updated:', order.id);
+      if (order.tableId) {
+        // Update table bills when order is updated
+        if (changes.items || changes.addItem) {
+          setTableBills(prev => {
+            const existing = prev[order.tableId] || { cheques: [] };
+            const updatedCheques = existing.cheques.map(cheque => {
+              if (cheque.id === order.chequeId) {
+                return {
+                  ...cheque,
+                  items: order.items || changes.items || cheque.items
+                };
+              }
+              return cheque;
+            });
+            
+            return {
+              ...prev,
+              [order.tableId]: { cheques: updatedCheques }
+            };
+          });
+        }
+      }
+    });
+
+    const unsubscribeOrderFired = orderEventManager.on('order:fired', ({ order, kotData }) => {
+      console.log('[ToastTables] Order fired to kitchen:', order.id);
+      if (order.tableId) {
+        addLog(order.tableId, `KOT sent to kitchen for order ${order.id}`);
+      }
+    });
+
+    const unsubscribeOrderCompleted = orderEventManager.on('order:completed', (order) => {
+      console.log('[ToastTables] Order completed:', order.id);
+      if (order.tableId) {
+        addLog(order.tableId, `Order ${order.id} completed`);
+      }
+    });
+
+    const unsubscribeOrderPaid = orderEventManager.on('order:paid', ({ order, paymentData }) => {
+      console.log('[ToastTables] Order paid:', order.id);
+      if (order.tableId) {
+        addLog(order.tableId, `Payment processed for order ${order.id}`);
+        
+        // Check if table should be cleared
+        const table = floorTables.find(t => t.id === order.tableId || matchTableCanonical(t, order.tableId));
+        if (table && table.autoClearOnPayment) {
+          setFloorTables(prev => prev.map(t => 
+            t.id === order.tableId || matchTableCanonical(t, order.tableId)
+              ? { ...t, status: 'cleaning', badge: 'Dirty' }
+              : t
+          ));
+        }
+      }
+    });
+
+    const unsubscribeTableStatus = orderEventManager.on('table:status', ({ tableId, newStatus, tableData }) => {
+      console.log('[ToastTables] Table status changed:', tableId, newStatus);
+      setFloorTables(prev => prev.map(t => 
+        t.id === tableId || matchTableCanonical(t, tableId)
+          ? { ...t, status: newStatus, ...tableData }
+          : t
+      ));
+    });
+
+    const unsubscribeTableOrder = orderEventManager.on('table:order', ({ tableId, orderData }) => {
+      console.log('[ToastTables] Table order updated:', tableId);
+      setTableBills(prev => ({
+        ...prev,
+        [tableId]: orderData
+      }));
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeOrderCreated();
+      unsubscribeOrderUpdated();
+      unsubscribeOrderFired();
+      unsubscribeOrderCompleted();
+      unsubscribeOrderPaid();
+      unsubscribeTableStatus();
+      unsubscribeTableOrder();
+    };
+  }, []);
 
   const selectedTable = useMemo(() => {
     return floorTables.find(t => t.id === selectedTableId) || floorTables[0];
@@ -598,7 +767,7 @@ export default function ToastTables({
   // Operational Handlers with Confirmations & Toast Feedback
   const handleOpenTable = () => {
     if (selectedTable.status === 'out_of_service' || selectedTable.badge === 'Out of Service') {
-      showToast(`Table #${selectedTable.name} is OUT OF SERVICE and cannot be seated`, 'error');
+      showToast(`Table #${selectedTable.name} is currently unavailable for seating`, 'error');
       return;
     }
 
@@ -632,6 +801,12 @@ export default function ToastTables({
 
     addLog(selectedTableId, `Table #${selectedTable.name} seated`);
     showToast(`Table #${selectedTable.name} opened`, 'success');
+    
+    // Emit table status change event
+    orderEventManager.emitTableStatusChanged(selectedTableId, 'occupied', {
+      guests: selectedTable.guests || 2,
+      seatedAt: Date.now()
+    });
   };
 
   const handleClearTable = () => {
@@ -690,12 +865,12 @@ export default function ToastTables({
   // Table Transfer / Move Party Handler
   const handleTransferTable = () => {
     if (!transferTargetTableId) {
-      showToast('Please select a destination table', 'warning');
+      showToast('Please select which table to transfer the order to', 'warning');
       return;
     }
     const targetTable = floorTables.find(t => matchTableCanonical(t, transferTargetTableId));
     if (!targetTable) {
-      showToast('Destination table not found', 'error');
+      showToast('Unable to find the selected destination table', 'error');
       return;
     }
 
@@ -736,7 +911,7 @@ export default function ToastTables({
       showToast('Floor plan layout saved successfully', 'success');
     } catch (err) {
       console.error('Failed to save floor plan to localStorage:', err);
-      showToast('Failed to save layout to local storage', 'error');
+      showToast('Unable to save floor plan changes. Please check your browser storage settings.', 'error');
       setIsEditMode(false);
     }
   };
@@ -834,12 +1009,12 @@ export default function ToastTables({
   // Feature 3: Functional Table Merging Handler (combines bills & visual link)
   const handleMergeTables = () => {
     if (!targetMergeTableId) {
-      showToast('Please select a target table to merge with', 'warning');
+      showToast('Please select which table to merge with', 'warning');
       return;
     }
     const targetTable = floorTables.find(t => matchTableCanonical(t, targetMergeTableId));
     if (!targetTable) {
-      showToast('Target table for merge not found', 'error');
+      showToast('Unable to find the selected table for merging', 'error');
       return;
     }
 
@@ -1123,16 +1298,46 @@ export default function ToastTables({
   const submitQuickPOSOrder = () => {
     if (quickPOSCart.length === 0) return;
     
+    // Create order using workflow service
+    const orderData = {
+      id: `ORD-${Date.now()}`,
+      tableId: selectedTableId,
+      tableNumber: selectedTable.name,
+      items: quickPOSCart.map(i => ({ ...i, seat: i.seat || quickPOSSelectedSeat })),
+      specialRequest: quickPOSOrderNote,
+      waiterId: staff && staff.length > 0 ? staff[0].id : null,
+      orderType: 'dine_in'
+    };
+
+    const order = orderWorkflowService.createOrder(orderData);
+    
+    // Add items to bill
     quickPOSCart.forEach(item => {
       for (let k = 0; k < item.qty; k++) {
         handleAddItemToBill({ ...item, seat: item.seat || quickPOSSelectedSeat });
       }
     });
 
+    // Fire order to kitchen
+    const kot = orderWorkflowService.fireOrderToKitchen(
+      order,
+      quickPOSCart.map(i => ({ ...i, seat: i.seat || quickPOSSelectedSeat })),
+      selectedTableId,
+      staff && staff.length > 0 ? staff[0].id : null
+    );
+
+    // Generate token if configured
+    if (settings?.enableTokens) {
+      orderWorkflowService.generateToken(order.id);
+    }
+
+    // Update table order data
+    orderWorkflowService.updateTableOrder(selectedTableId, tableBills[selectedTableId]);
+
     try {
       const kotManager = getKOTManager();
       kotManager.createKOT({
-        orderId: `ORD-${Date.now()}`,
+        orderId: order.id,
         tableNumber: selectedTable.name,
         items: quickPOSCart.map(i => ({ name: i.name, quantity: i.qty, price: i.price, seat: i.seat })),
         notes: quickPOSOrderNote ? `Quick POS: ${quickPOSOrderNote}` : 'Quick POS order from Toast Tables',
@@ -1142,10 +1347,11 @@ export default function ToastTables({
       console.log('KOT created from Quick POS');
     }
 
-    addLog(selectedTableId, `Quick POS order placed with ${quickPOSCart.length} items for Seat ${quickPOSSelectedSeat}`);
+    addLog(selectedTableId, `Quick POS order ${order.id} placed with ${quickPOSCart.length} items for Seat ${quickPOSSelectedSeat}`);
     setQuickPOSCart([]);
     setQuickPOSOrderNote('');
     setShowQuickPOSModal(false);
+    showToast(`Order ${order.id} sent to kitchen`, 'success');
   };
 
   const handlePay = () => {
@@ -1205,19 +1411,25 @@ export default function ToastTables({
       height: '100%',
       maxHeight: '100%',
       width: '100%',
-      backgroundColor: darkMode ? '#161b26' : '#f8fafc',
-      color: darkMode ? '#e2e8f0' : '#0f172a',
+      backgroundColor: darkMode ? '#0f0f0f' : '#f8fafc',
+      color: darkMode ? '#f1f5f9' : '#1e293b',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       overflow: 'hidden',
       userSelect: 'none',
       boxSizing: 'border-box'
     }}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+      `}</style>
       {/* ── Mobile Panel Selector Switcher ── */}
       {isMobile && (
         <div style={{
           display: 'flex',
-          backgroundColor: '#11151f',
-          borderBottom: '1px solid #252e3e',
+          backgroundColor: darkMode ? '#1a1a1a' : '#f1f5f9',
+          borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
           padding: '4px',
           flexShrink: 0
         }}>
@@ -1226,8 +1438,8 @@ export default function ToastTables({
             style={{
               flex: 1,
               padding: '8px',
-              backgroundColor: mobilePanel === 'floor' ? '#2563eb' : 'transparent',
-              color: mobilePanel === 'floor' ? '#ffffff' : '#94a3b8',
+              backgroundColor: mobilePanel === 'floor' ? '#6366f1' : 'transparent',
+              color: mobilePanel === 'floor' ? '#ffffff' : (darkMode ? '#cbd5e1' : '#64748b'),
               border: 'none',
               borderRadius: '6px',
               fontWeight: '700',
@@ -1242,8 +1454,8 @@ export default function ToastTables({
             style={{
               flex: 1,
               padding: '8px',
-              backgroundColor: mobilePanel === 'bill' ? '#2563eb' : 'transparent',
-              color: mobilePanel === 'bill' ? '#ffffff' : '#94a3b8',
+              backgroundColor: mobilePanel === 'bill' ? '#6366f1' : 'transparent',
+              color: mobilePanel === 'bill' ? '#ffffff' : (darkMode ? '#cbd5e1' : '#64748b'),
               border: 'none',
               borderRadius: '6px',
               fontWeight: '700',
@@ -1258,8 +1470,8 @@ export default function ToastTables({
             style={{
               flex: 1,
               padding: '8px',
-              backgroundColor: mobilePanel === 'sections' ? '#2563eb' : 'transparent',
-              color: mobilePanel === 'sections' ? '#ffffff' : '#94a3b8',
+              backgroundColor: mobilePanel === 'sections' ? '#6366f1' : 'transparent',
+              color: mobilePanel === 'sections' ? '#ffffff' : (darkMode ? '#cbd5e1' : '#64748b'),
               border: 'none',
               borderRadius: '6px',
               fontWeight: '700',
@@ -1279,8 +1491,8 @@ export default function ToastTables({
         {(!isMobile || mobilePanel === 'sections') && (
           <div style={{
             width: isMobile ? '100%' : isTablet ? '100px' : '140px',
-            backgroundColor: '#1a202c',
-            borderRight: '1px solid #252e3e',
+            backgroundColor: darkMode ? '#0f0f0f' : '#f8fafc',
+            borderRight: darkMode ? '2px solid #334155' : '2px solid #cbd5e1',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1288,7 +1500,7 @@ export default function ToastTables({
           }}>
             <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
               {/* Floor Plan Quick Search */}
-              <div style={{ padding: '8px', borderBottom: '1px solid #252e3e' }}>
+              <div style={{ padding: '8px', borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1' }}>
                 <input
                   type="text"
                   placeholder="🔍 Search table..."
@@ -1307,10 +1519,10 @@ export default function ToastTables({
                   style={{
                     width: '100%',
                     padding: '6px 8px',
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #334155',
+                    backgroundColor: darkMode ? '#2a2a2a' : '#f1f5f9',
+                    border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                     borderRadius: '4px',
-                    color: '#ffffff',
+                    color: darkMode ? '#f1f5f9' : '#1e293b',
                     fontSize: '11px',
                     boxSizing: 'border-box'
                   }}
@@ -1330,8 +1542,8 @@ export default function ToastTables({
                       flex: isMobile ? '1 1 45%' : 'none',
                       padding: isTablet ? '12px 6px' : '14px 10px',
                       textAlign: isMobile ? 'center' : 'left',
-                      backgroundColor: isActive ? '#111622' : 'transparent',
-                      color: isActive ? '#ffffff' : '#94a3b8',
+                      backgroundColor: isActive ? (darkMode ? '#1a1a1a' : '#e2e8f0') : 'transparent',
+                      color: isActive ? (darkMode ? '#f1f5f9' : '#1e293b') : (darkMode ? '#94a3b8' : '#64748b'),
                       border: 'none',
                       borderLeft: !isMobile && isActive ? '4px solid #f59e0b' : '4px solid transparent',
                       borderBottom: isMobile && isActive ? '3px solid #f59e0b' : 'none',
@@ -1355,9 +1567,9 @@ export default function ToastTables({
                 style={{
                   width: '100%',
                   padding: '10px 6px',
-                  backgroundColor: isEditMode ? '#ffffff' : '#000000',
-                  color: isEditMode ? '#000000' : '#ffffff',
-                  border: '1px solid #ffffff',
+                  backgroundColor: isEditMode ? '#6366f1' : (darkMode ? '#1a1a1a' : '#e2e8f0'),
+                  color: isEditMode ? '#ffffff' : (darkMode ? '#f1f5f9' : '#1e293b'),
+                  border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                   borderRadius: '6px',
                   fontSize: '11px',
                   fontWeight: '700',
@@ -1377,9 +1589,9 @@ export default function ToastTables({
                 style={{
                   width: '100%',
                   padding: '10px 6px',
-                  backgroundColor: '#ffffff',
-                  color: '#000000',
-                  border: '1px solid #ffffff',
+                  backgroundColor: darkMode ? '#1e293b' : '#e2e8f0',
+                  color: darkMode ? '#f1f5f9' : '#1e293b',
+                  border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                   borderRadius: '6px',
                   fontSize: '12px',
                   fontWeight: '700',
@@ -1406,8 +1618,8 @@ export default function ToastTables({
             onTouchEnd={handleCanvasMouseUp}
             style={{
               flex: 1,
-              backgroundColor: isEditMode ? '#0f172a' : '#161b26',
-              backgroundImage: isEditMode ? 'radial-gradient(#334155 1px, transparent 1px)' : 'none',
+              backgroundColor: isEditMode ? (darkMode ? '#1a1a1a' : '#f1f5f9') : (darkMode ? '#0f0f0f' : '#f8fafc'),
+              backgroundImage: isEditMode ? `radial-gradient(${darkMode ? '#334155' : '#cbd5e1'} 1px, transparent 1px)` : 'none',
               backgroundSize: '20px 20px',
               position: 'relative',
               overflow: 'hidden',
@@ -1422,22 +1634,22 @@ export default function ToastTables({
             {isEditMode && (
               <div style={{
                 padding: '8px 14px',
-                backgroundColor: '#1e293b',
-                borderBottom: '1px solid #334155',
+                backgroundColor: darkMode ? '#1a1a1a' : '#f1f5f9',
+                borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 zIndex: 20
               }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#f59e0b' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'theme.warning' }}>
                   ✏️ FLOOR BUILDER MODE: Drag tables to position
                 </span>
                 <button
                   onClick={() => setShowAddTableModal(true)}
                   style={{
                     padding: '6px 12px',
-                    backgroundColor: '#2563eb',
-                    color: '#ffffff',
+                    backgroundColor: 'theme.accent',
+                    color: 'theme.text',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '12px',
@@ -1468,7 +1680,7 @@ export default function ToastTables({
                       strokeDasharray="6,4"
                     />
                     <circle cx={`${(t1.x + t2.x) / 2 + 5}%`} cy={`${(t1.y + t2.y) / 2 + 6}%`} r="10" fill="#f59e0b" />
-                    <text x={`${(t1.x + t2.x) / 2 + 5}%`} y={`${(t1.y + t2.y) / 2 + 6.5}%`} fill="#0f172a" fontSize="10" fontWeight="bold" textAnchor="middle">🔗</text>
+                    <text x={`${(t1.x + t2.x) / 2 + 5}%`} y={`${(t1.y + t2.y) / 2 + 6.5}%`} fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle">🔗</text>
                   </g>
                 );
               })}
@@ -1487,6 +1699,7 @@ export default function ToastTables({
                 .map(t => {
                 const isSelected = selectedTableId === t.id;
                 const isOccupied = t.status === 'occupied';
+                const isCleaning = t.status === 'cleaning';
                 const seatingInfo = getTableSeatingStage(t);
 
                 if (t.type === 'wall') {
@@ -1501,16 +1714,17 @@ export default function ToastTables({
                         top: `${t.y}%`,
                         width: `clamp(60px, ${t.wPct}vw, 160px)`,
                         height: `clamp(10px, ${t.hPct}vh, 25px)`,
-                        backgroundColor: '#334155',
+                        backgroundColor: darkMode ? '#475569' : '#94a3b8',
                         borderRadius: '4px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '10px',
-                        color: '#94a3b8',
+                        color: darkMode ? '#f1f5f9' : '#ffffff',
                         fontWeight: '700',
                         cursor: isEditMode ? 'move' : 'default',
-                        border: isEditMode ? '1px dashed #f59e0b' : 'none'
+                        border: isEditMode ? '2px dashed #f59e0b' : darkMode ? '1px solid #64748b' : '1px solid #cbd5e1',
+                        boxShadow: darkMode ? '0 2px 4px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                     >
                       🧱 WALL
@@ -1536,8 +1750,16 @@ export default function ToastTables({
                       width: `clamp(40px, ${t.wPct}vw, 95px)`,
                       height: `clamp(36px, ${t.hPct}vh, 65px)`,
                       borderRadius: t.shape === 'circle' ? '50%' : '8px',
-                      backgroundColor: isOccupied ? '#ffffff' : '#2b3445',
-                      color: isOccupied ? seatingInfo.color : '#94a3b8',
+                      backgroundColor: t.status === 'cleaning' 
+                        ? (darkMode ? '#164e63' : '#cffafe') 
+                        : isOccupied 
+                        ? (darkMode ? '#1e293b' : '#e2e8f0') 
+                        : (darkMode ? '#1a1a1a' : '#ffffff'),
+                      color: t.status === 'cleaning' 
+                        ? (darkMode ? '#cffafe' : '#0e7490') 
+                        : isOccupied 
+                        ? (darkMode ? '#f1f5f9' : '#1e293b') 
+                        : (darkMode ? '#94a3b8' : '#64748b'),
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
@@ -1545,8 +1767,16 @@ export default function ToastTables({
                       fontWeight: '700',
                       fontSize: 'clamp(11px, 1.2vw, 16px)',
                       cursor: isEditMode ? 'move' : 'pointer',
-                      boxShadow: isSelected ? '0 0 0 3px #f59e0b' : '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
-                      border: isEditMode ? '2px dashed #f59e0b' : 'none',
+                      boxShadow: isSelected 
+                        ? (darkMode ? '0 0 0 3px #6366f1' : '0 0 0 3px #6366f1') 
+                        : t.status === 'cleaning'
+                        ? (darkMode ? '0 0 0 2px #06b6d4' : '0 0 0 2px #06b6d4')
+                        : (darkMode ? '0 4px 6px rgba(0,0,0,0.4)' : '0 4px 6px rgba(0,0,0,0.1)'),
+                      border: t.status === 'cleaning'
+                        ? (darkMode ? '2px dashed #06b6d4' : '2px dashed #06b6d4')
+                        : isOccupied 
+                        ? (darkMode ? '2px solid #6366f1' : '2px solid #6366f1') 
+                        : (darkMode ? '1px solid #334155' : '1px solid #cbd5e1'),
                       transition: isEditMode ? 'none' : 'all 0.15s ease',
                       zIndex: isSelected ? 10 : 3
                     }}
@@ -1559,7 +1789,7 @@ export default function ToastTables({
                           position: 'absolute',
                           top: '-8px',
                           right: '-8px',
-                          backgroundColor: '#2563eb',
+                          backgroundColor: '#6366f1',
                           color: '#ffffff',
                           borderRadius: '50%',
                           width: '18px',
@@ -1570,28 +1800,78 @@ export default function ToastTables({
                           fontSize: '10px',
                           cursor: 'pointer',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.4)',
-                          zIndex: 15
+                          zIndex: 15,
+                          border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1'
                         }}
                       >
                         📋
                       </div>
                     )}
 
-                    <span>{t.name}</span>
+                    <span style={{
+                      fontSize: 'clamp(12px, 1.3vw, 18px)',
+                      fontWeight: '800',
+                      color: isOccupied 
+                        ? (darkMode ? '#f1f5f9' : '#1e293b') 
+                        : (darkMode ? '#cbd5e1' : '#64748b'),
+                      textShadow: isOccupied 
+                        ? (darkMode ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 2px rgba(0,0,0,0.1)') 
+                        : 'none',
+                      letterSpacing: '0.5px'
+                    }}>{t.name}</span>
+                    
+                    {/* Status Text */}
+                    <span style={{
+                      fontSize: 'clamp(8px, 0.8vw, 10px)',
+                      fontWeight: '600',
+                      color: t.status === 'cleaning' 
+                        ? '#06b6d4' 
+                        : isOccupied 
+                        ? (seatingInfo.stage === 'fresh' ? '#10b981' : seatingInfo.stage === 'warning' ? '#f59e0b' : seatingInfo.stage === 'overdue' ? '#ef4444' : '#64748b')
+                        : (darkMode ? '#64748b' : '#94a3b8'),
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.3px',
+                      marginTop: '2px'
+                    }}>
+                      {t.status === 'cleaning' 
+                        ? '🧹 Cleaning' 
+                        : isOccupied 
+                        ? (seatingInfo.stage === 'fresh' ? 'Active' : seatingInfo.stage === 'warning' ? 'Waiting' : seatingInfo.stage === 'overdue' ? 'Overdue' : 'Seated') 
+                        : 'Available'}
+                    </span>
 
                     {/* Feature 2: Seating Duration Timer Badge (Top Left) */}
-                    {isOccupied && (
+                    {isCleaning && (
                       <div style={{
                         position: 'absolute',
                         top: '-6px',
                         left: '-6px',
-                        backgroundColor: seatingInfo.color,
+                        backgroundColor: '#06b6d4',
                         color: '#ffffff',
                         fontSize: '9px',
                         padding: '1px 5px',
                         borderRadius: '10px',
                         fontWeight: '700',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
+                        animation: 'pulse 2s infinite'
+                      }}>
+                        🧹 Cleaning
+                      </div>
+                    )}
+                    {isOccupied && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        left: '-6px',
+                        backgroundColor: seatingInfo.stage === 'fresh' ? '#10b981' : seatingInfo.stage === 'warning' ? '#f59e0b' : seatingInfo.stage === 'overdue' ? '#ef4444' : '#64748b',
+                        color: '#ffffff',
+                        fontSize: '9px',
+                        padding: '1px 5px',
+                        borderRadius: '10px',
+                        fontWeight: '700',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1'
                       }}>
                         ⏱️ {seatingInfo.label}
                       </div>
@@ -1606,14 +1886,15 @@ export default function ToastTables({
                         width: 'clamp(16px, 1.5vw, 22px)',
                         height: 'clamp(16px, 1.5vw, 22px)',
                         borderRadius: '50%',
-                        backgroundColor: '#1e293b',
+                        backgroundColor: darkMode ? '#f59e0b' : '#f59e0b',
                         color: '#ffffff',
                         fontSize: 'clamp(8px, 0.9vw, 11px)',
                         fontWeight: '700',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        border: '2px solid #ffffff'
+                        border: darkMode ? '2px solid #475569' : '2px solid #cbd5e1',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                       }}>
                         {t.guests}
                       </div>
@@ -1632,7 +1913,7 @@ export default function ToastTables({
                           <span
                             key={bIdx}
                             style={{
-                              backgroundColor: bdg === 'Dirty' ? '#ef4444' : bdg === 'Sanitizing' ? '#0284c7' : bdg === 'VIP' ? '#8b5cf6' : bdg === 'Out of Service' ? '#64748b' : '#1e293b',
+                              backgroundColor: bdg === 'Dirty' ? '#ef4444' : bdg === 'Sanitizing' ? '#6366f1' : bdg === 'VIP' ? '#f59e0b' : bdg === 'Out of Service' ? '#64748b' : '#94a3b8',
                               color: '#ffffff',
                               fontSize: '8px',
                               padding: '1px 4px',
@@ -1640,7 +1921,8 @@ export default function ToastTables({
                               fontWeight: '700',
                               textTransform: 'uppercase',
                               boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
-                              whiteSpace: 'nowrap'
+                              whiteSpace: 'nowrap',
+                              border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1'
                             }}
                           >
                             {bdg}
@@ -1659,8 +1941,8 @@ export default function ToastTables({
               alignItems: 'center',
               gap: isMobile ? '4px' : '8px',
               padding: isMobile ? '6px 8px' : '10px 14px',
-              backgroundColor: '#11151f',
-              borderTop: '1px solid #252e3e',
+              backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+              borderTop: '1px solid theme.bgSecondary',
               overflowX: 'auto',
               flexShrink: 0
             }}>
@@ -1669,8 +1951,8 @@ export default function ToastTables({
                 title="Table Operations Menu"
                 style={{
                   padding: '9px 12px',
-                  backgroundColor: '#1e293b',
-                  color: '#ffffff',
+                  backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+                  color: 'theme.text',
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -1687,8 +1969,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '65px',
                   padding: '10px 8px',
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
+                  backgroundColor: 'theme.accent',
+                  color: 'theme.text',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -1707,8 +1989,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '85px',
                   padding: '10px 8px',
-                  backgroundColor: '#ffffff',
-                  color: '#0f172a',
+                  backgroundColor: 'theme.text',
+                  color: 'theme.inputBg',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -1733,8 +2015,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '85px',
                   padding: '10px 8px',
-                  backgroundColor: '#ffffff',
-                  color: '#0f172a',
+                  backgroundColor: 'theme.text',
+                  color: 'theme.inputBg',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -1756,8 +2038,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '75px',
                   padding: '10px 8px',
-                  backgroundColor: '#ffffff',
-                  color: '#0f172a',
+                  backgroundColor: 'theme.text',
+                  color: 'theme.inputBg',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -1782,8 +2064,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '75px',
                   padding: '10px 8px',
-                  backgroundColor: '#ffffff',
-                  color: '#0f172a',
+                  backgroundColor: 'theme.text',
+                  color: 'theme.inputBg',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -1806,8 +2088,8 @@ export default function ToastTables({
         {(!isMobile || mobilePanel === 'bill') && (
           <div style={{
             width: isMobile ? '100%' : isTablet ? '290px' : '360px',
-            backgroundColor: '#11151f',
-            borderLeft: isMobile ? 'none' : '1px solid #252e3e',
+            backgroundColor: darkMode ? '#1a1a1a' : '#f1f5f9',
+            borderLeft: isMobile ? 'none' : (darkMode ? '2px solid #334155' : '2px solid #cbd5e1'),
             display: 'flex',
             flexDirection: 'column',
             flexShrink: 0,
@@ -1816,14 +2098,14 @@ export default function ToastTables({
             {/* Table Header Info with Feature 6: Customer CRM Pairing */}
             <div style={{
               padding: '12px 14px',
-              borderBottom: '1px solid #252e3e',
+              borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
               flexShrink: 0
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#f8fafc' }}>
+                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
                   Table #{selectedTable.name}
                 </h2>
                 <div style={{ display: 'flex', gap: '6px' }}>
@@ -1833,7 +2115,7 @@ export default function ToastTables({
                     style={{
                       padding: '3px 8px',
                       backgroundColor: '#f59e0b',
-                      color: '#0f172a',
+                      color: '#ffffff',
                       border: 'none',
                       borderRadius: '4px',
                       fontSize: '11px',
@@ -1847,7 +2129,7 @@ export default function ToastTables({
                     onClick={() => setShowAddItemModal(true)}
                     style={{
                       padding: '3px 8px',
-                      backgroundColor: '#2563eb',
+                      backgroundColor: '#6366f1',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '4px',
@@ -1860,14 +2142,14 @@ export default function ToastTables({
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: darkMode ? '#94a3b8' : '#64748b' }}>
                 <span
                   onClick={() => {
                     setEditGuestCount(selectedTable.guests || 2);
                     setShowGuestsModal(true);
                   }}
                   title="Click to edit guest count"
-                  style={{ cursor: 'pointer', backgroundColor: '#1e293b', padding: '2px 6px', borderRadius: '4px', border: '1px solid #334155', color: '#f8fafc', fontWeight: '600' }}
+                  style={{ cursor: 'pointer', backgroundColor: darkMode ? '#2a2a2a' : '#e2e8f0', padding: '2px 6px', borderRadius: '4px', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', color: darkMode ? '#f1f5f9' : '#1e293b', fontWeight: '600' }}
                 >
                   👥 {selectedTable.guests || 0} Guests ✏️
                 </span>
@@ -1887,15 +2169,15 @@ export default function ToastTables({
               {/* Cheques Selector Column */}
               <div style={{
                 width: isMobile ? '65px' : '75px',
-                backgroundColor: '#171d2b',
-                borderRight: '1px solid #252e3e',
+                backgroundColor: darkMode ? '#0f0f0f' : '#f8fafc',
+                borderRight: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
                 display: 'flex',
                 flexDirection: 'column',
                 padding: '8px 4px',
                 gap: '8px',
                 flexShrink: 0
               }}>
-                <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', textAlign: 'center' }}>
+                <span style={{ fontSize: '9px', fontWeight: '700', color: darkMode ? '#94a3b8' : '#64748b', textTransform: 'uppercase', textAlign: 'center' }}>
                   Cheques
                 </span>
 
@@ -1907,10 +2189,10 @@ export default function ToastTables({
                       onClick={() => setActiveChequeId(chq.id)}
                       style={{
                         padding: '10px 4px',
-                        backgroundColor: isSelected ? '#ffffff' : '#222c3e',
-                        color: isSelected ? '#0f172a' : '#cbd5e1',
+                        backgroundColor: isSelected ? '#6366f1' : (darkMode ? '#1a1a1a' : '#ffffff'),
+                        color: isSelected ? '#ffffff' : (darkMode ? '#94a3b8' : '#64748b'),
                         borderRadius: '6px',
-                        border: isSelected ? '2px solid #f59e0b' : '1px solid transparent',
+                        border: isSelected ? '2px solid #6366f1' : (darkMode ? '1px solid #334155' : '1px solid #e2e8f0'),
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
@@ -1930,9 +2212,9 @@ export default function ToastTables({
                   onClick={handleAddCheque}
                   style={{
                     padding: '10px 4px',
-                    backgroundColor: '#1e293b',
-                    color: '#94a3b8',
-                    border: '1px dashed #475569',
+                    backgroundColor: darkMode ? '#2a2a2a' : '#e2e8f0',
+                    color: darkMode ? '#94a3b8' : '#64748b',
+                    border: darkMode ? '1px dashed #475569' : '1px dashed #cbd5e1',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontWeight: '700',
@@ -1952,16 +2234,16 @@ export default function ToastTables({
                 
                 {/* Tabs header */}
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                  <div style={{ display: 'flex', borderBottom: '1px solid #252e3e', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1', flexShrink: 0 }}>
                     <button
                       onClick={() => setActiveTab('Bill')}
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: activeTab === 'Bill' ? '#11151f' : '#171d2b',
-                        color: activeTab === 'Bill' ? '#f8fafc' : '#64748b',
+                        backgroundColor: activeTab === 'Bill' ? (darkMode ? '#2a2a2a' : '#e2e8f0') : (darkMode ? '#0f0f0f' : '#f8fafc'),
+                        color: activeTab === 'Bill' ? (darkMode ? '#f1f5f9' : '#1e293b') : (darkMode ? '#94a3b8' : '#64748b'),
                         border: 'none',
-                        borderBottom: activeTab === 'Bill' ? '2px solid #2563eb' : 'none',
+                        borderBottom: activeTab === 'Bill' ? '2px solid #6366f1' : 'none',
                         fontWeight: '700',
                         fontSize: '12px',
                         cursor: 'pointer'
@@ -1974,10 +2256,10 @@ export default function ToastTables({
                       style={{
                         flex: 1,
                         padding: '8px',
-                        backgroundColor: activeTab === 'Logs' ? '#11151f' : '#171d2b',
-                        color: activeTab === 'Logs' ? '#f8fafc' : '#64748b',
+                        backgroundColor: activeTab === 'Logs' ? (darkMode ? '#2a2a2a' : '#e2e8f0') : (darkMode ? '#0f0f0f' : '#f8fafc'),
+                        color: activeTab === 'Logs' ? (darkMode ? '#f1f5f9' : '#1e293b') : (darkMode ? '#94a3b8' : '#64748b'),
                         border: 'none',
-                        borderBottom: activeTab === 'Logs' ? '2px solid #2563eb' : 'none',
+                        borderBottom: activeTab === 'Logs' ? '2px solid #6366f1' : 'none',
                         fontWeight: '700',
                         fontSize: '12px',
                         cursor: 'pointer'
@@ -1994,8 +2276,8 @@ export default function ToastTables({
                         display: 'flex',
                         gap: '4px',
                         padding: '6px 8px',
-                        backgroundColor: '#171d2b',
-                        borderBottom: '1px solid #1e293b',
+                        backgroundColor: darkMode ? '#0f0f0f' : '#f8fafc',
+                        borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
                         overflowX: 'auto',
                         flexShrink: 0
                       }}>
@@ -2005,8 +2287,8 @@ export default function ToastTables({
                             onClick={() => setSelectedSeatId(st)}
                             style={{
                               padding: '2px 8px',
-                              backgroundColor: selectedSeatId === st ? '#2563eb' : '#1e293b',
-                              color: selectedSeatId === st ? '#ffffff' : '#94a3b8',
+                              backgroundColor: selectedSeatId === st ? '#6366f1' : (darkMode ? '#2a2a2a' : '#e2e8f0'),
+                              color: selectedSeatId === st ? '#ffffff' : (darkMode ? '#94a3b8' : '#64748b'),
                               border: 'none',
                               borderRadius: '10px',
                               fontSize: '10px',
@@ -2027,41 +2309,41 @@ export default function ToastTables({
                         padding: '6px 10px',
                         fontSize: '10px',
                         fontWeight: '700',
-                        color: '#64748b',
-                        borderBottom: '1px solid #1e293b',
+                        color: darkMode ? '#94a3b8' : '#64748b',
+                        borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
                         flexShrink: 0
                       }}>
                         <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
                           {/* Qty sort header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <span style={{ color: itemSortKey === 'qty' ? '#38bdf8' : '#64748b' }}>Qty</span>
+                            <span style={{ color: itemSortKey === 'qty' ? '#6366f1' : (darkMode ? '#94a3b8' : '#64748b') }}>Qty</span>
                             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                               <button
                                 onClick={() => { setItemSortKey('qty'); setItemSortDir('asc'); }}
                                 title="Sort Qty Ascending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'qty' && itemSortDir === 'asc' ? '#38bdf8' : '#475569' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'qty' && itemSortDir === 'asc' ? '#6366f1' : (darkMode ? '#94a3b8' : '#64748b') }}
                               >▲</button>
                               <button
                                 onClick={() => { setItemSortKey('qty'); setItemSortDir('desc'); }}
                                 title="Sort Qty Descending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'qty' && itemSortDir === 'desc' ? '#38bdf8' : '#475569' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'qty' && itemSortDir === 'desc' ? 'theme.accent' : 'theme.textSecondary' }}
                               >▼</button>
                             </div>
                           </div>
 
                           {/* Article sort header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <span style={{ color: itemSortKey === 'article' ? '#38bdf8' : '#64748b' }}>Article</span>
+                            <span style={{ color: itemSortKey === 'article' ? 'theme.accent' : 'theme.textSecondary' }}>Article</span>
                             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                               <button
                                 onClick={() => { setItemSortKey('article'); setItemSortDir('asc'); }}
                                 title="Sort Article Ascending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'asc' ? '#38bdf8' : '#475569' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'asc' ? 'theme.accent' : 'theme.textSecondary' }}
                               >▲</button>
                               <button
                                 onClick={() => { setItemSortKey('article'); setItemSortDir('desc'); }}
                                 title="Sort Article Descending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'desc' ? '#38bdf8' : '#475569' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'desc' ? 'theme.accent' : 'theme.textSecondary' }}
                               >▼</button>
                             </div>
                           </div>
@@ -2069,17 +2351,17 @@ export default function ToastTables({
 
                         {/* Price sort header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <span style={{ color: itemSortKey === 'price' ? '#38bdf8' : '#64748b' }}>Price</span>
+                          <span style={{ color: itemSortKey === 'price' ? 'theme.accent' : 'theme.textSecondary' }}>Price</span>
                           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                             <button
                               onClick={() => { setItemSortKey('price'); setItemSortDir('asc'); }}
                               title="Sort Price Ascending"
-                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'asc' ? '#38bdf8' : '#475569' }}
+                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'asc' ? 'theme.accent' : 'theme.textSecondary' }}
                             >▲</button>
                             <button
                               onClick={() => { setItemSortKey('price'); setItemSortDir('desc'); }}
                               title="Sort Price Descending"
-                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'desc' ? '#38bdf8' : '#475569' }}
+                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'desc' ? 'theme.accent' : 'theme.textSecondary' }}
                             >▼</button>
                           </div>
                         </div>
@@ -2089,15 +2371,15 @@ export default function ToastTables({
                       <div style={{ padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
                         {sortedBillItems && sortedBillItems.length > 0 ? (
                           sortedBillItems.map(item => (
-                              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '2px 0' }}>
+                              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '4px 6px', backgroundColor: darkMode ? '#1a1a1a' : '#ffffff', borderRadius: '4px', border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <button
                                     onClick={() => handleItemDeleteClick(item)}
                                     title={item.tag || item.isFired ? `Void Fired Item: ${item.name}` : `Remove ${item.name}`}
                                     style={{
-                                      background: '#7f1d1d',
-                                      color: '#fca5a5',
-                                      border: 'none',
+                                      background: darkMode ? '#2a2a2a' : '#f1f5f9',
+                                      color: '#ef4444',
+                                      border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                                       borderRadius: '4px',
                                       width: '18px',
                                       height: '18px',
@@ -2113,15 +2395,15 @@ export default function ToastTables({
                                   >
                                     ✕
                                   </button>
-                                  <span style={{ fontWeight: '700', color: '#ffffff' }}>{item.qty}</span>
-                                  <span style={{ color: '#cbd5e1' }}>{item.name}</span>
-                                  <span style={{ fontSize: '9px', color: '#64748b', backgroundColor: '#1e293b', padding: '1px 4px', borderRadius: '3px' }}>
+                                  <span style={{ fontWeight: '700', color: darkMode ? '#f1f5f9' : '#1e293b' }}>{item.qty}</span>
+                                  <span style={{ color: darkMode ? '#94a3b8' : '#64748b' }}>{item.name}</span>
+                                  <span style={{ fontSize: '9px', color: darkMode ? '#94a3b8' : '#64748b', backgroundColor: darkMode ? '#2a2a2a' : '#e2e8f0', padding: '1px 4px', borderRadius: '3px' }}>
                                     S{item.seat || 1}
                                   </span>
                                   {item.tag && (
                                     <span style={{
-                                      backgroundColor: item.tag === 'ST' ? '#c026d3' : '#0284c7',
-                                      color: '#ffffff',
+                                      backgroundColor: item.tag === 'ST' ? (darkMode ? '#475569' : '#cbd5e1') : '#6366f1',
+                                      color: item.tag === 'ST' ? (darkMode ? '#f1f5f9' : '#1e293b') : '#ffffff',
                                       fontSize: '8px',
                                       fontWeight: '700',
                                       padding: '1px 3px',
@@ -2132,14 +2414,14 @@ export default function ToastTables({
                                   )}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span style={{ fontWeight: '600', color: '#f8fafc' }}>
+                                  <span style={{ fontWeight: '600', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
                                     ₹{(item.price * item.qty).toFixed(2)}
                                   </span>
                                 </div>
                               </div>
                             ))
                         ) : (
-                          <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+                          <div style={{ padding: '20px', textAlign: 'center', color: 'theme.textSecondary', fontSize: '12px' }}>
                             No items on this cheque
                           </div>
                         )}
@@ -2149,12 +2431,12 @@ export default function ToastTables({
                     /* Audit Logs Tab View */
                     <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {(tableLogs[selectedTableId] || []).map(log => (
-                        <div key={log.id} style={{ padding: '6px 8px', backgroundColor: '#171d2b', borderRadius: '4px', borderLeft: '3px solid #2563eb', fontSize: '11px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: '9px' }}>
+                        <div key={log.id} style={{ padding: '6px 8px', backgroundColor: 'theme.bg', borderRadius: '4px', borderLeft: '3px solid theme.accent', fontSize: '11px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'theme.textSecondary', fontSize: '9px' }}>
                             <span>{log.time}</span>
-                            <span style={{ color: '#38bdf8', fontWeight: '600' }}>👤 {log.staff || (staff && staff[0] ? staff[0].name : 'Staff')}</span>
+                            <span style={{ color: 'theme.accent', fontWeight: '600' }}>👤 {log.staff || (staff && staff[0] ? staff[0].name : 'Staff')}</span>
                           </div>
-                          <div style={{ color: '#e2e8f0', marginTop: '2px' }}>{log.text}</div>
+                          <div style={{ color: 'theme.text', marginTop: '2px' }}>{log.text}</div>
                         </div>
                       ))}
                     </div>
@@ -2162,7 +2444,7 @@ export default function ToastTables({
                 </div>
 
                 {/* Totals, Feature 5 Course Firing Controls & Action Buttons Footer */}
-                <div style={{ padding: '10px 12px', borderTop: '1px solid #252e3e', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                <div style={{ padding: '10px 12px', borderTop: '1px solid theme.bgSecondary', display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
                   {/* Dynamic Course Firing Buttons */}
                   <div style={{ display: 'flex', gap: '4px', overflowX: 'auto' }}>
                     {(() => {
@@ -2175,7 +2457,7 @@ export default function ToastTables({
                         <button
                           key={cat}
                           onClick={() => handleFireCourse(cat)}
-                          style={{ flex: 1, padding: '4px 6px', backgroundColor: '#334155', color: '#f8fafc', border: 'none', borderRadius: '4px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          style={{ flex: 1, padding: '4px 6px', backgroundColor: darkMode ? '#2a2a2a' : '#e2e8f0', color: darkMode ? '#f1f5f9' : '#1e293b', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', borderRadius: '4px', fontSize: '10px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap' }}
                         >
                           🔥 Fire {cat}
                         </button>
@@ -2184,7 +2466,7 @@ export default function ToastTables({
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: darkMode ? '#94a3b8' : '#64748b' }}>
                       <span>Subtotal</span>
                       <span>₹{subtotal.toFixed(2)}</span>
                     </div>
@@ -2194,15 +2476,15 @@ export default function ToastTables({
                         <span>-₹{allocatedDiscount.toFixed(2)}</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: darkMode ? '#94a3b8' : '#64748b' }}>
                       <span>GST ({gstRatePct}%)</span>
                       <span>₹{taxAmount.toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: darkMode ? '#94a3b8' : '#64748b' }}>
                       <span>Service Charge ({serviceChargeRatePct}%)</span>
                       <span>₹{serviceChargeAmount.toFixed(2)}</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#f8fafc', fontWeight: '700', fontSize: '15px', marginTop: '4px', borderTop: '1px solid #334155', paddingTop: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: darkMode ? '#f1f5f9' : '#1e293b', fontWeight: '700', fontSize: '15px', marginTop: '4px', borderTop: darkMode ? '1px solid #334155' : '1px solid #cbd5e1', paddingTop: '4px' }}>
                       <span>Total</span>
                       <span>₹{calculateTotal().toFixed(2)}</span>
                     </div>
@@ -2214,9 +2496,9 @@ export default function ToastTables({
                       style={{
                         flex: 1,
                         padding: '6px',
-                        backgroundColor: '#ffffff',
-                        color: '#000000',
-                        border: '1px solid #ffffff',
+                        backgroundColor: darkMode ? '#1e293b' : '#e2e8f0',
+                        color: darkMode ? '#f1f5f9' : '#1e293b',
+                        border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                         borderRadius: '4px',
                         fontWeight: '700',
                         fontSize: '10px',
@@ -2230,9 +2512,9 @@ export default function ToastTables({
                       style={{
                         flex: 1,
                         padding: '6px',
-                        backgroundColor: '#000000',
-                        color: '#ffffff',
-                        border: '1px solid #ffffff',
+                        backgroundColor: darkMode ? '#ffffff' : '#1e293b',
+                        color: darkMode ? '#1e293b' : '#ffffff',
+                        border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                         borderRadius: '4px',
                         fontWeight: '700',
                         fontSize: '10px',
@@ -2246,9 +2528,9 @@ export default function ToastTables({
                       style={{
                         flex: 1,
                         padding: '6px',
-                        backgroundColor: '#000000',
-                        color: '#ffffff',
-                        border: '1px solid #ffffff',
+                        backgroundColor: darkMode ? '#ffffff' : '#1e293b',
+                        color: darkMode ? '#1e293b' : '#ffffff',
+                        border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                         borderRadius: '4px',
                         fontWeight: '700',
                         fontSize: '10px',
@@ -2262,9 +2544,9 @@ export default function ToastTables({
                       style={{
                         flex: 1,
                         padding: '6px',
-                        backgroundColor: '#000000',
-                        color: '#ffffff',
-                        border: '1px solid #ffffff',
+                        backgroundColor: darkMode ? '#ffffff' : '#1e293b',
+                        color: darkMode ? '#1e293b' : '#ffffff',
+                        border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1',
                         borderRadius: '4px',
                         fontWeight: '700',
                         fontSize: '10px',
@@ -2280,9 +2562,9 @@ export default function ToastTables({
                     style={{
                       width: '100%',
                       padding: '12px',
-                      backgroundColor: '#ffffff',
-                      color: '#000000',
-                      border: '1px solid #ffffff',
+                      backgroundColor: '#6366f1',
+                      color: '#ffffff',
+                      border: 'none',
                       borderRadius: '4px',
                       fontWeight: '700',
                       fontSize: '14px',
@@ -2308,7 +2590,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2316,53 +2598,273 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: darkMode ? '#f1f5f9' : '#1e293b',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px'
+            gap: '12px',
+            border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+            boxShadow: darkMode ? '0 20px 25px -5px rgba(0,0,0,0.5)' : '0 20px 25px -5px rgba(0,0,0,0.15)'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Add Element to Floor</h3>
-            <label style={{ fontSize: '12px', color: '#cbd5e1' }}>Element Type:</label>
-            <select
-              value={newElementData.type}
-              onChange={(e) => setNewElementData({ ...newElementData, type: e.target.value })}
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569' }}
-            >
-              <option value="table">Table</option>
-              <option value="wall">Wall / Barrier</option>
-            </select>
-
-            <label style={{ fontSize: '12px', color: '#cbd5e1' }}>Table Label / Number:</label>
-            <input
-              type="text"
-              value={newElementData.name}
-              onChange={(e) => setNewElementData({ ...newElementData, name: e.target.value })}
-              placeholder="e.g. 20 or VIP-1"
-              style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569', boxSizing: 'border-box' }}
-            />
-
-            <label style={{ fontSize: '12px', color: '#cbd5e1' }}>Shape:</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setNewElementData({ ...newElementData, shape: 'rect' })}
-                style={{ flex: 1, padding: '8px', backgroundColor: newElementData.shape === 'rect' ? '#2563eb' : '#0f172a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Add Element to Floor</h3>
+            <p style={{ margin: 0, fontSize: '11px', color: 'theme.border', marginBottom: '12px' }}>Configure table, wall, or floor element properties</p>
+            
+            {/* Section: Basic Info */}
+            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
+              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>ELEMENT TYPE</label>
+              <select
+                value={newElementData.type}
+                onChange={(e) => setNewElementData({ ...newElementData, type: e.target.value })}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', fontSize: '13px' }}
               >
-                Rectangle
-              </button>
-              <button
-                onClick={() => setNewElementData({ ...newElementData, shape: 'circle' })}
-                style={{ flex: 1, padding: '8px', backgroundColor: newElementData.shape === 'circle' ? '#2563eb' : '#0f172a', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-              >
-                Round
-              </button>
+                <option value="table">🪑 Table</option>
+                <option value="wall">🧱 Wall / Barrier</option>
+                <option value="door">🚪 Door</option>
+                <option value="window">🪟 Window</option>
+                <option value="pillar">🏛️ Pillar</option>
+                <option value="bar_counter">🍸 Bar Counter</option>
+                <option value="entrance">🚶 Entrance</option>
+                <option value="stage">🎭 Stage</option>
+              </select>
+
+              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block', marginTop: '10px' }}>LABEL / NUMBER</label>
+              <input
+                type="text"
+                value={newElementData.name}
+                onChange={(e) => setNewElementData({ ...newElementData, name: e.target.value })}
+                placeholder="e.g. 20 or VIP-1"
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '13px' }}
+              />
+            </div>
+
+            {/* Section: Shape & Preview - For all element types */}
+            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
+              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>SHAPE</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '12px' }}>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'rect' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'rect' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  ▭ Rectangle
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'circle' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'circle' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  ⚪ Round
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'square' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'square' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  ⬜ Square
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'oval' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'oval' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  ⬭ Oval
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'booth' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'booth' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  🛋️ Booth
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'high_top' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'high_top' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  🍸 High Top
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'l_shaped' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'l_shaped' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  └ L-Shaped
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 'u_shaped' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'u_shaped' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  ┌ U-Shaped
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, shape: 't_shaped' })}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 't_shaped' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                >
+                  ├ T-Shaped
+                </button>
+              </div>
+
+              {/* Live Preview */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'theme.inputBg', borderRadius: '6px', border: '1px solid theme.border' }}>
+                <div style={{ fontSize: '11px', color: 'theme.border', minWidth: '60px' }}>Preview:</div>
+                <div style={{
+                  width: `${Math.min((newElementData.width || 100) / 2, 60)}px`,
+                  height: `${Math.min((newElementData.height || 100) / 2, 60)}px`,
+                  background: getElementColor(newElementData.type),
+                  borderRadius: newElementData.shape === 'circle' || newElementData.shape === 'round' ? '50%' : '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '9px',
+                  color: 'theme.bg',
+                  transform: `rotate(${newElementData.rotation || 0}deg)`,
+                  border: getBorderStyle(newElementData.type, newElementData.wallType),
+                  minWidth: '30px',
+                  minHeight: '30px'
+                }}>
+                  {newElementData.name || getElementIcon(newElementData.type)}
+                </div>
+                <div style={{ fontSize: '10px', color: 'theme.textSecondary' }}>
+                  {newElementData.width || 100} × {newElementData.height || 100}px
+                  {newElementData.rotation && ` | ${newElementData.rotation}°`}
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Dimensions */}
+            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
+              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>DIMENSIONS</label>
+              
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, width: 80, height: 80 })}
+                  style={{ flex: 1, padding: '6px', backgroundColor: 'theme.inputBg', color: 'theme.border', border: '1px solid theme.textSecondary', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
+                >
+                  Small
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, width: 100, height: 100 })}
+                  style={{ flex: 1, padding: '6px', backgroundColor: 'theme.inputBg', color: 'theme.border', border: '1px solid theme.textSecondary', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
+                >
+                  Medium
+                </button>
+                <button
+                  onClick={() => setNewElementData({ ...newElementData, width: 140, height: 140 })}
+                  style={{ flex: 1, padding: '6px', backgroundColor: 'theme.inputBg', color: 'theme.border', border: '1px solid theme.textSecondary', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
+                >
+                  Large
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Width (px)</label>
+                  <input
+                    type="number"
+                    value={newElementData.width || 100}
+                    onChange={(e) => setNewElementData({ ...newElementData, width: parseInt(e.target.value) || 100 })}
+                    min="50"
+                    max="300"
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Height (px)</label>
+                  <input
+                    type="number"
+                    value={newElementData.height || 100}
+                    onChange={(e) => setNewElementData({ ...newElementData, height: parseInt(e.target.value) || 100 })}
+                    min="50"
+                    max="300"
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Capacity - Only for tables */}
+              {newElementData.type === 'table' && (
+                <div style={{ marginTop: '8px' }}>
+                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Capacity (seats)</label>
+                  <input
+                    type="number"
+                    value={newElementData.capacity || 4}
+                    onChange={(e) => setNewElementData({ ...newElementData, capacity: parseInt(e.target.value) || 4 })}
+                    min="1"
+                    max="20"
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Section: Advanced */}
+            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
+              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>ADVANCED</label>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Rotation (°)</label>
+                  <input
+                    type="number"
+                    value={newElementData.rotation || 0}
+                    onChange={(e) => setNewElementData({ ...newElementData, rotation: parseInt(e.target.value) || 0 })}
+                    min="0"
+                    max="360"
+                    step="15"
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                  />
+                </div>
+                {/* Wall Type - Only for walls, doors, windows */}
+                {(newElementData.type === 'wall' || newElementData.type === 'door' || newElementData.type === 'window') && (
+                  <div>
+                    <label style={{ fontSize: '10px', color: darkMode ? '#94a3b8' : '#64748b', marginBottom: '4px', display: 'block' }}>Wall Type</label>
+                    <select
+                      value={newElementData.wallType || 'solid'}
+                      onChange={(e) => setNewElementData({ ...newElementData, wallType: e.target.value })}
+                      style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: darkMode ? '#2a2a2a' : '#f1f5f9', color: darkMode ? '#f1f5f9' : '#1e293b', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', fontSize: '12px' }}
+                    >
+                      <option value="solid">Solid</option>
+                      <option value="glass">Glass</option>
+                      <option value="curtain">Curtain</option>
+                      <option value="railing">Railing</option>
+                      <option value="plant">Plant</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Table-specific options */}
+              {newElementData.type === 'table' && (
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'theme.textSecondary', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={newElementData.canCombine || false}
+                      onChange={(e) => setNewElementData({ ...newElementData, canCombine: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Can Combine
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'theme.textSecondary', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={newElementData.wallNearby || false}
+                      onChange={(e) => setNewElementData({ ...newElementData, wallNearby: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Wall Nearby
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'theme.textSecondary', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={newElementData.windowNearby || false}
+                      onChange={(e) => setNewElementData({ ...newElementData, windowNearby: e.target.checked })}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Window Nearby
+                  </label>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button onClick={() => setShowAddTableModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleAddTableElement} style={{ flex: 1, padding: '10px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Add Element</button>
+              <button onClick={() => setShowAddTableModal(false)} style={{ flex: 1, padding: '12px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Cancel</button>
+              <button onClick={handleAddTableElement} style={{ flex: 1, padding: '12px', backgroundColor: 'theme.success', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Add Element</button>
             </div>
           </div>
         </div>
@@ -2373,7 +2875,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2381,22 +2883,24 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: darkMode ? '#f1f5f9' : '#1e293b',
+            border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+            boxShadow: darkMode ? '0 20px 25px -5px rgba(0,0,0,0.5)' : '0 20px 25px -5px rgba(0,0,0,0.15)',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Merge Table #{selectedTable.name}</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Merge Table #{selectedTable.name}</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
               Select adjacent table to connect visually on the floor plan map:
             </p>
             <select
               value={targetMergeTableId}
               onChange={(e) => setTargetMergeTableId(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary' }}
             >
               <option value="">Select table to merge...</option>
               {floorTables.filter(t => t.id !== selectedTableId && t.type !== 'wall').map(t => (
@@ -2404,8 +2908,8 @@ export default function ToastTables({
               ))}
             </select>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button onClick={() => setShowMergeModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleMergeTables} style={{ flex: 1, padding: '10px', backgroundColor: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Merge Tables</button>
+              <button onClick={() => setShowMergeModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleMergeTables} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.warning', color: 'theme.inputBg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Merge Tables</button>
             </div>
           </div>
         </div>
@@ -2416,7 +2920,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2425,22 +2929,24 @@ export default function ToastTables({
           <div style={{
             width: '380px',
             maxHeight: '480px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: darkMode ? '#f1f5f9' : '#1e293b',
+            border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+            boxShadow: darkMode ? '0 20px 25px -5px rgba(0,0,0,0.5)' : '0 20px 25px -5px rgba(0,0,0,0.15)',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '16px' }}>Link Customer / Reservation</h3>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Link Customer / Reservation</h3>
               <button
                 onClick={() => setShowAddCustomerModal(true)}
                 style={{
                   padding: '4px 8px',
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
+                  backgroundColor: 'theme.accent',
+                  color: 'theme.text',
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '11px',
@@ -2460,10 +2966,10 @@ export default function ToastTables({
               style={{
                 width: '100%',
                 padding: '8px 10px',
-                backgroundColor: '#0f172a',
-                border: '1px solid #334155',
+                backgroundColor: 'theme.inputBg',
+                border: '1px solid theme.border',
                 borderRadius: '6px',
-                color: '#ffffff',
+                color: 'theme.text',
                 fontSize: '12px',
                 boxSizing: 'border-box'
               }}
@@ -2482,24 +2988,24 @@ export default function ToastTables({
                   onClick={() => handlePairCustomer(c)}
                   style={{
                     padding: '10px 12px',
-                    backgroundColor: '#0f172a',
+                    backgroundColor: 'theme.inputBg',
                     borderRadius: '6px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     cursor: 'pointer',
-                    border: '1px solid #334155'
+                    border: '1px solid theme.border'
                   }}
                 >
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '600' }}>{c.name}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{c.phone}</div>
+                    <div style={{ fontSize: '11px', color: 'theme.border' }}>{c.phone}</div>
                   </div>
-                  <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '700' }}>⭐ {c.points || 0} pts</span>
+                  <span style={{ fontSize: '11px', color: 'theme.warning', fontWeight: '700' }}>⭐ {c.points || 0} pts</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowCustomerPairModal(false)} style={{ padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={() => setShowCustomerPairModal(false)} style={{ padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}
@@ -2509,7 +3015,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.85)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2517,31 +3023,33 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: darkMode ? '#f1f5f9' : '#1e293b',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px'
+            gap: '12px',
+            border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+            boxShadow: darkMode ? '0 20px 25px -5px rgba(0,0,0,0.5)' : '0 20px 25px -5px rgba(0,0,0,0.15)'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Add New Customer</h3>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>Add New Customer</h3>
             <input
               type="text"
               placeholder="Full Name *"
               value={newCustomerData.name}
               onChange={(e) => setNewCustomerData(prev => ({ ...prev, name: e.target.value }))}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', backgroundColor: darkMode ? '#2a2a2a' : '#f1f5f9', color: darkMode ? '#f1f5f9' : '#1e293b', boxSizing: 'border-box' }}
             />
             <input
               type="text"
               placeholder="Phone Number *"
               value={newCustomerData.phone}
               onChange={(e) => setNewCustomerData(prev => ({ ...prev, phone: e.target.value }))}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowAddCustomerModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => setShowAddCustomerModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
               <button
                 onClick={() => {
                   if (!newCustomerData.name.trim()) return;
@@ -2551,7 +3059,7 @@ export default function ToastTables({
                   setShowAddCustomerModal(false);
                   setNewCustomerData({ name: '', phone: '', email: '', points: 50 });
                 }}
-                style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
               >
                 Save & Link
               </button>
@@ -2565,7 +3073,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.85)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2576,9 +3084,9 @@ export default function ToastTables({
             maxWidth: '850px',
             height: '80vh',
             maxHeight: '650px',
-            backgroundColor: '#11151f',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
-            border: '1px solid #252e3e',
+            border: '1px solid theme.bgSecondary',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -2589,32 +3097,33 @@ export default function ToastTables({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '14px 20px',
-              backgroundColor: '#000000',
-              borderBottom: '1px solid #222222'
+              padding: '16px 24px',
+              backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+              borderBottom: darkMode ? '1px solid #334155' : '1px solid #e2e8f0'
             }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#ffffff' }}>
-                  ⚡ QUICK POS REGISTER — TABLE #{selectedTable.name}
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#f1f5f9' : '#1e293b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                  ⚡ Quick POS Register — Table #{selectedTable.name}
                 </h3>
-                <span style={{ fontSize: '12px', color: '#888888' }}>
+                <span style={{ fontSize: '11px', color: darkMode ? '#94a3b8' : '#64748b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginTop: '4px' }}>
                   Real-time item selection • Auto-routes KOT to Kitchen KDS displays • Indian Rupees (₹)
                 </span>
               </div>
               <button
                 onClick={() => setShowQuickPOSModal(false)}
                 style={{
-                  padding: '6px 14px',
-                  backgroundColor: '#000000',
-                  color: '#ffffff',
-                  border: '1px solid #ffffff',
-                  borderRadius: '4px',
+                  padding: '8px 16px',
+                  backgroundColor: darkMode ? '#f1f5f9' : '#f1f5f9',
+                  color: darkMode ? '#1e293b' : '#1e293b',
+                  border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+                  borderRadius: '6px',
                   fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
                 }}
               >
-                ✕ CLOSE
+                ✕ Close
               </button>
             </div>
 
@@ -2622,10 +3131,10 @@ export default function ToastTables({
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
               
               {/* Left Side: Items & Categories */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', borderRight: '1px solid #222222', minWidth: 0, backgroundColor: '#050505' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', borderRight: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', minWidth: 0, backgroundColor: darkMode ? '#0f0f0f' : '#f8fafc' }}>
                 
                 {/* Search & Category Pills */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                   <input
                     type="text"
                     value={quickPOSSearch}
@@ -2633,31 +3142,33 @@ export default function ToastTables({
                     placeholder="Search menu item or barcode..."
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
-                      backgroundColor: '#000000',
-                      border: '1px solid #444444',
-                      borderRadius: '4px',
-                      color: '#ffffff',
-                      fontSize: '13px',
+                      padding: '12px 16px',
+                      backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+                      border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      color: darkMode ? '#f1f5f9' : '#1e293b',
+                      fontSize: '14px',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                       boxSizing: 'border-box'
                     }}
                   />
 
-                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                     {['All', 'Beverages', 'Breakfast', 'Bakery', 'Entrees', 'Desserts', 'Salads'].map(cat => (
                       <button
                         key={cat}
                         onClick={() => setQuickPOSCategory(cat)}
                         style={{
-                          padding: '6px 14px',
-                          backgroundColor: quickPOSCategory === cat ? '#ffffff' : '#000000',
-                          color: quickPOSCategory === cat ? '#000000' : '#888888',
-                          border: '1px solid #333333',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '700',
+                          padding: '8px 16px',
+                          backgroundColor: quickPOSCategory === cat ? '#6366f1' : (darkMode ? '#1a1a1a' : '#ffffff'),
+                          color: quickPOSCategory === cat ? '#ffffff' : (darkMode ? '#94a3b8' : '#64748b'),
+                          border: quickPOSCategory === cat ? 'none' : (darkMode ? '1px solid #334155' : '1px solid #cbd5e1'),
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '600',
                           cursor: 'pointer',
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
                         }}
                       >
                         {cat}
@@ -2669,8 +3180,8 @@ export default function ToastTables({
                 {/* Items Grid */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                  gap: '10px',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                  gap: '12px',
                   overflowY: 'auto',
                   flex: 1
                 }}>
@@ -2692,21 +3203,32 @@ export default function ToastTables({
                       key={mi.id}
                       onClick={() => addToQuickPOSCart(mi)}
                       style={{
-                        padding: '12px 10px',
-                        backgroundColor: '#000000',
-                        border: '1px solid #333333',
-                        borderRadius: '6px',
+                        padding: '16px 12px',
+                        backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+                        border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0',
+                        borderRadius: '8px',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease'
+                        transition: 'all 0.2s ease',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#6366f1';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = darkMode ? '0 4px 12px rgba(99,102,241,0.3)' : '0 4px 12px rgba(99,102,241,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = darkMode ? '#334155' : '#e2e8f0';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: '#ffffff', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: darkMode ? '#f1f5f9' : '#1e293b', marginBottom: '8px', lineHeight: '1.3' }}>
                         {mi.name}
                       </span>
-                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
                         ₹{mi.price.toFixed(2)}
                       </span>
                     </div>
@@ -2716,23 +3238,23 @@ export default function ToastTables({
 
               {/* Right Side: Quick POS Order Terminal Summary */}
               <div style={{
-                width: '320px',
-                backgroundColor: '#000000',
+                width: '340px',
+                backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: '16px',
-                borderLeft: '1px solid #222222'
+                padding: '20px',
+                borderLeft: darkMode ? '1px solid #334155' : '1px solid #e2e8f0'
               }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#ffffff' }}>
-                      REGISTER CART ({quickPOSCart.reduce((acc, i) => acc + i.qty, 0)})
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: darkMode ? '#f1f5f9' : '#1e293b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                      Register Cart ({quickPOSCart.reduce((acc, i) => acc + i.qty, 0)})
                     </h4>
                     {quickPOSCart.length > 0 && (
                       <button
                         onClick={() => setQuickPOSCart([])}
-                        style={{ background: 'none', border: 'none', color: '#888888', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+                        style={{ background: 'none', border: 'none', color: darkMode ? '#ef4444' : '#ef4444', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', fontWeight: '500', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
                       >
                         Clear Cart
                       </button>
@@ -2740,21 +3262,22 @@ export default function ToastTables({
                   </div>
 
                   {/* Seat Assignment Selector */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', backgroundColor: '#0a0a0a', padding: '6px', borderRadius: '4px', border: '1px solid #222222' }}>
-                    <span style={{ fontSize: '10px', color: '#888888', fontWeight: '700' }}>SEAT:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', backgroundColor: darkMode ? '#2a2a2a' : '#f1f5f9', padding: '8px 12px', borderRadius: '8px', border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1' }}>
+                    <span style={{ fontSize: '11px', color: darkMode ? '#94a3b8' : '#64748b', fontWeight: '600', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>SEAT:</span>
                     {[1, 2, 3, 4].map(s => (
                       <button
                         key={s}
                         onClick={() => setQuickPOSSelectedSeat(s)}
                         style={{
-                          padding: '2px 8px',
-                          backgroundColor: quickPOSSelectedSeat === s ? '#ffffff' : '#111111',
-                          color: quickPOSSelectedSeat === s ? '#000000' : '#888888',
-                          border: '1px solid #333333',
-                          borderRadius: '3px',
-                          fontSize: '10px',
-                          fontWeight: '700',
-                          cursor: 'pointer'
+                          padding: '6px 12px',
+                          backgroundColor: quickPOSSelectedSeat === s ? '#6366f1' : (darkMode ? '#1a1a1a' : '#ffffff'),
+                          color: quickPOSSelectedSeat === s ? '#ffffff' : (darkMode ? '#94a3b8' : '#64748b'),
+                          border: quickPOSSelectedSeat === s ? 'none' : (darkMode ? '1px solid #334155' : '1px solid #cbd5e1'),
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
                         }}
                       >
                         Seat {s}
@@ -2763,16 +3286,16 @@ export default function ToastTables({
                   </div>
 
                   {/* Items List */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1 }}>
                     {quickPOSCart.length > 0 ? (
                       quickPOSCart.map(item => (
-                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '8px', backgroundColor: '#0a0a0a', border: '1px solid #222222', borderRadius: '4px' }}>
+                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', padding: '12px', backgroundColor: darkMode ? '#2a2a2a' : '#f1f5f9', border: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', borderRadius: '8px' }}>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '700', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <div style={{ fontWeight: '600', color: darkMode ? '#f1f5f9' : '#1e293b', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                               <span>{item.name}</span>
-                              <span style={{ fontSize: '9px', color: '#888888', backgroundColor: '#111111', padding: '1px 3px', border: '1px solid #333333', borderRadius: '2px' }}>S{item.seat || 1}</span>
+                              <span style={{ fontSize: '10px', color: darkMode ? '#94a3b8' : '#64748b', backgroundColor: darkMode ? '#334155' : '#e2e8f0', padding: '2px 6px', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', borderRadius: '4px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>S{item.seat || 1}</span>
                             </div>
-                            <div style={{ fontSize: '11px', color: '#888888' }}>₹{item.price.toFixed(2)} x {item.qty}</div>
+                            <div style={{ fontSize: '12px', color: darkMode ? '#94a3b8' : '#64748b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>₹{item.price.toFixed(2)} × {item.qty}</div>
                           </div>
                           
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2780,16 +3303,16 @@ export default function ToastTables({
                               onClick={() => {
                                 setQuickPOSCart(prev => prev.map(i => i.id === item.id ? { ...i, qty: Math.max(0, i.qty - 1) } : i).filter(i => i.qty > 0));
                               }}
-                              style={{ width: '22px', height: '22px', backgroundColor: '#111111', color: '#ffffff', border: '1px solid #444444', borderRadius: '4px', cursor: 'pointer', fontWeight: '700' }}
+                              style={{ width: '26px', height: '26px', backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: darkMode ? '#f1f5f9' : '#1e293b', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
                             >
                               -
                             </button>
-                            <span style={{ fontWeight: '700', color: '#ffffff', width: '18px', textAlign: 'center' }}>{item.qty}</span>
+                            <span style={{ fontWeight: '600', color: darkMode ? '#f1f5f9' : '#1e293b', width: '20px', textAlign: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>{item.qty}</span>
                             <button
                               onClick={() => {
                                 setQuickPOSCart(prev => prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i));
                               }}
-                              style={{ width: '22px', height: '22px', backgroundColor: '#111111', color: '#ffffff', border: '1px solid #444444', borderRadius: '4px', cursor: 'pointer', fontWeight: '700' }}
+                              style={{ width: '26px', height: '26px', backgroundColor: darkMode ? '#334155' : '#e2e8f0', color: darkMode ? '#f1f5f9' : '#1e293b', border: darkMode ? '1px solid #475569' : '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
                             >
                               +
                             </button>
@@ -2797,7 +3320,7 @@ export default function ToastTables({
                         </div>
                       ))
                     ) : (
-                      <div style={{ padding: '30px 15px', textAlign: 'center', color: '#666666', fontSize: '11px', border: '1px dashed #333333', borderRadius: '6px' }}>
+                      <div style={{ padding: '24px 16px', textAlign: 'center', color: darkMode ? '#94a3b8' : '#64748b', fontSize: '13px', border: darkMode ? '1px dashed #334155' : '1px dashed #cbd5e1', borderRadius: '8px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                         Tap menu items to add to order
                       </div>
                     )}
@@ -2811,21 +3334,22 @@ export default function ToastTables({
                     placeholder="Add special kitchen note (e.g. Extra spicy)..."
                     style={{
                       width: '100%',
-                      padding: '8px 10px',
-                      backgroundColor: '#050505',
-                      border: '1px solid #333333',
-                      borderRadius: '4px',
-                      color: '#ffffff',
-                      fontSize: '11px',
-                      marginTop: '8px',
+                      padding: '10px 12px',
+                      backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+                      border: darkMode ? '1px solid #334155' : '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      color: darkMode ? '#f1f5f9' : '#1e293b',
+                      fontSize: '13px',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      marginBottom: '12px',
                       boxSizing: 'border-box'
                     }}
                   />
                 </div>
 
                 {/* Quick Order Submit */}
-                <div style={{ borderTop: '1px solid #222222', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '15px', color: '#ffffff' }}>
+                <div style={{ borderTop: darkMode ? '1px solid #334155' : '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600', fontSize: '15px', color: darkMode ? '#f1f5f9' : '#1e293b', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
                     <span>Subtotal</span>
                     <span>₹{quickPOSCart.reduce((sum, i) => sum + (i.price * i.qty), 0).toFixed(2)}</span>
                   </div>
@@ -2836,17 +3360,20 @@ export default function ToastTables({
                     style={{
                       width: '100%',
                       padding: '14px',
-                      backgroundColor: quickPOSCart.length > 0 ? '#ffffff' : '#222222',
-                      color: quickPOSCart.length > 0 ? '#000000' : '#666666',
-                      border: '1px solid #ffffff',
-                      borderRadius: '4px',
-                      fontWeight: '700',
+                      backgroundColor: quickPOSCart.length > 0 ? '#6366f1' : (darkMode ? '#2a2a2a' : '#e2e8f0'),
+                      color: quickPOSCart.length > 0 ? '#ffffff' : (darkMode ? '#64748b' : '#94a3b8'),
+                      border: quickPOSCart.length > 0 ? 'none' : (darkMode ? '1px solid #334155' : '1px solid #cbd5e1'),
+                      borderRadius: '8px',
+                      fontWeight: '600',
                       fontSize: '13px',
                       cursor: quickPOSCart.length > 0 ? 'pointer' : 'not-allowed',
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      opacity: quickPOSCart.length > 0 ? '1' : '0.5',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                      letterSpacing: '0.5px'
                     }}
                   >
-                    SEND TO KITCHEN & TABLE (KOT)
+                    Send to Kitchen & Table (KOT)
                   </button>
                 </div>
               </div>
@@ -2861,7 +3388,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2869,15 +3396,15 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px', borderBottom: '1px solid #334155', paddingBottom: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', borderBottom: darkMode ? '1px solid #334155' : '1px solid #cbd5e1', paddingBottom: '12px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
               Table #{selectedTable.name} Options
             </h3>
             <button
@@ -2885,19 +3412,19 @@ export default function ToastTables({
                 setShowMenuModal(false);
                 setShowQRModal(true);
               }}
-              style={{ padding: '12px', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #ffffff', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ padding: '12px', backgroundColor: 'theme.text', color: 'theme.bgfff', border: '1px solid theme.text', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               📱 Print Table QR Standee
             </button>
             <button
               onClick={() => { handleOpenTable(); setShowMenuModal(false); }}
-              style={{ padding: '12px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ padding: '12px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               Open / Seat Table
             </button>
             <button
               onClick={handleClearTable}
-              style={{ padding: '12px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ padding: '12px', backgroundColor: 'theme.danger', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               Clear Table
             </button>
@@ -2923,9 +3450,9 @@ export default function ToastTables({
                     }}
                     style={{
                       padding: '8px',
-                      backgroundColor: isTagged ? '#10b981' : stBadge === 'Dirty' ? '#ef4444' : stBadge === 'Sanitizing' ? '#0284c7' : stBadge === 'VIP' ? '#8b5cf6' : stBadge === 'Out of Service' ? '#64748b' : '#334155',
-                      color: '#fff',
-                      border: isTagged ? '2px solid #ffffff' : 'none',
+                      backgroundColor: isTagged ? 'theme.success' : stBadge === 'Dirty' ? 'theme.danger' : stBadge === 'Sanitizing' ? 'theme.accent' : stBadge === 'VIP' ? 'theme.textSecondary' : stBadge === 'Out of Service' ? 'theme.textSecondary' : 'theme.border',
+                      color: 'theme.bg',
+                      border: isTagged ? '2px solid theme.text' : 'none',
                       borderRadius: '6px',
                       fontSize: '11px',
                       fontWeight: '700',
@@ -2940,7 +3467,7 @@ export default function ToastTables({
 
             <button
               onClick={() => setShowMenuModal(false)}
-              style={{ padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}
+              style={{ padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -2953,7 +3480,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2961,25 +3488,25 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '340px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Send Kitchen Note (Table #{selectedTable.name})</h3>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Send Kitchen Note (Table #{selectedTable.name})</h3>
             <textarea
               value={kitchenMessage}
               onChange={(e) => setKitchenMessage(e.target.value)}
               placeholder="Enter instruction for kitchen station..."
               rows={3}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowMessageModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSendMessage} style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Send KOT Note</button>
+              <button onClick={() => setShowMessageModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSendMessage} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Send KOT Note</button>
             </div>
           </div>
         </div>
@@ -2990,7 +3517,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2998,25 +3525,25 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '300px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Rename Table</h3>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Rename Table</h3>
             <input
               type="text"
               value={newTableName}
               onChange={(e) => setNewTableName(e.target.value)}
               placeholder="Table name or number"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowRenameModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleRenameTable} style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save</button>
+              <button onClick={() => setShowRenameModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleRenameTable} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save</button>
             </div>
           </div>
         </div>
@@ -3027,7 +3554,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3036,15 +3563,15 @@ export default function ToastTables({
           <div style={{
             width: '360px',
             maxHeight: '420px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Add Item to Table #{selectedTable.name}</h3>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Add Item to Table #{selectedTable.name}</h3>
             <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {(menuItems && menuItems.length > 0 ? menuItems : [
                 { id: 'm1', name: 'Fried Calamari', price: 340.00 },
@@ -3059,7 +3586,7 @@ export default function ToastTables({
                   onClick={() => handleAddItemToBill(mi)}
                   style={{
                     padding: '10px 12px',
-                    backgroundColor: '#0f172a',
+                    backgroundColor: 'theme.inputBg',
                     borderRadius: '6px',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -3068,11 +3595,11 @@ export default function ToastTables({
                   }}
                 >
                   <span style={{ fontSize: '13px', fontWeight: '600' }}>{mi.name}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>₹{mi.price.toFixed(2)}</span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'theme.success' }}>₹{mi.price.toFixed(2)}</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowAddItemModal(false)} style={{ padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Close</button>
+            <button onClick={() => setShowAddItemModal(false)} style={{ padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Close</button>
           </div>
         </div>
       )}
@@ -3082,7 +3609,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3090,25 +3617,25 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '300px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Apply Discount (₹)</h3>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Apply Discount (₹)</h3>
             <input
               type="number"
               value={discountAmountInput}
               onChange={(e) => setDiscountAmountInput(e.target.value)}
               placeholder="Discount amount (e.g. 50.00)"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowDiscountModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleApplyDiscount} style={{ flex: 1, padding: '10px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Apply</button>
+              <button onClick={() => setShowDiscountModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleApplyDiscount} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.success', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Apply</button>
             </div>
           </div>
         </div>
@@ -3119,7 +3646,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3127,22 +3654,22 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>⇄ Transfer Table #{selectedTable.name}</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>⇄ Transfer Table #{selectedTable.name}</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
               Select target table to move active bill checks, items, and timers:
             </p>
             <select
               value={transferTargetTableId}
               onChange={(e) => setTransferTargetTableId(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg' }}
             >
               <option value="">Select Destination Table...</option>
               {floorTables
@@ -3154,8 +3681,8 @@ export default function ToastTables({
                 ))}
             </select>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => setShowTransferModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleTransferTable} style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Transfer Party</button>
+              <button onClick={() => setShowTransferModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleTransferTable} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Transfer Party</button>
             </div>
           </div>
         </div>
@@ -3166,7 +3693,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3174,16 +3701,16 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>⏱️ Timed Prep Hold / Delayed Fire</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>⏱️ Timed Prep Hold / Delayed Fire</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
               Set a delayed timer before firing KOT ticket to kitchen:
             </p>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -3194,9 +3721,9 @@ export default function ToastTables({
                   style={{
                     flex: 1,
                     padding: '8px',
-                    backgroundColor: timedHoldMinutes === m ? '#f59e0b' : '#0f172a',
-                    color: '#fff',
-                    border: '1px solid #475569',
+                    backgroundColor: timedHoldMinutes === m ? 'theme.warning' : 'theme.inputBg',
+                    color: 'theme.bg',
+                    border: '1px solid theme.textSecondary',
                     borderRadius: '6px',
                     fontWeight: '700',
                     cursor: 'pointer'
@@ -3207,8 +3734,8 @@ export default function ToastTables({
               ))}
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => setShowTimedHoldModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleFireCourse('Hold Course', timedHoldMinutes)} style={{ flex: 1, padding: '10px', backgroundColor: '#f59e0b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Schedule Hold</button>
+              <button onClick={() => setShowTimedHoldModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => handleFireCourse('Hold Course', timedHoldMinutes)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.warning', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Schedule Hold</button>
             </div>
           </div>
         </div>
@@ -3219,7 +3746,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3227,33 +3754,33 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '340px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>🧮 N-Way Equal Bill Splitter</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>🧮 N-Way Equal Bill Splitter</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
               Subtotal: ₹{calculateTotal().toFixed(2)}
             </p>
-            <label style={{ fontSize: '12px', color: '#cbd5e1' }}>Number of Equal Payments (Guests):</label>
+            <label style={{ fontSize: '12px', color: 'theme.textSecondary' }}>Number of Equal Payments (Guests):</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button onClick={() => setNWaySplitCount(Math.max(2, nWaySplitCount - 1))} style={{ padding: '6px 14px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700' }}>-</button>
+              <button onClick={() => setNWaySplitCount(Math.max(2, nWaySplitCount - 1))} style={{ padding: '6px 14px', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700' }}>-</button>
               <span style={{ flex: 1, textAlign: 'center', fontSize: '18px', fontWeight: '700' }}>{nWaySplitCount} Ways</span>
-              <button onClick={() => setNWaySplitCount(nWaySplitCount + 1)} style={{ padding: '6px 14px', backgroundColor: '#334155', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700' }}>+</button>
+              <button onClick={() => setNWaySplitCount(nWaySplitCount + 1)} style={{ padding: '6px 14px', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700' }}>+</button>
             </div>
-            <div style={{ backgroundColor: '#0f172a', padding: '12px', borderRadius: '8px', border: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', color: '#94a3b8' }}>Each Guest Pays:</span>
-              <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>
+            <div style={{ backgroundColor: 'theme.inputBg', padding: '12px', borderRadius: '8px', border: '1px solid theme.border', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: 'theme.border' }}>Each Guest Pays:</span>
+              <span style={{ fontSize: '18px', fontWeight: '700', color: 'theme.success' }}>
                 ₹{(calculateTotal() / nWaySplitCount).toFixed(2)}
               </span>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => setShowNWaySplitModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleConfirmNWaySplit} style={{ flex: 1, padding: '10px', backgroundColor: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Confirm N-Way Split</button>
+              <button onClick={() => setShowNWaySplitModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmNWaySplit} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.success', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Confirm N-Way Split</button>
             </div>
           </div>
         </div>
@@ -3264,7 +3791,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3272,20 +3799,20 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '380px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>✂️ Itemized Cheque Split</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>✂️ Itemized Cheque Split</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
               Select specific items to move from cheque {activeChequeId} into a new split cheque:
             </p>
 
-            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#0f172a', padding: '10px', borderRadius: '8px' }}>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: 'theme.inputBg', padding: '10px', borderRadius: '8px' }}>
               {(activeBill.items || []).map(item => {
                 const isSelected = selectedSplitItemIds.includes(item.id);
                 return (
@@ -3298,9 +3825,9 @@ export default function ToastTables({
                     }}
                     style={{
                       padding: '8px 10px',
-                      backgroundColor: isSelected ? '#1e293b' : '#11151f',
+                      backgroundColor: isSelected ? 'theme.bgSecondary' : 'theme.bgSecondary',
                       borderRadius: '6px',
-                      border: isSelected ? '1px solid #2563eb' : '1px solid transparent',
+                      border: isSelected ? '1px solid theme.accent' : '1px solid transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
@@ -3316,7 +3843,7 @@ export default function ToastTables({
                       />
                       <span><strong>{item.qty}x</strong> {item.name} (Seat {item.seat || 1})</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'theme.success' }}>
                       ₹{(item.price * item.qty).toFixed(2)}
                     </span>
                   </div>
@@ -3325,8 +3852,8 @@ export default function ToastTables({
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => { setSelectedSplitItemIds([]); setShowSplitModal(false); }} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleConfirmItemSplit} style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+              <button onClick={() => { setSelectedSplitItemIds([]); setShowSplitModal(false); }} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmItemSplit} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
                 Split ({selectedSplitItemIds.length}) Items
               </button>
             </div>
@@ -3340,8 +3867,8 @@ export default function ToastTables({
           position: 'fixed',
           top: '20px',
           right: '20px',
-          backgroundColor: toastMessage.type === 'error' ? '#ef4444' : toastMessage.type === 'warning' ? '#f59e0b' : toastMessage.type === 'success' ? '#10b981' : '#2563eb',
-          color: '#ffffff',
+          backgroundColor: toastMessage.type === 'error' ? 'theme.danger' : toastMessage.type === 'warning' ? 'theme.warning' : toastMessage.type === 'success' ? 'theme.success' : 'theme.accent',
+          color: 'theme.text',
           padding: '12px 18px',
           borderRadius: '8px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
@@ -3363,7 +3890,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3371,24 +3898,24 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '340px',
-            backgroundColor: '#1e293b',
-            border: '1px solid #334155',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            border: '1px solid theme.border',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: '#f59e0b' }}>⚠️ {confirmModalConfig.title}</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#cbd5e1', lineHeight: 1.5 }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#f59e0b' }}>⚠️ {confirmModalConfig.title}</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.textSecondary', lineHeight: 1.5 }}>
               {confirmModalConfig.message}
             </p>
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
               <button
                 onClick={() => setConfirmModalConfig(null)}
-                style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.text', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
@@ -3398,7 +3925,7 @@ export default function ToastTables({
                   setConfirmModalConfig(null);
                   cb && cb();
                 }}
-                style={{ flex: 1, padding: '10px', backgroundColor: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: 'theme.danger', color: 'theme.text', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}
               >
                 Confirm
               </button>
@@ -3412,7 +3939,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.7)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3420,25 +3947,25 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '320px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Table Note</h3>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Table Note</h3>
             <textarea
               value={tableNote}
               onChange={(e) => setTableNote(e.target.value)}
               placeholder="Special customer note or VIP instructions..."
               rows={3}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #475569', backgroundColor: '#0f172a', color: '#fff', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowNoteModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSaveNote} style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Note</button>
+              <button onClick={() => setShowNoteModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSaveNote} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Note</button>
             </div>
           </div>
         </div>
@@ -3469,7 +3996,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.85)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3477,25 +4004,25 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '350px',
-            backgroundColor: '#1e293b',
-            border: '2px solid #ef4444',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
+            border: '2px solid theme.danger',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px', color: '#ef4444' }}>⛔ MANAGER VOID REQUIRED</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: '#cbd5e1' }}>
-              Item <strong style={{ color: '#ffffff' }}>"{itemToVoid.name}"</strong> has already been fired to the kitchen. Select a void reason and enter Manager PIN:
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#ef4444' }}>⛔ MANAGER VOID REQUIRED</h3>
+            <p style={{ margin: 0, fontSize: '12px', color: 'theme.textSecondary' }}>
+              Item <strong style={{ color: 'theme.text' }}>"{itemToVoid.name}"</strong> has already been fired to the kitchen. Select a void reason and enter Manager PIN:
             </p>
             <div>
-              <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Void Reason *</label>
+              <label style={{ fontSize: '11px', color: 'theme.border', display: 'block', marginBottom: '4px' }}>Void Reason *</label>
               <select
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary' }}
               >
                 <option value="Customer changed mind">Customer changed mind</option>
                 <option value="Order mistake by server">Order mistake by server</option>
@@ -3505,18 +4032,18 @@ export default function ToastTables({
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Manager PIN * (Default: 1234)</label>
+              <label style={{ fontSize: '11px', color: 'theme.border', display: 'block', marginBottom: '4px' }}>Manager PIN * (Default: 1234)</label>
               <input
                 type="password"
                 placeholder="Enter Manager PIN"
                 value={managerPin}
                 onChange={(e) => setManagerPin(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: '#0f172a', color: '#fff', border: '1px solid #475569', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box' }}
               />
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-              <button onClick={() => setShowVoidModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleConfirmVoidItem} style={{ flex: 1, padding: '10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>CONFIRM VOID</button>
+              <button onClick={() => setShowVoidModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmVoidItem} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.danger', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>CONFIRM VOID</button>
             </div>
           </div>
         </div>
@@ -3527,7 +4054,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3535,29 +4062,29 @@ export default function ToastTables({
         }}>
           <div style={{
             width: '300px',
-            backgroundColor: '#1e293b',
+            backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '16px' }}>Edit Guest Count (Table #{selectedTable.name})</h3>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Edit Guest Count (Table #{selectedTable.name})</h3>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '10px 0' }}>
               <button
                 onClick={() => setEditGuestCount(prev => Math.max(1, prev - 1))}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#334155', color: '#fff', border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
               >-</button>
-              <span style={{ fontSize: '24px', fontWeight: '800', color: '#38bdf8' }}>{editGuestCount}</span>
+              <span style={{ fontSize: '24px', fontWeight: '800', color: 'theme.accent' }}>{editGuestCount}</span>
               <button
                 onClick={() => setEditGuestCount(prev => prev + 1)}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#334155', color: '#fff', border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
               >+</button>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowGuestsModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#475569', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleUpdateGuestsCount(editGuestCount)} style={{ flex: 1, padding: '10px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Guests</button>
+              <button onClick={() => setShowGuestsModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => handleUpdateGuestsCount(editGuestCount)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Guests</button>
             </div>
           </div>
         </div>
@@ -3568,7 +4095,7 @@ export default function ToastTables({
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.85)',
+          backgroundColor: darkMode ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3578,23 +4105,23 @@ export default function ToastTables({
           <div style={{
             width: '100%',
             maxWidth: '420px',
-            backgroundColor: '#000000',
-            border: '2px solid #ffffff',
+            backgroundColor: 'theme.bgfff',
+            border: '2px solid theme.text',
             borderRadius: '12px',
             padding: '24px',
-            color: '#ffffff',
+            color: 'theme.text',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
             textAlign: 'center'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333333', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid theme.border', paddingBottom: '12px' }}>
               <div style={{ fontSize: '16px', fontWeight: '800', tracking: '0.05em', textTransform: 'uppercase' }}>📱 TABLE #{selectedTable.name} QR CODE</div>
-              <button onClick={() => setShowQRModal(false)} style={{ background: 'none', border: 'none', color: '#ffffff', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowQRModal(false)} style={{ background: 'none', border: 'none', color: 'theme.text', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div id="print-qr-standee" style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', border: '3px solid #000000' }}>
-              <div style={{ color: '#000000', fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px' }}>
+            <div id="print-qr-standee" style={{ backgroundColor: 'theme.text', padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', border: '3px solid theme.bgfff' }}>
+              <div style={{ color: 'theme.bgfff', fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px' }}>
                 TABLE #{selectedTable.name}
               </div>
               <div style={{ color: '#555555', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', tracking: '0.05em' }}>
@@ -3614,7 +4141,7 @@ export default function ToastTables({
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => setShowQRModal(false)}
-                style={{ flex: 1, padding: '12px', backgroundColor: '#222222', color: '#ffffff', border: '1px solid #444444', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', backgroundColor: 'theme.border', color: 'theme.text', border: '1px solid theme.border', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
               >
                 CLOSE
               </button>
@@ -3629,12 +4156,12 @@ export default function ToastTables({
                         <head>
                           <title>Table #${selectedTable.name} QR Standee</title>
                           <style>
-                            body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; text-align: center; }
-                            .card { border: 4px solid #000; padding: 30px; border-radius: 16px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-                            h1 { font-size: 32px; margin: 0 0 8px 0; color: #000; }
-                            p { font-size: 12px; color: #555; margin: 0 0 20px 0; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-                            img { width: 200px; height: 200px; margin-bottom: 14px; }
-                            .url { font-size: 11px; color: #666; font-family: monospace; }
+                            body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; text-align: center; background: #f8fafc; }
+                            .card { border: 2px solid #cbd5e1; padding: 30px; border-radius: 16px; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #ffffff; }
+                            h1 { font-size: 28px; margin: 0 0 8px 0; color: #1e293b; font-weight: 700; }
+                            p { font-size: 12px; color: #64748b; margin: 0 0 20px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+                            img { width: 200px; height: 200px; margin-bottom: 14px; border-radius: 8px; }
+                            .url { font-size: 11px; color: #64748b; font-family: monospace; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; }
                           </style>
                         </head>
                         <body>
@@ -3653,7 +4180,7 @@ export default function ToastTables({
                     printWin.document.close();
                   }
                 }}
-                style={{ flex: 1, padding: '12px', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #ffffff', borderRadius: '6px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase' }}
+                style={{ flex: 1, padding: '12px', backgroundColor: 'theme.text', color: 'theme.bgfff', border: '1px solid theme.text', borderRadius: '6px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase' }}
               >
                 🖨️ PRINT STANDEE
               </button>

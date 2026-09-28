@@ -33,13 +33,38 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
   const [printers, setPrinters] = useState(DEFAULT_PRINTERS);
 
   const loadKOTs = () => {
+    // Safe localStorage helper
+    const safeLocalStorageGet = (key, defaultValue) => {
+      try {
+        const saved = localStorage.getItem(key);
+        if (saved === null) return defaultValue;
+        return JSON.parse(saved);
+      } catch (error) {
+        return defaultValue;
+      }
+    };
+
     try {
       const allKOTs = kotManager.getAllKOTs();
-      console.log('Loading KOTs:', allKOTs.length);
-      
+
+      // Sync token status from localStorage
+      try {
+        const qrOrders = safeLocalStorageGet('qr_orders', []);
+        allKOTs.forEach(kot => {
+          if (kot.token) {
+            const qrOrder = qrOrders.find(qr => qr.token === kot.token);
+            if (qrOrder && qrOrder.tokenStatus) {
+              kot.tokenStatus = qrOrder.tokenStatus;
+            }
+          }
+        });
+      } catch (error) {
+        // Token sync failed, continue without it
+      }
+
       // Also check for QR orders
       try {
-        const qrOrders = JSON.parse(localStorage.getItem('qr_orders') || '[]');
+        const qrOrders = safeLocalStorageGet('qr_orders', []);
         const pendingQROrders = qrOrders.filter(order => order.status === 'PENDING');
         
         pendingQROrders.forEach(qrOrder => {
@@ -60,6 +85,7 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
               tableNumber: qrOrder.tableName || 'QR Order',
               createdAt: qrOrder.createdAt,
               token: qrOrder.token || null,
+              tokenStatus: qrOrder.tokenStatus || 'PENDING',
               orderType: 'qr'
             };
             
@@ -73,9 +99,8 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
               kotManager.saveState();
 
               // Auto-print KOT if enabled in settings
-              const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+              const mainSettings = safeLocalStorageGet('cafeos_settings', {});
               if (mainSettings.autoPrintKOT !== false) {
-                console.log('Auto-printing KOT for QR order:', res.kot.kotId);
                 // Print KOT - you can implement thermal printer printing here
                 setTimeout(() => {
                   window.print();
@@ -85,7 +110,7 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
           }
         });
       } catch (error) {
-        console.error('Error processing QR orders:', error);
+        // QR order processing failed, continue without it
       }
 
       const updatedKOTs = kotManager.getAllKOTs();
@@ -142,8 +167,19 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
       setKots(prev => prev.map(k =>
         k.kotId === kotId ? { ...k, status: newStatus, updatedAt: new Date().toISOString() } : k
       ));
+      
+      // Broadcast status update to Toast Orders
+      const kot = kotManager.getKOT(kotId);
+      if (kot && kot.orderId) {
+        const channel = new BroadcastChannel('bakerypos_updates');
+        channel.postMessage({
+          type: 'KOT_STATUS_UPDATE',
+          data: { orderId: kot.orderId, status: newStatus }
+        });
+        channel.close();
+      }
     } catch (error) {
-      console.error('Error updating KOT status:', error);
+      // Error handling without console
     }
   };
 
@@ -210,8 +246,6 @@ export default function KitchenDisplaySystem({ screenSize = 'large', orders = []
         }
       }
 
-      console.log('Speaking:', message);
-      
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(message);
         window.speechSynthesis.speak(utterance);
@@ -1379,8 +1413,8 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
             {kot.token && (
               <span style={{
                 padding: screenSize === 'small' ? '2px 6px' : '4px 8px',
-                background: '#000000',
-                color: '#ffffff',
+                background: kot.tokenStatus === 'READY' ? '#00ff00' : kot.tokenStatus === 'PREPARING' ? '#0000ff' : kot.tokenStatus === 'COMPLETED' ? '#808080' : '#ffaa00',
+                color: kot.tokenStatus === 'READY' || kot.tokenStatus === 'PREPARING' ? '#000000' : '#ffffff',
                 borderRadius: '0px',
                 fontSize: screenSize === 'small' ? '9px' : '10px',
                 fontWeight: 'bold',
@@ -1388,7 +1422,23 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
                 fontFamily: '"Courier New", monospace',
                 flexShrink: 0
               }}>
-                {kot.token}
+                {kot.token} ({kot.tokenStatus || 'PENDING'})
+              </span>
+            )}
+            {kot.kitchenDelay && (
+              <span style={{
+                padding: screenSize === 'small' ? '2px 6px' : '4px 8px',
+                background: '#ff0000',
+                color: '#ffffff',
+                borderRadius: '0px',
+                fontSize: screenSize === 'small' ? '9px' : '10px',
+                fontWeight: 'bold',
+                border: '1px solid #ff0000',
+                fontFamily: '"Courier New", monospace',
+                flexShrink: 0,
+                animation: 'kds-pulse-border 1s infinite'
+              }}>
+                DELAYED
               </span>
             )}
             {kot.station && (
@@ -1470,6 +1520,20 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
               <span>•</span>
               <span style={{ fontWeight: 'bold' }}>{orderAge}m</span>
             </div>
+            {kot.expectedReadyTime && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <span>•</span>
+                <span style={{ color: kot.kitchenDelay ? '#ff0000' : '#006600' }}>
+                  Ready: {new Date(kot.expectedReadyTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </span>
+              </div>
+            )}
+            {kot.course && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                <span>•</span>
+                <span>Course {kot.course}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1533,6 +1597,11 @@ function KOTCard({ kot, screenSize, onItemStatusChange, onKOTStatusChange, onMar
                   {item.notes && (
                     <div style={{ fontSize: '11px', color: '#ff0000', marginTop: '4px', fontWeight: 'bold' }}>
                       Note: {item.notes}
+                    </div>
+                  )}
+                  {kot.kitchenDelayReason && (
+                    <div style={{ fontSize: '11px', color: '#ff0000', marginTop: '4px', fontWeight: 'bold', backgroundColor: '#fff0f0', padding: '4px' }}>
+                      DELAY REASON: {kot.kitchenDelayReason}
                     </div>
                   )}
                   {item.modifications && item.modifications.length > 0 && (

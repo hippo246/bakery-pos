@@ -1,67 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-
-/* ─── Error Boundary ─────────────────────────────────────────────────── */
-class TablesErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('Tables component error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          background: '#000000',
-          color: '#ffffff',
-          padding: '20px',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-          <div style={{ fontSize: '20px', fontWeight: '700', marginBottom: '12px' }}>
-            Tables View Error
-          </div>
-          <div style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '24px', maxWidth: '400px' }}>
-            Something went wrong loading the tables view. This may be due to invalid data.
-          </div>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            style={{
-              padding: '12px 24px',
-              background: '#6366f1',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
-          >
-            Try Again
-          </button>
-          {this.state.error && (
-            <div style={{ marginTop: '20px', fontSize: '11px', color: '#6b7280', fontFamily: 'monospace' }}>
-              {this.state.error.toString()}
-            </div>
-          )}
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import ErrorBoundary from "../common/ErrorBoundary";
 
 /* ─── helpers ──────────────────────────────────────────────────────── */
 function formatElapsed(ms) {
@@ -4235,8 +4173,8 @@ function Tables({
 /* ─── Export with Error Boundary ─────────────────────────────────────── */
 export default function TablesWithErrorBoundary(props) {
   return (
-    <TablesErrorBoundary>
+    <ErrorBoundary>
       <Tables {...props} />
-    </TablesErrorBoundary>
+    </ErrorBoundary>
   );
 }

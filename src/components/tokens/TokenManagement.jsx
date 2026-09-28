@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import orderEventManager from '../../services/OrderEventManager.js';
+import orderWorkflowService from '../../services/OrderWorkflowService.js';
 
 /* ─── Mobile detection ─────────────────────────────────────────── */
 function useIsMobile() {
@@ -906,6 +908,59 @@ export default function TokenManagement({ orders = [], setOrders, onNavigate, da
     load();
     pollingRef.current = setInterval(load, 12000);
     return () => clearInterval(pollingRef.current);
+  }, []);
+
+  // Real-time order event synchronization
+  useEffect(() => {
+    // Subscribe to token generation events
+    const unsubscribeTokenGenerated = orderEventManager.on('token:generated', ({ orderId, tokenNumber }) => {
+      console.log('[TokenManagement] Token generated:', tokenNumber, 'for order:', orderId);
+      // Find the order and add token number
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === orderId ? { ...o, token: `T-${tokenNumber}` } : o
+        ));
+      }
+    });
+
+    // Subscribe to token status change events
+    const unsubscribeTokenStatus = orderEventManager.on('token:status', ({ tokenNumber, newStatus }) => {
+      console.log('[TokenManagement] Token status changed:', tokenNumber, newStatus);
+      // Update token status
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.token === `T-${tokenNumber}` ? { ...o, status: newStatus } : o
+        ));
+      }
+    });
+
+    // Subscribe to order completed events
+    const unsubscribeOrderCompleted = orderEventManager.on('order:completed', (order) => {
+      console.log('[TokenManagement] Order completed:', order.id);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === order.id ? { ...o, status: 'COMPLETED' } : o
+        ));
+      }
+    });
+
+    // Subscribe to order paid events
+    const unsubscribeOrderPaid = orderEventManager.on('order:paid', ({ order, paymentData }) => {
+      console.log('[TokenManagement] Order paid:', order.id);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === order.id ? { ...o, status: 'PAID', payment: paymentData } : o
+        ));
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeTokenGenerated();
+      unsubscribeTokenStatus();
+      unsubscribeOrderCompleted();
+      unsubscribeOrderPaid();
+    };
   }, []);
 
   const announce = useCallback((num, status) => {

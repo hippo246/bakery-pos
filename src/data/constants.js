@@ -44,7 +44,7 @@ export const INIT_KDS = () => {
   return normalizeKdsCards(LEGACY_INIT_KDS);
 };
 
-export const MENU_CATS = ["ALL", "Other", "Msgs", "Beers", "Cocktails", "Red Wines", "White Wines", "Breakfast", "Beverages", "Brunch", "Appetizer", "Salads", "Entrees", "Sandwich", "Sides"];
+export const MENU_CATS = ["ALL", "Other", "Msgs", "Mocktails", "Specialty Teas", "Artisanal Coffees", "Breakfast", "Beverages", "Brunch", "Appetizer", "Salads", "Entrees", "Sandwich", "Sides"];
 
 // Modifier categories and options for menu items
 export const MODIFIER_CATEGORIES = {

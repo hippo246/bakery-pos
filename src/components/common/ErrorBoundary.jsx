@@ -1,161 +1,227 @@
-import { Component } from 'react';
+import React, { Component } from 'react';
 
-// Simple, practical ErrorBoundary that actually helps users
-// - Shows clear error message
-// - Provides Refresh and Clear Cache buttons
-// - Logs errors for debugging
-// - No health monitor or complex self-healing that doesn't work
-
-export default class ErrorBoundary extends Component {
+class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { 
       hasError: false, 
-      error: null,
-      errorInfo: null
+      error: null, 
+      errorInfo: null,
+      errorId: null
     };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    const errorId = `ERR-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    return { hasError: true, error, errorId };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({
+      error,
+      errorInfo
+    });
     
-    // Log error to localStorage for debugging
+    // Save error to localStorage for debugging
     try {
-      const errorLog = JSON.parse(localStorage.getItem('cafeos_error_log') || '[]');
+      const errorLog = JSON.parse(localStorage.getItem('error_log') || '[]');
       errorLog.push({
+        id: this.state.errorId,
         timestamp: new Date().toISOString(),
-        message: error.message,
+        error: error.toString(),
         stack: error.stack,
-        componentStack: errorInfo.componentStack,
+        componentStack: errorInfo?.componentStack,
+        url: window.location.href,
         userAgent: navigator.userAgent
       });
       // Keep only last 50 errors
-      if (errorLog.length > 50) errorLog.shift();
-      localStorage.setItem('cafeos_error_log', JSON.stringify(errorLog));
-    } catch (_e) {
-      // Ignore localStorage errors
+      if (errorLog.length > 50) errorLog.splice(0, errorLog.length - 50);
+      localStorage.setItem('error_log', JSON.stringify(errorLog));
+    } catch (e) {
+      // Silent fail if localStorage is unavailable
     }
-    
-    this.setState({ errorInfo });
   }
 
-  handleRefresh = () => {
-    window.location.reload();
+  handleReset = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null, errorId: null });
   };
 
-  handleClearCache = () => {
-    // Clear all localStorage and sessionStorage
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-      // Also clear IndexedDB using a simpler approach
-      if (window.indexedDB) {
-        // Delete known databases
-        const knownDbs = ['cafeos_db', 'cafeos_state', 'cafeos_cache'];
-        knownDbs.forEach(dbName => {
-          try {
-            indexedDB.deleteDatabase(dbName);
-          } catch (e) {
-            console.error('Failed to delete database:', dbName, e);
-          }
-        });
-      }
-      // Reload page after a short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
-    } catch (error) {
-      console.error('Failed to clear cache:', error);
-      // Even if clearing fails, try to reload
-      window.location.reload();
+  handleCopyError = () => {
+    const errorText = `Error ID: ${this.state.errorId}\n\nError: ${this.state.error?.toString()}\n\nStack Trace:\n${this.state.error?.stack}\n\nComponent Stack:\n${this.state.errorInfo?.componentStack}\n\nTimestamp: ${new Date().toISOString()}\n\nURL: ${window.location.href}`;
+    
+    navigator.clipboard.writeText(errorText).then(() => {
+      alert('Error details copied to clipboard!');
+    }).catch(() => {
+      alert('Failed to copy error details');
+    });
+  };
+
+  handleDownloadLog = () => {
+    const errorData = {
+      id: this.state.errorId,
+      timestamp: new Date().toISOString(),
+      error: this.state.error?.toString(),
+      stack: this.state.error?.stack,
+      componentStack: this.state.errorInfo?.componentStack,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      localStorage: { ...localStorage }
+    };
+    
+    const blob = new Blob([JSON.stringify(errorData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `error-${this.state.errorId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  handleClearErrorLog = () => {
+    if (confirm('Clear all error history?')) {
+      localStorage.removeItem('error_log');
+      alert('Error log cleared');
     }
   };
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ 
-          padding: 40, 
-          textAlign: 'center',
-          background: '#1E1E1E',
-          minHeight: '100vh',
+        <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#FFFFFF'
+          minHeight: '100vh',
+          background: '#f3f4f6',
+          padding: '20px'
         }}>
-          <div style={{ fontSize: 80, marginBottom: 24 }}>⚠️</div>
-          <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 16, color: '#FFFFFF' }}>
-            Something went wrong
-          </h1>
-          <p style={{ fontSize: 16, color: '#AAA', marginBottom: 32, lineHeight: 1.6, maxWidth: 500 }}>
-            The application encountered an unexpected error. This might be a temporary issue.
-          </p>
-          
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{
+            background: '#ffffff',
+            padding: '32px',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            width: '100%',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>😕</div>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '12px', color: '#1a1a1a' }}>
+              Something went wrong
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+              An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.
+            </p>
+            <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '20px' }}>
+              Error ID: <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: '4px' }}>{this.state.errorId}</code>
+            </p>
+            
+            {this.state.error && (
+              <details style={{ marginBottom: '16px' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '12px', color: '#2563eb', marginBottom: '8px', fontWeight: '600' }}>
+                  View technical details
+                </summary>
+                <pre style={{
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  background: '#f9fafb',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  maxHeight: '200px',
+                  border: '1px solid #e5e7eb'
+                }}>
+                  {this.state.error.toString()}
+                  {this.state.errorInfo && this.state.errorInfo.componentStack}
+                </pre>
+              </details>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <button
+                onClick={this.handleCopyError}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: '#ffffff',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                📋 Copy Error
+              </button>
+              <button
+                onClick={this.handleDownloadLog}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: '#ffffff',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                💾 Download Log
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <button
+                onClick={this.handleReset}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  background: '#ffffff',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Refresh Page
+              </button>
+            </div>
+
             <button
-              onClick={this.handleRefresh}
+              onClick={this.handleClearErrorLog}
               style={{
-                padding: '16px 32px',
-                background: '#E63946',
-                color: '#FFFFFF',
+                width: '100%',
+                padding: '8px 16px',
+                background: 'transparent',
+                color: '#9ca3af',
                 border: 'none',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: 16,
-                fontWeight: 600,
-                transition: 'background 0.2s ease'
+                borderRadius: '4px',
+                fontSize: '12px',
+                cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#C73E3E'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#E63946'}
             >
-              Refresh Page
-            </button>
-            <button
-              onClick={this.handleClearCache}
-              style={{
-                padding: '16px 32px',
-                background: '#222222',
-                color: '#FFFFFF',
-                border: '1px solid #222222',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: 16,
-                fontWeight: 600,
-                transition: 'background 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#222222'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#222222'}
-            >
-              Clear Browser Cache
+              Clear error history
             </button>
           </div>
-          
-          {import.meta.env.DEV && (
-            <details style={{ marginTop: 32, textAlign: 'left', maxWidth: 600, width: '100%' }}>
-              <summary style={{ cursor: 'pointer', fontSize: 14, color: '#666666', marginBottom: 16 }}>
-                Error Details (Dev Only)
-              </summary>
-              <pre style={{ 
-                padding: 16, 
-                background: '#2A2A2A', 
-                borderRadius: 8, 
-                fontSize: 12, 
-                overflow: 'auto',
-                maxHeight: 400,
-                color: '#AAA',
-                border: '1px solid #222222'
-              }}>
-                {this.state.error?.stack}
-                {this.state.errorInfo?.componentStack}
-              </pre>
-            </details>
-          )}
         </div>
       );
     }
@@ -163,3 +229,5 @@ export default class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;

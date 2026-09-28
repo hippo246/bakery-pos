@@ -21,6 +21,27 @@ if (typeof document !== "undefined" && !document.getElementById("brew-theme-tran
   } catch { /* console unavailable */ }
 }
 
+// Inject the CSS custom-property theme tokens so --cafe-bg, --cafe-border, etc. are defined.
+// This runs once at module load time (before any React render) for zero-flash theming.
+if (typeof document !== "undefined" && !document.getElementById("brew-theme-css")) {
+  const el = document.createElement("style");
+  el.id = "brew-theme-css";
+  el.textContent = THEME_CSS;
+  document.head.appendChild(el);
+}
+
+// Apply the correct theme class to <html> based on saved preference, before first paint.
+if (typeof document !== "undefined") {
+  const saved = localStorage.getItem('bakerypos_theme');
+  // "light" saved means darkMode===true (light mode) — apply .light class
+  if (saved === 'light' || saved === null) {
+    // Default to light mode for new users (matches the default in BakeryPOS: true = light)
+    document.documentElement.classList.add('light');
+  } else {
+    document.documentElement.classList.remove('light');
+  }
+}
+
 export default function App() {
   const [isOnlineOrdering, setIsOnlineOrdering] = useState(false);
   const [menuItems, setMenuItems] = useState([]);

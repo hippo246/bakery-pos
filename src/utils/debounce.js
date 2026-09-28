@@ -1,13 +1,6 @@
-/**
- * Debounce utility function
- * Delays function execution until after wait milliseconds have elapsed
- * since the last time the debounced function was invoked
- * 
- * @param {Function} func - Function to debounce
- * @param {number} wait - Milliseconds to wait
- * @returns {Function} Debounced function
- */
-export function debounce(func, wait = 300) {
+// Debounce utility for performance optimization
+
+export const debounce = (func, wait) => {
   let timeout;
   
   return function executedFunction(...args) {
@@ -19,24 +12,16 @@ export function debounce(func, wait = 300) {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
-}
+};
 
-/**
- * Throttle utility function
- * Ensures function is called at most once every wait milliseconds
- * 
- * @param {Function} func - Function to throttle
- * @param {number} wait - Milliseconds to wait
- * @returns {Function} Throttled function
- */
-export function throttle(func, wait = 300) {
+export const throttle = (func, limit) => {
   let inThrottle;
   
   return function executedFunction(...args) {
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, wait);
+      setTimeout(() => inThrottle = false, limit);
     }
   };
-}
+};

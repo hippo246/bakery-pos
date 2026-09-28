@@ -996,111 +996,99 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
   // Initialize menu with Toast POS categories if empty
   useEffect(() => {
     // Always populate if empty or if items don't have Toast POS categories
-    const hasToastCategories = menuItems && menuItems.some(item => 
-      ['Beers', 'Cocktails', 'Red Wines', 'White Wines', 'Breakfast', 'Beverages', 'Brunch', 'Appetizer', 'Salads', 'Entrees', 'Sandwich', 'Sides'].includes(item.category)
+    const hasToastCategories = menuItems && menuItems.some(item =>
+      ['Mocktails', 'Specialty Teas', 'Artisanal Coffees', 'Breakfast', 'Beverages', 'Brunch', 'Appetizer', 'Salads', 'Entrees', 'Sandwich', 'Sides'].includes(item.category)
     );
     
     if (!menuItems || menuItems.length === 0 || !hasToastCategories) {
       const toastMenuItems = [
-        // Beers
-        { id: 'beer-1', name: 'Allagash White', price: 8.00, category: 'Beers', description: 'Belgian-style wheat ale', subcategory: 'Import', active: true },
-        { id: 'beer-2', name: 'Stella Artois', price: 7.00, category: 'Beers', description: 'Belgian lager', subcategory: 'Import', active: true },
-        { id: 'beer-3', name: 'Stone Ipa', price: 9.00, category: 'Beers', description: 'India Pale Ale', subcategory: 'Craft', active: true },
-        { id: 'beer-4', name: 'Guinness Stout', price: 8.00, category: 'Beers', description: 'Irish dry stout', subcategory: 'Import', active: true },
-        { id: 'beer-5', name: 'Heineken', price: 7.50, category: 'Beers', description: 'Dutch lager', subcategory: 'Import', active: true },
-        { id: 'beer-6', name: 'Corona', price: 6.50, category: 'Beers', description: 'Mexican lager', subcategory: 'Import', active: true },
-        { id: 'beer-7', name: 'Blue Moon', price: 7.00, category: 'Beers', description: 'Belgian white', subcategory: 'Craft', active: true },
-        { id: 'beer-8', name: 'Angry Orchard', price: 6.50, category: 'Beers', description: 'Hard cider', subcategory: 'Cider', active: true },
+        // Mocktails
+        { id: 'mocktail-1', name: 'Passionfruit Fizz', price: 240.00, category: 'Mocktails', description: 'Passionfruit, mint, sparkling soda', subcategory: 'Fruity', active: true },
+        { id: 'mocktail-2', name: 'Virgin Mojito', price: 220.00, category: 'Mocktails', description: 'Fresh mint, lime, crushed ice', subcategory: 'Classic', active: true },
+        { id: 'mocktail-3', name: 'Berry Breeze', price: 260.00, category: 'Mocktails', description: 'Mixed berries, basil, tonic', subcategory: 'Fruity', active: true },
+        { id: 'mocktail-4', name: 'Citrus Ginger Ale', price: 210.00, category: 'Mocktails', description: 'Fresh ginger, lemon, sparkling water', subcategory: 'Refreshing', active: true },
+        { id: 'mocktail-5', name: 'Rose Lemonade', price: 230.00, category: 'Mocktails', description: 'Rose syrup, fresh lemon, soda', subcategory: 'Floral', active: true },
+        { id: 'mocktail-6', name: 'Watermelon Cooler', price: 250.00, category: 'Mocktails', description: 'Fresh watermelon, mint, lime', subcategory: 'Fruity', active: true },
         
-        // Cocktails
-        { id: 'cocktail-1', name: 'Mojito', price: 12.00, category: 'Cocktails', description: 'Rum, mint, lime', subcategory: 'Classic', active: true },
-        { id: 'cocktail-2', name: 'Margarita', price: 11.00, category: 'Cocktails', description: 'Tequila, lime, triple sec', subcategory: 'Classic', active: true },
-        { id: 'cocktail-3', name: 'Old Fashioned', price: 13.00, category: 'Cocktails', description: 'Bourbon, bitters, sugar', subcategory: 'Classic', active: true },
-        { id: 'cocktail-4', name: 'Martini', price: 14.00, category: 'Cocktails', description: 'Gin or vodka, vermouth', subcategory: 'Classic', active: true },
-        { id: 'cocktail-5', name: 'Mai Tai', price: 12.00, category: 'Cocktails', description: 'Rum, orange curaçao', subcategory: 'Tropical', active: true },
-        { id: 'cocktail-6', name: 'Cosmopolitan', price: 11.00, category: 'Cocktails', description: 'Vodka, cranberry, lime', subcategory: 'Modern', active: true },
+        // Specialty Teas
+        { id: 'tea-1', name: 'Jasmine Green Tea', price: 180.00, category: 'Specialty Teas', description: 'Organic fragrant green tea', subcategory: 'Green', active: true },
+        { id: 'tea-2', name: 'Masala Chai Latte', price: 160.00, category: 'Specialty Teas', description: 'Spiced Indian tea with steamed milk', subcategory: 'Spiced', active: true },
+        { id: 'tea-3', name: 'Earl Grey Reserve', price: 190.00, category: 'Specialty Teas', description: 'Bergamot infused black tea', subcategory: 'Black', active: true },
+        { id: 'tea-4', name: 'Chamomile Honey', price: 170.00, category: 'Specialty Teas', description: 'Calming chamomile with honey', subcategory: 'Herbal', active: true },
         
-        // Red Wines
-        { id: 'red-1', name: 'Cabernet Sauvignon', price: 12.00, category: 'Red Wines', description: 'Full-bodied red', subcategory: 'Bold', active: true },
-        { id: 'red-2', name: 'Merlot', price: 11.00, category: 'Red Wines', description: 'Smooth red', subcategory: 'Medium', active: true },
-        { id: 'red-3', name: 'Pinot Noir', price: 13.00, category: 'Red Wines', description: 'Light-bodied red', subcategory: 'Light', active: true },
-        { id: 'red-4', name: 'Malbec', price: 10.00, category: 'Red Wines', description: 'Argentine red', subcategory: 'Bold', active: true },
-        { id: 'red-5', name: 'Shiraz', price: 11.00, category: 'Red Wines', description: 'Australian red', subcategory: 'Bold', active: true },
-        
-        // White Wines
-        { id: 'white-1', name: 'Chardonnay', price: 11.00, category: 'White Wines', description: 'Full-bodied white', subcategory: 'Full', active: true },
-        { id: 'white-2', name: 'Sauvignon Blanc', price: 10.00, category: 'White Wines', description: 'Crisp white', subcategory: 'Crisp', active: true },
-        { id: 'white-3', name: 'Pinot Grigio', price: 10.00, category: 'White Wines', description: 'Light white', subcategory: 'Light', active: true },
-        { id: 'white-4', name: 'Riesling', price: 9.00, category: 'White Wines', description: 'Sweet white', subcategory: 'Sweet', active: true },
-        { id: 'white-5', name: 'Prosecco', price: 11.00, category: 'White Wines', description: 'Sparkling white', subcategory: 'Sparkling', active: true },
+        // Artisanal Coffees
+        { id: 'cof-1', name: 'Vanilla Cappuccino', price: 220.00, category: 'Artisanal Coffees', description: 'Espresso, steamed milk, vanilla bean', subcategory: 'Hot', active: true },
+        { id: 'cof-2', name: 'Hazelnut Cold Brew', price: 250.00, category: 'Artisanal Coffees', description: '18-hour cold brew with hazelnut', subcategory: 'Cold', active: true },
+        { id: 'cof-3', name: 'Flat White', price: 210.00, category: 'Artisanal Coffees', description: 'Double ristretto, velvety microfoam', subcategory: 'Hot', active: true },
+        { id: 'cof-4', name: 'Caramel Macchiato', price: 230.00, category: 'Artisanal Coffees', description: 'Espresso layered with caramel', subcategory: 'Hot', active: true },
         
         // Breakfast
-        { id: 'breakfast-1', name: 'Eggs Benedict', price: 14.00, category: 'Breakfast', description: 'Poached eggs, hollandaise', subcategory: 'Eggs', active: true },
-        { id: 'breakfast-2', name: 'Pancakes', price: 10.00, category: 'Breakfast', description: 'Stack of 3 with syrup', subcategory: 'Pancakes', active: true },
-        { id: 'breakfast-3', name: 'Omelette', price: 12.00, category: 'Breakfast', description: 'Three eggs with choice', subcategory: 'Eggs', active: true },
-        { id: 'breakfast-4', name: 'French Toast', price: 11.00, category: 'Breakfast', description: 'With maple syrup', subcategory: 'Pancakes', active: true },
-        { id: 'breakfast-5', name: 'Breakfast Burrito', price: 13.00, category: 'Breakfast', description: 'Eggs, cheese, salsa', subcategory: 'Burrito', active: true },
+        { id: 'breakfast-1', name: 'Eggs Benedict', price: 340.00, category: 'Breakfast', description: 'Poached eggs, hollandaise, English muffin', subcategory: 'Eggs', active: true },
+        { id: 'breakfast-2', name: 'Fluffy Pancakes Stack', price: 290.00, category: 'Breakfast', description: 'Stack of 3 with maple syrup', subcategory: 'Pancakes', active: true },
+        { id: 'breakfast-3', name: 'Truffle Mushroom Omelette', price: 320.00, category: 'Breakfast', description: 'Three eggs with wild mushrooms & cheese', subcategory: 'Eggs', active: true },
+        { id: 'breakfast-4', name: 'French Toast Royale', price: 310.00, category: 'Breakfast', description: 'Thick brioche with berry compote', subcategory: 'Pancakes', active: true },
+        { id: 'breakfast-5', name: 'Masala Breakfast Bowl', price: 280.00, category: 'Breakfast', description: 'Spiced eggs, veggies, paratha', subcategory: 'Indian', active: true },
         
         // Beverages
-        { id: 'bev-1', name: 'Coffee', price: 3.00, category: 'Beverages', description: 'Fresh brewed', subcategory: 'Hot', active: true },
-        { id: 'bev-2', name: 'Espresso', price: 4.00, category: 'Beverages', description: 'Single shot', subcategory: 'Hot', active: true },
-        { id: 'bev-3', name: 'Tea', price: 2.50, category: 'Beverages', description: 'Hot or iced', subcategory: 'Hot', active: true },
-        { id: 'bev-4', name: 'Orange Juice', price: 4.00, category: 'Beverages', description: 'Fresh squeezed', subcategory: 'Fresh', active: true },
-        { id: 'bev-5', name: 'Smoothie', price: 6.00, category: 'Beverages', description: 'Mixed fruit', subcategory: 'Cold', active: true },
-        { id: 'bev-6', name: 'Iced Coffee', price: 4.50, category: 'Beverages', description: 'Cold brew', subcategory: 'Cold', active: true },
+        { id: 'bev-1', name: 'House Brewed Coffee', price: 140.00, category: 'Beverages', description: 'Fresh dark roast', subcategory: 'Hot', active: true },
+        { id: 'bev-2', name: 'Double Espresso', price: 160.00, category: 'Beverages', description: 'Rich double shot', subcategory: 'Hot', active: true },
+        { id: 'bev-3', name: 'Fresh Mint Ice Tea', price: 180.00, category: 'Beverages', description: 'Refreshing lemon iced tea', subcategory: 'Cold', active: true },
+        { id: 'bev-4', name: 'Fresh Orange Juice', price: 220.00, category: 'Beverages', description: '100% fresh squeezed', subcategory: 'Fresh', active: true },
+        { id: 'bev-5', name: 'Mixed Fruit Smoothie', price: 260.00, category: 'Beverages', description: 'Seasonal fruits blended fresh', subcategory: 'Cold', active: true },
+        { id: 'bev-6', name: 'Mango Lassi', price: 200.00, category: 'Beverages', description: 'Chilled yogurt mango drink', subcategory: 'Cold', active: true },
         
         // Appetizer
-        { id: 'app-1', name: 'Nachos', price: 12.00, category: 'Appetizer', description: 'Loaded with cheese', subcategory: 'Shared', active: true },
-        { id: 'app-2', name: 'Wings', price: 11.00, category: 'Appetizer', description: 'Buffalo style', subcategory: 'Shared', active: true },
-        { id: 'app-3', name: 'Mozzarella Sticks', price: 9.00, category: 'Appetizer', description: 'Marinara sauce', subcategory: 'Individual', active: true },
-        { id: 'app-4', name: 'Calamari', price: 13.00, category: 'Appetizer', description: 'Fried with lemon', subcategory: 'Shared', active: true },
-        { id: 'app-5', name: 'Bruschetta', price: 8.00, category: 'Appetizer', description: 'Tomato, basil', subcategory: 'Individual', active: true },
+        { id: 'app-1', name: 'Loaded Cheese Nachos', price: 340.00, category: 'Appetizer', description: 'Loaded with queso, jalapeños & salsa', subcategory: 'Shared', active: true },
+        { id: 'app-2', name: 'Crispy Garlic Wings', price: 380.00, category: 'Appetizer', description: 'Glazed with honey garlic sauce', subcategory: 'Shared', active: true },
+        { id: 'app-3', name: 'Mozzarella Sticks', price: 280.00, category: 'Appetizer', description: 'Served with marinara sauce', subcategory: 'Individual', active: true },
+        { id: 'app-4', name: 'Crispy Calamari', price: 360.00, category: 'Appetizer', description: 'Fried with lemon aioli', subcategory: 'Shared', active: true },
+        { id: 'app-5', name: 'Bruschetta Trio', price: 260.00, category: 'Appetizer', description: 'Tomato, basil, balsamic', subcategory: 'Individual', active: true },
         
         // Salads
-        { id: 'salad-1', name: 'Caesar Salad', price: 10.00, category: 'Salads', description: 'Romaine, parmesan', subcategory: 'Classic', active: true },
-        { id: 'salad-2', name: 'Greek Salad', price: 11.00, category: 'Salads', description: 'Feta, olives', subcategory: 'Mediterranean', active: true },
-        { id: 'salad-3', name: 'Garden Salad', price: 8.00, category: 'Salads', description: 'Mixed greens', subcategory: 'Light', active: true },
-        { id: 'salad-4', name: 'Cobb Salad', price: 12.00, category: 'Salads', description: 'Egg, bacon, avocado', subcategory: 'Protein', active: true },
-        { id: 'salad-5', name: 'Chef Salad', price: 11.00, category: 'Salads', description: 'Mixed greens, protein', subcategory: 'Protein', active: true },
+        { id: 'salad-1', name: 'Classic Caesar Salad', price: 320.00, category: 'Salads', description: 'Romaine, parmesan, croutons', subcategory: 'Classic', active: true },
+        { id: 'salad-2', name: 'Mediterranean Greek Salad', price: 340.00, category: 'Salads', description: 'Feta, kalamata olives, cucumber', subcategory: 'Mediterranean', active: true },
+        { id: 'salad-3', name: 'Fresh Garden Salad', price: 260.00, category: 'Salads', description: 'Mixed greens with balsamic vinaigrette', subcategory: 'Light', active: true },
+        { id: 'salad-4', name: 'Cobb Salad', price: 350.00, category: 'Salads', description: 'Egg, avocado, cherry tomatoes', subcategory: 'Protein', active: true },
+        { id: 'salad-5', name: 'Quinoa Power Bowl', price: 370.00, category: 'Salads', description: 'Quinoa, roasted veggies, tahini', subcategory: 'Protein', active: true },
         
         // Entrees
-        { id: 'entree-1', name: 'Steak', price: 28.00, category: 'Entrees', description: 'Grilled ribeye', subcategory: 'Grilled', active: true },
-        { id: 'entree-2', name: 'Salmon', price: 24.00, category: 'Entrees', description: 'Grilled Atlantic', subcategory: 'Grilled', active: true },
-        { id: 'entree-3', name: 'Chicken', price: 18.00, category: 'Entrees', description: 'Grilled breast', subcategory: 'Grilled', active: true },
-        { id: 'entree-4', name: 'Pasta Carbonara', price: 16.00, category: 'Entrees', description: 'Cream, bacon, egg', subcategory: 'Pasta', active: true },
-        { id: 'entree-5', name: 'Fish & Chips', price: 17.00, category: 'Entrees', description: 'Beer battered cod', subcategory: 'Fried', active: true },
+        { id: 'entree-1', name: 'Grilled Cottage Cheese Steak', price: 480.00, category: 'Entrees', description: 'Herbed marinade with roasted veggies', subcategory: 'Grilled', active: true },
+        { id: 'entree-2', name: 'Pan-Seared Salmon Fillet', price: 680.00, category: 'Entrees', description: 'Wild salmon with lemon butter sauce', subcategory: 'Grilled', active: true },
+        { id: 'entree-3', name: 'Roast Herb Chicken', price: 520.00, category: 'Entrees', description: 'Half chicken with mashed potatoes', subcategory: 'Grilled', active: true },
+        { id: 'entree-4', name: 'Penne Arrabbiata', price: 380.00, category: 'Entrees', description: 'Spicy tomato, garlic, basil', subcategory: 'Pasta', active: true },
+        { id: 'entree-5', name: 'Fish Tikka Masala', price: 540.00, category: 'Entrees', description: 'Creamy tomato curry with naan', subcategory: 'Curry', active: true },
         
         // Sandwich
-        { id: 'sand-1', name: 'Club Sandwich', price: 14.00, category: 'Sandwich', description: 'Turkey, bacon', subcategory: 'Classic', active: true },
-        { id: 'sand-2', name: 'BLT', price: 11.00, category: 'Sandwich', description: 'Bacon, lettuce, tomato', subcategory: 'Classic', active: true },
-        { id: 'sand-3', name: 'Grilled Cheese', price: 9.00, category: 'Sandwich', description: 'Melted cheddar', subcategory: 'Classic', active: true },
-        { id: 'sand-4', name: 'Reuben', price: 13.00, category: 'Sandwich', description: 'Corned beef, sauerkraut', subcategory: 'Classic', active: true },
-        { id: 'sand-5', name: 'Philly Cheesesteak', price: 12.00, category: 'Sandwich', description: 'Ribeye, peppers, onions', subcategory: 'Hot', active: true },
+        { id: 'sand-1', name: 'Artisan Club Sandwich', price: 360.00, category: 'Sandwich', description: 'Triple decker with chicken & egg', subcategory: 'Classic', active: true },
+        { id: 'sand-2', name: 'Avocado Veggie Club', price: 320.00, category: 'Sandwich', description: 'Fresh avocado, tomato, lettuce', subcategory: 'Veggie', active: true },
+        { id: 'sand-3', name: 'Three-Cheese Melt', price: 290.00, category: 'Sandwich', description: 'Melted cheddar, mozzarella, parmesan', subcategory: 'Classic', active: true },
+        { id: 'sand-4', name: 'Tandoori Chicken Wrap', price: 340.00, category: 'Sandwich', description: 'Spiced chicken, yogurt, chutney', subcategory: 'Wrap', active: true },
+        { id: 'sand-5', name: 'Egg & Cheese Muffin', price: 260.00, category: 'Sandwich', description: 'Toasted muffin, egg, cheddar', subcategory: 'Breakfast', active: true },
         
         // Sides
-        { id: 'side-1', name: 'Fries', price: 5.00, category: 'Sides', description: 'Crispy', subcategory: 'Potato', active: true },
-        { id: 'side-2', name: 'Onion Rings', price: 6.00, category: 'Sides', description: 'Battered', subcategory: 'Onion', active: true },
-        { id: 'side-3', name: 'Coleslaw', price: 4.00, category: 'Sides', description: 'Creamy', subcategory: 'Salad', active: true },
-        { id: 'side-4', name: 'Mashed Potatoes', price: 5.00, category: 'Sides', description: 'With gravy', subcategory: 'Potato', active: true },
-        { id: 'side-5', name: 'Garlic Bread', price: 4.50, category: 'Sides', description: 'Buttered', subcategory: 'Bread', active: true },
+        { id: 'side-1', name: 'Truffle Parmesan Fries', price: 220.00, category: 'Sides', description: 'Crispy fries with truffle oil', subcategory: 'Potato', active: true },
+        { id: 'side-2', name: 'Golden Onion Rings', price: 190.00, category: 'Sides', description: 'Crispy battered onion rings', subcategory: 'Onion', active: true },
+        { id: 'side-3', name: 'Classic Coleslaw', price: 140.00, category: 'Sides', description: 'Fresh creamy slaw', subcategory: 'Salad', active: true },
+        { id: 'side-4', name: 'Garlic Mashed Potatoes', price: 180.00, category: 'Sides', description: 'Creamy with roasted garlic', subcategory: 'Potato', active: true },
+        { id: 'side-5', name: 'Herb Garlic Bread', price: 160.00, category: 'Sides', description: 'Toasted with herb butter', subcategory: 'Bread', active: true },
         
         // Brunch
-        { id: 'brunch-1', name: 'Avocado Toast', price: 12.00, category: 'Brunch', description: 'Sourdough, poached egg', subcategory: 'Toast', active: true },
-        { id: 'brunch-2', name: 'Eggs Florentine', price: 13.00, category: 'Brunch', description: 'Spinach, hollandaise', subcategory: 'Eggs', active: true },
-        { id: 'brunch-3', name: 'Quiche', price: 11.00, category: 'Brunch', description: 'Vegetable or meat', subcategory: 'Eggs', active: true },
-        { id: 'brunch-4', name: 'Belgian Waffles', price: 10.00, category: 'Brunch', description: 'With berries', subcategory: 'Waffles', active: true },
+        { id: 'brunch-1', name: 'Avocado Sourdough Toast', price: 340.00, category: 'Brunch', description: 'Sourdough, poached egg, chili flakes', subcategory: 'Toast', active: true },
+        { id: 'brunch-2', name: 'Eggs Florentine', price: 360.00, category: 'Brunch', description: 'Spinach, poached egg, hollandaise', subcategory: 'Eggs', active: true },
+        { id: 'brunch-3', name: 'Spinach & Feta Quiche', price: 280.00, category: 'Brunch', description: 'Baked savoury tart with side salad', subcategory: 'Eggs', active: true },
+        { id: 'brunch-4', name: 'Belgian Waffles', price: 310.00, category: 'Brunch', description: 'With fresh berries & cream', subcategory: 'Waffles', active: true },
         
         // Other
-        { id: 'other-1', name: 'Water', price: 2.00, category: 'Other', description: 'Bottled', subcategory: 'Non-alcoholic', active: true },
-        { id: 'other-2', name: 'Soda', price: 3.00, category: 'Other', description: 'Various flavors', subcategory: 'Non-alcoholic', active: true },
-        { id: 'other-3', name: 'Sparkling Water', price: 3.00, category: 'Other', description: 'Perrier or San Pellegrino', subcategory: 'Non-alcoholic', active: true },
+        { id: 'other-1', name: 'Sparkling Water', price: 120.00, category: 'Other', description: '500ml glass bottle', subcategory: 'Water', active: true },
+        { id: 'other-2', name: 'Craft Soda', price: 150.00, category: 'Other', description: 'Natural botanicals soda', subcategory: 'Soft Drink', active: true },
+        { id: 'other-3', name: 'Coconut Water', price: 180.00, category: 'Other', description: 'Fresh tender coconut', subcategory: 'Natural', active: true },
       ];
       
       setMenuItems(toastMenuItems);
     }
   }, []); // Run once on mount
 
-  const categories = ['ALL', 'Other', 'Msgs', 'Beers', 'Cocktails', 'Red Wines', 'White Wines', 'Breakfast', 'Beverages', 'Brunch', 'Appetizer', 'Salads', 'Entrees', 'Sandwich', 'Sides'];
+  const categories = ['ALL', 'Other', 'Msgs', 'Mocktails', 'Specialty Teas', 'Artisanal Coffees', 'Breakfast', 'Beverages', 'Brunch', 'Appetizer', 'Salads', 'Entrees', 'Sandwich', 'Sides'];
 
   const categoryCounts = useMemo(() => {
     const counts = { ALL: menuItems.length };
@@ -1895,10 +1883,9 @@ export default function SimpleMenu({ menuItems = [], setMenuItems, inventory = [
                   >
                     <option value="Other">Other</option>
                     <option value="Msgs">Msgs</option>
-                    <option value="Beers">Beers</option>
-                    <option value="Cocktails">Cocktails</option>
-                    <option value="Red Wines">Red Wines</option>
-                    <option value="White Wines">White Wines</option>
+                    <option value="Mocktails">Mocktails</option>
+                    <option value="Specialty Teas">Specialty Teas</option>
+                    <option value="Artisanal Coffees">Artisanal Coffees</option>
                     <option value="Breakfast">Breakfast</option>
                     <option value="Beverages">Beverages</option>
                     <option value="Brunch">Brunch</option>

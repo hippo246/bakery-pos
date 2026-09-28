@@ -746,13 +746,38 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
         minHeight: 0
       }}>
         {/* Header */}
-        <div style={{ marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0', color: darkMode ? '#ffffff' : '#000000' }}>
-            Dashboard
-          </h1>
-          <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#666666', margin: 0 }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0', color: darkMode ? '#ffffff' : '#000000' }}>
+              Dashboard
+            </h1>
+            <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#666666', margin: 0 }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+              settings.dashboardLayout = settings.dashboardLayout === 'new' ? 'default' : 'new';
+              localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+              window.location.reload();
+            }}
+            style={{
+              padding: '10px 20px',
+              background: darkMode ? '#3b82f6' : '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.background = darkMode ? '#2563eb' : '#1d4ed8'}
+            onMouseOut={(e) => e.target.style.background = darkMode ? '#3b82f6' : '#2563eb'}
+          >
+            Switch to New Layout
+          </button>
         </div>
 
         {/* Key Metrics Row */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Dashboard from './dashboard/Dashboard';
+import NewDashboard from './dashboard/NewDashboard';
 import Reports from './analytics/Reports';
 import ComprehensiveReports from './analytics/ComprehensiveReports';
 import CRM from './crm/CRM';
@@ -86,6 +87,15 @@ export default function BakeryPOS({
     try {
       const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
       return saved.tables?.useToastTables === true ? 'toast' : 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+
+  const [dashboardMode, setDashboardMode] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+      return saved.dashboardLayout === 'new' ? 'new' : 'standard';
     } catch {
       return 'standard';
     }
@@ -200,7 +210,17 @@ export default function BakeryPOS({
     const saved = localStorage.getItem('bakerypos_theme');
     return saved === 'dark' ? false : true; // true = light (inverted legacy)
   });
-  useEffect(() => { localStorage.setItem('bakerypos_theme', darkMode ? 'light' : 'dark'); }, [darkMode]);
+
+  // Apply .light class to <html> so CSS custom properties in theme.js switch correctly.
+  // darkMode===true means LIGHT mode (legacy inversion), so add .light when darkMode is true.
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+    localStorage.setItem('bakerypos_theme', darkMode ? 'light' : 'dark');
+  }, [darkMode]);
 
   const getTabDarkMode = (tab) => {
     if (settings?.tabDarkModes && settings.tabDarkModes[tab] !== undefined) return settings.tabDarkModes[tab];
@@ -273,7 +293,9 @@ export default function BakeryPOS({
       case 'orders':       return useToastOrders
         ? <ToastOrders orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} tables={tables} setTables={setTables} customers={customers} setCustomers={setCustomers} staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('orders')} />
         : <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
-      case 'dashboard':    return <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('dashboard')} />;
+      case 'dashboard':    return dashboardMode === 'new'
+        ? <NewDashboard orders={orders} menuItems={menuItems} darkMode={getTabDarkMode('dashboard')} />
+        : <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('dashboard')} />;
       case 'reports':      return <Reports orders={orders} menuItems={menuItems} inventory={inventory} staff={staff} customers={customers} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('reports')} />;
       case 'crm':          return <CRM customers={customers} setCustomers={setCustomers} darkMode={getTabDarkMode('crm')} />;
       case 'staff':        return <Staff staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('staff')} />;
@@ -506,7 +528,7 @@ export default function BakeryPOS({
                 fontSize: '16px', color: 'var(--cafe-text-primary)', transition: 'all 0.2s',
               }}
             >
-              {darkMode ? '🌙' : '☀️'}
+              {darkMode ? '☀️' : '🌙'}
             </button>
           </div>
         </header>

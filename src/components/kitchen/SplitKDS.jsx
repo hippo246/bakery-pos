@@ -723,7 +723,7 @@ export default function SplitKDS({ orders = [], setOrders, splitSettings, onSpli
                 type="checkbox"
                 checked={selectedDiningOptions.includes(option)}
                 readOnly
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'default' }}
               />
             </button>
           ))}
@@ -790,7 +790,7 @@ export default function SplitKDS({ orders = [], setOrders, splitSettings, onSpli
                 type="checkbox"
                 checked={selectedPrepStations.includes(station.id)}
                 readOnly
-                style={{ cursor: 'pointer' }}
+                style={{ cursor: 'default' }}
               />
             </button>
           ))}
@@ -1414,7 +1414,7 @@ export default function SplitKDS({ orders = [], setOrders, splitSettings, onSpli
                                         type="checkbox"
                                         checked={item.status === 'COMPLETED'}
                                         readOnly
-                                        style={{ marginRight: '6px', cursor: 'pointer' }}
+                                        style={{ marginRight: '6px', cursor: 'default' }}
                                       />
                                       <span>{item.quantity}x {item.name}</span>
                                       {ticketLayout.showModifiers && item.modifiers && item.modifiers.length > 0 && (
@@ -1477,7 +1477,7 @@ export default function SplitKDS({ orders = [], setOrders, splitSettings, onSpli
                                         type="checkbox"
                                         checked={item.status === 'COMPLETED'}
                                         readOnly
-                                        style={{ marginRight: '6px', cursor: 'pointer' }}
+                                        style={{ marginRight: '6px', cursor: 'default' }}
                                       />
                                       <span>{item.quantity}x {item.name}</span>
                                       {ticketLayout.showModifiers && item.modifiers && item.modifiers.length > 0 && (
@@ -1772,7 +1772,7 @@ export default function SplitKDS({ orders = [], setOrders, splitSettings, onSpli
                                         type="checkbox"
                                         checked={item.status === 'COMPLETED'}
                                         readOnly
-                                        style={{ marginRight: '6px', cursor: 'pointer' }}
+                                        style={{ marginRight: '6px', cursor: 'default' }}
                                       />
                                       <span>{item.quantity}x {item.name}</span>
                                       {ticketLayout.showModifiers && item.modifiers && item.modifiers.length > 0 && (
@@ -1835,7 +1835,7 @@ export default function SplitKDS({ orders = [], setOrders, splitSettings, onSpli
                                         type="checkbox"
                                         checked={item.status === 'COMPLETED'}
                                         readOnly
-                                        style={{ marginRight: '6px', cursor: 'pointer' }}
+                                        style={{ marginRight: '6px', cursor: 'default' }}
                                       />
                                       <span>{item.quantity}x {item.name}</span>
                                       {ticketLayout.showModifiers && item.modifiers && item.modifiers.length > 0 && (

@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import orderEventManager from '../../services/OrderEventManager.js';
+import orderWorkflowService from '../../services/OrderWorkflowService.js';
 
 export default function Waiters({ onNavigate, orders = [], setOrders, staff = [], darkMode = true }) {
   const [selectedStaff, setSelectedStaff] = useState(null);
@@ -194,6 +196,64 @@ export default function Waiters({ onNavigate, orders = [], setOrders, staff = []
       setNotifiedReadyOrders(prev => [...prev, ...newReadyOrders.map(o => o.id)]);
     }
   }, [allOrders, notifiedReadyOrders]);
+
+  // Real-time order event synchronization
+  useEffect(() => {
+    // Subscribe to waiter assignment events
+    const unsubscribeWaiterAssigned = orderEventManager.on('waiter:assigned', ({ orderId, waiterId, tableId }) => {
+      console.log('[Waiters] Waiter assigned:', orderId, waiterId);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === orderId ? { ...o, staffId: waiterId, tableId } : o
+        ));
+      }
+    });
+
+    // Subscribe to order completed events
+    const unsubscribeOrderCompleted = orderEventManager.on('order:completed', (order) => {
+      console.log('[Waiters] Order completed:', order.id);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === order.id ? { ...o, status: 'COMPLETED' } : o
+        ));
+      }
+    });
+
+    // Subscribe to order paid events
+    const unsubscribeOrderPaid = orderEventManager.on('order:paid', ({ order, paymentData }) => {
+      console.log('[Waiters] Order paid:', order.id);
+      if (setOrders) {
+        setOrders(prev => prev.map(o => 
+          o.id === order.id ? { ...o, status: 'PAID', payment: paymentData } : o
+        ));
+      }
+    });
+
+    // Subscribe to order item status changes
+    const unsubscribeItemStatus = orderEventManager.on('order:item:status', ({ order, itemId, newStatus }) => {
+      console.log('[Waiters] Order item status changed:', order.id, itemId, newStatus);
+      // Update order items if status is ready
+      if (newStatus === 'ready' && setOrders) {
+        setOrders(prev => prev.map(o => {
+          if (o.id === order.id) {
+            const updatedItems = (o.items || []).map(item => 
+              item.id === itemId ? { ...item, status: 'ready' } : item
+            );
+            return { ...o, items: updatedItems };
+          }
+          return o;
+        }));
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeWaiterAssigned();
+      unsubscribeOrderCompleted();
+      unsubscribeOrderPaid();
+      unsubscribeItemStatus();
+    };
+  }, []);
 
   const waiterOrders = useMemo(() => {
     if (!selectedStaff) {

@@ -3,7 +3,6 @@ import { MENU_ITEMS, INIT_ORDERS, INIT_CUSTOMERS } from "../data/constants";
 import { INIT_STAFF } from "../data/staffConstants";
 import { INIT_INVENTORY } from "../data/inventoryConstants.js";
 import { applyTheme, getTheme } from "../styles/theme";
-import ErrorBoundary from "./common/ErrorBoundary";
 import { isDemoMode, isProductionMode, getAppMode, setAppMode, APP_MODES, exitDemoMode } from "../utils/appMode.js";
 import { 
   getRuntimeMode, 

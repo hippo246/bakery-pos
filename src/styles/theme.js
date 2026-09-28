@@ -501,16 +501,16 @@ export const THEME_CSS = `
     --cafe-info-bg:         #dbeafe;
     --cafe-info-border:     #bfdbfe;
     
-    /* Borders — subtle, modern */
-    --cafe-border:          #e2e8f0;
-    --cafe-border-light:    #f1f5f9;
+    /* Borders — visible & tactile */
+    --cafe-border:          #cbd5e1;
+    --cafe-border-light:    #e2e8f0;
     --cafe-border-focus:    var(--cafe-accent);
     
-    /* Shadows — soft, modern */
-    --cafe-shadow-sm:       0 1px 2px rgba(0,0,0,0.05);
-    --cafe-shadow-md:       0 4px 6px rgba(0,0,0,0.08);
-    --cafe-shadow-lg:       0 10px 15px rgba(0,0,0,0.1);
-    --cafe-shadow-glow:     0 0 20px rgba(245,158,11,0.1);
+    /* Shadows — defined elevation */
+    --cafe-shadow-sm:       0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --cafe-shadow-md:       0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    --cafe-shadow-lg:       0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    --cafe-shadow-glow:     0 0 20px rgba(245,158,11,0.15);
     
     /* Status colors — adjusted for light mode */
     --cafe-status-new:      #3b82f6;

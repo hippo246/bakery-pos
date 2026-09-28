@@ -40,6 +40,7 @@ export default function RoleSecurityPanel({ formData, handleInputChange, darkMod
                         type="checkbox"
                         checked={isAdmin || true} // Mock checkable grid state
                         disabled={isAdmin}
+                        readOnly
                         style={{ cursor: isAdmin ? 'not-allowed' : 'pointer' }}
                       />
                     </td>
