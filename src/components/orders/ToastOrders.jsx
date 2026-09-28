@@ -199,7 +199,7 @@ export default function ToastOrders({
       unsubscribeOrderPaid();
       unsubscribeTableStatus();
     };
-  }, [setOrders, setTables]);
+  }, [setOrders]);
   const [taxExemptReason, setTaxExemptReason] = useState('');
   const [kitchenDelay, setKitchenDelay] = useState(false);
   const [kitchenDelayReason, setKitchenDelayReason] = useState('');

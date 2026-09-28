@@ -60,8 +60,8 @@ export default function BakeryPOS({
   /* ── Responsive state ────────────────────────────────────────────── */
   const [isMobile,  setIsMobile]  = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768  : false);
   const [isMedium,  setIsMedium]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768  && window.innerWidth < 1024 : false);
-  const [isTablet,  setIsTablet]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1280 : false);
-  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1280 : false);
+  const [isTablet,  setIsTablet]  = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 768 && window.innerWidth < 1024 : false);
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : false);
   const [ordersMode, setOrdersMode] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
