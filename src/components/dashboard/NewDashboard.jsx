@@ -228,7 +228,7 @@ export default function NewDashboard({ orders = [], menuItems = [], darkMode = f
               Total Sales
             </div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: theme.text }}>
-              ${metrics.totalSales.toFixed(2)}
+              ₹{metrics.totalSales.toFixed(2)}
             </div>
             <div style={{ fontSize: '12px', color: '#10b981', marginTop: '4px' }}>
               +12.5%
@@ -262,7 +262,7 @@ export default function NewDashboard({ orders = [], menuItems = [], darkMode = f
               Average Value
             </div>
             <div style={{ fontSize: '24px', fontWeight: '700', color: theme.text }}>
-              ${metrics.avgOrderValue.toFixed(2)}
+              ₹{metrics.avgOrderValue.toFixed(2)}
             </div>
             <div style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>
               -8.5%
@@ -346,7 +346,7 @@ export default function NewDashboard({ orders = [], menuItems = [], darkMode = f
             </select>
           </div>
           <div style={{ fontSize: '32px', fontWeight: '700', marginBottom: '16px' }}>
-            ${metrics.hourlySales.reduce((sum, day) => sum + day.revenue, 0).toFixed(2)}
+            ₹{metrics.hourlySales.reduce((sum, day) => sum + day.revenue, 0).toFixed(2)}
           </div>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={metrics.hourlySales}>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Header({
   activeTab,
@@ -6,6 +6,19 @@ export default function Header({
   onToggleTheme,
   screenSize = 'large'
 }) {
+  const [dashboardLayout, setDashboardLayout] = useState('default');
+
+  useEffect(() => {
+    const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+    setDashboardLayout(settings.dashboardLayout || 'default');
+  }, []);
+
+  const handleDashboardLayoutChange = (newLayout) => {
+    const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+    settings.dashboardLayout = newLayout;
+    localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+    window.location.reload();
+  };
   const getTabTitle = (tab) => {
     const titles = {
       orders: 'Orders',
@@ -54,6 +67,24 @@ export default function Header({
         </h1>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {activeTab === 'dashboard' && (
+          <select
+            value={dashboardLayout}
+            onChange={(e) => handleDashboardLayoutChange(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              background: darkMode ? 'rgba(255,255,255,0.1)' : '#f3f4f6',
+              color: darkMode ? '#ffffff' : '#0a0a0a',
+              border: `1px solid ${darkMode ? '#111111' : '#e5e7eb'}`,
+              borderRadius: '8px',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="default">Standard Layout</option>
+            <option value="new">New Layout</option>
+          </select>
+        )}
         <button
           onClick={onToggleTheme}
           style={{
