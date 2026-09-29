@@ -1490,73 +1490,192 @@ export default function ToastOrders({
             borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
             overflow: screenSize === 'small' ? 'visible' : 'hidden'
           }}>
-          {/* Table Header */}
+          {/* ── Panel Header ─────────────────────────────────────────── */}
           <div style={{
-            padding: screenSize === 'small' ? '12px' : '12px 16px',
-            background: '#f8f9fa',
+            background: '#ffffff',
             borderBottom: '1px solid #e5e7eb',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: screenSize === 'small' ? 'flex-start' : 'center',
-            flexDirection: screenSize === 'small' ? 'column' : 'row',
-            gap: screenSize === 'small' ? '8px' : '0'
+            flexShrink: 0,
           }}>
-            <div>
-              <div style={{ fontSize: screenSize === 'small' ? '16px' : '14px', fontWeight: '700', color: '#1a1a1a' }}>
-                Toast Orders
+
+            {/* Row 1: Title + Table selector + Customer/Actions */}
+            <div style={{
+              padding: '10px 14px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              borderBottom: '1px solid #f3f4f6',
+            }}>
+              {/* Title */}
+              <div style={{ fontWeight: '700', fontSize: '13px', color: '#111827', whiteSpace: 'nowrap', marginRight: '4px' }}>
+                🍞 Order
               </div>
-              {customerName && (
-                <div style={{ fontSize: screenSize === 'small' ? '13px' : '12px', color: '#6b7280', marginTop: '2px' }}>
-                  {customerName}
-                </div>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: screenSize === 'small' ? '6px' : '8px', alignItems: 'center', flexWrap: 'wrap', width: screenSize === 'small' ? '100%' : 'auto' }}>
-              {/* Table Selector (Indicator) */}
-              <select
+
+              {/* Table selector — pick from list or type custom */}
+              <input
+                list="table-options"
                 value={tableNumber}
                 onChange={(e) => setTableNumber(e.target.value)}
+                placeholder="Table…"
                 style={{
-                  padding: screenSize === 'small' ? '8px 12px' : '6px 12px',
-                  background: '#e5e7eb',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: screenSize === 'small' ? '12px' : '11px',
+                  padding: '5px 8px',
+                  background: '#f3f4f6',
+                  border: '1.5px solid #e5e7eb',
+                  borderRadius: '7px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   color: '#374151',
-                  cursor: 'pointer'
+                  cursor: 'text',
+                  outline: 'none',
+                  width: '90px',
                 }}
-              >
+              />
+              <datalist id="table-options">
                 {Array.from({ length: 20 }, (_, i) => (
                   <option key={i + 1} value={String(i + 1)}>Table {i + 1}</option>
                 ))}
-              </select>
+                <option value="Bar">Bar</option>
+                <option value="Patio">Patio</option>
+                <option value="VIP">VIP</option>
+                <option value="Takeout">Takeout</option>
+              </datalist>
 
-              {/* Order Type Selector */}
+              {/* Guest count */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280', fontSize: '12px' }}>
+                <span>👥</span>
+                <input
+                  type="number"
+                  value={guestCount}
+                  onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
+                  min="1"
+                  style={{
+                    width: '36px',
+                    padding: '4px 6px',
+                    background: '#f9fafb',
+                    border: '1.5px solid #e5e7eb',
+                    borderRadius: '7px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    textAlign: 'center',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ flex: 1 }} />
+
+              {/* Customer pill */}
+              <button
+                onClick={() => setShowCustomerModal(true)}
+                style={{
+                  padding: '5px 10px',
+                  background: customerName ? '#ecfdf5' : '#f9fafb',
+                  color: customerName ? '#059669' : '#6b7280',
+                  border: `1.5px solid ${customerName ? '#6ee7b7' : '#e5e7eb'}`,
+                  borderRadius: '20px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                👤 {customerName || 'Guest'}
+              </button>
+
+              {/* Actions */}
+              <button
+                onClick={() => setShowBulkActions(true)}
+                style={{
+                  padding: '5px 10px',
+                  background: selectedItems.length > 0 ? '#eff6ff' : '#f9fafb',
+                  color: selectedItems.length > 0 ? '#2563eb' : '#6b7280',
+                  border: `1.5px solid ${selectedItems.length > 0 ? '#bfdbfe' : '#e5e7eb'}`,
+                  borderRadius: '7px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {selectedItems.length > 0 ? `⚡ ${selectedItems.length} selected` : '⚡ Actions'}
+              </button>
+            </div>
+
+            {/* Row 2: Order type + Seat mode + Tag */}
+            <div style={{
+              padding: '6px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderBottom: '1px solid #f3f4f6',
+              flexWrap: 'wrap',
+            }}>
+              {/* Order type pill group */}
               <div style={{
-                display: 'flex',
-                background: '#e5e7eb',
-                borderRadius: '6px',
-                padding: '2px'
+                display: 'inline-flex',
+                background: '#f3f4f6',
+                borderRadius: '8px',
+                padding: '2px',
+                gap: '1px',
               }}>
                 {[
-                  { value: 'dine_in',  label: '🍽 Dine-in' },
-                  { value: 'takeaway', label: '🥡 Takeout' },
-                  { value: 'delivery', label: '🛵 Delivery' },
-                ].map(({ value, label }) => (
+                  { value: 'dine_in',  label: 'Dine-in',  icon: '🍽️' },
+                  { value: 'takeaway', label: 'Takeout',  icon: '🥡' },
+                  { value: 'delivery', label: 'Delivery', icon: '🛵' },
+                ].map(({ value, label, icon }) => (
                   <button
                     key={value}
                     onClick={() => setOrderType(value)}
                     style={{
-                      padding: screenSize === 'small' ? '6px 10px' : '4px 8px',
+                      padding: '4px 10px',
                       background: orderType === value ? '#2563eb' : 'transparent',
-                      color: orderType === value ? '#ffffff' : '#374151',
+                      color: orderType === value ? '#ffffff' : '#6b7280',
                       border: 'none',
-                      borderRadius: '4px',
-                      fontSize: screenSize === 'small' ? '11px' : '10px',
-                      fontWeight: '600',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: orderType === value ? '700' : '500',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {icon} {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Separator */}
+              <div style={{ width: '1px', height: '20px', background: '#e5e7eb', margin: '0 2px' }} />
+
+              {/* Seat mode pill group */}
+              <div style={{
+                display: 'inline-flex',
+                background: '#f3f4f6',
+                borderRadius: '8px',
+                padding: '2px',
+                gap: '1px',
+              }}>
+                {[
+                  { value: 'per-seat',  label: 'Per Seat' },
+                  { value: 'per-table', label: 'Per Table' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setTableMode(value)}
+                    style={{
+                      padding: '4px 10px',
+                      background: tableMode === value ? '#111827' : 'transparent',
+                      color: tableMode === value ? '#ffffff' : '#6b7280',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: tableMode === value ? '700' : '500',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s',
                     }}
                   >
                     {label}
@@ -1564,204 +1683,83 @@ export default function ToastOrders({
                 ))}
               </div>
 
-              {/* Table Mode Toggle */}
-              <div style={{
-                display: 'flex',
-                background: '#e5e7eb',
-                borderRadius: '6px',
-                padding: '2px'
-              }}>
-                <button
-                  onClick={() => setTableMode('per-seat')}
-                  style={{
-                    padding: screenSize === 'small' ? '6px 10px' : '4px 8px',
-                    background: tableMode === 'per-seat' ? '#2563eb' : 'transparent',
-                    color: tableMode === 'per-seat' ? '#ffffff' : '#374151',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: screenSize === 'small' ? '11px' : '10px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Per Seat
-                </button>
-                <button
-                  onClick={() => setTableMode('per-table')}
-                  style={{
-                    padding: screenSize === 'small' ? '6px 10px' : '4px 8px',
-                    background: tableMode === 'per-table' ? '#2563eb' : 'transparent',
-                    color: tableMode === 'per-table' ? '#ffffff' : '#374151',
-                    border: 'none',
-                    borderRadius: '4px',
-                    fontSize: screenSize === 'small' ? '11px' : '10px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Per Table
-                </button>
-              </div>
+              <div style={{ flex: 1 }} />
 
+              {/* Tag pill */}
               <button
-                onClick={() => setShowCustomerModal(true)}
-                style={{
-                  padding: screenSize === 'small' ? '8px 12px' : '6px 12px',
-                  background: '#ffffff',
-                  color: '#374151',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: screenSize === 'small' ? '12px' : '11px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                onClick={() => {
+                  const tags = ['', 'Birthday', 'Anniversary', 'VIP', 'Allergy', 'To-go'];
+                  const currentTag = specialRequest && tags.includes(specialRequest) ? specialRequest : '';
+                  const nextIdx = (tags.indexOf(currentTag) + 1) % tags.length;
+                  setSpecialRequest(tags[nextIdx]);
                 }}
-              >
-                Customer
-              </button>
-              <button
-                onClick={() => setShowBulkActions(true)}
                 style={{
-                  padding: screenSize === 'small' ? '8px 12px' : '6px 12px',
-                  background: selectedItems.length > 0 ? '#2563eb' : '#6b7280',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: screenSize === 'small' ? '12px' : '11px',
+                  padding: '4px 10px',
+                  background: specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#fffbeb' : '#f9fafb',
+                  color: specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#b45309' : '#9ca3af',
+                  border: `1.5px solid ${specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#fcd34d' : '#e5e7eb'}`,
+                  borderRadius: '20px',
+                  fontSize: '11px',
                   fontWeight: '600',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
                 }}
-                title="Bulk actions on selected items, duplicate order, or void items"
+                title="Cycle quick-tag: Birthday, Anniversary, VIP, Allergy, To-go"
               >
-                Actions{selectedItems.length > 0 ? ` (${selectedItems.length})` : ''}
+                {specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest)
+                  ? `🏷️ ${specialRequest}` : '🏷️ Tag'}
               </button>
             </div>
-          </div>
 
-          {/* Filters */}
-          <div style={{
-            padding: '8px 16px',
-            background: '#ffffff',
-            borderBottom: '1px solid #e5e7eb',
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
-            flexWrap: 'wrap'
-          }}>
-            <button
-              onClick={() => setTableMode(tableMode === 'per-seat' ? 'per-table' : 'per-seat')}
-              style={{
-                padding: '4px 8px',
-                background: tableMode === 'per-seat' ? '#2563eb' : '#e5e7eb',
-                color: tableMode === 'per-seat' ? '#ffffff' : '#374151',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-              title="Toggle between per-seat and per-table view"
-            >
-              {tableMode === 'per-seat' ? 'By seat ✓' : 'By seat'}
-            </button>
-            <input
-              type="number"
-              value={guestCount}
-              onChange={(e) => setGuestCount(parseInt(e.target.value) || 1)}
-              style={{
-                width: '30px',
-                padding: '4px',
-                background: '#ffffff',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '12px',
-                textAlign: 'center'
-              }}
-            />
-            <button
-              onClick={() => {
-                // Cycle through common order tags
-                const tags = ['', 'Birthday', 'Anniversary', 'VIP', 'Allergy', 'To-go'];
-                const currentTag = specialRequest && tags.includes(specialRequest) ? specialRequest : '';
-                const nextIdx = (tags.indexOf(currentTag) + 1) % tags.length;
-                setSpecialRequest(tags[nextIdx]);
-              }}
-              style={{
-                padding: '4px 8px',
-                background: specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#f59e0b' : '#ffffff',
-                color: specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#ffffff' : '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-              title="Tag order: Birthday, Anniversary, VIP, Allergy, To-go"
-            >
-              {specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? `🏷 ${specialRequest}` : 'Tag order'}
-            </button>
-            <button
-              onClick={() => setShowCustomerModal(true)}
-              style={{
-                padding: '4px 8px',
-                background: customerName ? '#10b981' : '#ffffff',
-                color: customerName ? '#ffffff' : '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '10px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-              title="Assign a customer to this order"
-            >
-              {customerName ? `👤 ${customerName}` : 'Assign customer'}
-            </button>
-            <input
-              type="text"
-              placeholder="Special request..."
-              value={specialRequest}
-              onChange={(e) => setSpecialRequest(e.target.value)}
-              style={{
-                flex: 1,
-                minWidth: '150px',
-                padding: '4px 8px',
-                background: '#ffffff',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '10px'
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search items..."
-              value={cartSearch}
-              onChange={(e) => setCartSearch(e.target.value)}
-              style={{
-                flex: 1,
-                minWidth: '120px',
-                padding: '4px 8px',
-                background: '#ffffff',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '10px'
-              }}
-            />
-            {selectedItems.length > 0 && (
-              <button
-                onClick={() => setShowBulkActions(true)}
+            {/* Row 3: Search */}
+            <div style={{
+              padding: '8px 14px 4px',
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+            }}>
+              <input
+                type="text"
+                placeholder="🔍 Search items in order…"
+                value={cartSearch}
+                onChange={(e) => setCartSearch(e.target.value)}
                 style={{
-                  padding: '4px 8px',
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
+                  flex: 1,
+                  padding: '7px 10px',
+                  background: '#f9fafb',
+                  border: '1.5px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#374151',
+                  outline: 'none',
                 }}
-              >
-                Bulk ({selectedItems.length})
-              </button>
-            )}
+              />
+            </div>
+
+            {/* Row 4: Special request — full width, clearly labelled */}
+            <div style={{
+              padding: '4px 14px 10px',
+            }}>
+              <input
+                type="text"
+                placeholder="✏️ Special request or allergy note…"
+                value={['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '' : specialRequest}
+                onChange={(e) => setSpecialRequest(e.target.value)}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '7px 10px',
+                  background: specialRequest && !['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest)
+                    ? '#fffbeb' : '#f9fafb',
+                  border: `1.5px solid ${specialRequest && !['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest)
+                    ? '#fcd34d' : '#e5e7eb'}`,
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#374151',
+                  outline: 'none',
+                }}
+              />
+            </div>
           </div>
 
           {/* Order Items by Seat - Only show in Per Seat mode */}
@@ -2258,9 +2256,8 @@ export default function ToastOrders({
         </div>
         )}
 
-        {/* Middle Panel - Categories or Checkout */}
-        {!isCheckoutMode ? (
-          <div style={{
+        {/* Middle Panel - Categories (always visible) */}
+        <div style={{
             width: screenSize === 'small' ? '100%' : '120px',
             height: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'auto' : '0') : '100%',
             background: '#ffffff',
@@ -2273,11 +2270,11 @@ export default function ToastOrders({
             {categories.map(category => (
               <button
                 key={category}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => { setSelectedCategory(category); if (isCheckoutMode) handleBackToMenu(); }}
                 style={{
                   padding: '12px 8px',
-                  background: selectedCategory === category ? '#2563eb' : '#ffffff',
-                  color: selectedCategory === category ? '#ffffff' : '#1a1a1a',
+                  background: selectedCategory === category && !isCheckoutMode ? '#2563eb' : '#ffffff',
+                  color: selectedCategory === category && !isCheckoutMode ? '#ffffff' : '#1a1a1a',
                   border: 'none',
                   borderBottom: '1px solid #e5e7eb',
                   fontSize: '11px',
@@ -2290,88 +2287,6 @@ export default function ToastOrders({
               </button>
             ))}
           </div>
-        ) : (
-          <div style={{
-            width: screenSize === 'small' ? '100%' : '120px',
-            height: '100%',
-            background: '#f8f9fa',
-            display: 'flex',
-            flexDirection: 'column',
-            borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
-            borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
-            padding: '16px',
-            overflowY: 'auto'
-          }}>
-            <button
-              onClick={handleBackToMenu}
-              style={{
-                padding: '12px',
-                background: '#ffffff',
-                color: '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                marginBottom: '16px'
-              }}
-            >
-              ← Back
-            </button>
-            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a1a', marginBottom: '12px' }}>
-              Checkout
-            </div>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '16px' }}>
-              Order Summary
-            </div>
-            {cartItems.map((item, index) => (
-              <div key={item.uniqueId} style={{
-                padding: '8px 0',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                <div style={{ fontSize: '11px', fontWeight: '600', color: '#1a1a1a' }}>
-                  {item.quantity}x {item.name}
-                </div>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb' }}>
-                  ₹{(item.price * item.quantity).toFixed(2)}
-                </div>
-              </div>
-            ))}
-            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '2px solid #d1d5db' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>Subtotal</span>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1a1a1a' }}>₹{getSubtotal().toFixed(2)}</span>
-              </div>
-              {discount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '12px', color: '#6b7280' }}>Discount</span>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#10b981' }}>-₹{getDiscountAmount().toFixed(2)}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1a1a1a' }}>Total</span>
-                <span style={{ fontSize: '14px', fontWeight: '800', color: '#2563eb' }}>₹{getTotal().toFixed(2)}</span>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                background: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                marginTop: '16px'
-              }}
-            >
-              Pay
-            </button>
-          </div>
-        )}
 
         {/* Right Panel - Menu Items */}
         <div style={{
