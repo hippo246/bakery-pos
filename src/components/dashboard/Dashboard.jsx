@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useAppContext } from "../../context/AppContext.jsx";
 import LiveClock from "../common/LiveClock.jsx";
 import SpeakButton from "../voice/SpeakButton.jsx";
 import textToSpeechService from "../../services/voice/TextToSpeechService.js";
@@ -728,6 +727,12 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
     }, 250);
   };
 
+  const TABS = [
+    { id: 'overview', label: '📊 Overview' },
+    { id: 'orders',   label: '🧾 Orders' },
+    { id: 'billing',  label: '💬 Billing' },
+  ];
+
   return (
     <div style={{
       display: 'flex',
@@ -737,6 +742,49 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
       fontFamily: 'Arial, sans-serif',
       overflow: 'hidden'
     }}>
+      {/* Header */}
+      <div style={{
+        padding: screenSize === 'small' ? '12px 16px' : '16px 24px',
+        background: darkMode ? '#1a1a1a' : '#ffffff',
+        borderBottom: `1px solid ${darkMode ? '#333333' : '#e5e5e5'}`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 4px 0', color: darkMode ? '#ffffff' : '#000000' }}>
+              Dashboard
+            </h1>
+            <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#666666', margin: 0 }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+        </div>
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '7px 16px',
+                background: activeTab === tab.id
+                  ? (darkMode ? '#3b82f6' : '#2563eb')
+                  : (darkMode ? '#2a2a2a' : '#f3f4f6'),
+                color: activeTab === tab.id ? '#ffffff' : (darkMode ? '#aaaaaa' : '#555555'),
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: activeTab === tab.id ? '600' : '500',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Content */}
       <div style={{
         padding: screenSize === 'small' ? '16px' : '24px',
@@ -745,17 +793,112 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
         overflowY: 'auto',
         minHeight: 0
       }}>
-        {/* Header */}
-        <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+        {/* ── BILLING TAB ── */}
+        {activeTab === 'billing' && (
+          <Billing orders={orders} customers={[]} onNavigate={onNavigate} darkMode={darkMode} />
+        )}
+
+        {/* ── ORDERS TAB ── */}
+        {activeTab === 'orders' && (
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0', color: darkMode ? '#ffffff' : '#000000' }}>
-              Dashboard
-            </h1>
-            <p style={{ fontSize: '14px', color: darkMode ? '#888888' : '#666666', margin: 0 }}>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Search orders…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  background: darkMode ? '#2a2a2a' : '#f5f5f5',
+                  border: `1px solid ${darkMode ? '#444' : '#ddd'}`,
+                  borderRadius: '6px',
+                  color: darkMode ? '#fff' : '#000',
+                  fontSize: '13px',
+                  outline: 'none',
+                  flex: 1,
+                  minWidth: '180px',
+                }}
+              />
+              {['all','pending','preparing','completed','cancelled'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setOrderFilter(f)}
+                  style={{
+                    padding: '7px 14px',
+                    background: orderFilter === f ? '#3b82f6' : (darkMode ? '#2a2a2a' : '#f3f4f6'),
+                    color: orderFilter === f ? '#fff' : (darkMode ? '#aaa' : '#555'),
+                    border: 'none', borderRadius: '6px',
+                    fontSize: '12px', fontWeight: orderFilter === f ? '600' : '400',
+                    cursor: 'pointer', textTransform: 'capitalize',
+                  }}
+                >
+                  {f}
+                </button>
+              ))}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))}
+                  style={{ padding: '7px 10px', background: darkMode ? '#2a2a2a' : '#f5f5f5', border: `1px solid ${darkMode ? '#444' : '#ddd'}`, borderRadius: '6px', color: darkMode ? '#fff' : '#000', fontSize: '12px', outline: 'none' }} />
+                <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))}
+                  style={{ padding: '7px 10px', background: darkMode ? '#2a2a2a' : '#f5f5f5', border: `1px solid ${darkMode ? '#444' : '#ddd'}`, borderRadius: '6px', color: darkMode ? '#fff' : '#000', fontSize: '12px', outline: 'none' }} />
+              </div>
+              <button onClick={handleExportOrders} style={{ padding: '7px 14px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                Export CSV
+              </button>
+              <button onClick={handleExportPDF} style={{ padding: '7px 14px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                Export PDF
+              </button>
+            </div>
+            {/* Orders table */}
+            <div style={{ background: darkMode ? '#2a2a2a' : '#fff', border: `1px solid ${darkMode ? '#333' : '#ddd'}`, borderRadius: '6px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: darkMode ? '#333' : '#f5f5f5' }}>
+                    {['Order ID','Time','Status','Customer','Table','Items','Total','Payment'].map(h => (
+                      <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: darkMode ? '#fff' : '#000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.slice(0, 50).map(order => (
+                    <tr key={order.id} style={{ borderBottom: `1px solid ${darkMode ? '#3a3a3a' : '#eee'}` }}
+                      onMouseEnter={e => e.currentTarget.style.background = darkMode ? '#333' : '#f9f9f9'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: darkMode ? '#ccc' : '#333', fontFamily: 'monospace' }}>{String(order.id).slice(0,8)}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: darkMode ? '#ccc' : '#333' }}>{new Date(order.createdAt).toLocaleTimeString()}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{
+                          padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600',
+                          background: order.status === 'COMPLETED' ? '#d1fae5' : order.status === 'CANCELLED' ? '#fee2e2' : '#fef3c7',
+                          color: order.status === 'COMPLETED' ? '#065f46' : order.status === 'CANCELLED' ? '#991b1b' : '#92400e',
+                        }}>{order.status}</span>
+                      </td>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: darkMode ? '#ccc' : '#333' }}>{order.customer?.name || '—'}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: darkMode ? '#ccc' : '#333' }}>{order.table || '—'}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: darkMode ? '#aaa' : '#666', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {order.items?.map(i => `${i.name} ×${i.quantity}`).join(', ') || '—'}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: darkMode ? '#fff' : '#000', fontWeight: '700' }}>₹{(order.total || 0).toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px', fontSize: '11px', color: darkMode ? '#aaa' : '#666' }}>{order.paymentMethod || 'CASH'}</td>
+                    </tr>
+                  ))}
+                  {filteredOrders.length === 0 && (
+                    <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: darkMode ? '#666' : '#999', fontSize: '14px' }}>No orders match the current filters</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {filteredOrders.length > 50 && (
+              <p style={{ marginTop: '8px', fontSize: '12px', color: darkMode ? '#888' : '#999', textAlign: 'right' }}>
+                Showing 50 of {filteredOrders.length} orders
+              </p>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* ── OVERVIEW TAB ── */}
+        {activeTab === 'overview' && (<div>
 
         {/* Key Metrics Row */}
         <div style={{
@@ -949,6 +1092,8 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
             </div>
           </div>
         </div>
+        </div>
+        )} 
       </div>
     </div>
   );

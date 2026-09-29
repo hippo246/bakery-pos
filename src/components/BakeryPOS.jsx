@@ -3,7 +3,6 @@ import Dashboard from './dashboard/Dashboard';
 import NewDashboard from './dashboard/NewDashboard';
 import RestaurantDashboard from './dashboard/RestaurantDashboard';
 import Reports from './analytics/Reports';
-import ComprehensiveReports from './analytics/ComprehensiveReports';
 import CRM from './crm/CRM';
 import Staff from './staff/Staff';
 import Menu from './menu/Menu';
@@ -18,7 +17,6 @@ import { ToastOrders } from './orders';
 import RecipeManagement from './recipes/RecipeManagement';
 import WasteManagement from './waste/WasteManagement';
 import Reservations from './reservations/Reservations';
-import OnlineOrdering from './onlineordering/OnlineOrdering';
 import TokenManagement from './tokens/TokenManagement';
 import GSTReports from './analytics/GSTReports';
 
@@ -305,10 +303,10 @@ export default function BakeryPOS({
         ? <ToastOrders orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} tables={tables} setTables={setTables} customers={customers} setCustomers={setCustomers} staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('orders')} />
         : <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
       case 'dashboard':    return dashboardMode === 'new'
-        ? <NewDashboard orders={orders} setOrders={setOrders} menuItems={menuItems} customers={customers} tables={tables} tokens={tokens} staff={staff} darkMode={getTabDarkMode('dashboard')} />
+        ? <NewDashboard orders={orders} setOrders={setOrders} menuItems={menuItems} customers={customers} tables={tables} tokens={tokens} staff={staff} darkMode={!getTabDarkMode('dashboard')} />
         : dashboardMode === 'restaurant'
-        ? <RestaurantDashboard orders={orders} setOrders={setOrders} menuItems={menuItems} customers={customers} tables={tables} tokens={tokens} staff={staff} darkMode={getTabDarkMode('dashboard')} />
-        : <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('dashboard')} />;
+        ? <RestaurantDashboard orders={orders} setOrders={setOrders} menuItems={menuItems} customers={customers} tables={tables} tokens={tokens} staff={staff} darkMode={!getTabDarkMode('dashboard')} />
+        : <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={!getTabDarkMode('dashboard')} />;
       case 'reports':      return <Reports orders={orders} menuItems={menuItems} inventory={inventory} staff={staff} customers={customers} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('reports')} />;
       case 'crm':          return <CRM customers={customers} setCustomers={setCustomers} darkMode={getTabDarkMode('crm')} />;
       case 'staff':        return <Staff staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('staff')} />;
@@ -451,7 +449,7 @@ export default function BakeryPOS({
                       if (item.id === 'orders')    { setOrdersDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); setDashboardDropdownOpen(false); }
                       if (item.id === 'tables')    { setTablesDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setKitchenDropdownOpen(false); setDashboardDropdownOpen(false); }
                       if (item.id === 'kitchen')   { setKitchenDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setDashboardDropdownOpen(false); }
-                      if (item.id === 'dashboard') { setDashboardDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
+                      if (item.id === 'dashboard') { handleNavigate('dashboard'); setDashboardDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
                     } else {
                       handleNavigate(item.id);
                     }

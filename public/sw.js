@@ -8,8 +8,7 @@ const DYNAMIC_CACHE = 'bakerypos-dynamic-v1';
 const STATIC_FILES = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/favicon.ico'
+  '/favicon.svg'
 ];
 
 // Install event - cache static files

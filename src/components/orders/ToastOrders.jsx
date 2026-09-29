@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { getKOTManager } from '../../operations/KOTManager.js';
 import PaymentModal from '../pos/PaymentModal';
 import Receipt from '../pos/Receipt';
@@ -6,6 +6,50 @@ import toastHardware from '../../services/ToastHardwareService.js';
 import orderEventManager from '../../services/OrderEventManager.js';
 import orderWorkflowService from '../../services/OrderWorkflowService.js';
 import ORDER_CONFIG from '../../config/orderConfig.js';
+
+// ---- Safe helpers (storage never throws, money is always rounded to paise) ----
+const MAX_ORDER_HISTORY = 500;
+
+const readStorage = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null || raw === undefined) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed === null || parsed === undefined ? fallback : parsed;
+  } catch (error) {
+    console.error(`[ToastOrders] Could not read "${key}" from storage:`, error);
+    return fallback;
+  }
+};
+
+const writeStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`[ToastOrders] Could not save "${key}" to storage:`, error);
+    return false;
+  }
+};
+
+const round2 = (n) => Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+const clamp = (n, min, max) => Math.min(max, Math.max(min, Number(n) || 0));
+const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+// Recalculate a line's unit price from its parts so size, add-on pricing and
+// item discount can be applied in any order without overwriting each other.
+const repriceItem = (i) => {
+  const original = i.originalPrice ?? i.price;
+  const base = original * (i.priceMultiplier || 1);
+  const addOns = Object.values(i.modifierPricing || {}).reduce((s, p) => s + (Number(p) || 0), 0);
+  const gross = base + addOns;
+  const pct = clamp(i.discountPercent || 0, 0, 100);
+  const discountAmount = round2(gross * pct / 100);
+  return { ...i, originalPrice: original, discountAmount, price: round2(gross - discountAmount) };
+};
 
 // Mobile responsive hook
 function useScreenSize() {
@@ -45,7 +89,10 @@ export default function ToastOrders({
   darkMode = false
 }) {
   const screenSize = useScreenSize();
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(() => {
+    const draft = readStorage('toast_cart_draft', null);
+    return Array.isArray(draft?.cartItems) ? draft.cartItems : [];
+  });
   const [selectedItem, setSelectedItem] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -64,17 +111,24 @@ export default function ToastOrders({
 
   // CFD Broadcast side effect
   useEffect(() => {
-    toastHardware.broadcastCFD({
-      items: cartItems,
-      discount,
-      gstRate,
-      orderType
-    });
+    try {
+      toastHardware.broadcastCFD({
+        items: cartItems,
+        discount,
+        gstRate,
+        orderType
+      });
+    } catch (error) {
+      console.error('[ToastOrders] Customer display broadcast failed:', error);
+    }
   }, [cartItems, discount, gstRate, orderType]);
 
   
   // Seat functionality
-  const [seats, setSeats] = useState([{ id: 1, name: 'Seat 1' }]);
+  const [seats, setSeats] = useState(() => {
+    const draft = readStorage('toast_cart_draft', null);
+    return Array.isArray(draft?.seats) && draft.seats.length > 0 ? draft.seats : [{ id: 1, name: 'Seat 1' }];
+  });
   const [selectedSeat, setSelectedSeat] = useState(1);
   const [showSeatEditor, setShowSeatEditor] = useState(false);
   const [splitCheckMode, setSplitCheckMode] = useState(false);
@@ -160,6 +214,21 @@ export default function ToastOrders({
   const [showTaxExemptionModal, setShowTaxExemptionModal] = useState(false);
   const [taxExempt, setTaxExempt] = useState(false);
 
+  // Toast notifications (replace blocking alert() dialogs)
+  const [toasts, setToasts] = useState([]);
+  const notify = (message, type = 'info', duration = 3500) => {
+    const id = makeId('toast');
+    setToasts(prev => [...prev.slice(-3), { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
+  };
+  const submittingRef = useRef(false); // blocks double-tap on Send / Pay
+  const shortcutRef = useRef({});      // always-fresh values for the keyboard handler
+
+  // Persist the in-progress order so a refresh or crash doesn't lose it
+  useEffect(() => {
+    writeStorage('toast_cart_draft', { cartItems, seats });
+  }, [cartItems, seats]);
+
   // Real-time order event synchronization
   useEffect(() => {
     // Subscribe to order completed events
@@ -215,32 +284,16 @@ export default function ToastOrders({
   const [showTableAssignModal, setShowTableAssignModal] = useState(false);
   const [tableToAssign, setTableToAssign] = useState(null);
   const [assignCustomerName, setAssignCustomerName] = useState('');
-  const [tableNotes, setTableNotes] = useState(() => {
-    const saved = localStorage.getItem('table_notes');
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [tableConfig, setTableConfig] = useState(() => {
-    const saved = localStorage.getItem('table_config');
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [tableMerges, setTableMerges] = useState(() => {
-    const saved = localStorage.getItem('table_merges');
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [inventory, setInventory] = useState(() => {
-    const saved = localStorage.getItem('inventory');
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [loyaltyPoints, setLoyaltyPoints] = useState(() => {
-    const saved = localStorage.getItem('loyalty_points');
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [tableNotes, setTableNotes] = useState(() => readStorage('table_notes', {}));
+  const [tableConfig, setTableConfig] = useState(() => readStorage('table_config', {}));
+  const [tableMerges, setTableMerges] = useState(() => readStorage('table_merges', {}));
+  const [inventory, setInventory] = useState(() => readStorage('inventory', {}));
+  const [loyaltyPoints, setLoyaltyPoints] = useState(() => readStorage('loyalty_points', {}));
 
   // Staff/Waiter integration
   const [staff, setStaff] = useState(() => {
     if (propStaff && propStaff.length > 0) return propStaff;
-    const saved = localStorage.getItem('staff');
-    return saved ? JSON.parse(saved) : [];
+    return readStorage('staff', []);
   });
   const assignedServerHandler = setPropStaff || setStaff;
   
@@ -360,7 +413,7 @@ export default function ToastOrders({
   
   // Load print config and cash drawer from main settings
   useEffect(() => {
-    const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+    const mainSettings = readStorage('cafeos_settings', {});
     
     // Sync print config with main settings
     setPrintConfig(prev => ({
@@ -373,9 +426,9 @@ export default function ToastOrders({
       showTimestamp: true
     }));
     
-    const savedCashDrawer = localStorage.getItem('cash_drawer');
-    if (savedCashDrawer) {
-      setCashDrawer(JSON.parse(savedCashDrawer));
+    const savedCashDrawer = readStorage('cash_drawer', null);
+    if (savedCashDrawer && Array.isArray(savedCashDrawer.transactions)) {
+      setCashDrawer(savedCashDrawer);
     }
   }, []);
 
@@ -414,35 +467,36 @@ export default function ToastOrders({
     'Dressing on side'
   ];
 
-  const getSubtotal = () => cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const getDiscountedSubtotal = () => getSubtotal() * (1 - discount / 100);
-  const getServiceCharge = () => getDiscountedSubtotal() * (serviceCharge / 100);
-  const getTax = () => taxExempt ? 0 : (getDiscountedSubtotal() + getServiceCharge()) * (ORDER_CONFIG.DEFAULT_GST_RATE / 100);
-  const getTotal = () => getDiscountedSubtotal() + getServiceCharge() + getTax() + tipAmount;
+  const getSubtotal = () => round2(cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0));
+  const getDiscountedSubtotal = () => round2(getSubtotal() * (1 - clamp(discount, 0, 100) / 100));
+  const getDiscountAmount = () => round2(getSubtotal() - getDiscountedSubtotal());
+  const getServiceCharge = () => round2(getDiscountedSubtotal() * (clamp(serviceCharge, 0, 100) / 100));
+  const getTax = () => taxExempt ? 0 : round2((getDiscountedSubtotal() + getServiceCharge()) * ((Number(gstRate) || 0) / 100));
+  const getTotal = () => round2(getDiscountedSubtotal() + getServiceCharge() + getTax() + Math.max(0, Number(tipAmount) || 0));
 
   const addToCart = (item) => {
-    const existingItem = cartItems.find(i => i.id === item.id && 
-      JSON.stringify(i.modifiers) === JSON.stringify(item.modifiers) && i.seatId === selectedSeat && i.course === selectedCourse);
-    
-    if (existingItem) {
-      setCartItems(cartItems.map(i => 
-        i.uniqueId === existingItem.uniqueId 
-          ? { ...i, quantity: i.quantity + 1 }
-          : i
-      ));
-    } else {
-      const uniqueId = `${item.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      setCartItems([...cartItems, { 
-        ...item, 
-        uniqueId, 
-        quantity: 1, 
-        modifiers: item.modifiers || [], 
+    setCartItems(prev => {
+      const existingItem = prev.find(i => i.id === item.id &&
+        JSON.stringify(i.modifiers || []) === JSON.stringify(item.modifiers || []) &&
+        i.seatId === selectedSeat && i.course === selectedCourse &&
+        !i.discountPercent && !i.size);
+
+      if (existingItem) {
+        return prev.map(i =>
+          i.uniqueId === existingItem.uniqueId ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [...prev, {
+        ...item,
+        uniqueId: makeId(String(item.id)),
+        quantity: 1,
+        modifiers: item.modifiers || [],
         seatId: selectedSeat,
         course: selectedCourse,
         originalPrice: item.price
-      }]);
-    }
-    
+      }];
+    });
+
     // Add to recent items
     setRecentItems(prev => {
       const filtered = prev.filter(i => i.id !== item.id);
@@ -451,72 +505,43 @@ export default function ToastOrders({
   };
 
   const removeFromCart = (uniqueId) => {
-    setCartItems(cartItems.filter(i => i.uniqueId !== uniqueId));
+    setCartItems(prev => prev.filter(i => i.uniqueId !== uniqueId));
   };
 
   const updateQuantity = (uniqueId, delta) => {
-    setCartItems(cartItems.map(i => {
-      if (i.uniqueId === uniqueId) {
-        const newQuantity = Math.max(0, i.quantity + delta);
-        return { ...i, quantity: newQuantity };
-      }
-      return i;
+    setCartItems(prev => prev.flatMap(i => {
+      if (i.uniqueId !== uniqueId) return [i];
+      const quantity = i.quantity + delta;
+      return quantity <= 0 ? [] : [{ ...i, quantity }];
     }));
   };
 
   // Apply discount to individual item
   const applyItemDiscount = (uniqueId, discountPercent) => {
-    setCartItems(cartItems.map(i => {
-      if (i.uniqueId === uniqueId) {
-        const originalPrice = i.originalPrice || i.price;
-        const discountAmount = originalPrice * (discountPercent / 100);
-        return { 
-          ...i, 
-          originalPrice: originalPrice,
-          discountPercent, 
-          discountAmount, 
-          price: originalPrice - discountAmount 
-        };
-      }
-      return i;
-    }));
+    const pct = clamp(discountPercent, 0, 100);
+    setCartItems(prev => prev.map(i =>
+      i.uniqueId === uniqueId ? repriceItem({ ...i, discountPercent: pct }) : i
+    ));
   };
 
   // Apply size variant
   const applySizeVariant = (uniqueId, size, priceMultiplier) => {
-    setCartItems(cartItems.map(i => {
-      if (i.uniqueId === uniqueId) {
-        const originalPrice = i.originalPrice || i.price;
-        const newPrice = originalPrice * priceMultiplier;
-        return {
-          ...i,
-          originalPrice: originalPrice,
-          size,
-          priceMultiplier,
-          price: newPrice
-        };
-      }
-      return i;
-    }));
+    setCartItems(prev => prev.map(i =>
+      i.uniqueId === uniqueId ? repriceItem({ ...i, size, priceMultiplier }) : i
+    ));
   };
 
   // Apply modifier pricing
   const applyModifierPricing = (uniqueId, modifier, price) => {
-    setCartItems(cartItems.map(i => {
-      if (i.uniqueId === uniqueId) {
-        const currentModifiers = i.modifiers || [];
-        const currentPricing = i.modifierPricing || {};
-        // Check if modifier already exists
-        if (!currentModifiers.includes(modifier)) {
-          return {
-            ...i,
-            modifiers: [...currentModifiers, modifier],
-            modifierPricing: { ...currentPricing, [modifier]: price },
-            price: i.price + price
-          };
-        }
-      }
-      return i;
+    setCartItems(prev => prev.map(i => {
+      if (i.uniqueId !== uniqueId) return i;
+      const currentModifiers = i.modifiers || [];
+      if (currentModifiers.includes(modifier)) return i;
+      return repriceItem({
+        ...i,
+        modifiers: [...currentModifiers, modifier],
+        modifierPricing: { ...(i.modifierPricing || {}), [modifier]: Number(price) || 0 }
+      });
     }));
   };
 
@@ -528,25 +553,19 @@ export default function ToastOrders({
     const quantityPerSeat = Math.floor(item.quantity / targetSeatIds.length);
     const remainder = item.quantity % targetSeatIds.length;
 
-    setCartItems(cartItems.filter(i => i.uniqueId !== uniqueId));
-
+    const splitItems = [];
     targetSeatIds.forEach((seatId, idx) => {
       const quantity = quantityPerSeat + (idx < remainder ? 1 : 0);
       if (quantity > 0) {
-        const newUniqueId = `${item.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        setCartItems(prev => [...prev, {
-          ...item,
-          uniqueId: newUniqueId,
-          quantity,
-          seatId
-        }]);
+        splitItems.push({ ...item, uniqueId: makeId(String(item.id)), quantity, seatId });
       }
     });
+    setCartItems(prev => [...prev.filter(i => i.uniqueId !== uniqueId), ...splitItems]);
   };
 
   // Transfer item to different seat
   const transferItemToSeat = (uniqueId, targetSeatId) => {
-    setCartItems(cartItems.map(i => {
+    setCartItems(prev => prev.map(i => {
       if (i.uniqueId === uniqueId) {
         return { ...i, seatId: targetSeatId };
       }
@@ -556,19 +575,32 @@ export default function ToastOrders({
 
   // Void item with reason
   const voidItem = (uniqueId, reason) => {
-    setCartItems(cartItems.filter(i => i.uniqueId !== uniqueId));
-    // Log void for tracking
-    console.log(`Item voided: ${reason}`);
+    const item = cartItems.find(i => i.uniqueId === uniqueId);
+    setCartItems(prev => prev.filter(i => i.uniqueId !== uniqueId));
+    if (item) {
+      const voidLog = readStorage('void_log', []);
+      voidLog.push({
+        itemId: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        reason: reason || 'No reason given',
+        server: assignedServer,
+        tableNumber,
+        at: new Date().toISOString()
+      });
+      writeStorage('void_log', voidLog.slice(-1000));
+    }
   };
 
   // Duplicate entire order
   const duplicateOrder = () => {
     const duplicatedItems = cartItems.map(item => ({
       ...item,
-      uniqueId: `${item.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      uniqueId: makeId(String(item.id)),
       quantity: item.quantity
     }));
-    setCartItems([...cartItems, ...duplicatedItems]);
+    setCartItems(prev => [...prev, ...duplicatedItems]);
   };
 
   // Bulk actions
@@ -633,37 +665,40 @@ export default function ToastOrders({
 
   // Filter order history based on search
   const getFilteredOrderHistory = () => {
-    const orderHistory = JSON.parse(localStorage.getItem('order_history') || '[]');
+    const orderHistory = readStorage('order_history', []);
     if (!historySearch) return orderHistory;
     const searchLower = historySearch.toLowerCase();
     return orderHistory.filter(order =>
-      order.customerName.toLowerCase().includes(searchLower) ||
-      order.id.toLowerCase().includes(searchLower) ||
-      order.items.some(item => item.name.toLowerCase().includes(searchLower))
+      (order.customerName || '').toLowerCase().includes(searchLower) ||
+      String(order.id || '').toLowerCase().includes(searchLower) ||
+      (order.items || []).some(item => (item.name || '').toLowerCase().includes(searchLower))
     );
   };
 
   // Inventory management
   const updateInventory = (itemId, quantity) => {
-    const currentStock = inventory[itemId] || 0;
-    const newStock = Math.max(0, currentStock - quantity);
-    setInventory({ ...inventory, [itemId]: newStock });
-    localStorage.setItem('inventory', JSON.stringify({ ...inventory, [itemId]: newStock }));
+    setInventory(prev => {
+      const next = { ...prev, [itemId]: Math.max(0, (prev[itemId] || 0) - quantity) };
+      writeStorage('inventory', next);
+      return next;
+    });
   };
 
   const restockInventory = (itemId, quantity) => {
-    const currentStock = inventory[itemId] || 0;
-    const newStock = currentStock + quantity;
-    setInventory({ ...inventory, [itemId]: newStock });
-    localStorage.setItem('inventory', JSON.stringify({ ...inventory, [itemId]: newStock }));
+    setInventory(prev => {
+      const next = { ...prev, [itemId]: (prev[itemId] || 0) + quantity };
+      writeStorage('inventory', next);
+      return next;
+    });
   };
 
   // Loyalty points
   const addLoyaltyPoints = (customerId, points) => {
-    const currentPoints = loyaltyPoints[customerId] || 0;
-    const newPoints = currentPoints + points;
-    setLoyaltyPoints({ ...loyaltyPoints, [customerId]: newPoints });
-    localStorage.setItem('loyalty_points', JSON.stringify({ ...loyaltyPoints, [customerId]: newPoints }));
+    setLoyaltyPoints(prev => {
+      const next = { ...prev, [customerId]: (prev[customerId] || 0) + points };
+      writeStorage('loyalty_points', next);
+      return next;
+    });
   };
 
   const getLoyaltyPoints = (customerId) => loyaltyPoints[customerId] || 0;
@@ -694,7 +729,7 @@ export default function ToastOrders({
         ...prev,
         [tableNum]: { ...prev[tableNum], ...updates }
       };
-      localStorage.setItem('table_config', JSON.stringify(newConfig));
+      writeStorage('table_config', newConfig);
       return newConfig;
     });
   };
@@ -703,7 +738,7 @@ export default function ToastOrders({
   const updateTableNotes = (tableNum, notes) => {
     setTableNotes(prev => {
       const newNotes = { ...prev, [tableNum]: notes };
-      localStorage.setItem('table_notes', JSON.stringify(newNotes));
+      writeStorage('table_notes', newNotes);
       return newNotes;
     });
   };
@@ -713,7 +748,7 @@ export default function ToastOrders({
     const mergeId = `M-${table1}-${table2}`;
     setTableMerges(prev => {
       const newMerges = { ...prev, [mergeId]: { table1, table2, createdAt: new Date().toISOString() } };
-      localStorage.setItem('table_merges', JSON.stringify(newMerges));
+      writeStorage('table_merges', newMerges);
       return newMerges;
     });
     setShowTableMergeModal(false);
@@ -732,7 +767,7 @@ export default function ToastOrders({
   };
 
   const addModifierToItem = (uniqueId, modifier) => {
-    setCartItems(cartItems.map(i => {
+    setCartItems(prev => prev.map(i => {
       if (i.uniqueId === uniqueId) {
         const existingModifiers = i.modifiers || [];
         if (!existingModifiers.includes(modifier)) {
@@ -744,7 +779,7 @@ export default function ToastOrders({
   };
 
   const removeModifierFromItem = (uniqueId, modifier) => {
-    setCartItems(cartItems.map(i => {
+    setCartItems(prev => prev.map(i => {
       if (i.uniqueId === uniqueId) {
         return { ...i, modifiers: (i.modifiers || []).filter(m => m !== modifier) };
       }
@@ -780,15 +815,15 @@ export default function ToastOrders({
     setDragOverSeat(null);
   };
   const addSeat = () => {
-    const newSeatId = seats.length + 1;
-    setSeats([...seats, { id: newSeatId, name: `Seat ${newSeatId}` }]);
+    const newSeatId = seats.reduce((max, s) => Math.max(max, s.id), 0) + 1;
+    setSeats(prev => [...prev, { id: newSeatId, name: `Seat ${newSeatId}` }]);
   };
 
   const mergeSeats = (sourceSeatId, targetSeatId) => {
-    setCartItems(cartItems.map(item => 
+    setCartItems(prev => prev.map(item => 
       item.seatId === sourceSeatId ? { ...item, seatId: targetSeatId } : item
     ));
-    setSeats(seats.filter(s => s.id !== sourceSeatId));
+    setSeats(prev => prev.filter(s => s.id !== sourceSeatId));
     if (selectedSeat === sourceSeatId) {
       setSelectedSeat(targetSeatId);
     }
@@ -802,25 +837,28 @@ export default function ToastOrders({
     return getItemsBySeat(seatId).reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const getFilteredMenuItems = () => {
-    let filtered = selectedCategory === 'All' 
-      ? displayMenuItems 
+  const filteredMenuItems = useMemo(() => {
+    let filtered = selectedCategory === 'All'
+      ? displayMenuItems
       : displayMenuItems.filter(item => item.category === selectedCategory);
-    
+
     if (menuSearch) {
-      const searchLower = menuSearch.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.name.toLowerCase().includes(searchLower) ||
+      const searchLower = menuSearch.trim().toLowerCase();
+      filtered = filtered.filter(item =>
+        (item.name || '').toLowerCase().includes(searchLower) ||
         (item.description && item.description.toLowerCase().includes(searchLower)) ||
-        (item.code && item.code.toLowerCase().includes(searchLower))
+        (item.code && String(item.code).toLowerCase().includes(searchLower))
       );
     }
     return filtered;
-  };
+  }, [displayMenuItems, selectedCategory, menuSearch]);
+  const getFilteredMenuItems = () => filteredMenuItems;
 
   // Send to kitchen
   const sendToKitchen = () => {
-    if (cartItems.length === 0) return;
+    if (cartItems.length === 0 || submittingRef.current) return;
+    submittingRef.current = true;
+    setTimeout(() => { submittingRef.current = false; }, 1500);
 
     const order = {
       id: `ORD-${Date.now()}`,
@@ -857,7 +895,7 @@ export default function ToastOrders({
       });
     } catch (error) {
       console.error('[ToastOrders] Failed to create order in workflow service:', error);
-      alert('Failed to create order. Please try again.');
+      notify('Failed to create order. Please try again.', 'error');
       return;
     }
 
@@ -883,18 +921,18 @@ export default function ToastOrders({
         // Delay firing if kitchen delay is enabled
         setTimeout(fireOrder, ORDER_CONFIG.KITCHEN_DELAY_MINUTES * 60 * 1000);
         console.log('[ToastOrders] Order delayed by', ORDER_CONFIG.KITCHEN_DELAY_MINUTES, 'minutes due to:', kitchenDelayReason);
-        alert(`Order delayed by ${ORDER_CONFIG.KITCHEN_DELAY_MINUTES} minutes. Reason: ${kitchenDelayReason}`);
+        notify(`Order delayed by ${ORDER_CONFIG.KITCHEN_DELAY_MINUTES} minutes. Reason: ${kitchenDelayReason || 'none given'}`, 'warning', 5000);
       } else {
         fireOrder();
       }
     } catch (error) {
       console.error('[ToastOrders] Failed to fire order to kitchen:', error);
-      alert('Failed to send order to kitchen. Please try again.');
+      notify('Failed to send order to kitchen. Please try again.', 'error');
       return;
     }
 
     // Generate token if configured
-    const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+    const mainSettings = readStorage('cafeos_settings', {});
     if (mainSettings.enableTokens) {
       try {
         orderWorkflowService.generateToken(workflowOrder.id);
@@ -953,10 +991,10 @@ export default function ToastOrders({
       }));
     }
 
-    setOrders(prev => [...prev, order]);
+    setOrders?.(prev => [...prev, order]);
     setCartItems([]);
     setSpecialRequest('');
-    // Order sent successfully
+    if (!kitchenDelay) notify(`Order sent to kitchen — Table ${tableNumber}`, 'success');
   };
 
   // Split check functionality
@@ -997,12 +1035,12 @@ export default function ToastOrders({
       total: getTotal(),
       heldAt: new Date().toISOString()
     };
-    const existingHeldOrders = JSON.parse(localStorage.getItem('held_orders') || '[]');
+    const existingHeldOrders = readStorage('held_orders', []);
     existingHeldOrders.push(heldOrder);
-    localStorage.setItem('held_orders', JSON.stringify(existingHeldOrders));
+    writeStorage('held_orders', existingHeldOrders);
     setCartItems([]);
     setSpecialRequest('');
-    // Order held successfully
+    notify('Order held', 'success');
   };
 
   // Edit order item
@@ -1040,24 +1078,27 @@ export default function ToastOrders({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (e.repeat) return;
+      const s = shortcutRef.current;
+      const key = (e.key || '').toLowerCase();
+      const el = e.target;
+      const isTyping = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      const canSubmit = s.cartItems?.length > 0 && s.tableNumber && s.guestCount >= 1;
+
       // Ctrl/Cmd + S: Send to kitchen
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && key === 's') {
         e.preventDefault();
-        if (cartItems.length > 0 && tableNumber && guestCount >= 1) {
-          sendToKitchen();
-        }
+        if (canSubmit) s.sendToKitchen?.();
       }
       // Ctrl/Cmd + P: Pay
-      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+      if ((e.ctrlKey || e.metaKey) && key === 'p') {
         e.preventDefault();
-        if (cartItems.length > 0 && tableNumber && guestCount >= 1) {
-          handleCheckout();
-        }
+        if (canSubmit) s.handleCheckout?.();
       }
       // Ctrl/Cmd + H: Hold order
-      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+      if ((e.ctrlKey || e.metaKey) && key === 'h') {
         e.preventDefault();
-        holdOrder();
+        s.holdOrder?.();
       }
       // Escape: Close modals
       if (e.key === 'Escape') {
@@ -1082,9 +1123,20 @@ export default function ToastOrders({
         setShowVoidItemModal(false);
         setShowDuplicateOrderModal(false);
         setShowBulkActions(false);
+        setShowTableTransferModal(false);
+        setShowTableEditModal(false);
+        setShowTableMergeModal(false);
+        setShowTableAssignModal(false);
+        setShowSizeVariantModal(false);
+        setShowModifierPricingModal(false);
+        setShowCustomerNotesModal(false);
+        setShowServerAssignmentModal(false);
+        setShowOrderTimingModal(false);
+        setShowTaxExemptionModal(false);
+        setShowKitchenDelayModal(false);
       }
-      // F: Focus search
-      if (e.key === 'f' && !e.ctrlKey && !e.metaKey) {
+      // F: Focus search (never while the user is typing in a field)
+      if (key === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTyping) {
         const searchInput = document.querySelector('input[placeholder="Search menu items..."]');
         if (searchInput) {
           e.preventDefault();
@@ -1106,38 +1158,25 @@ export default function ToastOrders({
     setIsCheckoutMode(false);
   };
 
+  shortcutRef.current = { cartItems, tableNumber, guestCount, sendToKitchen, handleCheckout, holdOrder };
+
   const handlePaymentComplete = async () => {
+    if (submittingRef.current) return; // ignore double-tap on Pay
+
     // Validate payment
-    const paymentAmountNum = parseFloat(paymentAmount) || getTotal();
+    const paymentAmountNum = round2(parseFloat(paymentAmount) || getTotal());
     if (paymentAmountNum < getTotal()) {
-      alert('Payment amount is insufficient. Please enter a valid amount.');
+      notify('Payment amount is insufficient. Please enter a valid amount.', 'error');
       return;
     }
 
     if (cartItems.length === 0) {
-      alert('No items in cart to pay for.');
+      notify('No items in cart to pay for.', 'error');
       return;
     }
 
-    // Update inventory atomically
-    try {
-      cartItems.forEach(item => {
-        updateInventory(item.id, item.quantity);
-      });
-    } catch (error) {
-      console.error('[ToastOrders] Failed to update inventory:', error);
-      alert('Failed to update inventory. Please try again.');
-      return;
-    }
-
-    // Add loyalty points
-    if (customerName) {
-      const customer = customers.find(c => c.name === customerName);
-      if (customer) {
-        const pointsEarned = Math.floor(getTotal() * ORDER_CONFIG.LOYALTY_POINTS_PER_RUPEE);
-        addLoyaltyPoints(customer.id, pointsEarned);
-      }
-    }
+    submittingRef.current = true;
+    setTimeout(() => { submittingRef.current = false; }, 5000); // safety net
 
     const newOrder = {
       id: `ORD-${Date.now()}`,
@@ -1149,7 +1188,7 @@ export default function ToastOrders({
       subtotal: getSubtotal(),
       tax: getTax(),
       total: getTotal(),
-      discount: discount > 0 ? getSubtotal() * discount / 100 : 0,
+      discount: discount > 0 ? getDiscountAmount() : 0,
       serviceCharge: serviceCharge > 0 ? getServiceCharge() : 0,
       serviceChargePercentage: serviceCharge,
       notes: specialRequest,
@@ -1176,12 +1215,27 @@ export default function ToastOrders({
         method: paymentMethod,
         amount: parseFloat(paymentAmount) || getTotal(),
         tip: tipAmount,
-        discount: discount > 0 ? getSubtotal() * discount / 100 : 0
+        discount: discount > 0 ? getDiscountAmount() : 0
       });
     } catch (error) {
       console.error('[ToastOrders] Failed to process payment:', error);
-      alert('Failed to process payment. Please try again.');
+      notify('Failed to process payment. Please try again.', 'error');
+      submittingRef.current = false;
       return;
+    }
+
+    // Payment is confirmed - only now deduct stock and award loyalty points
+    try {
+      cartItems.forEach(item => updateInventory(item.id, item.quantity));
+    } catch (error) {
+      console.error('[ToastOrders] Failed to update inventory:', error);
+      notify('Payment recorded, but stock levels could not be updated.', 'warning', 5000);
+    }
+    if (customerName) {
+      const loyaltyCustomer = customers.find(c => c.name === customerName);
+      if (loyaltyCustomer) {
+        addLoyaltyPoints(loyaltyCustomer.id, Math.floor(getTotal() * ORDER_CONFIG.LOYALTY_POINTS_PER_RUPEE));
+      }
     }
 
     // Mark order as completed
@@ -1191,13 +1245,13 @@ export default function ToastOrders({
       console.error('[ToastOrders] Failed to mark order as completed:', error);
     }
 
-    setOrders(prev => [...prev, newOrder]);
+    setOrders?.(prev => [...prev, newOrder]);
     setLastCompletedOrder(newOrder);
     setShowPaymentModal(false);
     setShowReceipt(true);
 
     // Auto-print receipt if enabled in settings
-    const mainSettings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+    const mainSettings = readStorage('cafeos_settings', {});
     if (mainSettings.receiptAutoPrint !== false) {
       setTimeout(() => {
         window.print();
@@ -1212,16 +1266,16 @@ export default function ToastOrders({
         const receiptHTML = `
           <html>
           <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="text-align: center;">${mainSettings.storeName || 'BakeryPOS'}</h2>
+            <h2 style="text-align: center;">${escapeHtml(mainSettings.storeName || 'BakeryPOS')}</h2>
             <p><strong>Order #${newOrder.id}</strong></p>
             <p><strong>Date:</strong> ${new Date(newOrder.createdAt).toLocaleString()}</p>
-            <p><strong>Customer:</strong> ${newOrder.customerName}</p>
+            <p><strong>Customer:</strong> ${escapeHtml(newOrder.customerName)}</p>
             <hr/>
             <table style="width: 100%; border-collapse: collapse;">
               <tr><th style="text-align: left; border-bottom: 1px solid #ddd;">Item</th><th style="text-align: right; border-bottom: 1px solid #ddd;">Qty</th><th style="text-align: right; border-bottom: 1px solid #ddd;">Price</th></tr>
               ${newOrder.items.map(item => `
                 <tr>
-                  <td style="padding: 8px 0;">${item.name}</td>
+                  <td style="padding: 8px 0;">${escapeHtml(item.name)}</td>
                   <td style="text-align: right;">${item.quantity}</td>
                   <td style="text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
                 </tr>
@@ -1262,30 +1316,32 @@ export default function ToastOrders({
         }
       } catch (error) {
         console.error('Failed to send email receipt:', error);
-        alert('Failed to send email receipt. Receipt is available in the app.');
+        notify('Could not email the receipt. It is still available in the app.', 'warning', 5000);
       }
     }
 
     // Save to order history
-    const orderHistory = JSON.parse(localStorage.getItem('order_history') || '[]');
+    const orderHistory = readStorage('order_history', []);
     orderHistory.push(newOrder);
-    localStorage.setItem('order_history', JSON.stringify(orderHistory));
+    writeStorage('order_history', orderHistory.slice(-MAX_ORDER_HISTORY));
 
     // Update cash drawer if cash payment
-    if (paymentMethod === 'CASH') {
-      const paymentAmountNum = parseFloat(paymentAmount) || getTotal();
+    if (paymentMethod === 'CASH' || paymentMethod === ORDER_CONFIG.PAYMENT_METHODS.CASH) {
+      const orderTotal = getTotal();
       const updatedCashDrawer = {
         ...cashDrawer,
-        currentBalance: cashDrawer.currentBalance + paymentAmountNum,
+        currentBalance: round2(cashDrawer.currentBalance + orderTotal),
         transactions: [...cashDrawer.transactions, {
           type: 'PAYMENT_RECEIVED',
-          amount: paymentAmountNum,
+          amount: orderTotal,
+          tendered: paymentAmountNum,
+          change: round2(Math.max(0, paymentAmountNum - orderTotal)),
           orderId: newOrder.id,
           timestamp: new Date().toISOString()
         }]
       };
       setCashDrawer(updatedCashDrawer);
-      localStorage.setItem('cash_drawer', JSON.stringify(updatedCashDrawer));
+      writeStorage('cash_drawer', updatedCashDrawer);
     }
 
     // Update table status to cleaning after payment
@@ -1313,10 +1369,20 @@ export default function ToastOrders({
     setCustomerName('');
     setSpecialRequest('');
     setDiscount(0);
+    setDiscountReason('');
     setTableNumber('');
     setTipAmount(0);
+    setPaymentAmount('');
+    setTaxExempt(false);
+    setTaxExemptReason('');
+    setKitchenDelay(false);
+    setKitchenDelayReason('');
+    setSeats([{ id: 1, name: 'Seat 1' }]);
+    setSelectedSeat(1);
     setShowPaymentModal(false);
     setIsCheckoutMode(false);
+    notify(`Payment received — ₹${getTotal().toFixed(2)}`, 'success');
+    submittingRef.current = false;
   };
 
   return (
@@ -1684,6 +1750,7 @@ export default function ToastOrders({
                         ₹{(item.price * item.quantity).toFixed(2)}
                       </div>
                       <button
+                        aria-label={`Remove ${item.name}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           removeFromCart(item.uniqueId);
@@ -2731,6 +2798,42 @@ export default function ToastOrders({
         </div>
       </div>
 
+      {/* Toast notifications */}
+      {toasts.length > 0 && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 16,
+            right: 16,
+            zIndex: 10000,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            maxWidth: 'calc(100vw - 32px)',
+            pointerEvents: 'none'
+          }}
+        >
+          {toasts.map(t => (
+            <div
+              key={t.id}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                color: '#ffffff',
+                fontSize: 13,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                background: t.type === 'error' ? '#dc2626' : t.type === 'success' ? '#16a34a' : t.type === 'warning' ? '#d97706' : '#2563eb'
+              }}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Discount Modal */}
       {showDiscountModal && (
         <div style={{
@@ -2793,7 +2896,7 @@ export default function ToastOrders({
               <input
                 type="number"
                 value={discount}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setDiscount(clamp(parseFloat(e.target.value), 0, 100))}
                 min="0"
                 max="100"
                 step="1"
@@ -2939,7 +3042,7 @@ export default function ToastOrders({
               <input
                 type="number"
                 value={tipAmount}
-                onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                 min="0"
                 style={{
                   width: '100%',
@@ -3025,7 +3128,7 @@ export default function ToastOrders({
           }}>
             <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1a1a1a' }}>Held Orders</h3>
             {(() => {
-              const heldOrders = JSON.parse(localStorage.getItem('held_orders') || '[]');
+              const heldOrders = readStorage('held_orders', []);
               if (heldOrders.length === 0) {
                 return <p style={{ color: '#6b7280' }}>No held orders</p>;
               }
@@ -3047,7 +3150,7 @@ export default function ToastOrders({
                         setTableNumber(order.tableNumber);
                         setSpecialRequest(order.specialRequest);
                         const updatedHeldOrders = heldOrders.filter((_, i) => i !== index);
-                        localStorage.setItem('held_orders', JSON.stringify(updatedHeldOrders));
+                        writeStorage('held_orders', updatedHeldOrders);
                         setShowHeldOrders(false);
                       }}
                       style={{
@@ -3065,7 +3168,7 @@ export default function ToastOrders({
                     <button
                       onClick={() => {
                         const updatedHeldOrders = heldOrders.filter((_, i) => i !== index);
-                        localStorage.setItem('held_orders', JSON.stringify(updatedHeldOrders));
+                        writeStorage('held_orders', updatedHeldOrders);
                       }}
                       style={{
                         padding: '8px 16px',
@@ -3661,7 +3764,7 @@ export default function ToastOrders({
               </button>
               <button
                 onClick={() => {
-                  localStorage.setItem('print_config', JSON.stringify(printConfig));
+                  writeStorage('print_config', printConfig);
                   setShowPrintConfig(false);
                 }}
                 style={{
@@ -3707,7 +3810,7 @@ export default function ToastOrders({
               <input
                 type="number"
                 value={serviceCharge}
-                onChange={(e) => setServiceCharge(parseFloat(e.target.value) || 0)}
+                onChange={(e) => setServiceCharge(clamp(parseFloat(e.target.value), 0, 100))}
                 min="0"
                 max="50"
                 step="0.5"
@@ -3871,8 +3974,12 @@ export default function ToastOrders({
                   onClick={() => {
                     const input = document.querySelector('input[placeholder="Enter amount"]');
                     if (input && input.value) {
-                      const amount = parseFloat(input.value);
-                      setCashDrawer({
+                      const amount = round2(parseFloat(input.value));
+                      if (!Number.isFinite(amount) || amount < 0) {
+                        notify('Enter a valid starting amount (0 or more).', 'error');
+                        return;
+                      }
+                      const openedDrawer = {
                         ...cashDrawer,
                         startingBalance: amount,
                         currentBalance: amount,
@@ -3881,17 +3988,9 @@ export default function ToastOrders({
                           amount,
                           timestamp: new Date().toISOString()
                         }]
-                      });
-                      localStorage.setItem('cash_drawer', JSON.stringify({
-                        ...cashDrawer,
-                        startingBalance: amount,
-                        currentBalance: amount,
-                        transactions: [{
-                          type: 'STARTING_BALANCE',
-                          amount,
-                          timestamp: new Date().toISOString()
-                        }]
-                      }));
+                      };
+                      setCashDrawer(openedDrawer);
+                      writeStorage('cash_drawer', openedDrawer);
                     }
                   }}
                   style={{
@@ -4919,7 +5018,7 @@ export default function ToastOrders({
               </button>
               <button
                 onClick={() => {
-                  localStorage.setItem('customer_notes', JSON.stringify(customerNotes));
+                  writeStorage('customer_notes', customerNotes);
                   setShowCustomerNotesModal(false);
                   setSelectedCustomerForNotes(null);
                 }}
@@ -6270,7 +6369,7 @@ export default function ToastOrders({
                 value={selectedItem.quantity}
                 onChange={(e) => {
                   const newQuantity = parseInt(e.target.value) || 1;
-                  setCartItems(cartItems.map(i => 
+                  setCartItems(prev => prev.map(i => 
                     i.uniqueId === selectedItem.uniqueId 
                       ? { ...i, quantity: newQuantity }
                       : i
@@ -6294,7 +6393,7 @@ export default function ToastOrders({
                 value={selectedItem.course}
                 onChange={(e) => {
                   const newCourse = parseInt(e.target.value) || 1;
-                  setCartItems(cartItems.map(i => 
+                  setCartItems(prev => prev.map(i => 
                     i.uniqueId === selectedItem.uniqueId 
                       ? { ...i, course: newCourse }
                       : i
@@ -6318,7 +6417,7 @@ export default function ToastOrders({
                 value={selectedItem.price}
                 onChange={(e) => {
                   const newPrice = parseFloat(e.target.value) || 0;
-                  setCartItems(cartItems.map(i => 
+                  setCartItems(prev => prev.map(i => 
                     i.uniqueId === selectedItem.uniqueId 
                       ? { ...i, price: newPrice }
                       : i
