@@ -131,7 +131,6 @@ export default function ToastOrders({
   });
   const [selectedSeat, setSelectedSeat] = useState(1);
   const [showSeatEditor, setShowSeatEditor] = useState(false);
-  const [splitCheckMode, setSplitCheckMode] = useState(false);
   
   // Table mode: 'per-seat' (each seat has its own order) or 'per-table' (table-level ordering)
   const [tableMode, setTableMode] = useState('per-seat');
@@ -154,6 +153,7 @@ export default function ToastOrders({
   const [recentItems, setRecentItems] = useState([]);
   const [showSplitPaymentModal, setShowSplitPaymentModal] = useState(false);
   const [splitPayments, setSplitPayments] = useState({});
+  const [splitPaymentMethods, setSplitPaymentMethods] = useState({}); // per-seat payment method
   const [showOrderHistory, setShowOrderHistory] = useState(false);
   const [showPrintConfig, setShowPrintConfig] = useState(false);
   const [printConfig, setPrintConfig] = useState({
@@ -173,6 +173,7 @@ export default function ToastOrders({
   const [confirmMessage, setConfirmMessage] = useState('');
   const [confirmAction, setConfirmAction] = useState(null);
   const [showSplitCheckModal, setShowSplitCheckModal] = useState(false);
+  const [splitCheckSeatId, setSplitCheckSeatId] = useState(null); // seat being paid in split-check flow
   const [showEditItemModal, setShowEditItemModal] = useState(false);
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -223,6 +224,9 @@ export default function ToastOrders({
   };
   const submittingRef = useRef(false); // blocks double-tap on Send / Pay
   const shortcutRef = useRef({});      // always-fresh values for the keyboard handler
+  const drawerStartRef = useRef(null); // cash drawer — set starting balance input
+  const drawerAddRef   = useRef(null); // cash drawer — add cash input
+  const drawerRemoveRef = useRef(null);// cash drawer — remove cash input
 
   // Persist the in-progress order so a refresh or crash doesn't lose it
   useEffect(() => {
@@ -475,6 +479,13 @@ export default function ToastOrders({
   const getTotal = () => round2(getDiscountedSubtotal() + getServiceCharge() + getTax() + Math.max(0, Number(tipAmount) || 0));
 
   const addToCart = (item) => {
+    // Guard: check stock before adding (inventory[id] === 0 means out of stock)
+    const stock = inventory[item.id];
+    if (stock !== undefined && stock !== null && stock === 0) {
+      notify(`"${item.name}" is out of stock.`, 'error');
+      return;
+    }
+
     setCartItems(prev => {
       const existingItem = prev.find(i => i.id === item.id &&
         JSON.stringify(i.modifiers || []) === JSON.stringify(item.modifiers || []) &&
@@ -679,14 +690,6 @@ export default function ToastOrders({
   const updateInventory = (itemId, quantity) => {
     setInventory(prev => {
       const next = { ...prev, [itemId]: Math.max(0, (prev[itemId] || 0) - quantity) };
-      writeStorage('inventory', next);
-      return next;
-    });
-  };
-
-  const restockInventory = (itemId, quantity) => {
-    setInventory(prev => {
-      const next = { ...prev, [itemId]: (prev[itemId] || 0) + quantity };
       writeStorage('inventory', next);
       return next;
     });
@@ -1342,6 +1345,8 @@ export default function ToastOrders({
       };
       setCashDrawer(updatedCashDrawer);
       writeStorage('cash_drawer', updatedCashDrawer);
+      // Kick physical cash drawer on cash payment
+      try { toastHardware.kickCashDrawer(); } catch (e) { /* hardware not connected */ }
     }
 
     // Update table status to cleaning after payment
@@ -1364,7 +1369,17 @@ export default function ToastOrders({
       }));
     }
 
-    // Reset
+    // Reset — if paying a single seat via split-check, only remove that seat's items
+    if (splitCheckSeatId != null) {
+      setCartItems(prev => prev.filter(i => i.seatId !== splitCheckSeatId));
+      setSeats(prev => prev.filter(s => s.id !== splitCheckSeatId));
+      setSplitCheckSeatId(null);
+      setShowPaymentModal(false);
+      setShowReceipt(true);
+      notify(`Payment received for Seat ${splitCheckSeatId} — ₹${getTotal().toFixed(2)}`, 'success');
+      submittingRef.current = false;
+      return;
+    }
     setCartItems([]);
     setCustomerName('');
     setSpecialRequest('');
@@ -1517,6 +1532,38 @@ export default function ToastOrders({
                 ))}
               </select>
 
+              {/* Order Type Selector */}
+              <div style={{
+                display: 'flex',
+                background: '#e5e7eb',
+                borderRadius: '6px',
+                padding: '2px'
+              }}>
+                {[
+                  { value: 'dine_in',  label: '🍽 Dine-in' },
+                  { value: 'takeaway', label: '🥡 Takeout' },
+                  { value: 'delivery', label: '🛵 Delivery' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setOrderType(value)}
+                    style={{
+                      padding: screenSize === 'small' ? '6px 10px' : '4px 8px',
+                      background: orderType === value ? '#2563eb' : 'transparent',
+                      color: orderType === value ? '#ffffff' : '#374151',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: screenSize === 'small' ? '11px' : '10px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
               {/* Table Mode Toggle */}
               <div style={{
                 display: 'flex',
@@ -1571,17 +1618,21 @@ export default function ToastOrders({
               >
                 Customer
               </button>
-              <button style={{
-                padding: screenSize === 'small' ? '8px 12px' : '6px 12px',
-                background: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: screenSize === 'small' ? '12px' : '11px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}>
-                Actions
+              <button
+                onClick={() => setShowBulkActions(true)}
+                style={{
+                  padding: screenSize === 'small' ? '8px 12px' : '6px 12px',
+                  background: selectedItems.length > 0 ? '#2563eb' : '#6b7280',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: screenSize === 'small' ? '12px' : '11px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+                title="Bulk actions on selected items, duplicate order, or void items"
+              >
+                Actions{selectedItems.length > 0 ? ` (${selectedItems.length})` : ''}
               </button>
             </div>
           </div>
@@ -1596,17 +1647,21 @@ export default function ToastOrders({
             alignItems: 'center',
             flexWrap: 'wrap'
           }}>
-            <button style={{
-              padding: '4px 8px',
-              background: '#e5e7eb',
-              color: '#374151',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}>
-              By seat
+            <button
+              onClick={() => setTableMode(tableMode === 'per-seat' ? 'per-table' : 'per-seat')}
+              style={{
+                padding: '4px 8px',
+                background: tableMode === 'per-seat' ? '#2563eb' : '#e5e7eb',
+                color: tableMode === 'per-seat' ? '#ffffff' : '#374151',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Toggle between per-seat and per-table view"
+            >
+              {tableMode === 'per-seat' ? 'By seat ✓' : 'By seat'}
             </button>
             <input
               type="number"
@@ -1622,29 +1677,43 @@ export default function ToastOrders({
                 textAlign: 'center'
               }}
             />
-            <button style={{
-              padding: '4px 8px',
-              background: '#ffffff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}>
-              Default tag
+            <button
+              onClick={() => {
+                // Cycle through common order tags
+                const tags = ['', 'Birthday', 'Anniversary', 'VIP', 'Allergy', 'To-go'];
+                const currentTag = specialRequest && tags.includes(specialRequest) ? specialRequest : '';
+                const nextIdx = (tags.indexOf(currentTag) + 1) % tags.length;
+                setSpecialRequest(tags[nextIdx]);
+              }}
+              style={{
+                padding: '4px 8px',
+                background: specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#f59e0b' : '#ffffff',
+                color: specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? '#ffffff' : '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Tag order: Birthday, Anniversary, VIP, Allergy, To-go"
+            >
+              {specialRequest && ['Birthday','Anniversary','VIP','Allergy','To-go'].includes(specialRequest) ? `🏷 ${specialRequest}` : 'Tag order'}
             </button>
-            <button style={{
-              padding: '4px 8px',
-              background: '#ffffff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}>
-              Assign cu
+            <button
+              onClick={() => setShowCustomerModal(true)}
+              style={{
+                padding: '4px 8px',
+                background: customerName ? '#10b981' : '#ffffff',
+                color: customerName ? '#ffffff' : '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Assign a customer to this order"
+            >
+              {customerName ? `👤 ${customerName}` : 'Assign customer'}
             </button>
             <input
               type="text"
@@ -2022,7 +2091,7 @@ export default function ToastOrders({
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
               <span style={{ fontSize: '11px', color: '#6b7280' }}>
-                {taxExempt ? 'Tax exempt' : 'Including tax 19%'}
+                {taxExempt ? 'Tax exempt' : `Including tax ${gstRate}%`}
               </span>
               <span style={{ fontSize: '12px', fontWeight: '600', color: '#1a1a1a' }}>
                 {taxExempt ? '₹0.00' : `₹${getTax().toFixed(2)}`}
@@ -3402,6 +3471,8 @@ export default function ToastOrders({
                       }}
                     />
                     <select
+                      value={splitPaymentMethods[seat.id] || 'Cash'}
+                      onChange={(e) => setSplitPaymentMethods({ ...splitPaymentMethods, [seat.id]: e.target.value })}
                       style={{
                         padding: '6px',
                         border: '1px solid #d1d5db',
@@ -3433,8 +3504,89 @@ export default function ToastOrders({
               </button>
               <button
                 onClick={() => {
+                  // Validate: every seat with items must have an amount entered
+                  const seatsWithItems = seats.filter(s => getSeatTotal(s.id) > 0);
+                  const missing = seatsWithItems.filter(s => !splitPayments[s.id] || splitPayments[s.id] <= 0);
+                  if (missing.length > 0) {
+                    notify(`Enter an amount for: ${missing.map(s => s.name).join(', ')}`, 'error');
+                    return;
+                  }
+                  const enteredTotal = round2(seatsWithItems.reduce((sum, s) => sum + (splitPayments[s.id] || 0), 0));
+                  const orderTotal = getTotal();
+                  if (enteredTotal < orderTotal - 0.01) {
+                    notify(`Amounts entered (₹${enteredTotal.toFixed(2)}) are less than order total (₹${orderTotal.toFixed(2)})`, 'error');
+                    return;
+                  }
+
+                  // Process one completed order per seat
+                  const completedOrders = seatsWithItems.map(seat => {
+                    const seatItems = getItemsBySeat(seat.id);
+                    const seatTotal = getSeatTotal(seat.id);
+                    const method = (splitPaymentMethods[seat.id] || 'CASH').toUpperCase();
+                    return {
+                      id: `ORD-${Date.now()}-${seat.id}`,
+                      invoiceNumber: `INV-${Date.now().toString().slice(-8)}-${seat.id}`,
+                      customerName: customerName || seat.name,
+                      diningOption: orderType,
+                      items: seatItems,
+                      subtotal: seatTotal,
+                      tax: round2(seatTotal * ((Number(gstRate) || 0) / 100)),
+                      total: round2(seatTotal * (1 + (Number(gstRate) || 0) / 100)),
+                      tableNumber,
+                      status: 'COMPLETED',
+                      paymentMethod: method,
+                      paymentAmount: splitPayments[seat.id],
+                      paymentStatus: 'PAID',
+                      notes: `Split payment — ${seat.name}`,
+                      createdAt: new Date().toISOString(),
+                    };
+                  });
+
+                  setOrders?.(prev => [...prev, ...completedOrders]);
+
+                  // Save all to history
+                  const orderHistory = readStorage('order_history', []);
+                  writeStorage('order_history', [...orderHistory, ...completedOrders].slice(-MAX_ORDER_HISTORY));
+
+                  // Kick cash drawer if any seat paid cash
+                  const hasCash = seatsWithItems.some(s => (splitPaymentMethods[s.id] || 'CASH').toUpperCase() === 'CASH');
+                  if (hasCash) {
+                    try { toastHardware.kickCashDrawer(); } catch (e) { /* hardware not connected */ }
+                    const cashTotal = round2(seatsWithItems
+                      .filter(s => (splitPaymentMethods[s.id] || 'CASH').toUpperCase() === 'CASH')
+                      .reduce((sum, s) => sum + (splitPayments[s.id] || 0), 0));
+                    const updatedDrawer = {
+                      ...cashDrawer,
+                      currentBalance: round2(cashDrawer.currentBalance + cashTotal),
+                      transactions: [...cashDrawer.transactions, {
+                        type: 'PAYMENT_RECEIVED',
+                        amount: cashTotal,
+                        orderId: completedOrders[0]?.id,
+                        timestamp: new Date().toISOString()
+                      }]
+                    };
+                    setCashDrawer(updatedDrawer);
+                    writeStorage('cash_drawer', updatedDrawer);
+                  }
+
+                  // Update table to cleaning
+                  if (tables && setTables) {
+                    setTables(prev => prev.map(t =>
+                      (t.number === parseInt(tableNumber) || t.id === parseInt(tableNumber))
+                        ? { ...t, status: 'cleaning', orderId: null }
+                        : t
+                    ));
+                  }
+
+                  setCartItems([]);
+                  setSeats([{ id: 1, name: 'Seat 1' }]);
+                  setSelectedSeat(1);
+                  setSplitPayments({});
+                  setSplitPaymentMethods({});
                   setShowSplitPaymentModal(false);
-                  handleCheckout();
+                  setLastCompletedOrder(completedOrders[completedOrders.length - 1]);
+                  setShowReceipt(true);
+                  notify(`Split payment complete — ${seatsWithItems.length} seats paid`, 'success');
                 }}
                 style={{
                   padding: '8px 16px',
@@ -3442,7 +3594,8 @@ export default function ToastOrders({
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  fontWeight: '600',
                 }}
               >
                 Process Payments
@@ -3455,9 +3608,9 @@ export default function ToastOrders({
       {/* Payment Modal */}
       <PaymentModal
         show={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        cartTotal={getTotal()}
-        discount={discount}
+        onClose={() => { setShowPaymentModal(false); setSplitCheckSeatId(null); }}
+        cartTotal={splitCheckSeatId != null ? getSeatTotal(splitCheckSeatId) : getTotal()}
+        discount={splitCheckSeatId != null ? 0 : discount}
         tipAmount={tipAmount}
         onTipAmountChange={setTipAmount}
         gstRate={gstRate}
@@ -3467,8 +3620,6 @@ export default function ToastOrders({
         onPaymentMethodChange={setPaymentMethod}
         paymentAmount={paymentAmount}
         onPaymentAmountChange={setPaymentAmount}
-        tipAmount={tipAmount}
-        onTipAmountChange={setTipAmount}
       />
       
       {/* Order History Modal */}
@@ -3960,6 +4111,7 @@ export default function ToastOrders({
               <label style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#1a1a1a' }}>Set Starting Balance</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
+                  ref={drawerStartRef}
                   type="number"
                   placeholder="Enter amount"
                   style={{
@@ -3972,7 +4124,7 @@ export default function ToastOrders({
                 />
                 <button
                   onClick={() => {
-                    const input = document.querySelector('input[placeholder="Enter amount"]');
+                    const input = drawerStartRef.current;
                     if (input && input.value) {
                       const amount = round2(parseFloat(input.value));
                       if (!Number.isFinite(amount) || amount < 0) {
@@ -3991,6 +4143,7 @@ export default function ToastOrders({
                       };
                       setCashDrawer(openedDrawer);
                       writeStorage('cash_drawer', openedDrawer);
+                      input.value = '';
                     }
                   }}
                   style={{
@@ -4011,6 +4164,7 @@ export default function ToastOrders({
               <label style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#1a1a1a' }}>Add Cash</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
+                  ref={drawerAddRef}
                   type="number"
                   placeholder="Enter amount"
                   style={{
@@ -4023,18 +4177,22 @@ export default function ToastOrders({
                 />
                 <button
                   onClick={() => {
-                    const input = document.querySelectorAll('input[placeholder="Enter amount"]')[1];
+                    const input = drawerAddRef.current;
                     if (input && input.value) {
-                      const amount = parseFloat(input.value);
-                      setCashDrawer({
+                      const amount = round2(parseFloat(input.value));
+                      if (!Number.isFinite(amount) || amount <= 0) return;
+                      const updated = {
                         ...cashDrawer,
-                        currentBalance: cashDrawer.currentBalance + amount,
+                        currentBalance: round2(cashDrawer.currentBalance + amount),
                         transactions: [...cashDrawer.transactions, {
                           type: 'ADD_CASH',
                           amount,
                           timestamp: new Date().toISOString()
                         }]
-                      });
+                      };
+                      setCashDrawer(updated);
+                      writeStorage('cash_drawer', updated);
+                      input.value = '';
                     }
                   }}
                   style={{
@@ -4055,6 +4213,7 @@ export default function ToastOrders({
               <label style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#1a1a1a' }}>Remove Cash</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
+                  ref={drawerRemoveRef}
                   type="number"
                   placeholder="Enter amount"
                   style={{
@@ -4067,18 +4226,22 @@ export default function ToastOrders({
                 />
                 <button
                   onClick={() => {
-                    const input = document.querySelectorAll('input[placeholder="Enter amount"]')[2];
+                    const input = drawerRemoveRef.current;
                     if (input && input.value) {
-                      const amount = parseFloat(input.value);
-                      setCashDrawer({
+                      const amount = round2(parseFloat(input.value));
+                      if (!Number.isFinite(amount) || amount <= 0) return;
+                      const updated = {
                         ...cashDrawer,
-                        currentBalance: cashDrawer.currentBalance - amount,
+                        currentBalance: round2(cashDrawer.currentBalance - amount),
                         transactions: [...cashDrawer.transactions, {
                           type: 'REMOVE_CASH',
                           amount,
                           timestamp: new Date().toISOString()
                         }]
-                      });
+                      };
+                      setCashDrawer(updated);
+                      writeStorage('cash_drawer', updated);
+                      input.value = '';
                     }
                   }}
                   style={{
@@ -6290,41 +6453,73 @@ export default function ToastOrders({
             width: '500px',
             maxWidth: '90%'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1a1a1a' }}>Split Check</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px', color: '#1a1a1a' }}>Split Check</h3>
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Pay each seat separately, or pay everything at once.</p>
             <div style={{ marginBottom: '16px' }}>
               {seats.filter(seat => getSeatTotal(seat.id) > 0).map(seat => (
-                <div key={seat.id} style={{ 
-                  padding: '12px', 
-                  background: '#f9fafb', 
-                  borderRadius: '4px', 
+                <div key={seat.id} style={{
+                  padding: '12px',
+                  background: '#f9fafb',
+                  borderRadius: '4px',
                   marginBottom: '8px',
                   border: '1px solid #e5e7eb',
                   display: 'flex',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
                 }}>
-                  <span style={{ fontSize: '14px', fontWeight: '600' }}>{seat.name}</span>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#2563eb' }}>
-                    ₹{getSeatTotal(seat.id).toFixed(2)}
-                  </span>
+                  <div>
+                    <span style={{ fontSize: '14px', fontWeight: '600' }}>{seat.name}</span>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                      {getItemsBySeat(seat.id).map(i => `${i.name} ×${i.quantity}`).join(', ')}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#2563eb' }}>
+                      ₹{getSeatTotal(seat.id).toFixed(2)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSplitCheckSeatId(seat.id);
+                        setShowSplitCheckModal(false);
+                        setShowPaymentModal(true);
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Pay
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px' }}>
-              Total: ₹{getTotal().toFixed(2)}
+            <div style={{ fontSize: '14px', fontWeight: '700', marginBottom: '16px', borderTop: '1px solid #e5e7eb', paddingTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>Total</span>
+              <span>₹{getTotal().toFixed(2)}</span>
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setShowSplitCheckModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  background: '#e5e7eb',
-                  color: '#374151',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
+                style={{ padding: '8px 16px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
               >
                 Close
+              </button>
+              <button
+                onClick={() => {
+                  setSplitCheckSeatId(null);
+                  setShowSplitCheckModal(false);
+                  setShowPaymentModal(true);
+                }}
+                style={{ padding: '8px 16px', background: '#374151', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Pay Full Total
               </button>
             </div>
           </div>
