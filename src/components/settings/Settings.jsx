@@ -4900,6 +4900,7 @@ function SimpleSettings({ settings = {}, setSettings, onNavigate, menuItems = []
                       >
                         <option value="default">Default (Standard)</option>
                         <option value="new">New Layout</option>
+                        <option value="restaurant">Restaurant Layout</option>
                         <option value="compact">Compact</option>
                         <option value="detailed">Detailed</option>
                         <option value="custom">Custom</option>

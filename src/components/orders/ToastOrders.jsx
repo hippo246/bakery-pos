@@ -60,6 +60,7 @@ export default function ToastOrders({
   const [paymentAmount, setPaymentAmount] = useState('');
   const [tipAmount, setTipAmount] = useState(0);
   const [gstRate, setGstRate] = useState(ORDER_CONFIG.DEFAULT_GST_RATE);
+  const [isCheckoutMode, setIsCheckoutMode] = useState(false);
 
   // CFD Broadcast side effect
   useEffect(() => {
@@ -1098,7 +1099,11 @@ export default function ToastOrders({
 
   const handleCheckout = () => {
     if (cartItems.length === 0) return;
-    setShowPaymentModal(true);
+    setIsCheckoutMode(true);
+  };
+
+  const handleBackToMenu = () => {
+    setIsCheckoutMode(false);
   };
 
   const handlePaymentComplete = async () => {
@@ -1311,6 +1316,7 @@ export default function ToastOrders({
     setTableNumber('');
     setTipAmount(0);
     setShowPaymentModal(false);
+    setIsCheckoutMode(false);
   };
 
   return (
@@ -1391,17 +1397,18 @@ export default function ToastOrders({
           </div>
         )}
         
-        {/* Left Panel - Order Details */}
-        <div style={{
-          width: screenSize === 'small' ? '100%' : '320px',
-          height: screenSize === 'small' ? (mobileActivePanel === 'order' ? 'auto' : '0') : '100%',
-          background: '#ffffff',
-          display: screenSize === 'small' ? (mobileActivePanel === 'order' ? 'flex' : 'none') : 'flex',
-          flexDirection: 'column',
-          borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
-          borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
-          overflow: screenSize === 'small' ? 'visible' : 'hidden'
-        }}>
+        {/* Left Panel - Order Details - Hide in checkout mode on mobile */}
+        {(!isCheckoutMode || screenSize !== 'small') && (
+          <div style={{
+            width: screenSize === 'small' ? '100%' : '320px',
+            height: screenSize === 'small' ? (mobileActivePanel === 'order' ? 'auto' : '0') : '100%',
+            background: '#ffffff',
+            display: screenSize === 'small' ? (mobileActivePanel === 'order' ? 'flex' : 'none') : 'flex',
+            flexDirection: 'column',
+            borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
+            borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
+            overflow: screenSize === 'small' ? 'visible' : 'hidden'
+          }}>
           {/* Table Header */}
           <div style={{
             padding: screenSize === 'small' ? '12px' : '12px 16px',
@@ -2113,38 +2120,122 @@ export default function ToastOrders({
             </button>
           </div>
         </div>
+        )}
 
-        {/* Middle Panel - Categories */}
-        <div style={{
-          width: screenSize === 'small' ? '100%' : '120px',
-          height: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'auto' : '0') : '100%',
-          background: '#ffffff',
-          display: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'flex' : 'none') : 'flex',
-          flexDirection: 'column',
-          borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
-          borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
-          overflow: screenSize === 'small' ? 'visible' : 'hidden'
-        }}>
-          {categories.map(category => (
+        {/* Middle Panel - Categories or Checkout */}
+        {!isCheckoutMode ? (
+          <div style={{
+            width: screenSize === 'small' ? '100%' : '120px',
+            height: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'auto' : '0') : '100%',
+            background: '#ffffff',
+            display: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'flex' : 'none') : 'flex',
+            flexDirection: 'column',
+            borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
+            borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
+            overflow: screenSize === 'small' ? 'visible' : 'hidden'
+          }}>
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                style={{
+                  padding: '12px 8px',
+                  background: selectedCategory === category ? '#2563eb' : '#ffffff',
+                  color: selectedCategory === category ? '#ffffff' : '#1a1a1a',
+                  border: 'none',
+                  borderBottom: '1px solid #e5e7eb',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            width: screenSize === 'small' ? '100%' : '120px',
+            height: '100%',
+            background: '#f8f9fa',
+            display: 'flex',
+            flexDirection: 'column',
+            borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
+            borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
+            padding: '16px',
+            overflowY: 'auto'
+          }}>
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
+              onClick={handleBackToMenu}
               style={{
-                padding: '12px 8px',
-                background: selectedCategory === category ? '#2563eb' : '#ffffff',
-                color: selectedCategory === category ? '#ffffff' : '#1a1a1a',
-                border: 'none',
-                borderBottom: '1px solid #e5e7eb',
-                fontSize: '11px',
+                padding: '12px',
+                background: '#ffffff',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '12px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                textAlign: 'left'
+                marginBottom: '16px'
               }}
             >
-              {category}
+              ← Back
             </button>
-          ))}
-        </div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1a1a1a', marginBottom: '12px' }}>
+              Checkout
+            </div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '16px' }}>
+              Order Summary
+            </div>
+            {cartItems.map((item, index) => (
+              <div key={item.uniqueId} style={{
+                padding: '8px 0',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#1a1a1a' }}>
+                  {item.quantity}x {item.name}
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb' }}>
+                  ₹{(item.price * item.quantity).toFixed(2)}
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '2px solid #d1d5db' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#6b7280' }}>Subtotal</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#1a1a1a' }}>₹{getSubtotal().toFixed(2)}</span>
+              </div>
+              {discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>Discount</span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#10b981' }}>-₹{getDiscountAmount().toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#1a1a1a' }}>Total</span>
+                <span style={{ fontSize: '14px', fontWeight: '800', color: '#2563eb' }}>₹{getTotal().toFixed(2)}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPaymentModal(true)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                marginTop: '16px'
+              }}
+            >
+              Pay
+            </button>
+          </div>
+        )}
 
         {/* Right Panel - Menu Items */}
         <div style={{
@@ -2442,8 +2533,8 @@ export default function ToastOrders({
             </div>
           </div>
 
-          {/* Bottom Actions */}
-          <div style={{
+        {/* Bottom Actions */}
+        <div style={{
             padding: screenSize === 'small' ? '12px' : '12px 16px',
             background: '#f8f9fa',
             borderTop: '1px solid #e5e7eb',
@@ -2639,7 +2730,7 @@ export default function ToastOrders({
           </div>
         </div>
       </div>
-      
+
       {/* Discount Modal */}
       {showDiscountModal && (
         <div style={{

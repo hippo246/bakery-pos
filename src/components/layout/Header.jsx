@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 export default function Header({
   activeTab,
@@ -6,19 +6,6 @@ export default function Header({
   onToggleTheme,
   screenSize = 'large'
 }) {
-  const [dashboardLayout, setDashboardLayout] = useState('default');
-
-  useEffect(() => {
-    const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
-    setDashboardLayout(settings.dashboardLayout || 'default');
-  }, []);
-
-  const handleDashboardLayoutChange = (newLayout) => {
-    const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
-    settings.dashboardLayout = newLayout;
-    localStorage.setItem('cafeos_settings', JSON.stringify(settings));
-    window.location.reload();
-  };
   const getTabTitle = (tab) => {
     const titles = {
       orders: 'Orders',
@@ -83,6 +70,7 @@ export default function Header({
           >
             <option value="default">Standard Layout</option>
             <option value="new">New Layout</option>
+            <option value="restaurant">Restaurant Layout</option>
           </select>
         )}
         <button

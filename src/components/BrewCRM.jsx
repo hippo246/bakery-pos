@@ -73,7 +73,7 @@ function saveLocalCollection(key, value) {
   }
 }
 
-const LOCAL_COLLECTION_KEYS = ["orders", "customers", "menuItems", "staff", "inventory", "tables"];
+const LOCAL_COLLECTION_KEYS = ["orders", "customers", "menuItems", "staff", "inventory", "tables", "tokens"];
 
 const normalizeArray = (items, normalizer, collectionName) => {
   if (!Array.isArray(items)) return [];
@@ -192,6 +192,9 @@ export default function BrewCRM() {
         { id: 7, name: 'T7', status: 'available', capacity: 4 },
         { id: 8, name: 'T8', status: 'available', capacity: 6 }
       ]);
+  const [tokens, setTokens] = useState(() => isLocalMode
+    ? loadLocalCollection("tokens", [])
+    : []);
   const [theme, setTheme] = useState(() => getTheme());
   const [storageError, setStorageError] = useState(null);
   const [settings, setSettings] = useState(() => {
@@ -372,6 +375,7 @@ export default function BrewCRM() {
           setSettings={setSettings}
           tables={tables}
           setTables={setTables}
+          tokens={tokens}
       />
     </>
   );

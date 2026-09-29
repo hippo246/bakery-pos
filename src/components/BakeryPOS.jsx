@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Dashboard from './dashboard/Dashboard';
 import NewDashboard from './dashboard/NewDashboard';
+import RestaurantDashboard from './dashboard/RestaurantDashboard';
 import Reports from './analytics/Reports';
 import ComprehensiveReports from './analytics/ComprehensiveReports';
 import CRM from './crm/CRM';
@@ -23,20 +24,20 @@ import GSTReports from './analytics/GSTReports';
 
 /* ─── All tab metadata in one place ─────────────────────────────────── */
 const ALL_TABS = [
-  { id: 'orders',       label: 'Orders',       icon: '🛒' },
-  { id: 'dashboard',    label: 'Dashboard',    icon: '📊' },
+  { id: 'orders',       label: 'Orders',       icon: '🛒', hasDropdown: true },
+  { id: 'dashboard',    label: 'Dashboard',    icon: '📊', hasDropdown: true },
   { id: 'reports',      label: 'Reports',      icon: '📈' },
-  { id: 'crm',          label: 'Customers',    icon: '👤' },
+  { id: 'crm',          label: 'Customers',    icon: '👤', hasDropdown: true },
   { id: 'staff',        label: 'Staff',        icon: '👥' },
-  { id: 'menu',         label: 'Menu',         icon: '🍽️' },
+  { id: 'menu',         label: 'Menu',         icon: '🍽️', hasDropdown: true },
   { id: 'inventory',    label: 'Inventory',    icon: '📦' },
   { id: 'recipes',      label: 'Recipes',      icon: '📜' },
   { id: 'waste',        label: 'Waste',        icon: '♻️' },
   { id: 'reservations', label: 'Reservations', icon: '📅' },
   { id: 'tokens',       label: 'Tokens',       icon: '🎫' },
-  { id: 'tables',       label: 'Tables',       icon: '🪑' },
+  { id: 'tables',       label: 'Tables',       icon: '🪑', hasDropdown: true },
   { id: 'waiters',      label: 'Waiters',      icon: '🛎️' },
-  { id: 'kitchen',      label: 'Kitchen',      icon: '👨‍🍳' },
+  { id: 'kitchen',      label: 'Kitchen',      icon: '👨‍🍳', hasDropdown: true },
   { id: 'gst',          label: 'GST Reports',  icon: '🧾' },
   { id: 'settings',     label: 'Settings',     icon: '⚙️' },
 ];
@@ -51,6 +52,7 @@ export default function BakeryPOS({
   inventory, setInventory,
   settings, setSettings,
   tables, setTables,
+  tokens,
 }) {
   /* ── Navigation state ────────────────────────────────────────────── */
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('bakerypos_active_tab') || 'orders');
@@ -95,7 +97,7 @@ export default function BakeryPOS({
   const [dashboardMode, setDashboardMode] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
-      return saved.dashboardLayout === 'new' ? 'new' : 'standard';
+      return saved.dashboardLayout === 'new' ? 'new' : saved.dashboardLayout === 'restaurant' ? 'restaurant' : 'standard';
     } catch {
       return 'standard';
     }
@@ -161,16 +163,16 @@ export default function BakeryPOS({
     }
   };
 
-  // Sync orders, tables, and kitchen mode with localStorage changes
+  // Sync orders, tables, kitchen, and dashboard mode with localStorage changes
   useEffect(() => {
     const handleSettingsChange = () => {
       try {
         const saved = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
-        
+
         // Sync orders mode
         if (saved.orders?.useToastOrders) setOrdersMode('toast');
         else setOrdersMode('standard');
-        
+
         // Sync tables mode
         if (saved.tables?.useToastTables) setTablesMode('toast');
         else setTablesMode('standard');
@@ -180,10 +182,16 @@ export default function BakeryPOS({
         else if (saved.kitchen?.useSplitKDS) setKitchenMode('split');
         else if (saved.kitchen?.useOracleKDS) setKitchenMode('oracle');
         else setKitchenMode('standard');
+
+        // Sync dashboard mode
+        if (saved.dashboardLayout === 'new') setDashboardMode('new');
+        else if (saved.dashboardLayout === 'restaurant') setDashboardMode('restaurant');
+        else setDashboardMode('standard');
       } catch {
         setOrdersMode('standard');
         setTablesMode('standard');
         setKitchenMode('standard');
+        setDashboardMode('standard');
       }
     };
 
@@ -202,6 +210,7 @@ export default function BakeryPOS({
   const [ordersDropdownOpen,   setOrdersDropdownOpen]   = useState(false);
   const [tablesDropdownOpen,   setTablesDropdownOpen]   = useState(false);
   const [kitchenDropdownOpen,  setKitchenDropdownOpen]  = useState(false);
+  const [dashboardDropdownOpen, setDashboardDropdownOpen] = useState(false);
   const [dropdownCoords,        setDropdownCoords]        = useState({ top: 0, left: 0 });
   const tabsRef = useRef(null);
 
@@ -247,6 +256,7 @@ export default function BakeryPOS({
       setOrdersDropdownOpen(false);
       setTablesDropdownOpen(false);
       setKitchenDropdownOpen(false);
+      setDashboardDropdownOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -274,6 +284,7 @@ export default function BakeryPOS({
     setOrdersDropdownOpen(false);
     setTablesDropdownOpen(false);
     setKitchenDropdownOpen(false);
+    setDashboardDropdownOpen(false);
     setShowMobileMoreMenu(false);
     setTabletSidebarOpen(false);
   }, []);
@@ -294,7 +305,9 @@ export default function BakeryPOS({
         ? <ToastOrders orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} onNavigate={handleNavigate} tables={tables} setTables={setTables} customers={customers} setCustomers={setCustomers} staff={staff} setStaff={setStaff} darkMode={getTabDarkMode('orders')} />
         : <SimplePOS orders={orders} setOrders={setOrders} menuItems={menuItems} setMenuItems={setMenuItems} inventory={inventory} setInventory={setInventory} customers={customers} setCustomers={setCustomers} settings={settings} setSettings={setSettings} staff={staff} tables={tables} setTables={setTables} onNavigate={handleNavigate} darkMode={getTabDarkMode('orders')} />;
       case 'dashboard':    return dashboardMode === 'new'
-        ? <NewDashboard orders={orders} menuItems={menuItems} darkMode={getTabDarkMode('dashboard')} />
+        ? <NewDashboard orders={orders} setOrders={setOrders} menuItems={menuItems} customers={customers} tables={tables} tokens={tokens} staff={staff} darkMode={getTabDarkMode('dashboard')} />
+        : dashboardMode === 'restaurant'
+        ? <RestaurantDashboard orders={orders} setOrders={setOrders} menuItems={menuItems} customers={customers} tables={tables} tokens={tokens} staff={staff} darkMode={getTabDarkMode('dashboard')} />
         : <Dashboard orders={orders} setOrders={setOrders} menuItems={menuItems} inventory={inventory} customers={customers} staff={staff} tables={tables} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('dashboard')} />;
       case 'reports':      return <Reports orders={orders} menuItems={menuItems} inventory={inventory} staff={staff} customers={customers} settings={settings} onNavigate={handleNavigate} darkMode={getTabDarkMode('reports')} />;
       case 'crm':          return <CRM customers={customers} setCustomers={setCustomers} darkMode={getTabDarkMode('crm')} />;
@@ -414,7 +427,7 @@ export default function BakeryPOS({
             }}>
               {[
                 { id: 'orders', label: 'Orders', hasDropdown: true },
-                { id: 'dashboard', label: 'Dashboard' },
+                { id: 'dashboard', label: 'Dashboard', hasDropdown: true },
                 { id: 'reports', label: 'Reports' },
                 { id: 'crm', label: 'Customers', hasDropdown: true },
                 { id: 'staff', label: 'Staff' },
@@ -433,11 +446,12 @@ export default function BakeryPOS({
                     if (item.hasDropdown) {
                       const rect = e.currentTarget.getBoundingClientRect();
                       setDropdownCoords({ top: rect.bottom + 4, left: rect.left });
-                      if (item.id === 'menu')      { setMenuDropdownOpen(p => !p); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
-                      if (item.id === 'crm')       { setCustomersDropdownOpen(p => !p); setMenuDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
-                      if (item.id === 'orders')    { setOrdersDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
-                      if (item.id === 'tables')    { setTablesDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setKitchenDropdownOpen(false); }
-                      if (item.id === 'kitchen')   { setKitchenDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); }
+                      if (item.id === 'menu')      { setMenuDropdownOpen(p => !p); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); setDashboardDropdownOpen(false); }
+                      if (item.id === 'crm')       { setCustomersDropdownOpen(p => !p); setMenuDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); setDashboardDropdownOpen(false); }
+                      if (item.id === 'orders')    { setOrdersDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); setDashboardDropdownOpen(false); }
+                      if (item.id === 'tables')    { setTablesDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setKitchenDropdownOpen(false); setDashboardDropdownOpen(false); }
+                      if (item.id === 'kitchen')   { setKitchenDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setDashboardDropdownOpen(false); }
+                      if (item.id === 'dashboard') { setDashboardDropdownOpen(p => !p); setMenuDropdownOpen(false); setCustomersDropdownOpen(false); setOrdersDropdownOpen(false); setTablesDropdownOpen(false); setKitchenDropdownOpen(false); }
                     } else {
                       handleNavigate(item.id);
                     }
@@ -457,7 +471,7 @@ export default function BakeryPOS({
                   onMouseLeave={e => { if (activeTab !== item.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--cafe-text-secondary)'; } }}
                 >
                   {item.label}
-                  {item.hasDropdown && <span style={{ fontSize: '10px' }}>▼</span>}
+                  {item.hasDropdown && <span style={{ fontSize: '12px', marginLeft: '4px' }}>▼</span>}
                 </button>
               ))}
             </div>
@@ -600,6 +614,31 @@ export default function BakeryPOS({
           }},
         ]} activeTab={activeTab} onNavigate={(id) => {}} customActions={true} />
       )}
+      {dashboardDropdownOpen && isDesktop && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'dashboard-standard', label: '📊 Standard Layout', action: () => {
+            const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+            settings.dashboardLayout = 'default';
+            localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+            setDashboardDropdownOpen(false);
+            window.location.reload();
+          }},
+          { id: 'dashboard-new', label: '🎨 New Layout', action: () => {
+            const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+            settings.dashboardLayout = 'new';
+            localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+            setDashboardDropdownOpen(false);
+            window.location.reload();
+          }},
+          { id: 'dashboard-restaurant', label: '🍽️ Restaurant Layout', action: () => {
+            const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+            settings.dashboardLayout = 'restaurant';
+            localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+            setDashboardDropdownOpen(false);
+            window.location.reload();
+          }},
+        ]} activeTab={activeTab} onNavigate={(id) => {}} customActions={true} />
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           TABLET TOPBAR (768-1279px - always uses topbar like laptops)
@@ -636,6 +675,31 @@ export default function BakeryPOS({
           { id: 'crm',          label: 'Customers' },
           { id: 'reservations', label: 'Reservations' },
         ]} activeTab={activeTab} onNavigate={(id) => { handleNavigate(id); setCustomersDropdownOpen(false); }} />
+      )}
+      {dashboardDropdownOpen && isTablet && (
+        <DesktopDropdown ref={null} coords={dropdownCoords} items={[
+          { id: 'dashboard-standard', label: '📊 Standard Layout', action: () => {
+            const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+            settings.dashboardLayout = 'default';
+            localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+            setDashboardDropdownOpen(false);
+            window.location.reload();
+          }},
+          { id: 'dashboard-new', label: '🎨 New Layout', action: () => {
+            const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+            settings.dashboardLayout = 'new';
+            localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+            setDashboardDropdownOpen(false);
+            window.location.reload();
+          }},
+          { id: 'dashboard-restaurant', label: '🍽️ Restaurant Layout', action: () => {
+            const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
+            settings.dashboardLayout = 'restaurant';
+            localStorage.setItem('cafeos_settings', JSON.stringify(settings));
+            setDashboardDropdownOpen(false);
+            window.location.reload();
+          }},
+        ]} activeTab={activeTab} onNavigate={(id) => {}} customActions={true} />
       )}
 
       {/* ══════════════════════════════════════════════════════════════

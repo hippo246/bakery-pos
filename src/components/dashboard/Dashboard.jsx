@@ -755,29 +755,6 @@ export default function SimpleDashboard({ orders = [], setOrders, menuItems = []
               {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
-          <button
-            onClick={() => {
-              const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
-              settings.dashboardLayout = settings.dashboardLayout === 'new' ? 'default' : 'new';
-              localStorage.setItem('cafeos_settings', JSON.stringify(settings));
-              window.location.reload();
-            }}
-            style={{
-              padding: '10px 20px',
-              background: darkMode ? '#3b82f6' : '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-            onMouseOver={(e) => e.target.style.background = darkMode ? '#2563eb' : '#1d4ed8'}
-            onMouseOut={(e) => e.target.style.background = darkMode ? '#3b82f6' : '#2563eb'}
-          >
-            Switch to New Layout
-          </button>
         </div>
 
         {/* Key Metrics Row */}

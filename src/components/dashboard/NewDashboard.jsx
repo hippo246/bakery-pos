@@ -1,16 +1,144 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend, RadialBarChart, RadialBar } from 'recharts';
+import OrderEventManager from '../../services/OrderEventManager';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
-export default function NewDashboard({ orders = [], menuItems = [], darkMode = false }) {
+export default function NewDashboard({ orders = [], setOrders, menuItems = [], customers = [], tables = [], tokens = [], staff = [], darkMode = false }) {
   const [selectedPeriod, setSelectedPeriod] = useState('Weekly');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [localOrders, setLocalOrders] = useState(orders);
+  const [localCustomers, setLocalCustomers] = useState(customers);
+  const [localTables, setLocalTables] = useState(tables);
+  const [localTokens, setLocalTokens] = useState(tokens);
+  const [localStaff, setLocalStaff] = useState(staff);
+
+  // Sync props with local state
+  useEffect(() => {
+    setLocalOrders(orders);
+    setLocalCustomers(customers);
+    setLocalTables(tables);
+    setLocalTokens(tokens);
+    setLocalStaff(staff);
+  }, [orders, customers, tables, tokens, staff]);
+
+  // Subscribe to all real-time events
+  useEffect(() => {
+    const unsubscribeOrderCreated = OrderEventManager.on('order:created', (order) => {
+      console.log('[NewDashboard] Order created:', order.id);
+      setLocalOrders(prev => [...prev, order]);
+    });
+
+    const unsubscribeOrderUpdated = OrderEventManager.on('order:updated', (order) => {
+      console.log('[NewDashboard] Order updated:', order.id);
+      setLocalOrders(prev => prev.map(o => o.id === order.id ? { ...o, ...order } : o));
+    });
+
+    const unsubscribeOrderFired = OrderEventManager.on('order:fired', ({ order, kotData }) => {
+      console.log('[NewDashboard] Order fired:', order.id);
+      setLocalOrders(prev => prev.map(o => o.id === order.id ? { ...o, kotData } : o));
+    });
+
+    const unsubscribeOrderItemStatus = OrderEventManager.on('order:item:status', ({ order, itemId, newStatus }) => {
+      console.log('[NewDashboard] Order item status changed:', order.id, itemId, newStatus);
+      setLocalOrders(prev => prev.map(o => {
+        if (o.id === order.id) {
+          const updatedItems = o.items?.map(item => 
+            item.id === itemId ? { ...item, status: newStatus } : item
+          );
+          return { ...o, items: updatedItems };
+        }
+        return o;
+      }));
+    });
+
+    const unsubscribeOrderCompleted = OrderEventManager.on('order:completed', (order) => {
+      console.log('[NewDashboard] Order completed:', order.id);
+      setLocalOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'COMPLETED' } : o));
+    });
+
+    const unsubscribeOrderPaid = OrderEventManager.on('order:paid', ({ order, paymentData }) => {
+      console.log('[NewDashboard] Order paid:', order.id);
+      setLocalOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'PAID', payment: paymentData } : o));
+    });
+
+    const unsubscribeOrderCancelled = OrderEventManager.on('order:cancelled', ({ order, reason }) => {
+      console.log('[NewDashboard] Order cancelled:', order.id);
+      setLocalOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'CANCELLED', cancelReason: reason } : o));
+    });
+
+    const unsubscribeTableStatus = OrderEventManager.on('table:status', ({ tableId, newStatus, tableData }) => {
+      console.log('[NewDashboard] Table status changed:', tableId, newStatus);
+      setLocalTables(prev => prev.map(t => 
+        t.id === tableId || t.number === parseInt(tableId)
+          ? { ...t, status: newStatus, ...tableData }
+          : t
+      ));
+    });
+
+    const unsubscribeTableOrder = OrderEventManager.on('table:order', ({ tableId, orderData }) => {
+      console.log('[NewDashboard] Table order updated:', tableId);
+      setLocalTables(prev => prev.map(t => 
+        t.id === tableId || t.number === parseInt(tableId)
+          ? { ...t, orderId: orderData.orderId, orderData }
+          : t
+      ));
+    });
+
+    const unsubscribeKOTReceived = OrderEventManager.on('kitchen:kot:received', (kotData) => {
+      console.log('[NewDashboard] KOT received:', kotData);
+    });
+
+    const unsubscribeKitchenItemStarted = OrderEventManager.on('kitchen:item:started', ({ kotId, itemId }) => {
+      console.log('[NewDashboard] Kitchen item started:', kotId, itemId);
+    });
+
+    const unsubscribeKitchenItemCompleted = OrderEventManager.on('kitchen:item:completed', ({ kotId, itemId }) => {
+      console.log('[NewDashboard] Kitchen item completed:', kotId, itemId);
+    });
+
+    const unsubscribeWaiterAssigned = OrderEventManager.on('waiter:assigned', ({ orderId, waiterId, tableId }) => {
+      console.log('[NewDashboard] Waiter assigned:', orderId, waiterId, tableId);
+      setLocalOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, waiterId, tableId } : o
+      ));
+    });
+
+    const unsubscribeTokenGenerated = OrderEventManager.on('token:generated', ({ orderId, tokenNumber }) => {
+      console.log('[NewDashboard] Token generated:', orderId, tokenNumber);
+      setLocalTokens(prev => [...prev, { orderId, tokenNumber, status: 'active', createdAt: new Date().toISOString() }]);
+    });
+
+    const unsubscribeTokenStatus = OrderEventManager.on('token:status', ({ tokenNumber, newStatus }) => {
+      console.log('[NewDashboard] Token status changed:', tokenNumber, newStatus);
+      setLocalTokens(prev => prev.map(t => 
+        t.tokenNumber === tokenNumber ? { ...t, status: newStatus } : t
+      ));
+    });
+
+    return () => {
+      unsubscribeOrderCreated();
+      unsubscribeOrderUpdated();
+      unsubscribeOrderFired();
+      unsubscribeOrderItemStatus();
+      unsubscribeOrderCompleted();
+      unsubscribeOrderPaid();
+      unsubscribeOrderCancelled();
+      unsubscribeTableStatus();
+      unsubscribeTableOrder();
+      unsubscribeKOTReceived();
+      unsubscribeKitchenItemStarted();
+      unsubscribeKitchenItemCompleted();
+      unsubscribeWaiterAssigned();
+      unsubscribeTokenGenerated();
+      unsubscribeTokenStatus();
+    };
+  }, []);
 
   // Calculate metrics
   const metrics = useMemo(() => {
     const today = new Date().toDateString();
-    const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today);
+    const todayOrders = localOrders.filter(o => new Date(o.createdAt).toDateString() === today);
     const completedOrders = todayOrders.filter(o => o.status === 'COMPLETED' || o.status === 'PAID');
     
     const totalSales = completedOrders.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -65,7 +193,7 @@ export default function NewDashboard({ orders = [], menuItems = [], darkMode = f
       categoryData,
       activeOrders
     };
-  }, [orders]);
+  }, [localOrders]);
 
   const theme = darkMode ? {
     bg: '#0f0f0f',
@@ -104,26 +232,6 @@ export default function NewDashboard({ orders = [], menuItems = [], darkMode = f
           Dashboard
         </h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button
-            onClick={() => {
-              const settings = JSON.parse(localStorage.getItem('cafeos_settings') || '{}');
-              settings.dashboardLayout = 'default';
-              localStorage.setItem('cafeos_settings', JSON.stringify(settings));
-              window.location.reload();
-            }}
-            style={{
-              padding: '10px 20px',
-              background: '#6366f1',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            Switch to Standard Layout
-          </button>
           <button style={{
             padding: '10px 20px',
             background: theme.card,
