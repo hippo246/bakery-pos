@@ -1641,15 +1641,15 @@ export default function ToastTables({
                 alignItems: 'center',
                 zIndex: 20
               }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: 'theme.warning' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: theme.warning }}>
                   ✏️ FLOOR BUILDER MODE: Drag tables to position
                 </span>
                 <button
                   onClick={() => setShowAddTableModal(true)}
                   style={{
                     padding: '6px 12px',
-                    backgroundColor: 'theme.accent',
-                    color: 'theme.text',
+                    backgroundColor: theme.accent,
+                    color: theme.text,
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '12px',
@@ -1696,6 +1696,7 @@ export default function ToastTables({
             }}>
               {floorTables
                 .filter(t => selectedSection === 'All Sections' || !t.section || t.section === selectedSection)
+                .filter(t => !floorSearchQuery.trim() || t.name?.toLowerCase().includes(floorSearchQuery.toLowerCase()) || t.number?.toString().toLowerCase().includes(floorSearchQuery.toLowerCase()))
                 .map(t => {
                 const isSelected = selectedTableId === t.id;
                 const isOccupied = t.status === 'occupied';
@@ -1952,7 +1953,7 @@ export default function ToastTables({
                 style={{
                   padding: '9px 12px',
                   backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
-                  color: 'theme.text',
+                  color: theme.text,
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',
@@ -1969,8 +1970,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '65px',
                   padding: '10px 8px',
-                  backgroundColor: 'theme.accent',
-                  color: 'theme.text',
+                  backgroundColor: theme.accent,
+                  color: theme.text,
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -1989,8 +1990,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '85px',
                   padding: '10px 8px',
-                  backgroundColor: 'theme.text',
-                  color: 'theme.inputBg',
+                  backgroundColor: theme.text,
+                  color: theme.inputBg,
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -2015,8 +2016,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '85px',
                   padding: '10px 8px',
-                  backgroundColor: 'theme.text',
-                  color: 'theme.inputBg',
+                  backgroundColor: theme.text,
+                  color: theme.inputBg,
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -2038,8 +2039,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '75px',
                   padding: '10px 8px',
-                  backgroundColor: 'theme.text',
-                  color: 'theme.inputBg',
+                  backgroundColor: theme.text,
+                  color: theme.inputBg,
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -2064,8 +2065,8 @@ export default function ToastTables({
                   flex: 1,
                   minWidth: '75px',
                   padding: '10px 8px',
-                  backgroundColor: 'theme.text',
-                  color: 'theme.inputBg',
+                  backgroundColor: theme.text,
+                  color: theme.inputBg,
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: '700',
@@ -2326,24 +2327,24 @@ export default function ToastTables({
                               <button
                                 onClick={() => { setItemSortKey('qty'); setItemSortDir('desc'); }}
                                 title="Sort Qty Descending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'qty' && itemSortDir === 'desc' ? 'theme.accent' : 'theme.textSecondary' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'qty' && itemSortDir === 'desc' ? theme.accent : theme.textSecondary }}
                               >▼</button>
                             </div>
                           </div>
 
                           {/* Article sort header */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                            <span style={{ color: itemSortKey === 'article' ? 'theme.accent' : 'theme.textSecondary' }}>Article</span>
+                            <span style={{ color: itemSortKey === 'article' ? theme.accent : theme.textSecondary }}>Article</span>
                             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                               <button
                                 onClick={() => { setItemSortKey('article'); setItemSortDir('asc'); }}
                                 title="Sort Article Ascending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'asc' ? 'theme.accent' : 'theme.textSecondary' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'asc' ? theme.accent : theme.textSecondary }}
                               >▲</button>
                               <button
                                 onClick={() => { setItemSortKey('article'); setItemSortDir('desc'); }}
                                 title="Sort Article Descending"
-                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'desc' ? 'theme.accent' : 'theme.textSecondary' }}
+                                style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'article' && itemSortDir === 'desc' ? theme.accent : theme.textSecondary }}
                               >▼</button>
                             </div>
                           </div>
@@ -2351,17 +2352,17 @@ export default function ToastTables({
 
                         {/* Price sort header */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <span style={{ color: itemSortKey === 'price' ? 'theme.accent' : 'theme.textSecondary' }}>Price</span>
+                          <span style={{ color: itemSortKey === 'price' ? theme.accent : theme.textSecondary }}>Price</span>
                           <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
                             <button
                               onClick={() => { setItemSortKey('price'); setItemSortDir('asc'); }}
                               title="Sort Price Ascending"
-                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'asc' ? 'theme.accent' : 'theme.textSecondary' }}
+                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'asc' ? theme.accent : theme.textSecondary }}
                             >▲</button>
                             <button
                               onClick={() => { setItemSortKey('price'); setItemSortDir('desc'); }}
                               title="Sort Price Descending"
-                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'desc' ? 'theme.accent' : 'theme.textSecondary' }}
+                              style={{ background: 'none', border: 'none', padding: '0 1px', cursor: 'pointer', fontSize: '9px', lineHeight: 1, color: itemSortKey === 'price' && itemSortDir === 'desc' ? theme.accent : theme.textSecondary }}
                             >▼</button>
                           </div>
                         </div>
@@ -2421,7 +2422,7 @@ export default function ToastTables({
                               </div>
                             ))
                         ) : (
-                          <div style={{ padding: '20px', textAlign: 'center', color: 'theme.textSecondary', fontSize: '12px' }}>
+                          <div style={{ padding: '20px', textAlign: 'center', color: theme.textSecondary, fontSize: '12px' }}>
                             No items on this cheque
                           </div>
                         )}
@@ -2431,12 +2432,12 @@ export default function ToastTables({
                     /* Audit Logs Tab View */
                     <div style={{ padding: '8px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {(tableLogs[selectedTableId] || []).map(log => (
-                        <div key={log.id} style={{ padding: '6px 8px', backgroundColor: 'theme.bg', borderRadius: '4px', borderLeft: '3px solid theme.accent', fontSize: '11px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'theme.textSecondary', fontSize: '9px' }}>
+                        <div key={log.id} style={{ padding: '6px 8px', backgroundColor: theme.bg, borderRadius: '4px', borderLeft: `3px solid ${theme.accent}`, fontSize: '11px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.textSecondary, fontSize: '9px' }}>
                             <span>{log.time}</span>
-                            <span style={{ color: 'theme.accent', fontWeight: '600' }}>👤 {log.staff || (staff && staff[0] ? staff[0].name : 'Staff')}</span>
+                            <span style={{ color: theme.accent, fontWeight: '600' }}>👤 {log.staff || (staff && staff[0] ? staff[0].name : 'Staff')}</span>
                           </div>
-                          <div style={{ color: 'theme.text', marginTop: '2px' }}>{log.text}</div>
+                          <div style={{ color: theme.text, marginTop: '2px' }}>{log.text}</div>
                         </div>
                       ))}
                     </div>
@@ -2609,15 +2610,15 @@ export default function ToastTables({
             boxShadow: darkMode ? '0 20px 25px -5px rgba(0,0,0,0.5)' : '0 20px 25px -5px rgba(0,0,0,0.15)'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Add Element to Floor</h3>
-            <p style={{ margin: 0, fontSize: '11px', color: 'theme.border', marginBottom: '12px' }}>Configure table, wall, or floor element properties</p>
+            <p style={{ margin: 0, fontSize: '11px', color: theme.border, marginBottom: '12px' }}>Configure table, wall, or floor element properties</p>
             
             {/* Section: Basic Info */}
-            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
-              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>ELEMENT TYPE</label>
+            <div style={{ padding: '12px', background: theme.bgSecondary, borderRadius: '8px', border: `1px solid ${theme.border}` }}>
+              <label style={{ fontSize: '11px', color: theme.border, fontWeight: '600', marginBottom: '6px', display: 'block' }}>ELEMENT TYPE</label>
               <select
                 value={newElementData.type}
                 onChange={(e) => setNewElementData({ ...newElementData, type: e.target.value })}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', fontSize: '13px' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, fontSize: '13px' }}
               >
                 <option value="table">🪑 Table</option>
                 <option value="wall">🧱 Wall / Barrier</option>
@@ -2629,79 +2630,79 @@ export default function ToastTables({
                 <option value="stage">🎭 Stage</option>
               </select>
 
-              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block', marginTop: '10px' }}>LABEL / NUMBER</label>
+              <label style={{ fontSize: '11px', color: theme.border, fontWeight: '600', marginBottom: '6px', display: 'block', marginTop: '10px' }}>LABEL / NUMBER</label>
               <input
                 type="text"
                 value={newElementData.name}
                 onChange={(e) => setNewElementData({ ...newElementData, name: e.target.value })}
                 placeholder="e.g. 20 or VIP-1"
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '13px' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, boxSizing: 'border-box', fontSize: '13px' }}
               />
             </div>
 
             {/* Section: Shape & Preview - For all element types */}
-            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
-              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>SHAPE</label>
+            <div style={{ padding: '12px', background: theme.bgSecondary, borderRadius: '8px', border: `1px solid ${theme.border}` }}>
+              <label style={{ fontSize: '11px', color: theme.border, fontWeight: '600', marginBottom: '6px', display: 'block' }}>SHAPE</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '12px' }}>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'rect' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'rect' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'rect' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   ▭ Rectangle
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'circle' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'circle' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'circle' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   ⚪ Round
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'square' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'square' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'square' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   ⬜ Square
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'oval' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'oval' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'oval' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   ⬭ Oval
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'booth' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'booth' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'booth' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   🛋️ Booth
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'high_top' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'high_top' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'high_top' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   🍸 High Top
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'l_shaped' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'l_shaped' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'l_shaped' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   └ L-Shaped
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 'u_shaped' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'u_shaped' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 'u_shaped' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   ┌ U-Shaped
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, shape: 't_shaped' })}
-                  style={{ padding: '8px', backgroundColor: newElementData.shape === 't_shaped' ? 'theme.accent' : 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
+                  style={{ padding: '8px', backgroundColor: newElementData.shape === 't_shaped' ? theme.accent : theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, borderRadius: '6px', cursor: 'pointer', fontSize: '11px', fontWeight: '500' }}
                 >
                   ├ T-Shaped
                 </button>
               </div>
 
               {/* Live Preview */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'theme.inputBg', borderRadius: '6px', border: '1px solid theme.border' }}>
-                <div style={{ fontSize: '11px', color: 'theme.border', minWidth: '60px' }}>Preview:</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: theme.inputBg, borderRadius: '6px', border: `1px solid ${theme.border}` }}>
+                <div style={{ fontSize: '11px', color: theme.border, minWidth: '60px' }}>Preview:</div>
                 <div style={{
                   width: `${Math.min((newElementData.width || 100) / 2, 60)}px`,
                   height: `${Math.min((newElementData.height || 100) / 2, 60)}px`,
@@ -2711,7 +2712,7 @@ export default function ToastTables({
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '9px',
-                  color: 'theme.bg',
+                  color: theme.bg,
                   transform: `rotate(${newElementData.rotation || 0}deg)`,
                   border: getBorderStyle(newElementData.type, newElementData.wallType),
                   minWidth: '30px',
@@ -2719,7 +2720,7 @@ export default function ToastTables({
                 }}>
                   {newElementData.name || getElementIcon(newElementData.type)}
                 </div>
-                <div style={{ fontSize: '10px', color: 'theme.textSecondary' }}>
+                <div style={{ fontSize: '10px', color: theme.textSecondary }}>
                   {newElementData.width || 100} × {newElementData.height || 100}px
                   {newElementData.rotation && ` | ${newElementData.rotation}°`}
                 </div>
@@ -2727,25 +2728,25 @@ export default function ToastTables({
             </div>
 
             {/* Section: Dimensions */}
-            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
-              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>DIMENSIONS</label>
+            <div style={{ padding: '12px', background: theme.bgSecondary, borderRadius: '8px', border: `1px solid ${theme.border}` }}>
+              <label style={{ fontSize: '11px', color: theme.border, fontWeight: '600', marginBottom: '6px', display: 'block' }}>DIMENSIONS</label>
               
               <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, width: 80, height: 80 })}
-                  style={{ flex: 1, padding: '6px', backgroundColor: 'theme.inputBg', color: 'theme.border', border: '1px solid theme.textSecondary', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
+                  style={{ flex: 1, padding: '6px', backgroundColor: theme.inputBg, color: theme.border, border: `1px solid ${theme.textSecondary}`, borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
                 >
                   Small
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, width: 100, height: 100 })}
-                  style={{ flex: 1, padding: '6px', backgroundColor: 'theme.inputBg', color: 'theme.border', border: '1px solid theme.textSecondary', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
+                  style={{ flex: 1, padding: '6px', backgroundColor: theme.inputBg, color: theme.border, border: `1px solid ${theme.textSecondary}`, borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
                 >
                   Medium
                 </button>
                 <button
                   onClick={() => setNewElementData({ ...newElementData, width: 140, height: 140 })}
-                  style={{ flex: 1, padding: '6px', backgroundColor: 'theme.inputBg', color: 'theme.border', border: '1px solid theme.textSecondary', borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
+                  style={{ flex: 1, padding: '6px', backgroundColor: theme.inputBg, color: theme.border, border: `1px solid ${theme.textSecondary}`, borderRadius: '4px', cursor: 'pointer', fontSize: '10px' }}
                 >
                   Large
                 </button>
@@ -2753,25 +2754,25 @@ export default function ToastTables({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
-                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Width (px)</label>
+                  <label style={{ fontSize: '10px', color: theme.textSecondary, marginBottom: '4px', display: 'block' }}>Width (px)</label>
                   <input
                     type="number"
                     value={newElementData.width || 100}
                     onChange={(e) => setNewElementData({ ...newElementData, width: parseInt(e.target.value) || 100 })}
                     min="50"
                     max="300"
-                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, boxSizing: 'border-box', fontSize: '12px' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Height (px)</label>
+                  <label style={{ fontSize: '10px', color: theme.textSecondary, marginBottom: '4px', display: 'block' }}>Height (px)</label>
                   <input
                     type="number"
                     value={newElementData.height || 100}
                     onChange={(e) => setNewElementData({ ...newElementData, height: parseInt(e.target.value) || 100 })}
                     min="50"
                     max="300"
-                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, boxSizing: 'border-box', fontSize: '12px' }}
                   />
                 </div>
               </div>
@@ -2779,26 +2780,26 @@ export default function ToastTables({
               {/* Capacity - Only for tables */}
               {newElementData.type === 'table' && (
                 <div style={{ marginTop: '8px' }}>
-                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Capacity (seats)</label>
+                  <label style={{ fontSize: '10px', color: theme.textSecondary, marginBottom: '4px', display: 'block' }}>Capacity (seats)</label>
                   <input
                     type="number"
                     value={newElementData.capacity || 4}
                     onChange={(e) => setNewElementData({ ...newElementData, capacity: parseInt(e.target.value) || 4 })}
                     min="1"
                     max="20"
-                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, boxSizing: 'border-box', fontSize: '12px' }}
                   />
                 </div>
               )}
             </div>
 
             {/* Section: Advanced */}
-            <div style={{ padding: '12px', background: 'theme.bgSecondary', borderRadius: '8px', border: '1px solid theme.border' }}>
-              <label style={{ fontSize: '11px', color: 'theme.border', fontWeight: '600', marginBottom: '6px', display: 'block' }}>ADVANCED</label>
+            <div style={{ padding: '12px', background: theme.bgSecondary, borderRadius: '8px', border: `1px solid ${theme.border}` }}>
+              <label style={{ fontSize: '11px', color: theme.border, fontWeight: '600', marginBottom: '6px', display: 'block' }}>ADVANCED</label>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <div>
-                  <label style={{ fontSize: '10px', color: 'theme.textSecondary', marginBottom: '4px', display: 'block' }}>Rotation (°)</label>
+                  <label style={{ fontSize: '10px', color: theme.textSecondary, marginBottom: '4px', display: 'block' }}>Rotation (°)</label>
                   <input
                     type="number"
                     value={newElementData.rotation || 0}
@@ -2806,7 +2807,7 @@ export default function ToastTables({
                     min="0"
                     max="360"
                     step="15"
-                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box', fontSize: '12px' }}
+                    style={{ width: '100%', padding: '6px', borderRadius: '4px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, boxSizing: 'border-box', fontSize: '12px' }}
                   />
                 </div>
                 {/* Wall Type - Only for walls, doors, windows */}
@@ -2831,7 +2832,7 @@ export default function ToastTables({
               {/* Table-specific options */}
               {newElementData.type === 'table' && (
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '10px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'theme.textSecondary', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: theme.textSecondary, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={newElementData.canCombine || false}
@@ -2840,7 +2841,7 @@ export default function ToastTables({
                     />
                     Can Combine
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'theme.textSecondary', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: theme.textSecondary, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={newElementData.wallNearby || false}
@@ -2849,7 +2850,7 @@ export default function ToastTables({
                     />
                     Wall Nearby
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'theme.textSecondary', cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: theme.textSecondary, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
                       checked={newElementData.windowNearby || false}
@@ -2863,8 +2864,8 @@ export default function ToastTables({
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button onClick={() => setShowAddTableModal(false)} style={{ flex: 1, padding: '12px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Cancel</button>
-              <button onClick={handleAddTableElement} style={{ flex: 1, padding: '12px', backgroundColor: 'theme.success', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Add Element</button>
+              <button onClick={() => setShowAddTableModal(false)} style={{ flex: 1, padding: '12px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' }}>Cancel</button>
+              <button onClick={handleAddTableElement} style={{ flex: 1, padding: '12px', backgroundColor: theme.success, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>Add Element</button>
             </div>
           </div>
         </div>
@@ -2894,13 +2895,13 @@ export default function ToastTables({
             gap: '12px'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>Merge Table #{selectedTable.name}</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.border }}>
               Select adjacent table to connect visually on the floor plan map:
             </p>
             <select
               value={targetMergeTableId}
               onChange={(e) => setTargetMergeTableId(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}` }}
             >
               <option value="">Select table to merge...</option>
               {floorTables.filter(t => t.id !== selectedTableId && t.type !== 'wall').map(t => (
@@ -2908,8 +2909,8 @@ export default function ToastTables({
               ))}
             </select>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button onClick={() => setShowMergeModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleMergeTables} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.warning', color: 'theme.inputBg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Merge Tables</button>
+              <button onClick={() => setShowMergeModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleMergeTables} style={{ flex: 1, padding: '10px', backgroundColor: theme.warning, color: theme.inputBg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Merge Tables</button>
             </div>
           </div>
         </div>
@@ -2945,8 +2946,8 @@ export default function ToastTables({
                 onClick={() => setShowAddCustomerModal(true)}
                 style={{
                   padding: '4px 8px',
-                  backgroundColor: 'theme.accent',
-                  color: 'theme.text',
+                  backgroundColor: theme.accent,
+                  color: theme.text,
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '11px',
@@ -2966,10 +2967,10 @@ export default function ToastTables({
               style={{
                 width: '100%',
                 padding: '8px 10px',
-                backgroundColor: 'theme.inputBg',
-                border: '1px solid theme.border',
+                backgroundColor: theme.inputBg,
+                border: `1px solid ${theme.border}`,
                 borderRadius: '6px',
-                color: 'theme.text',
+                color: theme.text,
                 fontSize: '12px',
                 boxSizing: 'border-box'
               }}
@@ -2988,24 +2989,24 @@ export default function ToastTables({
                   onClick={() => handlePairCustomer(c)}
                   style={{
                     padding: '10px 12px',
-                    backgroundColor: 'theme.inputBg',
+                    backgroundColor: theme.inputBg,
                     borderRadius: '6px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     cursor: 'pointer',
-                    border: '1px solid theme.border'
+                    border: `1px solid ${theme.border}`
                   }}
                 >
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '600' }}>{c.name}</div>
-                    <div style={{ fontSize: '11px', color: 'theme.border' }}>{c.phone}</div>
+                    <div style={{ fontSize: '11px', color: theme.border }}>{c.phone}</div>
                   </div>
-                  <span style={{ fontSize: '11px', color: 'theme.warning', fontWeight: '700' }}>⭐ {c.points || 0} pts</span>
+                  <span style={{ fontSize: '11px', color: theme.warning, fontWeight: '700' }}>⭐ {c.points || 0} pts</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowCustomerPairModal(false)} style={{ padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={() => setShowCustomerPairModal(false)} style={{ padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}
@@ -3046,10 +3047,10 @@ export default function ToastTables({
               placeholder="Phone Number *"
               value={newCustomerData.phone}
               onChange={(e) => setNewCustomerData(prev => ({ ...prev, phone: e.target.value }))}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: `1px solid ${theme.textSecondary}`, backgroundColor: theme.inputBg, color: theme.bg, boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowAddCustomerModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => setShowAddCustomerModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
               <button
                 onClick={() => {
                   if (!newCustomerData.name.trim()) return;
@@ -3059,7 +3060,7 @@ export default function ToastTables({
                   setShowAddCustomerModal(false);
                   setNewCustomerData({ name: '', phone: '', email: '', points: 50 });
                 }}
-                style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
               >
                 Save & Link
               </button>
@@ -3086,7 +3087,7 @@ export default function ToastTables({
             maxHeight: '650px',
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
-            border: '1px solid theme.bgSecondary',
+            border: `1px solid ${theme.bgSecondary}`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -3399,7 +3400,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -3412,19 +3413,19 @@ export default function ToastTables({
                 setShowMenuModal(false);
                 setShowQRModal(true);
               }}
-              style={{ padding: '12px', backgroundColor: 'theme.text', color: 'theme.bgfff', border: '1px solid theme.text', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ padding: '12px', backgroundColor: theme.text, color: theme.bgfff, border: `1px solid ${theme.text}`, borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               📱 Print Table QR Standee
             </button>
             <button
               onClick={() => { handleOpenTable(); setShowMenuModal(false); }}
-              style={{ padding: '12px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ padding: '12px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               Open / Seat Table
             </button>
             <button
               onClick={handleClearTable}
-              style={{ padding: '12px', backgroundColor: 'theme.danger', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+              style={{ padding: '12px', backgroundColor: theme.danger, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
             >
               Clear Table
             </button>
@@ -3450,8 +3451,8 @@ export default function ToastTables({
                     }}
                     style={{
                       padding: '8px',
-                      backgroundColor: isTagged ? 'theme.success' : stBadge === 'Dirty' ? 'theme.danger' : stBadge === 'Sanitizing' ? 'theme.accent' : stBadge === 'VIP' ? 'theme.textSecondary' : stBadge === 'Out of Service' ? 'theme.textSecondary' : 'theme.border',
-                      color: 'theme.bg',
+                      backgroundColor: isTagged ? theme.success : stBadge === 'Dirty' ? theme.danger : stBadge === 'Sanitizing' ? theme.accent : stBadge === 'VIP' ? theme.textSecondary : stBadge === 'Out of Service' ? theme.textSecondary : theme.border,
+                      color: theme.bg,
                       border: isTagged ? '2px solid theme.text' : 'none',
                       borderRadius: '6px',
                       fontSize: '11px',
@@ -3467,7 +3468,7 @@ export default function ToastTables({
 
             <button
               onClick={() => setShowMenuModal(false)}
-              style={{ padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}
+              style={{ padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}
             >
               Cancel
             </button>
@@ -3491,7 +3492,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -3502,11 +3503,11 @@ export default function ToastTables({
               onChange={(e) => setKitchenMessage(e.target.value)}
               placeholder="Enter instruction for kitchen station..."
               rows={3}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${theme.textSecondary}`, backgroundColor: theme.inputBg, color: theme.bg, boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowMessageModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSendMessage} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Send KOT Note</button>
+              <button onClick={() => setShowMessageModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSendMessage} style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Send KOT Note</button>
             </div>
           </div>
         </div>
@@ -3528,7 +3529,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -3539,11 +3540,11 @@ export default function ToastTables({
               value={newTableName}
               onChange={(e) => setNewTableName(e.target.value)}
               placeholder="Table name or number"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${theme.textSecondary}`, backgroundColor: theme.inputBg, color: theme.bg, boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowRenameModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleRenameTable} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save</button>
+              <button onClick={() => setShowRenameModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleRenameTable} style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save</button>
             </div>
           </div>
         </div>
@@ -3566,7 +3567,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -3586,7 +3587,7 @@ export default function ToastTables({
                   onClick={() => handleAddItemToBill(mi)}
                   style={{
                     padding: '10px 12px',
-                    backgroundColor: 'theme.inputBg',
+                    backgroundColor: theme.inputBg,
                     borderRadius: '6px',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -3595,11 +3596,11 @@ export default function ToastTables({
                   }}
                 >
                   <span style={{ fontSize: '13px', fontWeight: '600' }}>{mi.name}</span>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'theme.success' }}>₹{mi.price.toFixed(2)}</span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: theme.success }}>₹{mi.price.toFixed(2)}</span>
                 </div>
               ))}
             </div>
-            <button onClick={() => setShowAddItemModal(false)} style={{ padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Close</button>
+            <button onClick={() => setShowAddItemModal(false)} style={{ padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Close</button>
           </div>
         </div>
       )}
@@ -3620,7 +3621,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -3631,11 +3632,11 @@ export default function ToastTables({
               value={discountAmountInput}
               onChange={(e) => setDiscountAmountInput(e.target.value)}
               placeholder="Discount amount (e.g. 50.00)"
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${theme.textSecondary}`, backgroundColor: theme.inputBg, color: theme.bg, boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowDiscountModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleApplyDiscount} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.success', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Apply</button>
+              <button onClick={() => setShowDiscountModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleApplyDiscount} style={{ flex: 1, padding: '10px', backgroundColor: theme.success, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Apply</button>
             </div>
           </div>
         </div>
@@ -3657,19 +3658,19 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>⇄ Transfer Table #{selectedTable.name}</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.border }}>
               Select target table to move active bill checks, items, and timers:
             </p>
             <select
               value={transferTargetTableId}
               onChange={(e) => setTransferTargetTableId(e.target.value)}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${theme.textSecondary}`, backgroundColor: theme.inputBg, color: theme.bg }}
             >
               <option value="">Select Destination Table...</option>
               {floorTables
@@ -3681,8 +3682,8 @@ export default function ToastTables({
                 ))}
             </select>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => setShowTransferModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleTransferTable} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Transfer Party</button>
+              <button onClick={() => setShowTransferModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleTransferTable} style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Transfer Party</button>
             </div>
           </div>
         </div>
@@ -3704,13 +3705,13 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>⏱️ Timed Prep Hold / Delayed Fire</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.border }}>
               Set a delayed timer before firing KOT ticket to kitchen:
             </p>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -3721,9 +3722,9 @@ export default function ToastTables({
                   style={{
                     flex: 1,
                     padding: '8px',
-                    backgroundColor: timedHoldMinutes === m ? 'theme.warning' : 'theme.inputBg',
-                    color: 'theme.bg',
-                    border: '1px solid theme.textSecondary',
+                    backgroundColor: timedHoldMinutes === m ? theme.warning : theme.inputBg,
+                    color: theme.bg,
+                    border: `1px solid ${theme.textSecondary}`,
                     borderRadius: '6px',
                     fontWeight: '700',
                     cursor: 'pointer'
@@ -3734,8 +3735,8 @@ export default function ToastTables({
               ))}
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => setShowTimedHoldModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleFireCourse('Hold Course', timedHoldMinutes)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.warning', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Schedule Hold</button>
+              <button onClick={() => setShowTimedHoldModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => handleFireCourse('Hold Course', timedHoldMinutes)} style={{ flex: 1, padding: '10px', backgroundColor: theme.warning, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Schedule Hold</button>
             </div>
           </div>
         </div>
@@ -3757,30 +3758,30 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>🧮 N-Way Equal Bill Splitter</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.border }}>
               Subtotal: ₹{calculateTotal().toFixed(2)}
             </p>
-            <label style={{ fontSize: '12px', color: 'theme.textSecondary' }}>Number of Equal Payments (Guests):</label>
+            <label style={{ fontSize: '12px', color: theme.textSecondary }}>Number of Equal Payments (Guests):</label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button onClick={() => setNWaySplitCount(Math.max(2, nWaySplitCount - 1))} style={{ padding: '6px 14px', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700' }}>-</button>
+              <button onClick={() => setNWaySplitCount(Math.max(2, nWaySplitCount - 1))} style={{ padding: '6px 14px', backgroundColor: theme.border, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700' }}>-</button>
               <span style={{ flex: 1, textAlign: 'center', fontSize: '18px', fontWeight: '700' }}>{nWaySplitCount} Ways</span>
-              <button onClick={() => setNWaySplitCount(nWaySplitCount + 1)} style={{ padding: '6px 14px', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700' }}>+</button>
+              <button onClick={() => setNWaySplitCount(nWaySplitCount + 1)} style={{ padding: '6px 14px', backgroundColor: theme.border, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700' }}>+</button>
             </div>
-            <div style={{ backgroundColor: 'theme.inputBg', padding: '12px', borderRadius: '8px', border: '1px solid theme.border', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', color: 'theme.border' }}>Each Guest Pays:</span>
-              <span style={{ fontSize: '18px', fontWeight: '700', color: 'theme.success' }}>
+            <div style={{ backgroundColor: theme.inputBg, padding: '12px', borderRadius: '8px', border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: theme.border }}>Each Guest Pays:</span>
+              <span style={{ fontSize: '18px', fontWeight: '700', color: theme.success }}>
                 ₹{(calculateTotal() / nWaySplitCount).toFixed(2)}
               </span>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => setShowNWaySplitModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleConfirmNWaySplit} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.success', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Confirm N-Way Split</button>
+              <button onClick={() => setShowNWaySplitModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmNWaySplit} style={{ flex: 1, padding: '10px', backgroundColor: theme.success, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Confirm N-Way Split</button>
             </div>
           </div>
         </div>
@@ -3802,17 +3803,17 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>✂️ Itemized Cheque Split</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.border' }}>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.border }}>
               Select specific items to move from cheque {activeChequeId} into a new split cheque:
             </p>
 
-            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: 'theme.inputBg', padding: '10px', borderRadius: '8px' }}>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: theme.inputBg, padding: '10px', borderRadius: '8px' }}>
               {(activeBill.items || []).map(item => {
                 const isSelected = selectedSplitItemIds.includes(item.id);
                 return (
@@ -3825,7 +3826,7 @@ export default function ToastTables({
                     }}
                     style={{
                       padding: '8px 10px',
-                      backgroundColor: isSelected ? 'theme.bgSecondary' : 'theme.bgSecondary',
+                      backgroundColor: isSelected ? theme.bgSecondary : theme.bgSecondary,
                       borderRadius: '6px',
                       border: isSelected ? '1px solid theme.accent' : '1px solid transparent',
                       display: 'flex',
@@ -3843,7 +3844,7 @@ export default function ToastTables({
                       />
                       <span><strong>{item.qty}x</strong> {item.name} (Seat {item.seat || 1})</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: 'theme.success' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: theme.success }}>
                       ₹{(item.price * item.qty).toFixed(2)}
                     </span>
                   </div>
@@ -3852,8 +3853,8 @@ export default function ToastTables({
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button onClick={() => { setSelectedSplitItemIds([]); setShowSplitModal(false); }} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleConfirmItemSplit} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+              <button onClick={() => { setSelectedSplitItemIds([]); setShowSplitModal(false); }} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmItemSplit} style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
                 Split ({selectedSplitItemIds.length}) Items
               </button>
             </div>
@@ -3867,8 +3868,8 @@ export default function ToastTables({
           position: 'fixed',
           top: '20px',
           right: '20px',
-          backgroundColor: toastMessage.type === 'error' ? 'theme.danger' : toastMessage.type === 'warning' ? 'theme.warning' : toastMessage.type === 'success' ? 'theme.success' : 'theme.accent',
-          color: 'theme.text',
+          backgroundColor: toastMessage.type === 'error' ? theme.danger : toastMessage.type === 'warning' ? theme.warning : toastMessage.type === 'success' ? theme.success : theme.accent,
+          color: theme.text,
           padding: '12px 18px',
           borderRadius: '8px',
           boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
@@ -3899,23 +3900,23 @@ export default function ToastTables({
           <div style={{
             width: '340px',
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
-            border: '1px solid theme.border',
+            border: `1px solid ${theme.border}`,
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#f59e0b' }}>⚠️ {confirmModalConfig.title}</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.textSecondary', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: '12px', color: theme.textSecondary, lineHeight: 1.5 }}>
               {confirmModalConfig.message}
             </p>
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
               <button
                 onClick={() => setConfirmModalConfig(null)}
-                style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.text', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
               >
                 Cancel
               </button>
@@ -3925,7 +3926,7 @@ export default function ToastTables({
                   setConfirmModalConfig(null);
                   cb && cb();
                 }}
-                style={{ flex: 1, padding: '10px', backgroundColor: 'theme.danger', color: 'theme.text', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}
+                style={{ flex: 1, padding: '10px', backgroundColor: theme.danger, color: theme.text, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700' }}
               >
                 Confirm
               </button>
@@ -3950,7 +3951,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -3961,11 +3962,11 @@ export default function ToastTables({
               onChange={(e) => setTableNote(e.target.value)}
               placeholder="Special customer note or VIP instructions..."
               rows={3}
-              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid theme.textSecondary', backgroundColor: 'theme.inputBg', color: 'theme.bg', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '10px', borderRadius: '6px', border: `1px solid ${theme.textSecondary}`, backgroundColor: theme.inputBg, color: theme.bg, boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowNoteModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSaveNote} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Note</button>
+              <button onClick={() => setShowNoteModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSaveNote} style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Note</button>
             </div>
           </div>
         </div>
@@ -4005,24 +4006,24 @@ export default function ToastTables({
           <div style={{
             width: '350px',
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
-            border: '2px solid theme.danger',
+            border: `2px solid ${theme.danger}`,
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
           }}>
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#ef4444' }}>⛔ MANAGER VOID REQUIRED</h3>
-            <p style={{ margin: 0, fontSize: '12px', color: 'theme.textSecondary' }}>
-              Item <strong style={{ color: 'theme.text' }}>"{itemToVoid.name}"</strong> has already been fired to the kitchen. Select a void reason and enter Manager PIN:
+            <p style={{ margin: 0, fontSize: '12px', color: theme.textSecondary }}>
+              Item <strong style={{ color: theme.text }}>"{itemToVoid.name}"</strong> has already been fired to the kitchen. Select a void reason and enter Manager PIN:
             </p>
             <div>
-              <label style={{ fontSize: '11px', color: 'theme.border', display: 'block', marginBottom: '4px' }}>Void Reason *</label>
+              <label style={{ fontSize: '11px', color: theme.border, display: 'block', marginBottom: '4px' }}>Void Reason *</label>
               <select
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}` }}
               >
                 <option value="Customer changed mind">Customer changed mind</option>
                 <option value="Order mistake by server">Order mistake by server</option>
@@ -4032,18 +4033,18 @@ export default function ToastTables({
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '11px', color: 'theme.border', display: 'block', marginBottom: '4px' }}>Manager PIN * (Default: 1234)</label>
+              <label style={{ fontSize: '11px', color: theme.border, display: 'block', marginBottom: '4px' }}>Manager PIN * (Default: 1234)</label>
               <input
                 type="password"
                 placeholder="Enter Manager PIN"
                 value={managerPin}
                 onChange={(e) => setManagerPin(e.target.value)}
-                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'theme.inputBg', color: 'theme.bg', border: '1px solid theme.textSecondary', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: theme.inputBg, color: theme.bg, border: `1px solid ${theme.textSecondary}`, boxSizing: 'border-box' }}
               />
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-              <button onClick={() => setShowVoidModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleConfirmVoidItem} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.danger', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>CONFIRM VOID</button>
+              <button onClick={() => setShowVoidModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleConfirmVoidItem} style={{ flex: 1, padding: '10px', backgroundColor: theme.danger, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>CONFIRM VOID</button>
             </div>
           </div>
         </div>
@@ -4065,7 +4066,7 @@ export default function ToastTables({
             backgroundColor: darkMode ? '#1a1a1a' : '#ffffff',
             borderRadius: '12px',
             padding: '20px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '12px'
@@ -4074,17 +4075,17 @@ export default function ToastTables({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '10px 0' }}>
               <button
                 onClick={() => setEditGuestCount(prev => Math.max(1, prev - 1))}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: theme.border, color: theme.bg, border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
               >-</button>
-              <span style={{ fontSize: '24px', fontWeight: '800', color: 'theme.accent' }}>{editGuestCount}</span>
+              <span style={{ fontSize: '24px', fontWeight: '800', color: theme.accent }}>{editGuestCount}</span>
               <button
                 onClick={() => setEditGuestCount(prev => prev + 1)}
-                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'theme.border', color: 'theme.bg', border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
+                style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: theme.border, color: theme.bg, border: 'none', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer' }}
               >+</button>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setShowGuestsModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.textSecondary', color: 'theme.bg', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleUpdateGuestsCount(editGuestCount)} style={{ flex: 1, padding: '10px', backgroundColor: 'theme.accent', color: 'theme.bg', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Guests</button>
+              <button onClick={() => setShowGuestsModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: theme.textSecondary, color: theme.bg, border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => handleUpdateGuestsCount(editGuestCount)} style={{ flex: 1, padding: '10px', backgroundColor: theme.accent, color: theme.bg, border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Guests</button>
             </div>
           </div>
         </div>
@@ -4105,11 +4106,11 @@ export default function ToastTables({
           <div style={{
             width: '100%',
             maxWidth: '420px',
-            backgroundColor: 'theme.bgfff',
-            border: '2px solid theme.text',
+            backgroundColor: theme.bgfff,
+            border: `2px solid ${theme.text}`,
             borderRadius: '12px',
             padding: '24px',
-            color: 'theme.text',
+            color: theme.text,
             display: 'flex',
             flexDirection: 'column',
             gap: '16px',
@@ -4117,11 +4118,11 @@ export default function ToastTables({
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid theme.border', paddingBottom: '12px' }}>
               <div style={{ fontSize: '16px', fontWeight: '800', tracking: '0.05em', textTransform: 'uppercase' }}>📱 TABLE #{selectedTable.name} QR CODE</div>
-              <button onClick={() => setShowQRModal(false)} style={{ background: 'none', border: 'none', color: 'theme.text', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowQRModal(false)} style={{ background: 'none', border: 'none', color: theme.text, fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div id="print-qr-standee" style={{ backgroundColor: 'theme.text', padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', border: '3px solid theme.bgfff' }}>
-              <div style={{ color: 'theme.bgfff', fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px' }}>
+            <div id="print-qr-standee" style={{ backgroundColor: theme.text, padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', border: '3px solid theme.bgfff' }}>
+              <div style={{ color: theme.bgfff, fontSize: '24px', fontWeight: '900', letterSpacing: '-0.5px' }}>
                 TABLE #{selectedTable.name}
               </div>
               <div style={{ color: '#555555', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', tracking: '0.05em' }}>
@@ -4141,7 +4142,7 @@ export default function ToastTables({
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => setShowQRModal(false)}
-                style={{ flex: 1, padding: '12px', backgroundColor: 'theme.border', color: 'theme.text', border: '1px solid theme.border', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
+                style={{ flex: 1, padding: '12px', backgroundColor: theme.border, color: theme.text, border: `1px solid ${theme.border}`, borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
               >
                 CLOSE
               </button>
@@ -4180,7 +4181,7 @@ export default function ToastTables({
                     printWin.document.close();
                   }
                 }}
-                style={{ flex: 1, padding: '12px', backgroundColor: 'theme.text', color: 'theme.bgfff', border: '1px solid theme.text', borderRadius: '6px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase' }}
+                style={{ flex: 1, padding: '12px', backgroundColor: theme.text, color: theme.bgfff, border: `1px solid ${theme.text}`, borderRadius: '6px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase' }}
               >
                 🖨️ PRINT STANDEE
               </button>

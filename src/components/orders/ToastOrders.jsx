@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { getKOTManager } from '../../operations/KOTManager.js';
 import PaymentModal from '../pos/PaymentModal';
+import Numpad from '../pos/Numpad.jsx';
 import Receipt from '../pos/Receipt';
 import toastHardware from '../../services/ToastHardwareService.js';
 import orderEventManager from '../../services/OrderEventManager.js';
@@ -57,15 +58,12 @@ function useScreenSize() {
   
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setScreenSize('small');
-      } else if (window.innerWidth < 1024) {
-        setScreenSize('medium');
-      } else {
-        setScreenSize('large');
-      }
+      const w = window.innerWidth;
+      if (w < 600)       setScreenSize('small');   // phones
+      else if (w < 900)  setScreenSize('medium');  // 7-8" tablets
+      else if (w < 1280) setScreenSize('large');   // 10" tablets / small laptops
+      else               setScreenSize('xlarge');  // desktops
     };
-    
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -107,6 +105,8 @@ export default function ToastOrders({
   const [paymentAmount, setPaymentAmount] = useState('');
   const [tipAmount, setTipAmount] = useState(0);
   const [gstRate, setGstRate] = useState(ORDER_CONFIG.DEFAULT_GST_RATE);
+  const [gstType, setGstType] = useState('intrastate'); // 'intrastate' (CGST+SGST) | 'interstate' (IGST)
+  const [showGstModal, setShowGstModal] = useState(false);
   const [isCheckoutMode, setIsCheckoutMode] = useState(false);
 
   // CFD Broadcast side effect
@@ -477,6 +477,36 @@ export default function ToastOrders({
   const getServiceCharge = () => round2(getDiscountedSubtotal() * (clamp(serviceCharge, 0, 100) / 100));
   const getTax = () => taxExempt ? 0 : round2((getDiscountedSubtotal() + getServiceCharge()) * ((Number(gstRate) || 0) / 100));
   const getTotal = () => round2(getDiscountedSubtotal() + getServiceCharge() + getTax() + Math.max(0, Number(tipAmount) || 0));
+
+  // Shared GST breakdown — returns rows array for rendering
+  const getGstRows = () => {
+    if (taxExempt || getTax() === 0) return [];
+    const taxBase = round2(getDiscountedSubtotal() + getServiceCharge());
+    const halfRate = round2(gstRate / 2);
+    const halfAmt  = round2(taxBase * halfRate / 100);
+    if (gstType === 'interstate') {
+      return [{ label: `IGST @ ${gstRate}%`, value: getTax() }];
+    }
+    return [
+      { label: `CGST @ ${halfRate}%`, value: halfAmt },
+      { label: `SGST @ ${halfRate}%`, value: halfAmt },
+    ];
+  };
+
+  // Shared totals rows — used in all three breakdown views
+  const getTotalsRows = () => {
+    const rows = [];
+    rows.push({ label: 'Subtotal', value: getSubtotal(), style: 'normal' });
+    if (discount > 0) rows.push({ label: `Discount (${discount}%)`, value: -getDiscountAmount(), style: 'discount' });
+    if (serviceCharge > 0) rows.push({ label: `Service charge (${serviceCharge}%)`, value: getServiceCharge(), style: 'normal' });
+    if (taxExempt) {
+      rows.push({ label: 'GST (exempt)', value: 0, style: 'muted' });
+    } else {
+      getGstRows().forEach(r => rows.push({ label: r.label, value: r.value, style: 'tax' }));
+    }
+    if (tipAmount > 0) rows.push({ label: 'Tip', value: tipAmount, style: 'tip' });
+    return rows;
+  };
 
   const addToCart = (item) => {
     // Guard: check stock before adding (inventory[id] === 0 means out of stock)
@@ -1107,6 +1137,7 @@ export default function ToastOrders({
       if (e.key === 'Escape') {
         setShowDiscountModal(false);
         setShowTipModal(false);
+        setShowGstModal(false);
         setShowCustomerModal(false);
         setShowHeldOrders(false);
         setShowSplitPaymentModal(false);
@@ -1415,80 +1446,325 @@ export default function ToastOrders({
         display: 'flex', 
         flex: 1, 
         height: '100%',
-        flexDirection: screenSize === 'small' ? 'column' : 'row'
+        flexDirection: screenSize === 'small' ? 'column' : 'row',
+        overflow: 'hidden',
+        position: 'relative',
       }}>
         
-        {/* Mobile Panel Navigation - Only show on small screens */}
+        {/* ═══════════════════════════════════════════════════════════
+            PHONE LAYOUT  (screenSize === 'small')
+            Full-screen panels, bottom tab bar, horizontal categories
+            ═══════════════════════════════════════════════════════════ */}
         {screenSize === 'small' && (
-          <div style={{
-            display: 'flex',
-            background: '#f8f9fa',
-            borderBottom: '1px solid #e5e7eb',
-            padding: '8px',
-            gap: '8px'
-          }}>
-            <button
-              onClick={() => setMobileActivePanel('order')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: mobileActivePanel === 'order' ? '#2563eb' : '#ffffff',
-                color: mobileActivePanel === 'order' ? '#ffffff' : '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Order
-            </button>
-            <button
-              onClick={() => setMobileActivePanel('categories')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: mobileActivePanel === 'categories' ? '#2563eb' : '#ffffff',
-                color: mobileActivePanel === 'categories' ? '#ffffff' : '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Categories
-            </button>
-            <button
-              onClick={() => setMobileActivePanel('menu')}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: mobileActivePanel === 'menu' ? '#2563eb' : '#ffffff',
-                color: mobileActivePanel === 'menu' ? '#ffffff' : '#374151',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              Menu
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+            {/* ── Active panel content ── */}
+            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+              {/* ORDER panel */}
+              {(mobileActivePanel === 'order' && !isCheckoutMode) && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: '#ffffff', overflow: 'hidden' }}>
+                  {/* Panel header */}
+                  <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid #f3f4f6', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <input
+                        list="table-options-mobile"
+                        value={tableNumber}
+                        onChange={e => setTableNumber(e.target.value)}
+                        placeholder="Table…"
+                        style={{ padding: '6px 10px', background: '#f3f4f6', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', fontWeight: '700', color: '#374151', outline: 'none', width: '90px' }}
+                      />
+                      <datalist id="table-options-mobile">
+                        {Array.from({ length: 20 }, (_, i) => <option key={i+1} value={String(i+1)}>Table {i+1}</option>)}
+                        <option value="Bar">Bar</option><option value="Patio">Patio</option><option value="VIP">VIP</option>
+                      </datalist>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '14px' }}>👥</span>
+                        <input type="number" value={guestCount} onChange={e => setGuestCount(parseInt(e.target.value)||1)} min="1" style={{ width: '36px', padding: '6px', background: '#f3f4f6', border: '1.5px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', fontWeight: '700', textAlign: 'center', outline: 'none' }} />
+                      </div>
+                      <div style={{ flex: 1 }} />
+                      <button onClick={() => setShowCustomerModal(true)} style={{ padding: '6px 10px', background: customerName ? '#ecfdf5' : '#f9fafb', color: customerName ? '#059669' : '#6b7280', border: `1.5px solid ${customerName ? '#6ee7b7' : '#e5e7eb'}`, borderRadius: '20px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                        👤 {customerName || 'Guest'}
+                      </button>
+                    </div>
+                    {/* Order type */}
+                    <div style={{ display: 'inline-flex', background: '#f3f4f6', borderRadius: '8px', padding: '2px', gap: '1px' }}>
+                      {[{v:'dine_in',l:'🍽 Dine-in'},{v:'takeaway',l:'🥡 Takeout'},{v:'delivery',l:'🛵 Delivery'}].map(({v,l})=>(
+                        <button key={v} onClick={()=>setOrderType(v)} style={{ padding: '5px 10px', background: orderType===v ? '#2563eb' : 'transparent', color: orderType===v ? '#fff' : '#6b7280', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: orderType===v?'700':'500', cursor: 'pointer' }}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cart items */}
+                  <div style={{ flex: 1, overflowY: 'auto' }}>
+                    {cartItems.length === 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '40px', marginBottom: '12px' }}>🛒</div>
+                        <div style={{ fontSize: '15px', fontWeight: '600' }}>Order is empty</div>
+                        <div style={{ fontSize: '13px', marginTop: '4px' }}>Tap Menu to add items</div>
+                      </div>
+                    ) : (
+                      cartItems.map(item => (
+                        <div key={item.uniqueId} style={{ padding: '12px 16px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{item.name}</div>
+                            {item.modifiers?.length > 0 && <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px' }}>{item.modifiers.join(', ')}</div>}
+                            {item.seatId && tableMode==='per-seat' && <div style={{ fontSize: '10px', color: '#9ca3af' }}>Seat {item.seatId}</div>}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button onClick={() => updateQuantity(item.uniqueId, -1)} style={{ width: '28px', height: '28px', background: '#f3f4f6', border: 'none', borderRadius: '50%', fontSize: '16px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                            <span style={{ fontSize: '14px', fontWeight: '700', minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.uniqueId, 1)} style={{ width: '28px', height: '28px', background: '#2563eb', border: 'none', borderRadius: '50%', fontSize: '16px', fontWeight: '700', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', minWidth: '60px', textAlign: 'right' }}>₹{(item.price * item.quantity).toFixed(2)}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Totals + action bar */}
+                  {cartItems.length > 0 && (
+                    <div style={{ flexShrink: 0, borderTop: '1px solid #e5e7eb', background: '#fff' }}>
+                      {/* Totals */}
+                      <div style={{ padding: '10px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                        {getTotalsRows().map(row => (
+                          <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '12px', color: row.style === 'muted' ? '#9ca3af' : '#6b7280' }}>{row.label}</span>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: row.style === 'discount' ? '#10b981' : row.style === 'tip' ? '#b45309' : row.style === 'tax' ? '#6366f1' : '#111827' }}>
+                              {row.value < 0 ? `−₹${Math.abs(row.value).toFixed(2)}` : `₹${row.value.toFixed(2)}`}
+                            </span>
+                          </div>
+                        ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #f3f4f6' }}>
+                          <span style={{ fontSize: '15px', fontWeight: '700' }}>Total</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#2563eb' }}>₹{getTotal().toFixed(2)}</span>
+                        </div>
+                      </div>
+                      {/* Quick controls row */}
+                      <div style={{ display: 'flex', gap: '6px', padding: '8px 16px', overflowX: 'auto', borderBottom: '1px solid #f3f4f6' }}>
+                        {[
+                          { label: discount>0 ? `${discount}% off` : 'Discount', icon: '🏷', active: discount>0, action: ()=>setShowDiscountModal(true) },
+                          { label: tipAmount>0 ? `Tip ₹${tipAmount.toFixed(0)}` : 'Tip', icon: '💰', active: tipAmount>0, action: ()=>setShowTipModal(true) },
+                          { label: serviceCharge>0 ? `Svc ${serviceCharge}%` : 'Service', icon: '🧾', active: serviceCharge>0, action: ()=>setShowServiceChargeModal(true) },
+                          { label: taxExempt ? 'Tax ✓' : gstRate>0 ? `GST ${gstRate}%` : 'GST', icon: '🧾', active: gstRate>0&&!taxExempt, action: ()=>setShowGstModal(true) },
+                          { label: assignedServer || 'Server', icon: '🧑‍🍳', active: !!assignedServer, action: ()=>setShowServerAssignmentModal(true) },
+                          { label: 'Timing', icon: '⏱', active: false, action: ()=>setShowOrderTimingModal(true) },
+                          { label: kitchenDelay ? 'Delay ✓' : 'Delay', icon: '🔁', active: kitchenDelay, action: ()=>setShowKitchenDelayModal(true) },
+                          { label: 'Drawer', icon: '🗄', active: false, action: ()=>setShowCashDrawer(true) },
+                          { label: 'Split', icon: '✂️', active: false, action: splitCheck },
+                        ].map(({label,icon,active,action}) => (
+                          <button key={label} onClick={action} style={{ flexShrink: 0, padding: '5px 10px', background: active ? '#eff6ff' : '#f3f4f6', color: active ? '#2563eb' : '#374151', border: active ? '1.5px solid #bfdbfe' : '1.5px solid transparent', borderRadius: '20px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            {icon} {label}
+                          </button>
+                        ))}
+                      </div>
+                      {/* Primary actions */}
+                      <div style={{ display: 'flex', gap: '8px', padding: '10px 16px' }}>
+                        <button onClick={()=>{ if(validateOrder()) sendToKitchen(); }} disabled={cartItems.length===0} style={{ flex: 1, padding: '13px', background: '#f3f4f6', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
+                          🍳 Send {cartItems.length > 0 ? `(${cartItems.length})` : ''}
+                        </button>
+                        <button onClick={()=>{ if(validateOrder()) handleCheckout(); }} disabled={cartItems.length===0} style={{ flex: 2, padding: '13px', background: cartItems.length>0 ? '#2563eb' : '#e5e7eb', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: cartItems.length>0 ? 'pointer' : 'not-allowed' }}>
+                          Pay ₹{getTotal().toFixed(2)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* MENU panel */}
+              {(mobileActivePanel === 'menu' && !isCheckoutMode) && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: '#ffffff', overflow: 'hidden' }}>
+                  {/* Search */}
+                  <div style={{ padding: '10px 12px 6px', flexShrink: 0 }}>
+                    <input
+                      type="text"
+                      placeholder="🔍 Search menu…"
+                      value={menuSearch}
+                      onChange={e => setMenuSearch(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', background: '#f3f4f6', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  {/* Category pills — horizontal scroll */}
+                  <div style={{ display: 'flex', gap: '6px', padding: '4px 12px 8px', overflowX: 'auto', flexShrink: 0 }}>
+                    {categories.map(cat => (
+                      <button key={cat} onClick={()=>setSelectedCategory(cat)} style={{ flexShrink: 0, padding: '6px 14px', background: selectedCategory===cat ? '#2563eb' : '#f3f4f6', color: selectedCategory===cat ? '#fff' : '#374151', border: 'none', borderRadius: '20px', fontSize: '12px', fontWeight: selectedCategory===cat?'700':'500', cursor: 'pointer' }}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Menu items grid */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '4px 8px 8px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', alignContent: 'start' }}>
+                    {filteredMenuItems.map(item => (
+                      <button key={item.id} onClick={()=>addToCart(item)} style={{ padding: '12px', background: '#ffffff', border: '1.5px solid #e5e7eb', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#111827', lineHeight: '1.3' }}>{item.name}</div>
+                        {item.description && <div style={{ fontSize: '10px', color: '#9ca3af', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.description}</div>}
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#2563eb', marginTop: '2px' }}>₹{item.price.toFixed(2)}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CHECKOUT panel (phone) */}
+              {isCheckoutMode && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', background: '#f9fafb', overflow: 'hidden' }}>
+                  {/* Header */}
+                  <div style={{ padding: '10px 14px', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <button onClick={handleBackToMenu} style={{ padding: '5px 10px', background: '#f3f4f6', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>← Back</button>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>Checkout</span>
+                    {tableNumber && <div style={{ padding: '2px 8px', background: '#eff6ff', color: '#2563eb', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{isNaN(tableNumber) ? tableNumber : `Table ${tableNumber}`}</div>}
+                    <span style={{ marginLeft: 'auto', fontSize: '15px', fontWeight: '800', color: '#2563eb' }}>₹{getTotal().toFixed(2)}</span>
+                  </div>
+
+                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 12px' }}>
+                    {/* Items */}
+                    <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                      <div style={{ padding: '7px 12px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', fontSize: '10px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase' }}>{cartItems.length} item{cartItems.length!==1?'s':''}</div>
+                      {cartItems.map(item => (
+                        <div key={item.uniqueId} style={{ padding: '9px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{item.quantity}× {item.name}</span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#111827' }}>₹{(item.price*item.quantity).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Totals */}
+                    <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '10px 12px' }}>
+                      {getTotalsRows().map(row=>(
+                        <div key={row.label} style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
+                          <span style={{ fontSize:'12px', color: row.style==='muted'?'#9ca3af':'#6b7280' }}>{row.label}</span>
+                          <span style={{ fontSize:'12px', fontWeight:'600', color: row.style==='discount'?'#10b981':row.style==='tip'?'#b45309':row.style==='tax'?'#6366f1':'#111827' }}>
+                            {row.value<0?`−₹${Math.abs(row.value).toFixed(2)}`:`₹${row.value.toFixed(2)}`}
+                          </span>
+                        </div>
+                      ))}
+                      <div style={{ display:'flex', justifyContent:'space-between', paddingTop:'8px', borderTop:'2px solid #f3f4f6' }}>
+                        <span style={{ fontSize:'14px', fontWeight:'700' }}>Total</span>
+                        <span style={{ fontSize:'15px', fontWeight:'800', color:'#2563eb' }}>₹{getTotal().toFixed(2)}</span>
+                      </div>
+                    </div>
+                    {/* Payment method */}
+                    <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '10px 12px' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px' }}>Payment Method</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                        {[{v:'CASH',l:'💵 Cash'},{v:'CARD',l:'💳 Card'},{v:'UPI',l:'📱 UPI'},{v:'UPI_QR',l:'📷 QR'},{v:'SPLIT',l:'✂️ Split'}].map(({v,l})=>(
+                          <button key={v} onClick={()=>setPaymentMethod(v)} style={{ padding:'9px 4px', background:paymentMethod===v?'#2563eb':'#f3f4f6', color:paymentMethod===v?'#fff':'#374151', border:'none', borderRadius:'8px', fontSize:'12px', fontWeight:paymentMethod===v?'700':'500', cursor:'pointer' }}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Amount + numpad */}
+                    {paymentMethod !== 'SPLIT' && (
+                      <div style={{ background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '10px 12px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', marginBottom: '8px' }}>Amount Tendered</div>
+                        <div style={{ display: 'flex', gap: '5px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                          {[getTotal(),...[100,200,500,1000,2000].filter(v=>v>=getTotal())].slice(0,4).map((amt,i)=>(
+                            <button key={i} onClick={()=>setPaymentAmount(amt.toFixed(2))} style={{ padding:'4px 10px', background:'#f3f4f6', border:'1.5px solid #e5e7eb', borderRadius:'20px', color:'#374151', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>
+                              {i===0?`Exact ₹${amt.toFixed(2)}`:`₹${amt.toLocaleString('en-IN')}`}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ padding:'10px 14px', background:'#f9fafb', border:'1.5px solid #e5e7eb', borderRadius:'9px', fontSize:'20px', fontWeight:'800', color:paymentAmount?'#111827':'#9ca3af', marginBottom:'6px', minHeight:'44px' }}>
+                          {paymentAmount || 'Enter amount'}
+                        </div>
+                        {paymentAmount && (()=>{
+                          const diff = parseFloat(paymentAmount)-getTotal();
+                          return diff>=0
+                            ? <div style={{ padding:'4px 10px', background:'#ecfdf5', borderRadius:'6px', fontSize:'12px', color:'#059669', fontWeight:'600', marginBottom:'6px' }}>Change: ₹{diff.toFixed(2)}</div>
+                            : <div style={{ padding:'4px 10px', background:'#fef2f2', borderRadius:'6px', fontSize:'12px', color:'#dc2626', fontWeight:'600', marginBottom:'6px' }}>Short by ₹{Math.abs(diff).toFixed(2)}</div>;
+                        })()}
+                        <Numpad mode="amount" darkMode={false} screenSize="small" onKeyPress={key=>{
+                          setPaymentAmount(prev=>{
+                            const c=prev||'';
+                            if(key==='C') return '';
+                            if(key==='⌫') return c.length>1?c.slice(0,-1):'';
+                            if(key==='.') return c.includes('.')?c:c+'.';
+                            const di=c.indexOf('.');
+                            if(di!==-1&&c.length-di>2) return c;
+                            return(!c||c==='0')?key:c+key;
+                          });
+                        }} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Complete payment */}
+                  <div style={{ padding: '10px 12px', background: '#fff', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
+                    <button
+                      onClick={()=>{
+                        const valid=paymentMethod==='SPLIT'||(!!paymentAmount&&parseFloat(paymentAmount)>=getTotal());
+                        if(!valid){notify('Enter a payment amount equal to or greater than the total.','error');return;}
+                        handlePaymentComplete();
+                      }}
+                      style={{ width:'100%', padding:'14px', background:'#10b981', color:'#fff', border:'none', borderRadius:'10px', fontSize:'15px', fontWeight:'700', cursor:'pointer' }}
+                    >
+                      {paymentMethod==='SPLIT'?'✂️ Continue to Split':'✓ Complete Payment'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Fixed bottom tab bar ── */}
+            {!isCheckoutMode && (
+              <div style={{
+                display: 'flex',
+                background: '#ffffff',
+                borderTop: '1px solid #e5e7eb',
+                flexShrink: 0,
+                boxShadow: '0 -2px 10px rgba(0,0,0,0.06)',
+              }}>
+                {[
+                  { id: 'order',   icon: '🧾', label: 'Order', badge: cartItems.length || null },
+                  { id: 'menu',    icon: '🍽️', label: 'Menu' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setMobileActivePanel(tab.id)}
+                    style={{
+                      flex: 1,
+                      padding: '10px 4px 8px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '3px',
+                      position: 'relative',
+                      borderTop: mobileActivePanel === tab.id ? '2px solid #2563eb' : '2px solid transparent',
+                    }}
+                  >
+                    <span style={{ fontSize: '22px', lineHeight: '1' }}>{tab.icon}</span>
+                    <span style={{ fontSize: '10px', fontWeight: '600', color: mobileActivePanel === tab.id ? '#2563eb' : '#9ca3af' }}>{tab.label}</span>
+                    {tab.badge > 0 && (
+                      <div style={{ position: 'absolute', top: '6px', right: 'calc(50% - 18px)', width: '16px', height: '16px', background: '#ef4444', borderRadius: '50%', fontSize: '9px', fontWeight: '800', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {tab.badge > 9 ? '9+' : tab.badge}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            TABLET / DESKTOP LAYOUT  (screenSize !== 'small')
+            Three-column: left order panel | middle controls | right menu
+            ═══════════════════════════════════════════════════════════ */}
+        {screenSize !== 'small' && (
+          <>
         
-        {/* Left Panel - Order Details - Hide in checkout mode on mobile */}
-        {(!isCheckoutMode || screenSize !== 'small') && (
+        {/* Left Panel - Order Details */}
+        {true && (
           <div style={{
-            width: screenSize === 'small' ? '100%' : '320px',
-            height: screenSize === 'small' ? (mobileActivePanel === 'order' ? 'auto' : '0') : '100%',
+            width: '320px',
+            height: '100%',
             background: '#ffffff',
-            display: screenSize === 'small' ? (mobileActivePanel === 'order' ? 'flex' : 'none') : 'flex',
+            display: 'flex',
             flexDirection: 'column',
-            borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
-            borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
-            overflow: screenSize === 'small' ? 'visible' : 'hidden'
+            borderRight: '1px solid #d1d5db',
+            overflow: 'hidden'
           }}>
           {/* ── Panel Header ─────────────────────────────────────────── */}
           <div style={{
@@ -2256,48 +2532,474 @@ export default function ToastOrders({
         </div>
         )}
 
-        {/* Middle Panel - Categories (always visible) */}
+        {/* Middle Panel - Categories OR checkout quick-controls */}
         <div style={{
-            width: screenSize === 'small' ? '100%' : '120px',
-            height: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'auto' : '0') : '100%',
-            background: '#ffffff',
-            display: screenSize === 'small' ? (mobileActivePanel === 'categories' ? 'flex' : 'none') : 'flex',
+            width: '120px',
+            height: '100%',
+            background: isCheckoutMode ? '#f8fafc' : '#ffffff',
+            display: 'flex',
             flexDirection: 'column',
-            borderRight: screenSize === 'small' ? 'none' : '1px solid #d1d5db',
-            borderBottom: screenSize === 'small' ? '1px solid #d1d5db' : 'none',
-            overflow: screenSize === 'small' ? 'visible' : 'hidden'
+            borderRight: '1px solid #e5e7eb',
+            overflow: 'hidden',
+            transition: 'background 0.2s',
           }}>
-            {categories.map(category => (
+
+          {isCheckoutMode ? (
+            /* ── Checkout quick-controls ── */
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+
+              {/* Section label */}
+              <div style={{
+                padding: '8px 10px 6px',
+                fontSize: '9px',
+                fontWeight: '800',
+                color: '#9ca3af',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                borderBottom: '1px solid #f3f4f6',
+                flexShrink: 0,
+              }}>
+                Controls
+              </div>
+
+              {/* Discount */}
               <button
-                key={category}
-                onClick={() => { setSelectedCategory(category); if (isCheckoutMode) handleBackToMenu(); }}
+                onClick={() => setShowDiscountModal(true)}
                 style={{
-                  padding: '12px 8px',
-                  background: selectedCategory === category && !isCheckoutMode ? '#2563eb' : '#ffffff',
-                  color: selectedCategory === category && !isCheckoutMode ? '#ffffff' : '#1a1a1a',
+                  padding: '10px 8px',
+                  background: discount > 0 ? '#ecfdf5' : 'transparent',
+                  color: discount > 0 ? '#059669' : '#374151',
                   border: 'none',
-                  borderBottom: '1px solid #e5e7eb',
-                  fontSize: '11px',
-                  fontWeight: '600',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
                   cursor: 'pointer',
-                  textAlign: 'left'
+                  textAlign: 'center',
+                  flexShrink: 0,
                 }}
               >
-                {category}
+                🏷️{'\n'}
+                <span style={{ display: 'block', marginTop: '2px' }}>
+                  {discount > 0 ? `${discount}% off` : 'Discount'}
+                </span>
               </button>
-            ))}
+
+              {/* Tip quick-set */}
+              {/* Tip — opens modal */}
+              <button
+                onClick={() => setShowTipModal(true)}
+                style={{ width: '100%', padding: '10px 8px', background: tipAmount > 0 ? '#fdf4ff' : 'transparent', color: tipAmount > 0 ? '#9333ea' : '#374151', border: 'none', borderBottom: '1px solid #f3f4f6', fontSize: '10px', fontWeight: '700', cursor: 'pointer', textAlign: 'center', flexShrink: 0 }}
+              >
+                💰
+                <span style={{ display: 'block', marginTop: '2px' }}>{tipAmount > 0 ? `₹${tipAmount.toFixed(0)}` : 'Tip'}</span>
+              </button>
+
+              {/* GST — opens modal */}
+              <button
+                onClick={() => setShowGstModal(true)}
+                style={{ width: '100%', padding: '10px 8px', background: gstRate > 0 && !taxExempt ? '#eef2ff' : 'transparent', color: gstRate > 0 && !taxExempt ? '#4338ca' : '#374151', border: 'none', borderBottom: '1px solid #f3f4f6', fontSize: '10px', fontWeight: '700', cursor: 'pointer', textAlign: 'center', flexShrink: 0 }}
+              >
+                🧾
+                <span style={{ display: 'block', marginTop: '2px' }}>{taxExempt ? 'No GST' : gstRate > 0 ? `${gstRate}%` : 'GST'}</span>
+              </button>
+              <button
+                onClick={() => setShowServiceChargeModal(true)}
+                style={{
+                  padding: '10px 8px',
+                  background: serviceCharge > 0 ? '#eff6ff' : 'transparent',
+                  color: serviceCharge > 0 ? '#2563eb' : '#374151',
+                  border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                🧾
+                <span style={{ display: 'block', marginTop: '2px' }}>
+                  {serviceCharge > 0 ? `Svc ${serviceCharge}%` : 'Service'}
+                </span>
+              </button>
+
+              {/* Tax Exemption */}
+              <button
+                onClick={() => setShowTaxExemptionModal(true)}
+                style={{
+                  padding: '10px 8px',
+                  background: taxExempt ? '#fffbeb' : 'transparent',
+                  color: taxExempt ? '#b45309' : '#374151',
+                  border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                🚫
+                <span style={{ display: 'block', marginTop: '2px' }}>
+                  {taxExempt ? 'Tax ✓' : 'Tax'}
+                </span>
+              </button>
+
+              {/* Server */}
+              <button
+                onClick={() => setShowServerAssignmentModal(true)}
+                style={{
+                  padding: '10px 8px',
+                  background: assignedServer ? '#f0fdf4' : 'transparent',
+                  color: assignedServer ? '#16a34a' : '#374151',
+                  border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                🧑‍🍳
+                <span style={{ display: 'block', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+                  {assignedServer || 'Server'}
+                </span>
+              </button>
+
+              {/* Timing */}
+              <button
+                onClick={() => setShowOrderTimingModal(true)}
+                style={{
+                  padding: '10px 8px',
+                  background: 'transparent',
+                  color: '#374151',
+                  border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                ⏱️
+                <span style={{ display: 'block', marginTop: '2px' }}>Timing</span>
+              </button>
+
+              {/* Kitchen Delay */}
+              <button
+                onClick={() => setShowKitchenDelayModal(true)}
+                style={{
+                  padding: '10px 8px',
+                  background: kitchenDelay ? '#fffbeb' : 'transparent',
+                  color: kitchenDelay ? '#b45309' : '#374151',
+                  border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                🔁
+                <span style={{ display: 'block', marginTop: '2px' }}>
+                  {kitchenDelay ? 'Delay ✓' : 'Delay'}
+                </span>
+              </button>
+
+              {/* Cash Drawer */}
+              <button
+                onClick={() => setShowCashDrawer(true)}
+                style={{
+                  padding: '10px 8px',
+                  background: 'transparent',
+                  color: '#374151',
+                  border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                🗄️
+                <span style={{ display: 'block', marginTop: '2px' }}>Drawer</span>
+              </button>
+
+
+              {/* Split */}
+              <button
+                onClick={() => setShowSplitCheckModal(true)}
+                style={{
+                  marginTop: 'auto',
+                  padding: '10px 8px',
+                  background: 'transparent',
+                  color: '#6b7280',
+                  border: 'none',
+                  borderTop: '1px solid #f3f4f6',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                ✂️{'\n'}
+                <span style={{ display: 'block', marginTop: '2px' }}>Split</span>
+              </button>
+            </div>
+
+          ) : (
+            /* ── Category list ── */
+            <>
+              {categories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  style={{
+                    padding: '12px 8px',
+                    background: selectedCategory === category ? '#2563eb' : '#ffffff',
+                    color: selectedCategory === category ? '#ffffff' : '#1a1a1a',
+                    border: 'none',
+                    borderBottom: '1px solid #e5e7eb',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    flexShrink: 0,
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+            </>
+          )}
           </div>
 
-        {/* Right Panel - Menu Items */}
+        {/* Right Panel - Menu Items OR Checkout (checkout takes over this panel) */}
         <div style={{
-          flex: screenSize === 'small' ? 'none' : 1,
-          width: screenSize === 'small' ? '100%' : 'auto',
-          height: screenSize === 'small' ? (mobileActivePanel === 'menu' ? 'auto' : '0') : '100%',
+          flex: 1,
+          height: '100%',
           background: '#ffffff',
-          display: screenSize === 'small' ? (mobileActivePanel === 'menu' ? 'flex' : 'none') : 'flex',
+          display: 'flex',
           flexDirection: 'column',
-          overflow: screenSize === 'small' ? 'visible' : 'hidden'
+          overflow: 'hidden',
+          position: 'relative',
         }}>
+
+          {/* ── CHECKOUT / PAYMENT — unified, responsive two-column layout ── */}
+          {isCheckoutMode && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: '#f3f4f6',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 10,
+              overflow: 'hidden',
+            }}>
+              {/* ── Top bar ── */}
+              <div style={{
+                padding: '10px 16px',
+                background: '#ffffff',
+                borderBottom: '1px solid #e5e7eb',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexShrink: 0,
+                minHeight: '44px',
+              }}>
+                <button onClick={handleBackToMenu} style={{ padding: '4px 10px', background: '#f3f4f6', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  ← Menu
+                </button>
+                <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>Checkout</span>
+                {tableNumber && <div style={{ padding: '2px 8px', background: '#eff6ff', color: '#2563eb', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>{isNaN(tableNumber) ? tableNumber : `Table ${tableNumber}`}</div>}
+                {customerName && <div style={{ padding: '2px 8px', background: '#ecfdf5', color: '#059669', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>👤 {customerName}</div>}
+                <span style={{ marginLeft: 'auto', fontSize: '15px', fontWeight: '800', color: '#2563eb' }}>₹{getTotal().toFixed(2)}</span>
+              </div>
+
+              {/* ── Body — two columns on medium+, single column on small ── */}
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: screenSize === 'small' ? 'column' : 'row',
+                overflow: 'hidden',
+                gap: screenSize === 'small' ? '0' : '0',
+              }}>
+
+                {/* LEFT column: items + totals */}
+                <div style={{
+                  flex: screenSize === 'small' ? 'none' : '1 1 0',
+                  overflowY: 'auto',
+                  padding: '10px 12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  borderRight: screenSize === 'small' ? 'none' : '1px solid #e5e7eb',
+                  borderBottom: screenSize === 'small' ? '1px solid #e5e7eb' : 'none',
+                  background: '#f9fafb',
+                  maxHeight: screenSize === 'small' ? '35vh' : '100%',
+                }}>
+                  {/* Item list */}
+                  <div style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                    <div style={{ padding: '7px 12px', background: '#f8fafc', borderBottom: '1px solid #e5e7eb', fontSize: '10px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {cartItems.length} item{cartItems.length !== 1 ? 's' : ''}
+                    </div>
+                    {cartItems.map(item => (
+                      <div key={item.uniqueId} style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#111827' }}>{item.quantity}× {item.name}</div>
+                          {item.modifiers?.length > 0 && <div style={{ fontSize: '11px', color: '#6b7280' }}>{item.modifiers.join(', ')}</div>}
+                          {item.seatId && tableMode === 'per-seat' && <div style={{ fontSize: '10px', color: '#9ca3af' }}>Seat {item.seatId}</div>}
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#111827', whiteSpace: 'nowrap', paddingLeft: '8px' }}>₹{(item.price * item.quantity).toFixed(2)}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Totals */}
+                  <div style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '10px 12px' }}>
+                    {getTotalsRows().map(row => (
+                      <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '12px', color: row.style === 'muted' ? '#9ca3af' : '#6b7280' }}>{row.label}</span>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: row.style === 'discount' ? '#10b981' : row.style === 'tip' ? '#b45309' : row.style === 'tax' ? '#6366f1' : '#111827' }}>
+                          {row.value < 0 ? `−₹${Math.abs(row.value).toFixed(2)}` : `₹${row.value.toFixed(2)}`}
+                        </span>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '2px solid #f3f4f6', marginTop: '2px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>Total</span>
+                      <span style={{ fontSize: '16px', fontWeight: '800', color: '#2563eb' }}>₹{getTotal().toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT column: payment method + amount + numpad + confirm */}
+                <div style={{
+                  flex: screenSize === 'small' ? 'none' : '1 1 0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  background: '#ffffff',
+                }}>
+                  {/* Scrollable payment area */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+                    {/* Payment method */}
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Payment Method</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px' }}>
+                        {[
+                          { value: 'CASH',   label: '💵 Cash' },
+                          { value: 'CARD',   label: '💳 Card' },
+                          { value: 'UPI',    label: '📱 UPI' },
+                          { value: 'UPI_QR', label: '📷 UPI QR' },
+                          { value: 'SPLIT',  label: '✂️ Split' },
+                        ].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onClick={() => setPaymentMethod(value)}
+                            style={{
+                              padding: '8px 4px',
+                              background: paymentMethod === value ? '#2563eb' : '#f3f4f6',
+                              color: paymentMethod === value ? '#ffffff' : '#374151',
+                              border: 'none', borderRadius: '7px',
+                              fontSize: '11px', fontWeight: paymentMethod === value ? '700' : '500',
+                              cursor: 'pointer', transition: 'all 0.1s',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Amount tendered — only when not SPLIT */}
+                    {paymentMethod !== 'SPLIT' && (
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Amount Tendered</div>
+
+                        {/* Quick pills */}
+                        <div style={{ display: 'flex', gap: '5px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                          {[getTotal(), ...[100, 200, 500, 1000, 2000].filter(v => v >= getTotal())].slice(0, 4).map((amt, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setPaymentAmount(amt.toFixed(2))}
+                              style={{ padding: '3px 9px', background: '#f3f4f6', border: '1.5px solid #e5e7eb', borderRadius: '20px', color: '#374151', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                            >
+                              {i === 0 ? `Exact ₹${amt.toFixed(2)}` : `₹${amt.toLocaleString('en-IN')}`}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Amount display / input */}
+                        <div style={{
+                          padding: '10px 14px',
+                          background: '#f9fafb',
+                          border: '1.5px solid #e5e7eb',
+                          borderRadius: '9px',
+                          fontSize: '20px',
+                          fontWeight: '800',
+                          color: paymentAmount ? '#111827' : '#9ca3af',
+                          marginBottom: '4px',
+                          minHeight: '44px',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}>
+                          {paymentAmount || 'Enter amount'}
+                        </div>
+
+                        {/* Change / short */}
+                        {paymentAmount && (() => {
+                          const diff = parseFloat(paymentAmount) - getTotal();
+                          return diff >= 0
+                            ? <div style={{ padding: '4px 10px', background: '#ecfdf5', borderRadius: '6px', fontSize: '12px', color: '#059669', fontWeight: '600', marginBottom: '4px' }}>Change: ₹{diff.toFixed(2)}</div>
+                            : <div style={{ padding: '4px 10px', background: '#fef2f2', borderRadius: '6px', fontSize: '12px', color: '#dc2626', fontWeight: '600', marginBottom: '4px' }}>Short by ₹{Math.abs(diff).toFixed(2)}</div>;
+                        })()}
+
+                        {/* Numpad — inline, no scale hack */}
+                        <div>
+                          <Numpad
+                            mode="amount"
+                            darkMode={false}
+                            screenSize={screenSize === 'small' ? 'small' : 'large'}
+                            onKeyPress={key => {
+                              setPaymentAmount(prev => {
+                                const c = prev || '';
+                                if (key === 'C') return '';
+                                if (key === '⌫') return c.length > 1 ? c.slice(0, -1) : '';
+                                if (key === '.') return c.includes('.') ? c : c + '.';
+                                const di = c.indexOf('.');
+                                if (di !== -1 && c.length - di > 2) return c;
+                                return (!c || c === '0') ? key : c + key;
+                              });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Complete button — sticky at bottom of right column */}
+                  <div style={{ padding: '10px 12px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
+                    <button
+                      onClick={() => {
+                        const valid = paymentMethod === 'SPLIT' || (!!paymentAmount && parseFloat(paymentAmount) >= getTotal());
+                        if (!valid) { notify('Enter a payment amount equal to or greater than the total.', 'error'); return; }
+                        handlePaymentComplete();
+                      }}
+                      style={{ width: '100%', padding: '13px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '9px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      {paymentMethod === 'SPLIT' ? '✂️ Continue to Split' : '✓ Complete Payment'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Course Selector */}
           <div style={{
             padding: '12px 16px',
@@ -2780,7 +3482,9 @@ export default function ToastOrders({
             </button>
           </div>
         </div>
-      </div>
+        </> /* end desktop layout */
+        )} {/* end screenSize !== 'small' */}
+      </div> {/* end Main Layout */}
 
       {/* Toast notifications */}
       {toasts.length > 0 && (
@@ -2973,115 +3677,118 @@ export default function ToastOrders({
       
       {/* Tip Modal */}
       {showTipModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: '#ffffff',
-            padding: '24px',
-            borderRadius: '8px',
-            width: '450px',
-            maxWidth: '90%',
-            border: '2px solid #1a1a1a'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#1a1a1a' }}>Add Tip</h3>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#1a1a1a' }}>Quick Percentage</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '16px' }}>
-                {[10, 12, 15, 18, 20, 22, 25, 30].map(percent => {
-                  const tipAmt = getSubtotal() * percent / 100;
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'16px' }}>
+          <div style={{ background:'#ffffff', borderRadius:'12px', width:'100%', maxWidth:'420px', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+            {/* Header */}
+            <div style={{ padding:'16px 20px', borderBottom:'1px solid #f3f4f6', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontSize:'16px', fontWeight:'700', color:'#111827' }}>💰 Add Tip</span>
+              <button onClick={()=>setShowTipModal(false)} style={{ padding:'4px 10px', background:'#f3f4f6', border:'none', borderRadius:'6px', fontSize:'13px', cursor:'pointer', color:'#6b7280' }}>✕</button>
+            </div>
+            <div style={{ padding:'16px 20px' }}>
+              {/* Percentage presets */}
+              <div style={{ fontSize:'11px', fontWeight:'700', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'8px' }}>Quick %</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'6px', marginBottom:'16px' }}>
+                {[5, 10, 15, 20].map(pct => {
+                  const amt = round2(getSubtotal() * pct / 100);
+                  const active = Math.abs(tipAmount - amt) < 0.01;
                   return (
-                    <button
-                      key={percent}
-                      onClick={() => setTipAmount(tipAmt)}
-                      style={{
-                        padding: '12px 8px',
-                        background: '#fef3c7',
-                        color: '#92400e',
-                        border: '1px solid #fcd34d',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px',
-                        textAlign: 'center'
-                      }}
-                    >
-                      <div style={{ fontWeight: '600' }}>{percent}%</div>
-                      <div style={{ fontSize: '9px', opacity: 0.7 }}>₹{tipAmt.toFixed(0)}</div>
+                    <button key={pct} onClick={()=>setTipAmount(amt)} style={{ padding:'10px 4px', background:active?'#ec4899':'#f3f4f6', color:active?'#fff':'#374151', border:'none', borderRadius:'8px', cursor:'pointer', textAlign:'center' }}>
+                      <div style={{ fontSize:'13px', fontWeight:'700' }}>{pct}%</div>
+                      <div style={{ fontSize:'10px', opacity:0.75, marginTop:'2px' }}>₹{amt.toFixed(0)}</div>
                     </button>
                   );
                 })}
               </div>
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#1a1a1a' }}>Custom Amount (₹)</label>
-              <input
-                type="number"
-                value={tipAmount}
-                onChange={(e) => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                min="0"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  color: '#1a1a1a'
-                }}
-              />
-            </div>
-            <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '4px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '12px', color: '#1e40af', marginBottom: '4px' }}>
-                <strong>Tip Summary:</strong>
+              {/* Custom rupee amount — prominent */}
+              <div style={{ fontSize:'11px', fontWeight:'700', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'8px' }}>Custom Amount</div>
+              <div style={{ display:'flex', alignItems:'center', gap:'0', marginBottom:'12px' }}>
+                <div style={{ padding:'0 12px', background:'#f3f4f6', border:'1.5px solid #e5e7eb', borderRight:'none', borderRadius:'8px 0 0 8px', fontSize:'18px', fontWeight:'700', color:'#6b7280', height:'48px', display:'flex', alignItems:'center' }}>₹</div>
+                <input
+                  type="number"
+                  value={tipAmount || ''}
+                  onChange={e => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                  placeholder="0.00"
+                  min="0"
+                  step="1"
+                  style={{ flex:1, padding:'12px 14px', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'0 8px 8px 0', fontSize:'18px', fontWeight:'700', color:'#111827', outline:'none', boxSizing:'border-box' }}
+                />
               </div>
-              <div style={{ fontSize: '12px', color: '#1e40af' }}>
-                Bill Total: ₹{getTotal().toFixed(2)}
-              </div>
-              <div style={{ fontSize: '12px', color: '#1e40af' }}>
-                Tip Amount: ₹{tipAmount.toFixed(2)}
-              </div>
-              <div style={{ fontSize: '12px', color: '#1e40af', fontWeight: '600' }}>
-                Final Total: ₹{(getTotal() + tipAmount).toFixed(2)}
+              {/* Summary */}
+              <div style={{ padding:'10px 14px', background:'#fdf4ff', border:'1px solid #e9d5ff', borderRadius:'8px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:'13px', color:'#7c3aed' }}>Bill + Tip</span>
+                <span style={{ fontSize:'16px', fontWeight:'800', color:'#7c3aed' }}>₹{(getTotal() - tipAmount + (tipAmount || 0)).toFixed(2)}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setShowTipModal(false);
-                  setTipAmount(0);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  background: '#e5e7eb',
-                  color: '#1a1a1a',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setShowTipModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Add
-              </button>
+            {/* Actions */}
+            <div style={{ padding:'12px 20px', borderTop:'1px solid #f3f4f6', display:'flex', gap:'8px' }}>
+              <button onClick={()=>{setTipAmount(0);setShowTipModal(false);}} style={{ flex:1, padding:'11px', background:'#f3f4f6', color:'#6b7280', border:'none', borderRadius:'8px', fontSize:'13px', fontWeight:'600', cursor:'pointer' }}>Remove Tip</button>
+              <button onClick={()=>setShowTipModal(false)} style={{ flex:2, padding:'11px', background:'#ec4899', color:'#fff', border:'none', borderRadius:'8px', fontSize:'13px', fontWeight:'700', cursor:'pointer' }}>Apply ₹{tipAmount.toFixed(2)}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GST Modal */}
+      {showGstModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'16px' }}>
+          <div style={{ background:'#ffffff', borderRadius:'12px', width:'100%', maxWidth:'420px', overflow:'hidden', boxShadow:'0 20px 60px rgba(0,0,0,0.2)' }}>
+            {/* Header */}
+            <div style={{ padding:'16px 20px', borderBottom:'1px solid #f3f4f6', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontSize:'16px', fontWeight:'700', color:'#111827' }}>🧾 GST Settings</span>
+              <button onClick={()=>setShowGstModal(false)} style={{ padding:'4px 10px', background:'#f3f4f6', border:'none', borderRadius:'6px', fontSize:'13px', cursor:'pointer', color:'#6b7280' }}>✕</button>
+            </div>
+            <div style={{ padding:'16px 20px' }}>
+              {/* Intrastate / Interstate toggle */}
+              <div style={{ fontSize:'11px', fontWeight:'700', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'8px' }}>Transaction Type</div>
+              <div style={{ display:'flex', background:'#f3f4f6', borderRadius:'8px', padding:'2px', gap:'2px', marginBottom:'16px' }}>
+                {[{v:'intrastate',l:'🏙 Intrastate (CGST + SGST)'},{v:'interstate',l:'🚛 Interstate (IGST)'}].map(({v,l})=>(
+                  <button key={v} onClick={()=>setGstType(v)} style={{ flex:1, padding:'8px 6px', background:gstType===v?'#6366f1':'transparent', color:gstType===v?'#fff':'#6b7280', border:'none', borderRadius:'6px', fontSize:'11px', fontWeight:gstType===v?'700':'500', cursor:'pointer' }}>{l}</button>
+                ))}
+              </div>
+              {/* Rate presets */}
+              <div style={{ fontSize:'11px', fontWeight:'700', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'8px' }}>GST Rate</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(5, 1fr)', gap:'6px', marginBottom:'12px' }}>
+                {[0, 5, 12, 18, 28].map(rate => (
+                  <button key={rate} onClick={()=>setGstRate(rate)} style={{ padding:'10px 4px', background:gstRate===rate?'#6366f1':'#f3f4f6', color:gstRate===rate?'#fff':'#374151', border:'none', borderRadius:'8px', fontSize:'13px', fontWeight:'700', cursor:'pointer' }}>
+                    {rate}%
+                  </button>
+                ))}
+              </div>
+              {/* Custom rate */}
+              <div style={{ fontSize:'11px', fontWeight:'700', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'8px' }}>Custom Rate</div>
+              <div style={{ display:'flex', alignItems:'center', gap:'0', marginBottom:'14px' }}>
+                <input
+                  type="number"
+                  value={gstRate || ''}
+                  onChange={e => setGstRate(Math.max(0, Math.min(28, parseFloat(e.target.value) || 0)))}
+                  placeholder="0"
+                  min="0" max="28" step="0.5"
+                  style={{ flex:1, padding:'11px 14px', background:'#fff', border:'1.5px solid #e5e7eb', borderRadius:'8px 0 0 8px', fontSize:'16px', fontWeight:'700', color:'#111827', outline:'none', boxSizing:'border-box' }}
+                />
+                <div style={{ padding:'0 14px', background:'#f3f4f6', border:'1.5px solid #e5e7eb', borderLeft:'none', borderRadius:'0 8px 8px 0', fontSize:'16px', fontWeight:'700', color:'#6b7280', height:'46px', display:'flex', alignItems:'center' }}>%</div>
+              </div>
+              {/* Live breakdown preview */}
+              <div style={{ padding:'10px 14px', background:'#eef2ff', border:'1px solid #c7d2fe', borderRadius:'8px' }}>
+                <div style={{ fontSize:'11px', fontWeight:'700', color:'#4338ca', marginBottom:'6px', textTransform:'uppercase' }}>Breakdown Preview</div>
+                {taxExempt
+                  ? <div style={{ fontSize:'13px', color:'#6366f1' }}>Tax exempt — ₹0.00</div>
+                  : getGstRows().map(r => (
+                      <div key={r.label} style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
+                        <span style={{ fontSize:'12px', color:'#4338ca' }}>{r.label}</span>
+                        <span style={{ fontSize:'12px', fontWeight:'700', color:'#4338ca' }}>₹{r.value.toFixed(2)}</span>
+                      </div>
+                    ))
+                }
+                <div style={{ display:'flex', justifyContent:'space-between', paddingTop:'6px', marginTop:'4px', borderTop:'1px solid #c7d2fe' }}>
+                  <span style={{ fontSize:'12px', fontWeight:'700', color:'#3730a3' }}>Total GST</span>
+                  <span style={{ fontSize:'13px', fontWeight:'800', color:'#3730a3' }}>₹{getTax().toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+            {/* Actions */}
+            <div style={{ padding:'12px 20px', borderTop:'1px solid #f3f4f6', display:'flex', gap:'8px' }}>
+              <button onClick={()=>{setGstRate(0);setShowGstModal(false);}} style={{ flex:1, padding:'11px', background:'#f3f4f6', color:'#6b7280', border:'none', borderRadius:'8px', fontSize:'13px', fontWeight:'600', cursor:'pointer' }}>Remove GST</button>
+              <button onClick={()=>setShowGstModal(false)} style={{ flex:2, padding:'11px', background:'#6366f1', color:'#fff', border:'none', borderRadius:'8px', fontSize:'13px', fontWeight:'700', cursor:'pointer' }}>Apply {gstRate}%</button>
             </div>
           </div>
         </div>
@@ -3520,7 +4227,7 @@ export default function ToastOrders({
         </div>
       )}
 
-      {/* Payment Modal */}
+      {/* Payment Modal — kept for split-check per-seat flow from ToastTables; ToastOrders uses inline payment */}
       <PaymentModal
         show={showPaymentModal}
         onClose={() => { setShowPaymentModal(false); setSplitCheckSeatId(null); }}
@@ -6396,7 +7103,7 @@ export default function ToastOrders({
                       onClick={() => {
                         setSplitCheckSeatId(seat.id);
                         setShowSplitCheckModal(false);
-                        setShowPaymentModal(true);
+                        setIsCheckoutMode(true);
                       }}
                       style={{
                         padding: '6px 12px',
@@ -6430,7 +7137,7 @@ export default function ToastOrders({
                 onClick={() => {
                   setSplitCheckSeatId(null);
                   setShowSplitCheckModal(false);
-                  setShowPaymentModal(true);
+                  setIsCheckoutMode(true);
                 }}
                 style={{ padding: '8px 16px', background: '#374151', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}
               >
